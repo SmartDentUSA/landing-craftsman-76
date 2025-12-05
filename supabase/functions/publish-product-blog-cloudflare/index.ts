@@ -11,14 +11,20 @@ import {
   type VideoSchemaData 
 } from '../_shared/video-schema-helper.ts';
 
-// ✅ FASE 10: Authority Data Helper (E-E-A-T, Trust Signals, GEO SEO)
+// ✅ FASE 10: Authority Data Helper (E-E-A-T, Trust Signals, GEO SEO) - VERSÃO COMPLETA
 import { 
-  fetchAuthorityData, 
+  fetchAuthorityData,
+  fetchVideoTestimonials,
   generateAuthorityContextHTML, 
   generateAuthorityMetaTags,
   enrichOrganizationSchema,
   enrichProductSchema,
-  type AuthorityData 
+  generateSameAsSchema,
+  generateCompanyVideoSchemas,
+  generateVideoTestimonialSchemas,
+  generateVideoGallerySchema,
+  type AuthorityData,
+  type VideoTestimonial
 } from '../_shared/authority-data-helper.ts';
 
 import { 
@@ -382,8 +388,9 @@ function generateProductBlogHTML(options: {
   trackingPixels: TrackingPixels | null;
   relatedProducts?: any[];
   authorityData?: AuthorityData | null;
+  videoTestimonials?: VideoTestimonial[];
 }): string {
-  const { product, blogType, content, faqs, domain, pagePath, companyProfile, trackingPixels, relatedProducts, authorityData } = options;
+  const { product, blogType, content, faqs, domain, pagePath, companyProfile, trackingPixels, relatedProducts, authorityData, videoTestimonials = [] } = options;
   
   const companyName = companyProfile?.company_name || 'Smart Dent';
   const canonicalUrl = `https://${domain}${pagePath}`;
@@ -1803,9 +1810,9 @@ ${JSON.stringify({ "@context": "https://schema.org", "@graph": schemas.map(s => 
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════ -->
-  <!-- 🏢 FASE 10: Authority Context (E-E-A-T, Trust Signals) -->
+  <!-- 🏢 FASE 10: Authority Context COMPLETO (E-E-A-T, Trust Signals, Videos) -->
   <!-- ═══════════════════════════════════════════════════════════ -->
-  ${authorityData ? generateAuthorityContextHTML(authorityData) : ''}
+  ${authorityData ? generateAuthorityContextHTML(authorityData, videoTestimonials) : ''}
 </body>
 </html>`;
 }
@@ -1973,9 +1980,20 @@ serve(async (req) => {
     
     console.log(`[publish-product-blog] Related products found: ${relatedProducts?.length || 0}`);
 
-    // 5.5. Fetch authority data for E-E-A-T
-    const authorityData = await fetchAuthorityData(supabase);
-    console.log(`[publish-product-blog] Authority data: ${authorityData ? 'loaded' : 'not available'}`);
+    // 5.5. Fetch authority data for E-E-A-T and Video Testimonials
+    const [authorityData, videoTestimonials] = await Promise.all([
+      fetchAuthorityData(supabase),
+      fetchVideoTestimonials(supabase, 20)
+    ]);
+    
+    if (authorityData) {
+      const totalCompanyVideos = authorityData.companyVideos.youtube.length + 
+                                 authorityData.companyVideos.technical.length +
+                                 authorityData.companyVideos.testimonial.length;
+      console.log(`[publish-product-blog] Authority data COMPLETA: ${authorityData.partnerships.length} parceiros, ${totalCompanyVideos} vídeos empresa, ${videoTestimonials.length} video testimonials`);
+    } else {
+      console.log(`[publish-product-blog] Authority data: not available`);
+    }
 
     // 5. Generate HTML with LP Clone header/footer + All Schema Helpers
     const html = generateProductBlogHTML({
@@ -1988,7 +2006,8 @@ serve(async (req) => {
       companyProfile,
       trackingPixels,
       relatedProducts: relatedProducts || [],
-      authorityData
+      authorityData,
+      videoTestimonials
     });
 
     console.log(`[publish-product-blog] HTML generated: ${html.length} bytes`);

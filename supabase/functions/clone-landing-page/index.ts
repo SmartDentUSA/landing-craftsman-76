@@ -15,14 +15,20 @@ import { generateProductItemListSchema, generateGenericItemListSchema, type Item
 import { generateVideoObjectSchema, extractYouTubeId, getYouTubeThumbnail, getYouTubeEmbedUrl, type VideoSchemaData } from "../_shared/video-schema-helper.ts";
 // ✅ TRACKING: GTM, GA4, Meta Pixel, TikTok Pixel
 import { injectTrackingIntoHTML, getTrackingSummary, type TrackingPixels } from "../_shared/tracking-injector.ts";
-// ✅ FASE 10: Authority Data Helper (E-E-A-T, Trust Signals, GEO SEO)
+// ✅ FASE 10: Authority Data Helper (E-E-A-T, Trust Signals, GEO SEO) - VERSÃO COMPLETA
 import { 
-  fetchAuthorityData, 
+  fetchAuthorityData,
+  fetchVideoTestimonials,
   generateAuthorityContextHTML, 
   generateAuthorityMetaTags,
   enrichOrganizationSchema,
   enrichProductSchema,
-  type AuthorityData 
+  generateSameAsSchema,
+  generateCompanyVideoSchemas,
+  generateVideoTestimonialSchemas,
+  generateVideoGallerySchema,
+  type AuthorityData,
+  type VideoTestimonial
 } from "../_shared/authority-data-helper.ts";
 
 // ✅ FASE 9: Wrapper para manter compatibilidade
@@ -1401,6 +1407,7 @@ interface InjectSEOOptions {
   kols?: PersonSchemaData[];
   productWorkflow?: any;
   authorityData?: AuthorityData | null;
+  videoTestimonials?: VideoTestimonial[];
 }
 
 function injectSEO(
@@ -1422,7 +1429,8 @@ function injectSEO(
     relatedProducts = [],
     kols = [],
     productWorkflow,
-    authorityData
+    authorityData,
+    videoTestimonials = []
   } = options;
   
   // Remove existing meta tags
@@ -1799,12 +1807,49 @@ function injectSEO(
   
   result = result.replace(/<head[^>]*>/i, `$&\n${seoTags}`);
   
-  // ✅ FASE 10: Injetar Authority Context HTML (invisível para usuários, visível para crawlers)
+  // ✅ FASE 10: Injetar Authority Context HTML COMPLETO (invisível para usuários, visível para crawlers)
   if (authorityData) {
-    const authorityContextHTML = generateAuthorityContextHTML(authorityData);
+    // Gerar HTML de contexto com video testimonials
+    const videoTestimonialsForContext = options.videoTestimonials || [];
+    const authorityContextHTML = generateAuthorityContextHTML(authorityData, videoTestimonialsForContext);
     if (authorityContextHTML) {
       result = result.replace('</body>', `${authorityContextHTML}\n</body>`);
-      console.log(`✅ [FASE 10] Authority context HTML injected`);
+      console.log(`✅ [FASE 10] Authority context HTML COMPLETO injected (${videoTestimonialsForContext.length} video testimonials)`);
+    }
+    
+    // ✅ NOVO: Gerar VideoObject schemas dos vídeos da empresa e depoimentos
+    const companyVideoSchemas = generateCompanyVideoSchemas(
+      authorityData.companyVideos,
+      company,
+      websiteUrl,
+      10
+    );
+    const testimonialVideoSchemas = generateVideoTestimonialSchemas(
+      videoTestimonialsForContext,
+      company,
+      websiteUrl,
+      10
+    );
+    
+    // Adicionar video schemas ao @graph
+    if (companyVideoSchemas.length > 0) {
+      schemaGraph["@graph"].push(...companyVideoSchemas);
+      console.log(`✅ [FASE 10] ${companyVideoSchemas.length} Company VideoObject Schemas adicionados`);
+    }
+    if (testimonialVideoSchemas.length > 0) {
+      schemaGraph["@graph"].push(...testimonialVideoSchemas);
+      console.log(`✅ [FASE 10] ${testimonialVideoSchemas.length} Testimonial VideoObject Schemas adicionados`);
+    }
+    
+    // ✅ NOVO: Gerar ItemList de vídeos (Video Carousel)
+    const videoGallerySchema = generateVideoGallerySchema(
+      authorityData.companyVideos,
+      videoTestimonialsForContext,
+      company
+    );
+    if (videoGallerySchema) {
+      schemaGraph["@graph"].push(videoGallerySchema);
+      console.log(`✅ [FASE 10] VideoGallery ItemList Schema adicionado`);
     }
   }
   
@@ -2242,16 +2287,23 @@ async function processLandingPage(
   // Step 4.5: REWRITE IMAGE ALT/TITLE ATTRIBUTES (NEW in v2.1)
   processedHTML = rewriteImageAttributes(processedHTML, images, brand, product, companyName);
   
-  // ✅ FASE 3, 4, 6, 10: Buscar dados do produto, KOLs e Authority Data
-  const [productData, kols, authorityData] = await Promise.all([
+  // ✅ FASE 3, 4, 6, 10: Buscar dados do produto, KOLs, Authority Data e Video Testimonials
+  const [productData, kols, authorityData, videoTestimonials] = await Promise.all([
     fetchProductDataForSEO(supabase, brand, product),
     fetchKOLsForPersonSchema(supabase),
-    fetchAuthorityData(supabase)
+    fetchAuthorityData(supabase),
+    fetchVideoTestimonials(supabase, 20)
   ]);
   
-  console.log(`✅ [FASE 10] Authority data: ${authorityData ? 
-    `${authorityData.partnerships.length} parceiros, ${authorityData.areasServed.length} áreas, ${authorityData.reviews.length} reviews` : 
-    'não disponível'}`);
+  // Log de authority data expandida
+  if (authorityData) {
+    const totalCompanyVideos = authorityData.companyVideos.youtube.length + 
+                               authorityData.companyVideos.technical.length +
+                               authorityData.companyVideos.testimonial.length;
+    console.log(`✅ [FASE 10] Authority data COMPLETA: ${authorityData.partnerships.length} parceiros, ${authorityData.areasServed.length} áreas, ${authorityData.reviews.length} reviews, ${totalCompanyVideos} vídeos empresa, ${videoTestimonials.length} video testimonials`);
+  } else {
+    console.log(`⚠️ [FASE 10] Authority data não disponível`);
+  }
   
   // Step 5: Generate auto SEO if not provided
   const autoSEO = generateAutoSEO(html, brand, product, companyData);
@@ -2288,10 +2340,11 @@ async function processLandingPage(
       relatedProducts: productData.relatedProducts,
       kols,
       productWorkflow: productData.workflow,
-      authorityData
+      authorityData,
+      videoTestimonials
     }
   );
-  console.log('✅ SEO v3.0 and Schema.org FASES 1-9 injected');
+  console.log('✅ SEO v3.0 and Schema.org FASES 1-10 COMPLETO injected');
   
   // Step 7: Insert Smart Dent header/footer with cross-links
   processedHTML = insertSmartDentHeaderFooter(processedHTML, companyData, ctaUrl, publishedPages);
