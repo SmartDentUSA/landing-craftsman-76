@@ -39,13 +39,17 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     <!-- Canonical URL -->
     {{#canonical_url}}<link rel="canonical" href="{{canonical_url}}">{{/canonical_url}}
     
-  <!-- Hreflang Tags -->
-  <link rel="alternate" hreflang="pt-br" href="{{canonical_url}}">
-  {{#hreflang}}
-  {{#lang}}
-  <link rel="alternate" hreflang="{{lang}}" href="{{url}}">
-  {{/lang}}
-  {{/hreflang}}
+    <!-- Sitemap Reference -->
+    {{#sitemap_url}}<link rel="sitemap" type="application/xml" href="{{sitemap_url}}">{{/sitemap_url}}
+    
+    <!-- Hreflang Tags -->
+    <link rel="alternate" hreflang="pt-br" href="{{canonical_url}}">
+    <link rel="alternate" hreflang="x-default" href="{{canonical_url}}">
+    {{#hreflang}}
+    {{#lang}}
+    <link rel="alternate" hreflang="{{lang}}" href="{{url}}">
+    {{/lang}}
+    {{/hreflang}}
     
     <!-- Open Graph Tags -->
     {{#og_title}}<meta property="og:title" content="{{og_title}}">{{/og_title}}
@@ -66,6 +70,25 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     <!-- Publication Dates -->
     {{#publish_date}}<meta name="publish_date" content="{{publish_date}}">{{/publish_date}}
     {{#lastmod}}<meta name="lastmod" content="{{lastmod}}">{{/lastmod}}
+    
+    <!-- Author & Generator -->
+    {{#author}}<meta name="author" content="{{author}}">{{/author}}
+    <meta name="generator" content="Smart Dent CMS v3.0">
+    
+    <!-- AI Content Tags for AI Crawlers -->
+    {{#ai_content_type}}<meta name="ai-content-type" content="{{ai_content_type}}">{{/ai_content_type}}
+    {{#ai_topic}}<meta name="ai-topic" content="{{ai_topic}}">{{/ai_topic}}
+    
+    <!-- Geo Location Tags (Local SEO) -->
+    {{#geo_region}}<meta name="geo.region" content="{{geo_region}}">{{/geo_region}}
+    {{#geo_placename}}<meta name="geo.placename" content="{{geo_placename}}">{{/geo_placename}}
+    {{#geo_position}}<meta name="geo.position" content="{{geo_position}}">{{/geo_position}}
+    {{#icbm}}<meta name="ICBM" content="{{icbm}}">{{/icbm}}
+    
+    <!-- E-E-A-T Authority Tags -->
+    {{#expertise}}<meta name="expertise" content="{{expertise}}">{{/expertise}}
+    {{#brand_values}}<meta name="brand-values" content="{{brand_values}}">{{/brand_values}}
+    {{#partnerships}}<meta name="organization.partnerships" content="{{partnerships}}">{{/partnerships}}
     
     <!-- SEO AI Keywords -->
     {{#ai_keywords}}
@@ -4286,6 +4309,27 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
       schemaGraph.push(organizationSchema);
       console.log('✅ [Schema Enterprise] Organization schema adicionado ao @graph');
       
+      // ✅ Person Schema (Autor/Fundador) para E-E-A-T
+      if (companyProfile.founder_name) {
+        const personSchema: Record<string, any> = {
+          "@type": "Person",
+          "@id": `${companyProfile.website_url || processedData.canonical_url}/#founder`,
+          "name": companyProfile.founder_name,
+          "jobTitle": companyProfile.founder_title || "Fundador",
+          "worksFor": {
+            "@type": "Organization",
+            "@id": `${companyProfile.website_url}/#organization`
+          }
+        };
+        
+        if (companyProfile.founder_linkedin) {
+          personSchema.sameAs = [companyProfile.founder_linkedin];
+        }
+        
+        schemaGraph.push(personSchema);
+        console.log('✅ [Schema Enterprise] Person (Founder) schema adicionado ao @graph');
+      }
+      
       // ✅ FASE 2: WebPage Schema com Speakable SEMPRE
       const webPageSchema = {
         "@type": "WebPage",
@@ -4845,10 +4889,50 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
     // ✅ FASE 5: Adicionar company_profile completo para footer estruturado
     processedData.company_profile = companyProfile;
     
+    // ✅ NOVOS CAMPOS: Author, AI, Geo, E-E-A-T
+    processedData.author = companyProfile.founder_name || companyProfile.company_name;
+    processedData.ai_content_type = 'landing-page';
+    processedData.ai_topic = companyProfile.business_sector || companyProfile.main_products_services || 'Odontologia Digital';
+    
+    // Geo Tags
+    if (companyProfile.state) {
+      processedData.geo_region = `BR-${companyProfile.state}`;
+    }
+    if (companyProfile.city) {
+      processedData.geo_placename = companyProfile.city;
+    }
+    if (companyProfile.latitude && companyProfile.longitude) {
+      processedData.geo_position = `${companyProfile.latitude};${companyProfile.longitude}`;
+      processedData.icbm = `${companyProfile.latitude}, ${companyProfile.longitude}`;
+    }
+    
+    // E-E-A-T Authority Tags
+    processedData.expertise = companyProfile.seo_technical_expertise;
+    processedData.brand_values = companyProfile.brand_values;
+    
+    // Partnerships - extrair de institutional_links
+    const partnerships = (companyProfile.institutional_links as any[])?.filter(
+      (link: any) => link.type === 'partnership' || link.type === 'international_partnership'
+    );
+    if (partnerships?.length > 0) {
+      processedData.partnerships = partnerships.map((p: any) => p.name).join(', ');
+    }
+    
+    // Sitemap URL
+    if (processedData.canonical_url) {
+      try {
+        const canonicalOrigin = new URL(processedData.canonical_url).origin;
+        processedData.sitemap_url = `${canonicalOrigin}/sitemap.xml`;
+      } catch {
+        processedData.sitemap_url = '/sitemap.xml';
+      }
+    }
+    
     console.info('✅ Dados da empresa integrados ao HTML:', {
       company_name: companyProfile.company_name,
       seo_context_keywords: companyProfile.seo_context_keywords?.length || 0,
-      institutional_links: companyProfile.institutional_links?.length || 0
+      institutional_links: companyProfile.institutional_links?.length || 0,
+      new_meta_tags: ['author', 'ai_content_type', 'geo_region', 'expertise', 'sitemap_url']
     });
   }
 
