@@ -205,6 +205,67 @@ function sanitizeHTML(html: string): string {
 }
 
 // ============================================
+// ENSURE COMPLETE HTML STRUCTURE (DOCTYPE, html, head, body)
+// ============================================
+function ensureCompleteHTMLStructure(html: string): string {
+  const trimmedHtml = html.trim();
+  
+  // Verificar se já tem estrutura completa
+  const hasDoctype = trimmedHtml.toLowerCase().startsWith('<!doctype');
+  const hasHtmlTag = /<html[^>]*>/i.test(trimmedHtml);
+  const hasHeadTag = /<head[^>]*>/i.test(trimmedHtml);
+  const hasBodyTag = /<body[^>]*>/i.test(trimmedHtml);
+  
+  // Se já tem tudo, retornar como está
+  if (hasDoctype && hasHtmlTag && hasHeadTag && hasBodyTag) {
+    console.log('✅ [HTML Structure] Estrutura HTML já está completa');
+    return html;
+  }
+  
+  console.log(`⚠️ [HTML Structure] HTML incompleto: doctype=${hasDoctype}, html=${hasHtmlTag}, head=${hasHeadTag}, body=${hasBodyTag}`);
+  console.log('🔧 [HTML Structure] Criando estrutura HTML completa...');
+  
+  let content = trimmedHtml;
+  let extractedStyles = '';
+  let extractedScripts = '';
+  
+  // Extrair <style> tags do início
+  const styleRegex = /^(\s*<style[^>]*>[\s\S]*?<\/style>\s*)+/i;
+  const styleMatch = content.match(styleRegex);
+  if (styleMatch) {
+    extractedStyles = styleMatch[0];
+    content = content.replace(styleMatch[0], '').trim();
+    console.log(`📝 [HTML Structure] Extraído ${extractedStyles.length} chars de CSS para <head>`);
+  }
+  
+  // Extrair <script> tags do início (se houver)
+  const scriptRegex = /^(\s*<script[^>]*>[\s\S]*?<\/script>\s*)+/i;
+  const scriptMatch = content.match(scriptRegex);
+  if (scriptMatch) {
+    extractedScripts = scriptMatch[0];
+    content = content.replace(scriptMatch[0], '').trim();
+    console.log(`📝 [HTML Structure] Extraído ${extractedScripts.length} chars de JS para <head>`);
+  }
+  
+  // Construir estrutura HTML completa
+  const completeHTML = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  ${extractedStyles}
+  ${extractedScripts}
+</head>
+<body>
+${content}
+</body>
+</html>`;
+  
+  console.log(`✅ [HTML Structure] Estrutura HTML completa criada (${completeHTML.length} chars)`);
+  return completeHTML;
+}
+
+// ============================================
 // PRESERVE VIDEOS (NEW in v3.0)
 // ============================================
 function countVideos(html: string): number {
@@ -2251,6 +2312,9 @@ async function processLandingPage(
   // Step 1: Sanitize
   let processedHTML = sanitizeHTML(html);
   console.log(`✅ HTML sanitized (${processedHTML.length} chars, diff: ${html.length - processedHTML.length})`);
+  
+  // Step 1.5: Garantir estrutura HTML completa (DOCTYPE, html, head, body)
+  processedHTML = ensureCompleteHTMLStructure(processedHTML);
   
   // Step 2: Remove manufacturer elements (preserving videos) - CONDITIONAL
   let headerRemoved = false;
