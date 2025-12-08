@@ -958,20 +958,14 @@ serve(async (req) => {
       }
     }
 
-    // ✅ FASE 10: Buscar Authority Data e Video Testimonials em paralelo
-    const [authorityData, videoTestimonials] = await Promise.all([
-      fetchAuthorityData(supabaseClient).catch(err => {
-        console.error('⚠️ [SPIN LP] Erro ao buscar Authority Data:', err);
-        return null;
-      }),
-      fetchVideoTestimonials(supabaseClient, 20).catch(err => {
-        console.error('⚠️ [SPIN LP] Erro ao buscar Video Testimonials:', err);
-        return [];
-      })
-    ]);
+    // ✅ FASE 10: Buscar Authority Data (videoTestimonials já foi carregado na linha 851)
+    const authorityData = await fetchAuthorityData(supabaseClient).catch(err => {
+      console.error('⚠️ [SPIN LP] Erro ao buscar Authority Data:', err);
+      return null;
+    });
     
     if (authorityData) {
-      console.log(`✅ [SPIN LP] Authority Data carregado: ${authorityData.partnerships?.length || 0} parceiros, ${videoTestimonials.length} video testimonials`);
+      console.log(`✅ [SPIN LP] Authority Data carregado: ${authorityData.partnerships?.length || 0} parceiros, ${videoTestimonials?.length || 0} video testimonials`);
     }
 
     // ✅ MERGE: Adicionar depoimentos reais + recursos Sistema B + vídeos + publicações + KOL ao aiContent
