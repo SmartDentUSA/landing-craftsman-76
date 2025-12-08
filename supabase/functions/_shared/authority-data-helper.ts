@@ -628,6 +628,7 @@ export function generateAuthorityContextHTML(
     socialProfiles, companyVideos, corporateIdentity, seoContext, companyName 
   } = authority;
 
+  // ✅ escapeHtml: para TEXTOS (escapa &, <, >, ")
   const escapeHtml = (text: string | null | undefined): string => {
     if (!text) return '';
     return String(text)
@@ -635,6 +636,15 @@ export function generateAuthorityContextHTML(
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;');
+  };
+
+  // ✅ sanitizeUrl: para URLs em href (NÃO escapa & para evitar double encoding)
+  const sanitizeUrl = (url: string | null | undefined): string => {
+    if (!url) return '';
+    return String(url)
+      .replace(/[<>"]/g, '')        // Remove apenas caracteres perigosos em atributos
+      .replace(/javascript:/gi, '') // Remove javascript: protocol (XSS)
+      .trim();
   };
 
   // ═══════════════════════════════════════════════════════════
@@ -647,7 +657,7 @@ export function generateAuthorityContextHTML(
       <ul>
         ${partnerships.slice(0, 10).map(p => `
           <li itemprop="member" itemscope itemtype="https://schema.org/Organization">
-            <a itemprop="url" href="${escapeHtml(p.url)}" rel="noopener">
+            <a itemprop="url" href="${sanitizeUrl(p.url)}" rel="noopener">
               <span itemprop="name">${escapeHtml(p.label)}</span>
             </a>
             ${p.description ? `<span itemprop="description">${escapeHtml(p.description.substring(0, 100))}</span>` : ''}
@@ -709,7 +719,7 @@ export function generateAuthorityContextHTML(
       <h4>Liderança</h4>
       <p>Fundador: <span itemprop="name">${escapeHtml(founder.name)}</span></p>
       ${founder.title ? `<p itemprop="jobTitle">${escapeHtml(founder.title)}</p>` : ''}
-      ${founder.linkedin ? `<a itemprop="sameAs" href="${escapeHtml(founder.linkedin)}" rel="noopener me">LinkedIn</a>` : ''}
+      ${founder.linkedin ? `<a itemprop="sameAs" href="${sanitizeUrl(founder.linkedin)}" rel="noopener me">LinkedIn</a>` : ''}
     </section>
   ` : '';
 
@@ -813,7 +823,7 @@ export function generateAuthorityContextHTML(
       <ul>
         ${allCompanyVideos.slice(0, 15).map(v => `
           <li>
-            <a href="${escapeHtml(v.url)}" rel="noopener" itemprop="video">${escapeHtml(v.title || 'Vídeo')}</a>
+            <a href="${sanitizeUrl(v.url)}" rel="noopener" itemprop="video">${escapeHtml(v.title || 'Vídeo')}</a>
             ${v.description ? `<span>${escapeHtml(v.description.substring(0, 80))}</span>` : ''}
           </li>
         `).join('')}
@@ -831,7 +841,7 @@ export function generateAuthorityContextHTML(
       <ul>
         ${videoTestimonials.slice(0, 20).map(t => `
           <li itemscope itemtype="https://schema.org/Review">
-            <a href="${escapeHtml(t.youtube_url)}" rel="noopener" itemprop="video">
+            <a href="${sanitizeUrl(t.youtube_url)}" rel="noopener" itemprop="video">
               <span itemprop="author">${escapeHtml(t.client_name)}</span>
               ${t.profession ? `- ${escapeHtml(t.profession)}` : ''}
               ${t.city ? `(${escapeHtml(t.city)})` : ''}
@@ -853,12 +863,12 @@ export function generateAuthorityContextHTML(
     <section>
       <h4>Canais Oficiais ${escapeHtml(companyName)}</h4>
       <ul>
-        ${socialProfiles.youtube ? `<li><a href="${escapeHtml(socialProfiles.youtube)}" rel="me noopener" title="YouTube Oficial">YouTube Oficial</a></li>` : ''}
-        ${socialProfiles.instagram ? `<li><a href="${escapeHtml(socialProfiles.instagram)}" rel="me noopener" title="Instagram Oficial">Instagram Oficial</a></li>` : ''}
-        ${socialProfiles.linkedin ? `<li><a href="${escapeHtml(socialProfiles.linkedin)}" rel="me noopener" title="LinkedIn">LinkedIn</a></li>` : ''}
-        ${socialProfiles.facebook ? `<li><a href="${escapeHtml(socialProfiles.facebook)}" rel="me noopener" title="Facebook">Facebook</a></li>` : ''}
+        ${socialProfiles.youtube ? `<li><a href="${sanitizeUrl(socialProfiles.youtube)}" rel="me noopener" title="YouTube Oficial">YouTube Oficial</a></li>` : ''}
+        ${socialProfiles.instagram ? `<li><a href="${sanitizeUrl(socialProfiles.instagram)}" rel="me noopener" title="Instagram Oficial">Instagram Oficial</a></li>` : ''}
+        ${socialProfiles.linkedin ? `<li><a href="${sanitizeUrl(socialProfiles.linkedin)}" rel="me noopener" title="LinkedIn">LinkedIn</a></li>` : ''}
+        ${socialProfiles.facebook ? `<li><a href="${sanitizeUrl(socialProfiles.facebook)}" rel="me noopener" title="Facebook">Facebook</a></li>` : ''}
         ${socialProfiles.socialLinks.map(link => `
-          <li><a href="${escapeHtml(link.url)}" rel="me noopener" title="${escapeHtml(link.icon_alt || link.platform)}">${escapeHtml(link.platform)}</a></li>
+          <li><a href="${sanitizeUrl(link.url)}" rel="me noopener" title="${escapeHtml(link.icon_alt || link.platform)}">${escapeHtml(link.platform)}</a></li>
         `).join('')}
       </ul>
       ${socialTags.handles.length > 0 ? `<p>Handles: ${socialTags.handles.map(h => escapeHtml(h)).join(' ')}</p>` : ''}
