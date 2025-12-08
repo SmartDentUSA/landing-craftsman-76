@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
-import { Trash2, Plus, Download } from 'lucide-react';
+import { Trash2, Plus, Download, Upload, FileSpreadsheet } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import Papa from 'papaparse';
 
 interface TechnicalSpec {
   label: string;
@@ -33,6 +34,7 @@ export const ProductTechnicalSpecsModal: React.FC<ProductTechnicalSpecsModalProp
   const [newSpec, setNewSpec] = useState<TechnicalSpec>({ label: '', value: '' });
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isValidURL = (text: string): boolean => {
     try {
@@ -63,6 +65,104 @@ export const ProductTechnicalSpecsModal: React.FC<ProductTechnicalSpecsModalProp
       i === index ? { ...spec, [field]: value } : spec
     );
     setSpecs(updatedSpecs);
+  };
+
+  const handleCSVImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      toast({
+        title: "Arquivo inválido",
+        description: "Por favor, selecione um arquivo CSV",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const csvText = e.target?.result as string;
+      const parsed = Papa.parse<Record<string, string>>(csvText, {
+        header: true,
+        skipEmptyLines: true,
+      });
+
+      if (parsed.data && parsed.data.length > 0) {
+        const importedSpecs: TechnicalSpec[] = [];
+        const labelFields = ['Especificação', 'especificacao', 'Especificacao', 'label', 'Label', 'spec', 'Spec', 'Specification'];
+        const valueFields = ['Valor', 'valor', 'value', 'Value'];
+
+        parsed.data.forEach((row) => {
+          let label = '';
+          let value = '';
+
+          // Buscar label
+          for (const field of labelFields) {
+            if (row[field]?.trim()) {
+              label = row[field].trim();
+              break;
+            }
+          }
+
+          // Se não encontrou, tentar primeira coluna
+          if (!label) {
+            const keys = Object.keys(row);
+            if (keys.length > 0 && row[keys[0]]?.trim()) {
+              label = row[keys[0]].trim();
+            }
+          }
+
+          // Buscar value
+          for (const field of valueFields) {
+            if (row[field]?.trim()) {
+              value = row[field].trim();
+              break;
+            }
+          }
+
+          // Se não encontrou, tentar segunda coluna
+          if (!value) {
+            const keys = Object.keys(row);
+            if (keys.length > 1 && row[keys[1]]?.trim()) {
+              value = row[keys[1]].trim();
+            }
+          }
+
+          if (label && value) {
+            importedSpecs.push({ label, value });
+          }
+        });
+
+        if (importedSpecs.length > 0) {
+          setSpecs(prev => [...prev, ...importedSpecs]);
+          toast({
+            title: "CSV importado com sucesso",
+            description: `${importedSpecs.length} especificação(ões) adicionada(s)`,
+          });
+        } else {
+          toast({
+            title: "Nenhuma especificação encontrada",
+            description: "Verifique se o CSV possui colunas 'Especificação' e 'Valor'",
+            variant: "destructive",
+          });
+        }
+      }
+    };
+
+    reader.readAsText(file, 'UTF-8');
+    event.target.value = '';
+  };
+
+  const downloadTemplate = () => {
+    const csvContent = 'Especificação,Valor\nVoltagem,110V/220V\nPotência,1200W\nDimensões,30x20x15cm\nPeso,2.5kg\nGarantia,1 ano';
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'template-especificacoes-tecnicas.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleSave = async () => {
@@ -130,6 +230,48 @@ export const ProductTechnicalSpecsModal: React.FC<ProductTechnicalSpecsModalProp
               </div>
             </div>
           )}
+
+          {/* Importar CSV */}
+          <Card className="border-primary/30 bg-primary/5">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1">
+                  <h4 className="font-medium flex items-center gap-2">
+                    <FileSpreadsheet className="h-4 w-4" />
+                    Importar de CSV
+                  </h4>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Importe especificações em massa usando um arquivo CSV
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={downloadTemplate}
+                  >
+                    <Download className="h-4 w-4 mr-1" />
+                    Template
+                  </Button>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Upload className="h-4 w-4 mr-1" />
+                    Importar CSV
+                  </Button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".csv"
+                    onChange={handleCSVImport}
+                    className="hidden"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Lista de especificações para edição */}
           <div className="space-y-2">
