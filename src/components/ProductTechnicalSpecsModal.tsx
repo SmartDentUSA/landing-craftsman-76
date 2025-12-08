@@ -81,7 +81,7 @@ export const ProductTechnicalSpecsModal: React.FC<ProductTechnicalSpecsModalProp
     }
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       const csvText = e.target?.result as string;
       const parsed = Papa.parse<Record<string, string>>(csvText, {
         header: true,
@@ -135,11 +135,27 @@ export const ProductTechnicalSpecsModal: React.FC<ProductTechnicalSpecsModalProp
         });
 
         if (importedSpecs.length > 0) {
-          setSpecs(prev => [...prev, ...importedSpecs]);
-          toast({
-            title: "CSV importado com sucesso",
-            description: `${importedSpecs.length} especificação(ões) adicionada(s)`,
-          });
+          const allSpecs = [...specs, ...importedSpecs];
+          setSpecs(allSpecs);
+          
+          // Auto-salvar no banco de dados
+          try {
+            setIsLoading(true);
+            await onSave(allSpecs);
+            toast({
+              title: "CSV importado e salvo",
+              description: `${importedSpecs.length} especificação(ões) adicionadas e salvas automaticamente`,
+            });
+          } catch (error) {
+            console.error('Erro ao salvar specs importadas:', error);
+            toast({
+              title: "CSV importado (não salvo)",
+              description: "Especificações importadas, mas houve erro ao salvar. Clique em 'Salvar Especificações'.",
+              variant: "destructive",
+            });
+          } finally {
+            setIsLoading(false);
+          }
         } else {
           toast({
             title: "Nenhuma especificação encontrada",
