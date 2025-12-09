@@ -51,6 +51,34 @@ interface ClonedLP {
   captured_images: CapturedImage[];
 }
 
+// Função para normalizar encoding do texto de entrada
+const normalizeInputEncoding = (text: string): string => {
+  // Mapeamento de caracteres double-encoded comuns
+  const fixes: [RegExp, string][] = [
+    // Emojis malformados
+    [/ðŸš€/g, '🚀'], [/âž¡ï¸/g, '➡️'], [/ðŸ"¥/g, '🔥'], [/ðŸ'‰/g, '👉'],
+    [/âœ…/g, '✅'], [/âŒ/g, '❌'], [/ðŸ'¡/g, '💡'], [/ðŸŽ¯/g, '🎯'],
+    // Caracteres portugueses
+    [/Ã¡/g, 'á'], [/Ã /g, 'à'], [/Ã¢/g, 'â'], [/Ã£/g, 'ã'],
+    [/Ã©/g, 'é'], [/Ã¨/g, 'è'], [/Ãª/g, 'ê'],
+    [/Ã­/g, 'í'], [/Ã¬/g, 'ì'], [/Ã®/g, 'î'],
+    [/Ã³/g, 'ó'], [/Ã²/g, 'ò'], [/Ã´/g, 'ô'], [/Ãµ/g, 'õ'],
+    [/Ãº/g, 'ú'], [/Ã¹/g, 'ù'], [/Ã»/g, 'û'],
+    [/Ã§/g, 'ç'], [/Ã±/g, 'ñ'],
+    [/Ã‰/g, 'É'], [/Ã"/g, 'Ó'], [/Ãœ/g, 'Ü'], [/Ã‡/g, 'Ç'],
+    // Travessões e aspas
+    [/â€"/g, '–'], [/â€"/g, '—'], [/â€™/g, "'"], [/â€œ/g, '"'],
+    // Símbolos
+    [/Â®/g, '®'], [/Â©/g, '©'], [/Â°/g, '°'], [/Â /g, ' '],
+  ];
+  
+  let fixed = text;
+  for (const [pattern, replacement] of fixes) {
+    fixed = fixed.replace(pattern, replacement);
+  }
+  return fixed;
+};
+
 const LPClone = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -257,7 +285,7 @@ const LPClone = () => {
                     <CardContent>
                       <Textarea
                         value={originalHTML}
-                        onChange={(e) => setOriginalHTML(e.target.value)}
+                        onChange={(e) => setOriginalHTML(normalizeInputEncoding(e.target.value))}
                         placeholder="<!DOCTYPE html>&#10;<html>&#10;..."
                         className="font-mono text-xs min-h-[200px]"
                       />

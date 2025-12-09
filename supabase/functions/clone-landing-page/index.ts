@@ -45,6 +45,93 @@ const corsHeaders = {
 }
 
 // ============================================
+// NORMALIZE HTML ENCODING (FIX DOUBLE-ENCODED UTF-8)
+// ============================================
+function normalizeHTMLEncoding(html: string): string {
+  // Mapeamento de caracteres double-encoded UTF-8 para corretos
+  const fixes: [RegExp, string][] = [
+    // Emojis comuns malformados
+    [/ðŸš€/g, '🚀'],
+    [/âž¡ï¸/g, '➡️'],
+    [/ðŸ"¥/g, '🔥'],
+    [/ðŸ'‰/g, '👉'],
+    [/âœ…/g, '✅'],
+    [/âŒ/g, '❌'],
+    [/ðŸ'¡/g, '💡'],
+    [/ðŸŽ¯/g, '🎯'],
+    [/ðŸ'¬/g, '💬'],
+    [/ðŸ"/g, '📌'],
+    [/ðŸ"‹/g, '📋'],
+    [/ðŸ'€/g, '👀'],
+    [/ðŸ'ª/g, '💪'],
+    [/ðŸ†/g, '🏆'],
+    [/ðŸ"ˆ/g, '📈'],
+    [/ðŸ'¥/g, '👥'],
+    [/ðŸ"/g, '🔍'],
+    [/ðŸŒŸ/g, '🌟'],
+    [/âœ¨/g, '✨'],
+    [/ðŸ'°/g, '💰'],
+    [/ðŸ"§/g, '🔧'],
+    [/ðŸ"±/g, '📱'],
+    [/ðŸ'»/g, '💻'],
+    [/ðŸŽ/g, '🎁'],
+    [/ðŸ"¢/g, '📢'],
+    [/ðŸ"Œ/g, '📌'],
+    
+    // Travessões e aspas especiais
+    [/Ã¢â‚¬â€/g, '—'],
+    [/Ã¢â‚¬â„¢/g, "'"],
+    [/Ã¢â‚¬Â¦/g, '…'],
+    [/Ã¢â‚¬Å"/g, '"'],
+    [/Ã¢â‚¬Â/g, '"'],
+    [/â€"/g, '–'],
+    [/â€"/g, '—'],
+    [/â€™/g, "'"],
+    [/â€œ/g, '"'],
+    [/â€/g, '"'],
+    
+    // Caracteres portugueses double-encoded (ISO-8859-1 interpretado como UTF-8)
+    [/Ã¡/g, 'á'], [/Ã /g, 'à'], [/Ã¢/g, 'â'], [/Ã£/g, 'ã'], [/Ã¤/g, 'ä'],
+    [/Ã©/g, 'é'], [/Ã¨/g, 'è'], [/Ãª/g, 'ê'], [/Ã«/g, 'ë'],
+    [/Ã­/g, 'í'], [/Ã¬/g, 'ì'], [/Ã®/g, 'î'], [/Ã¯/g, 'ï'],
+    [/Ã³/g, 'ó'], [/Ã²/g, 'ò'], [/Ã´/g, 'ô'], [/Ãµ/g, 'õ'], [/Ã¶/g, 'ö'],
+    [/Ãº/g, 'ú'], [/Ã¹/g, 'ù'], [/Ã»/g, 'û'], [/Ã¼/g, 'ü'],
+    [/Ã§/g, 'ç'], [/Ã±/g, 'ñ'],
+    
+    // Maiúsculas double-encoded
+    [/Ã€/g, 'À'], [/Ã/g, 'Á'], [/Ã‚/g, 'Â'], [/Ãƒ/g, 'Ã'],
+    [/Ã‰/g, 'É'], [/Ãˆ/g, 'È'], [/ÃŠ/g, 'Ê'],
+    [/Ã/g, 'Í'], [/ÃŒ/g, 'Ì'], [/ÃŽ/g, 'Î'],
+    [/Ã"/g, 'Ó'], [/Ã'/g, 'Ò'], [/Ã"/g, 'Ô'], [/Ã•/g, 'Õ'],
+    [/Ãš/g, 'Ú'], [/Ã™/g, 'Ù'], [/Ã›/g, 'Û'], [/Ãœ/g, 'Ü'],
+    [/Ã‡/g, 'Ç'], [/Ã'/g, 'Ñ'],
+    
+    // Símbolos especiais
+    [/Âº/g, 'º'], [/Âª/g, 'ª'],
+    [/Â®/g, '®'], [/Â©/g, '©'], [/â„¢/g, '™'],
+    [/Â°/g, '°'],
+    
+    // Espaço não-quebrável malformado
+    [/Â /g, ' '],
+  ];
+  
+  let fixed = html;
+  let changesCount = 0;
+  
+  for (const [pattern, replacement] of fixes) {
+    const before = fixed;
+    fixed = fixed.replace(pattern, replacement);
+    if (before !== fixed) changesCount++;
+  }
+  
+  if (changesCount > 0) {
+    console.log(`🔠 [Encoding] Fixed ${changesCount} encoding pattern(s) in HTML`);
+  }
+  
+  return fixed;
+}
+
+// ============================================
 // SMART DENT DATA - HARDCODED FALLBACK
 // ============================================
 const SMART_DENT_DATA = {
@@ -2497,14 +2584,18 @@ serve(async (req) => {
     console.log(`📄 Has </body>: ${html?.includes('</body>') || false}`);
     console.log(`📄 First 300 chars: ${html?.substring(0, 300) || 'VAZIO'}`);
     
-    if (!html || !ctaUrl) {
+    // ✅ NORMALIZAR ENCODING UTF-8 (fix double-encoded characters)
+    const normalizedHTML = normalizeHTMLEncoding(html);
+    console.log(`🔠 HTML after encoding normalization: ${normalizedHTML.length} chars`);
+    
+    if (!normalizedHTML || !ctaUrl) {
       throw new Error('HTML e URL do CTA são obrigatórios');
     }
     
     // Validar tamanho mínimo do HTML
-    if (html.length < 500) {
-      console.error(`❌ HTML muito pequeno: ${html.length} chars`);
-      throw new Error(`HTML muito pequeno (${html.length} chars). Esperado: >1000 chars para uma LP. Verifique se o HTML está sendo enviado corretamente.`);
+    if (normalizedHTML.length < 500) {
+      console.error(`❌ HTML muito pequeno: ${normalizedHTML.length} chars`);
+      throw new Error(`HTML muito pequeno (${normalizedHTML.length} chars). Esperado: >1000 chars para uma LP. Verifique se o HTML está sendo enviado corretamente.`);
     }
     
     // Robust brand/product validation with trim and minimum length
@@ -2519,7 +2610,7 @@ serve(async (req) => {
       throw new Error('Produto é obrigatório (mínimo 2 caracteres)');
     }
     
-    console.log(`📋 Request: brand=${brand}, product=${product}, ctaUrl=${ctaUrl}, htmlSize=${html.length}`);
+    console.log(`📋 Request: brand=${brand}, product=${product}, ctaUrl=${ctaUrl}, htmlSize=${normalizedHTML.length}`);
     
     // Fetch company data - buscar registro com dados completos (não o vazio)
     const { data: companyData } = await supabase
@@ -2567,7 +2658,7 @@ serve(async (req) => {
     const publishedPages = await fetchPublishedPagesForCrossLinks(supabase);
     
     const result = await processLandingPage(
-      html,
+      normalizedHTML,
       ctaUrl,
       seoConfig,
       brand,
@@ -2583,7 +2674,7 @@ serve(async (req) => {
       success: true,
       ...result,
     }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' },
     });
     
   } catch (error) {
@@ -2593,7 +2684,7 @@ serve(async (req) => {
       error: (error as Error).message,
     }), {
       status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' },
     });
   }
 });
