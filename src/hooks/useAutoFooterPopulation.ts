@@ -11,6 +11,7 @@ interface NavigationMenuItem {
 interface FooterLocation {
   title: string;
   address: string;
+  country?: 'Brazil' | 'USA' | '';
 }
 
 interface FooterLink {
