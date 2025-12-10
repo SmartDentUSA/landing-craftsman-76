@@ -1132,143 +1132,153 @@ function injectPremiumCSS(): string {
         color: #fff;
       }
 
+      /* ===== CSS RESET PARA EVITAR CONFLITOS ===== */
+      .sd-premium-footer,
+      .sd-premium-footer * {
+        box-sizing: border-box !important;
+        margin: 0;
+        padding: 0;
+      }
+      
+      .sd-premium-footer div,
+      .sd-premium-footer article,
+      .sd-premium-footer p,
+      .sd-premium-footer strong {
+        display: block !important;
+      }
+
       /* Layout 2 áreas: Locations (esq) + Links/Sociais (dir) */
       .footer-columns {
-        display: grid;
-        grid-template-columns: 2fr 1fr;
-        gap: 2rem;
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 0 2rem;
+        display: grid !important;
+        grid-template-columns: 2fr 1fr !important;
+        gap: 2rem !important;
+        max-width: 1200px !important;
+        margin: 0 auto !important;
+        padding: 0 2rem !important;
       }
 
       .footer-locations-grid {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 1.5rem;
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 1.5rem !important;
       }
 
       .footer-right-column {
-        display: flex;
-        flex-direction: column;
-        gap: 1.5rem;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 1.5rem !important;
       }
 
       @media (max-width: 992px) {
         .footer-columns {
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: 1fr 1fr !important;
         }
         .footer-locations-grid {
-          grid-template-columns: 1fr;
+          grid-template-columns: 1fr !important;
         }
       }
 
       @media (max-width: 768px) {
         .footer-columns {
-          grid-template-columns: 1fr;
+          grid-template-columns: 1fr !important;
         }
       }
 
-      .footer-location,
+      .footer-location-card {
+        display: block !important;
+        margin-bottom: 0.5rem !important;
+      }
+
+      .footer-location-card strong {
+        display: block !important;
+        color: #fff !important;
+        font-weight: 700 !important;
+        font-size: 15px !important;
+        margin-bottom: 0.5rem !important;
+      }
+
+      .footer-location-card p {
+        display: block !important;
+        font-size: 13px !important;
+        line-height: 1.5 !important;
+        margin: 0.3rem 0 !important;
+        color: rgba(255,255,255,0.85) !important;
+      }
+
+      .footer-location-card p i {
+        color: #FF9B67 !important;
+        margin-right: 6px !important;
+      }
+
       .footer-links-column {
-        min-width: 0;
+        display: block !important;
       }
 
-      .footer-location strong,
       .footer-links-column strong {
-        color: #fff;
-        font-weight: 700;
-        font-size: 15px;
-        display: block;
-        margin-bottom: 0.75rem;
-      }
-
-      .footer-location p {
-        font-size: 13px;
-        line-height: 1.5;
-        margin: 0.3rem 0;
-        color: rgba(255,255,255,0.85);
-        display: flex;
-        align-items: flex-start;
-      }
-
-      .footer-location p i {
-        width: 16px;
-        min-width: 16px;
-        margin-right: 6px;
-        margin-top: 2px;
-        color: #FF9B67;
+        color: #fff !important;
+        font-weight: 700 !important;
+        font-size: 15px !important;
+        display: block !important;
+        margin-bottom: 0.75rem !important;
       }
 
       .footer-links-column a {
-        color: #FF9B67;
-        text-decoration: none;
-        font-size: 14px;
-        display: block;
-        margin: 0.4rem 0;
-        transition: opacity 0.2s;
+        color: #FF9B67 !important;
+        text-decoration: none !important;
+        font-size: 14px !important;
+        display: block !important;
+        margin: 0.4rem 0 !important;
+        transition: opacity 0.2s !important;
       }
 
       .footer-links-column a:hover {
-        opacity: 0.8;
-        text-decoration: underline;
+        opacity: 0.8 !important;
+        text-decoration: underline !important;
       }
 
       /* ===== SOCIAL INLINE (dentro da coluna direita) ===== */
+      .footer-social-inline {
+        display: block !important;
+      }
+      
       .footer-social-inline strong {
-        color: #EE7A3E;
-        font-weight: 600;
-        font-size: 14px;
-        display: block;
-        margin-bottom: 0.75rem;
+        color: #EE7A3E !important;
+        font-weight: 600 !important;
+        font-size: 14px !important;
+        display: block !important;
+        margin-bottom: 0.75rem !important;
       }
 
-      /* ===== SEÇÃO REDES SOCIAIS ===== */
-      .footer-social-section {
-        background: #3E4B5E !important;
-        padding: 1.5rem 0;
-        max-width: 1200px;
-        margin: 0 auto;
-        padding-left: 2rem;
-        padding-right: 2rem;
-        border-top: 1px solid rgba(255,255,255,0.15);
-      }
-
-      .footer-social-section strong {
-        color: #EE7A3E;
-        font-weight: 600;
-        font-size: 14px;
-        display: block;
-        margin-bottom: 1rem;
-      }
-
+      /* ===== ÍCONES SOCIAIS - FORÇAR HORIZONTAL ===== */
       .footer-social-links {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        gap: 10px !important;
+        max-width: 280px !important;
       }
 
       .footer-social-links a {
         display: inline-flex !important;
-        align-items: center;
-        justify-content: center;
-        width: 36px;
-        height: 36px;
-        background: rgba(255, 255, 255, 0.15);
-        border: 1px solid rgba(255,255,255,0.3);
-        border-radius: 50%;
-        transition: all 0.3s ease;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 36px !important;
+        height: 36px !important;
+        background: rgba(255, 255, 255, 0.15) !important;
+        border: 1px solid rgba(255,255,255,0.3) !important;
+        border-radius: 50% !important;
+        transition: all 0.3s ease !important;
       }
 
       .footer-social-links a:hover {
-        background: #EE7A3E;
-        border-color: #EE7A3E;
-        transform: translateY(-2px);
+        background: #EE7A3E !important;
+        border-color: #EE7A3E !important;
+        transform: translateY(-2px) !important;
       }
 
       .footer-social-links a i {
-        font-size: 16px;
-        color: #fff;
+        font-size: 16px !important;
+        color: #fff !important;
       }
 
       /* ===== SEÇÃO CROSS-LINKS (Navegue pelo Site) ===== */
@@ -2177,62 +2187,67 @@ function insertSmartDentHeaderFooter(
   let socialHtml = '';
   
   if (hasCustomFooter) {
-    // Localizações em grid 2x2
+    // Localizações em grid 2x2 - usando article para associação forte título-endereço
     const locationsItems = footerConfig.locations && footerConfig.locations.length > 0 
       ? footerConfig.locations.map((loc: any) => `
-          <div class="footer-location">
-            <strong>${escapeHtml(loc.title || loc.label || company)}</strong>
-            ${loc.address ? `<p><i class="fas fa-map-marker-alt"></i> ${escapeHtml(loc.address)}</p>` : ''}
-            ${loc.phone ? `<p><i class="fas fa-phone"></i> ${escapeHtml(loc.phone)}</p>` : ''}
-            ${loc.email ? `<p><i class="fas fa-envelope"></i> ${escapeHtml(loc.email)}</p>` : ''}
-          </div>
+          <article class="footer-location-card" style="display: block !important;">
+            <strong style="display: block !important; margin-bottom: 8px !important;">${escapeHtml(loc.title || loc.label || company)}</strong>
+            ${loc.address ? `<p style="display: block !important; margin: 4px 0 !important;"><i class="fas fa-map-marker-alt" style="color: #FF9B67; margin-right: 6px;"></i>${escapeHtml(loc.address)}</p>` : ''}
+            ${loc.phone ? `<p style="display: block !important; margin: 4px 0 !important;"><i class="fas fa-phone" style="color: #FF9B67; margin-right: 6px;"></i>${escapeHtml(loc.phone)}</p>` : ''}
+            ${loc.email ? `<p style="display: block !important; margin: 4px 0 !important;"><i class="fas fa-envelope" style="color: #FF9B67; margin-right: 6px;"></i>${escapeHtml(loc.email)}</p>` : ''}
+          </article>
         `).join('') 
       : `
-          <div class="footer-location">
-            <strong>${escapeHtml(company)}</strong>
-            ${streetAddress ? `<p><i class="fas fa-map-marker-alt"></i> ${escapeHtml(streetAddress)}${addressNumber ? `, ${escapeHtml(addressNumber)}` : ''}, ${escapeHtml(city)} - ${escapeHtml(state)}</p>` : ''}
-            ${phone ? `<p><i class="fas fa-phone"></i> ${escapeHtml(phone)}</p>` : ''}
-            ${email ? `<p><i class="fas fa-envelope"></i> ${escapeHtml(email)}</p>` : ''}
-          </div>
+          <article class="footer-location-card" style="display: block !important;">
+            <strong style="display: block !important; margin-bottom: 8px !important;">${escapeHtml(company)}</strong>
+            ${streetAddress ? `<p style="display: block !important; margin: 4px 0 !important;"><i class="fas fa-map-marker-alt" style="color: #FF9B67; margin-right: 6px;"></i>${escapeHtml(streetAddress)}${addressNumber ? `, ${escapeHtml(addressNumber)}` : ''}, ${escapeHtml(city)} - ${escapeHtml(state)}</p>` : ''}
+            ${phone ? `<p style="display: block !important; margin: 4px 0 !important;"><i class="fas fa-phone" style="color: #FF9B67; margin-right: 6px;"></i>${escapeHtml(phone)}</p>` : ''}
+            ${email ? `<p style="display: block !important; margin: 4px 0 !important;"><i class="fas fa-envelope" style="color: #FF9B67; margin-right: 6px;"></i>${escapeHtml(email)}</p>` : ''}
+          </article>
         `;
     
-    locationsHtml = `<div class="footer-locations-grid">${locationsItems}</div>`;
+    locationsHtml = `<div class="footer-locations-grid" style="display: grid !important; grid-template-columns: repeat(2, 1fr) !important; gap: 1.5rem !important;">${locationsItems}</div>`;
     
     // Links Úteis
     const linksItems = footerConfig.links && footerConfig.links.length > 0 
       ? footerConfig.links.map((link: any) => `
-          <a href="${escapeHtml(link.href)}" target="${link.openInNewTab ? '_blank' : '_self'}" rel="noopener">${escapeHtml(link.label)}</a>
+          <a href="${escapeHtml(link.href)}" target="${link.openInNewTab ? '_blank' : '_self'}" rel="noopener" style="display: block !important; color: #FF9B67 !important; margin: 0.4rem 0 !important;">${escapeHtml(link.label)}</a>
         `).join('')
       : '';
     
-    // Deduplificar redes sociais por platform e limitar a 6
-    const uniqueSocials = footerConfig.social_links && footerConfig.social_links.length > 0
-      ? footerConfig.social_links
-          .filter((s: any, i: number, arr: any[]) => arr.findIndex((x: any) => x.platform === s.platform) === i)
-          .slice(0, 6)
-      : [];
+    // Deduplificar redes sociais por platform usando Set e limitar a 6
+    const seenPlatforms = new Set<string>();
+    const uniqueSocials: any[] = [];
+    if (footerConfig.social_links && footerConfig.social_links.length > 0) {
+      for (const s of footerConfig.social_links) {
+        if (s.platform && !seenPlatforms.has(s.platform) && uniqueSocials.length < 6) {
+          seenPlatforms.add(s.platform);
+          uniqueSocials.push(s);
+        }
+      }
+    }
     
     const socialItems = uniqueSocials.length > 0
       ? uniqueSocials.map((social: any) => `
-          <a href="${escapeHtml(social.href)}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(social.icon_alt || social.platform || '')}">
-            <i class="fab fa-${escapeHtml(social.platform || 'link')}"></i>
+          <a href="${escapeHtml(social.href)}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(social.icon_alt || social.platform || '')}" style="display: inline-flex !important; width: 36px !important; height: 36px !important;">
+            <i class="fab fa-${escapeHtml(social.platform || 'link')}" style="font-size: 16px !important; color: #fff !important;"></i>
           </a>
         `).join('')
       : '';
     
     // Combinar Links + Sociais na coluna direita
     linksHtml = `
-      <div class="footer-right-column">
+      <div class="footer-right-column" style="display: flex !important; flex-direction: column !important; gap: 1.5rem !important;">
         ${linksItems ? `
-          <div class="footer-links-column">
-            <strong>Links Úteis</strong>
+          <div class="footer-links-column" style="display: block !important;">
+            <strong style="display: block !important; color: #fff !important; margin-bottom: 0.75rem !important;">Links Úteis</strong>
             ${linksItems}
           </div>
         ` : ''}
         ${socialItems ? `
-          <div class="footer-social-inline">
-            <strong>Redes Sociais</strong>
-            <div class="footer-social-links">
+          <div class="footer-social-inline" style="display: block !important;">
+            <strong style="display: block !important; color: #EE7A3E !important; margin-bottom: 0.75rem !important;">Redes Sociais</strong>
+            <div class="footer-social-links" style="display: flex !important; flex-direction: row !important; flex-wrap: wrap !important; gap: 10px !important;">
               ${socialItems}
             </div>
           </div>
