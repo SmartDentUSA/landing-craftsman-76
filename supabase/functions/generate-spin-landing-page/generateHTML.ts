@@ -864,8 +864,8 @@ export function generateLandingPageHTML(
   <meta name="twitter:image:alt" content="${escapeHtml(img.alt)}">` : ''}`).join('');
     } else {
       // Fallback: usar heroImageSrc ou logo
-      return `<meta property="og:image" content="${escapeHtml(heroImageSrc || company?.logo_url || '')}">
-  <meta name="twitter:image" content="${escapeHtml(heroImageSrc || company?.logo_url || '')}">`;
+      return `<meta property="og:image" content="${escapeHtml(heroImageSrc || company?.company_logo_url || '')}">
+  <meta name="twitter:image" content="${escapeHtml(heroImageSrc || company?.company_logo_url || '')}">`;
     }
   })()}
   
@@ -2303,7 +2303,7 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
   <!-- Header com Logo e Menu -->
   <div class="container">
     <div class="header">
-      <img src="${escapeHtml(company?.logo_url || 'https://via.placeholder.com/150x50?text=Logo')}" alt="Logo ${escapeHtml(sanitizeCompanyName(company?.company_name))}" class="banner" width="180" height="60" loading="eager">
+      <img src="${escapeHtml(company?.company_logo_url || 'https://via.placeholder.com/150x50?text=Logo')}" alt="Logo ${escapeHtml(sanitizeCompanyName(company?.company_name))}" class="banner" width="180" height="60" loading="eager">
       <nav class="main-nav">
         ${(() => {
           const navConfig = company?.navigation_footer_config;
