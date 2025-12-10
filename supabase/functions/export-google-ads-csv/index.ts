@@ -782,7 +782,74 @@ async function generateAdCopies(landingPageData: any, keywords: string[]) {
   };
 }
 
-// ✅ buildGoogleAdsCSV - Row Type Format with Multiple Ad Groups
+// ✅ Função de classificação de headlines para pinning
+function classifyHeadline(headline: string): 'product' | 'technical' | 'benefit' | 'cta' | 'offer' | 'general' {
+  const lowerHeadline = headline.toLowerCase();
+  
+  // CTAs e Ofertas (prioridade para posição 3)
+  const ctaTerms = ['compre', 'agende', 'confira', 'saiba', 'garanta', 'aproveite', 'clique', 'agora', 'já'];
+  const offerTerms = ['desconto', 'oferta', 'promoção', 'grátis', 'frete', 'parcel', 'preço', '12x', 'exclusiv'];
+  
+  if (ctaTerms.some(term => lowerHeadline.includes(term))) return 'cta';
+  if (offerTerms.some(term => lowerHeadline.includes(term))) return 'offer';
+  
+  // Técnicos (prioridade para posição 2)
+  const technicalTerms = ['4k', '3d', 'digital', 'tecnologia', 'precisão', 'alta', 'scanner', 'resolução', 'qualidade'];
+  if (technicalTerms.some(term => lowerHeadline.includes(term))) return 'technical';
+  
+  // Benefícios
+  const benefitTerms = ['melhor', 'ideal', 'perfeito', 'solução', 'resultado', 'rápid', 'fácil', 'profissional'];
+  if (benefitTerms.some(term => lowerHeadline.includes(term))) return 'benefit';
+  
+  // Produto/Categoria (prioridade para posição 1) - geralmente são os primeiros
+  const productTerms = ['impressora', 'scanner', 'rayshape', 'medit', 'odontolog', 'dental', 'clínica', 'consultório'];
+  if (productTerms.some(term => lowerHeadline.includes(term))) return 'product';
+  
+  return 'general';
+}
+
+// ✅ Determinar posição de pinning inteligente
+function determinePinningPosition(headlines: string[]): Record<number, number> {
+  const pinning: Record<number, number> = {};
+  
+  // Analisar todos os headlines para encontrar os melhores para cada posição
+  const classified = headlines.map((h, i) => ({ index: i, text: h, type: classifyHeadline(h) }));
+  
+  // Posição 1: Produto/Categoria (máximo relevância com a busca)
+  const productHeadlines = classified.filter(h => h.type === 'product');
+  if (productHeadlines.length > 0) {
+    pinning[productHeadlines[0].index] = 1;
+    if (productHeadlines.length > 1) {
+      pinning[productHeadlines[1].index] = 1; // Alternativa na posição 1
+    }
+  } else {
+    // Fallback: usar primeiro headline para posição 1
+    pinning[0] = 1;
+  }
+  
+  // Posição 2: Técnico/Diferencial
+  const technicalHeadlines = classified.filter(h => h.type === 'technical');
+  if (technicalHeadlines.length > 0) {
+    pinning[technicalHeadlines[0].index] = 2;
+  }
+  
+  // Posição 3: CTA ou Oferta
+  const ctaHeadlines = classified.filter(h => h.type === 'cta' || h.type === 'offer');
+  if (ctaHeadlines.length > 0) {
+    pinning[ctaHeadlines[0].index] = 3;
+    if (ctaHeadlines.length > 1) {
+      pinning[ctaHeadlines[1].index] = 3; // Alternativa na posição 3
+    }
+  }
+  
+  console.log('📌 Pinning strategy:', Object.entries(pinning).map(([i, pos]) => 
+    `H${parseInt(i) + 1} → Pos ${pos}`
+  ).join(', '));
+  
+  return pinning;
+}
+
+// ✅ buildGoogleAdsCSV - Row Type Format with Multiple Ad Groups + PINNING
 function buildGoogleAdsCSV(params: any): string {
   const { campaignName, config, adGroups, adCopies, sitelinks, videos, finalUrl } = params;
 
@@ -812,7 +879,7 @@ function buildGoogleAdsCSV(params: any): string {
     return str;
   }
 
-  // ✅ HEADER CORRETO - Google Ads Editor infere tipo pela presença de valores
+  // ✅ HEADER CORRETO - Google Ads Editor com suporte a PINNING
   const headers = [
     'Campaign',
     'Campaign type',
@@ -829,13 +896,15 @@ function buildGoogleAdsCSV(params: any): string {
     'Final URL',
     'Path 1',
     'Path 2',
-    // 15 Headlines
+    // 15 Headlines + 15 Headline Positions (para pinning)
     ...Array.from({ length: 15 }, (_, i) => `Headline ${i + 1}`),
-    // 4 Descriptions
-    'Description 1', 'Description 2', 'Description 3', 'Description 4'
+    ...Array.from({ length: 15 }, (_, i) => `Headline ${i + 1} position`),
+    // 4 Descriptions + 4 Description Positions (para pinning)
+    'Description 1', 'Description 2', 'Description 3', 'Description 4',
+    'Description 1 position', 'Description 2 position', 'Description 3 position', 'Description 4 position'
   ];
 
-  // ✅ CONSTANTES COL - 34 colunas totais
+  // ✅ CONSTANTES COL - 53 colunas totais (com posições de pinning)
   const COL = {
     CAMPAIGN: 0,
     CAMPAIGN_TYPE: 1,
@@ -852,9 +921,13 @@ function buildGoogleAdsCSV(params: any): string {
     FINAL_URL: 12,
     PATH_1: 13,
     PATH_2: 14,
-    HEADLINE_START: 15,
-    DESC_START: 30
+    HEADLINE_START: 15,        // Headlines 1-15 (índices 15-29)
+    HEADLINE_POS_START: 30,    // Headline positions 1-15 (índices 30-44)
+    DESC_START: 45,            // Descriptions 1-4 (índices 45-48)
+    DESC_POS_START: 49         // Description positions 1-4 (índices 49-52)
   };
+
+  const TOTAL_COLS = 53;
 
   const rows: string[][] = [];
 
@@ -883,7 +956,7 @@ function buildGoogleAdsCSV(params: any): string {
   };
 
   // 1. Campaign Row
-  const campaignRow = new Array(34).fill('');
+  const campaignRow = new Array(TOTAL_COLS).fill('');
   campaignRow[COL.CAMPAIGN] = csvEscape(campaignName);
   campaignRow[COL.CAMPAIGN_TYPE] = 'Search';
   campaignRow[COL.CAMPAIGN_STATUS] = 'Enabled';
@@ -923,16 +996,28 @@ function buildGoogleAdsCSV(params: any): string {
     'Produtos de alta qualidade. Satisfação garantida.'
   ];
 
+  // ✅ Preparar headlines para pinning
+  const finalHeadlines: string[] = [];
+  for (let i = 0; i < 15; i++) {
+    const h = adCopies.headlines?.[i];
+    const fallback = fallbackHeadlines[i] || `Headline ${i + 1}`;
+    const text = (h && typeof h === 'string' && h.trim()) ? h : fallback;
+    finalHeadlines.push(sanitizeText(text, 30));
+  }
+  
+  // ✅ Calcular pinning baseado no conteúdo dos headlines
+  const headlinePinning = determinePinningPosition(finalHeadlines);
+
   // ✅ NOVO: Iterar sobre múltiplos Ad Groups
   for (const adGroup of adGroups) {
     // 2. Ad Group Row
-    const adGroupRow = new Array(34).fill('');
+    const adGroupRow = new Array(TOTAL_COLS).fill('');
     adGroupRow[COL.CAMPAIGN] = csvEscape(campaignName);
     adGroupRow[COL.AD_GROUP] = csvEscape(adGroup.name);
     rows.push(adGroupRow);
 
-    // 3. Ad Row (RSA) para cada Ad Group
-    const adRow = new Array(34).fill('');
+    // 3. Ad Row (RSA) para cada Ad Group COM PINNING
+    const adRow = new Array(TOTAL_COLS).fill('');
     adRow[COL.CAMPAIGN] = csvEscape(campaignName);
     adRow[COL.AD_GROUP] = csvEscape(adGroup.name);
     adRow[COL.AD_TYPE] = 'Anúncio responsivo de pesquisa';
@@ -942,10 +1027,12 @@ function buildGoogleAdsCSV(params: any): string {
     
     // Headlines (COL.HEADLINE_START até COL.HEADLINE_START + 14)
     for (let i = 0; i < 15; i++) {
-      const h = adCopies.headlines?.[i];
-      const fallback = fallbackHeadlines[i] || `Headline ${i + 1}`;
-      const text = (h && typeof h === 'string' && h.trim()) ? h : fallback;
-      adRow[COL.HEADLINE_START + i] = csvEscape(sanitizeText(text, 30));
+      adRow[COL.HEADLINE_START + i] = csvEscape(finalHeadlines[i]);
+      
+      // ✅ NOVO: Aplicar pinning position se definido
+      if (headlinePinning[i] !== undefined) {
+        adRow[COL.HEADLINE_POS_START + i] = String(headlinePinning[i]);
+      }
     }
 
     // Descriptions (COL.DESC_START até COL.DESC_START + 3)
@@ -954,6 +1041,11 @@ function buildGoogleAdsCSV(params: any): string {
       const fallback = fallbackDescriptions[i] || `Descrição profissional ${i + 1}.`;
       const text = (d && typeof d === 'string' && d.trim()) ? d : fallback;
       adRow[COL.DESC_START + i] = csvEscape(sanitizeText(text, 90));
+      
+      // ✅ NOVO: Pinning de descriptions
+      // D1 na posição 1, D2 na posição 2 (garantir mensagens-chave)
+      if (i === 0) adRow[COL.DESC_POS_START + i] = '1';
+      if (i === 1) adRow[COL.DESC_POS_START + i] = '2';
     }
 
     rows.push(adRow);
@@ -962,7 +1054,7 @@ function buildGoogleAdsCSV(params: any): string {
 
     // 4. Keyword Rows para este Ad Group
     for (const keyword of adGroup.keywords) {
-      const keywordRow = new Array(34).fill('');
+      const keywordRow = new Array(TOTAL_COLS).fill('');
       keywordRow[COL.CAMPAIGN] = csvEscape(campaignName);
       keywordRow[COL.AD_GROUP] = csvEscape(adGroup.name);
       keywordRow[COL.KEYWORD] = csvEscape(sanitizeKeyword(keyword.text));
@@ -977,6 +1069,9 @@ function buildGoogleAdsCSV(params: any): string {
     ...rows.map(row => row.join(','))
   ];
 
-  console.log(`✅ CSV gerado: ${adGroups.length} Ad Groups, ${rows.length} linhas totais`);
+  // Log de pinning aplicado
+  const pinnedCount = Object.keys(headlinePinning).length;
+  console.log(`✅ CSV gerado: ${adGroups.length} Ad Groups, ${rows.length} linhas, ${pinnedCount} headlines com pinning`);
+  
   return csvLines.join('\n');
 }
