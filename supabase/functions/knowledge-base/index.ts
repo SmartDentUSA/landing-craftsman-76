@@ -1471,25 +1471,38 @@ serve(async (req) => {
   try {
     console.log('🌐 Public API - No authentication required');
 
-    // Parse query parameters
+    // Parse parameters from query string (for GET) or body (for POST)
     const url = new URL(req.url);
+    let bodyParams: Partial<KnowledgeBaseParams> = {};
+
+    // For POST requests, read body parameters
+    if (req.method === 'POST') {
+      try {
+        bodyParams = await req.json();
+        console.log('📦 POST body received:', bodyParams);
+      } catch (e) {
+        console.log('⚠️ No JSON body in POST request, using query params only');
+      }
+    }
+
+    // Merge query params with body params (body takes precedence)
     const params: KnowledgeBaseParams = {
-      format: (url.searchParams.get('format') as any) || 'json',
-      include_company: url.searchParams.get('include_company') !== 'false',
-      include_categories: url.searchParams.get('include_categories') !== 'false',
-      include_links: url.searchParams.get('include_links') !== 'false',
-      include_products: url.searchParams.get('include_products') !== 'false',
-      include_video_testimonials: url.searchParams.get('include_video_testimonials') !== 'false',
-      include_google_reviews: url.searchParams.get('include_google_reviews') !== 'false',
-      include_kols: url.searchParams.get('include_kols') === 'true',
-      include_spin_solutions: url.searchParams.get('include_spin_solutions') !== 'false',
-      include_blog_posts: url.searchParams.get('include_blog_posts') === 'true',
-      include_landing_pages: url.searchParams.get('include_landing_pages') === 'true',
-      include_external_videos: url.searchParams.get('include_external_videos') === 'true',
-      approved_only: url.searchParams.get('approved_only') !== 'false',
-      category: url.searchParams.get('category') || undefined,
-      limit: parseInt(url.searchParams.get('limit') || '50'),
-      offset: parseInt(url.searchParams.get('offset') || '0')
+      format: bodyParams.format || (url.searchParams.get('format') as any) || 'json',
+      include_company: bodyParams.include_company ?? url.searchParams.get('include_company') !== 'false',
+      include_categories: bodyParams.include_categories ?? url.searchParams.get('include_categories') !== 'false',
+      include_links: bodyParams.include_links ?? url.searchParams.get('include_links') !== 'false',
+      include_products: bodyParams.include_products ?? url.searchParams.get('include_products') !== 'false',
+      include_video_testimonials: bodyParams.include_video_testimonials ?? url.searchParams.get('include_video_testimonials') !== 'false',
+      include_google_reviews: bodyParams.include_google_reviews ?? url.searchParams.get('include_google_reviews') !== 'false',
+      include_kols: bodyParams.include_kols ?? url.searchParams.get('include_kols') === 'true',
+      include_spin_solutions: bodyParams.include_spin_solutions ?? url.searchParams.get('include_spin_solutions') !== 'false',
+      include_blog_posts: bodyParams.include_blog_posts ?? url.searchParams.get('include_blog_posts') === 'true',
+      include_landing_pages: bodyParams.include_landing_pages ?? url.searchParams.get('include_landing_pages') === 'true',
+      include_external_videos: bodyParams.include_external_videos ?? url.searchParams.get('include_external_videos') === 'true',
+      approved_only: bodyParams.approved_only ?? url.searchParams.get('approved_only') !== 'false',
+      category: bodyParams.category || url.searchParams.get('category') || undefined,
+      limit: bodyParams.limit ?? parseInt(url.searchParams.get('limit') || '50'),
+      offset: bodyParams.offset ?? parseInt(url.searchParams.get('offset') || '0')
     };
 
     console.log('Knowledge Base API called with params:', params);
