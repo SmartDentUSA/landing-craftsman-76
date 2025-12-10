@@ -2305,9 +2305,25 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
     <div class="header">
       <img src="${escapeHtml(company?.logo_url || 'https://via.placeholder.com/150x50?text=Logo')}" alt="Logo ${escapeHtml(sanitizeCompanyName(company?.company_name))}" class="banner" width="180" height="60" loading="eager">
       <nav class="main-nav">
-        <a href="https://loja.smartdent.com.br/">Loja</a>
-        <a href="https://parametros.smartdent.com.br/base-conhecimento">Blog</a>
-        <a href="https://api.whatsapp.com/send/?phone=5516993831794&text=Ol%C3%A1+Smart+Dent%2C+gostaria+de+mais+informa%C3%A7%C3%B5es" target="_blank">Fale conosco</a>
+        ${(() => {
+          const navConfig = company?.navigation_footer_config;
+          const menuItems = navConfig?.navigation_menu || [];
+          
+          if (menuItems && menuItems.length > 0) {
+            // Menu dinâmico do banco de dados
+            return menuItems
+              .sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
+              .map((item: any) => `<a href="${escapeHtml(item.href)}"${item.openInNewTab ? ' target="_blank" rel="noopener"' : ''}>${escapeHtml(item.label)}</a>`)
+              .join('');
+          }
+          
+          // Fallback hardcoded apenas se não houver configuração
+          return `
+            <a href="https://loja.smartdent.com.br/">Loja</a>
+            <a href="https://parametros.smartdent.com.br/base-conhecimento">Blog</a>
+            <a href="https://api.whatsapp.com/send/?phone=5516993831794" target="_blank" rel="noopener">Fale conosco</a>
+          `;
+        })()}
       </nav>
     </div>
   </div>
@@ -2801,20 +2817,19 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
             <div class="footer-columns">
               ${footerConfig.locations && footerConfig.locations.length > 0 ? footerConfig.locations.map((loc: any) => `
                 <div>
-                  <strong>${escapeHtml(loc.label || sanitizeCompanyName(company?.company_name))}</strong>
-                  ${loc.phone ? `<p><i class="fas fa-phone"></i> ${escapeHtml(loc.phone)}</p>` : ''}
-                  ${loc.email ? `<p><i class="fas fa-envelope"></i> ${escapeHtml(loc.email)}</p>` : ''}
+                  <strong>${escapeHtml(loc.title || loc.label || sanitizeCompanyName(company?.company_name))}</strong>
                   ${loc.address ? `<p><i class="fas fa-map-marker-alt"></i> ${escapeHtml(loc.address)}</p>` : ''}
                 </div>
-              `).join('') : `
-                <div>
-                  <strong>${escapeHtml(sanitizeCompanyName(company?.company_name))} - Brasil</strong>
-                  <p><i class="fas fa-phone"></i> Atendimento: ${escapeHtml(company?.contact_phone || company?.phone_number || '')}</p>
-                  <p><i class="fas fa-envelope"></i> Comercial: ${escapeHtml(company?.contact_email || company?.email || '')}</p>
-                  <p>${escapeHtml(company?.street_address || '')}, ${escapeHtml(company?.address_number || '')}</p>
-                  <p>${escapeHtml(company?.city || '')} - ${escapeHtml(company?.state || '')}, ${escapeHtml(company?.postal_code || '')}</p>
-                </div>
-              `}
+              `).join('') : ''}
+              
+              <!-- Contato sempre do company_profile -->
+              <div>
+                <strong>Contato</strong>
+                ${company?.contact_phone ? `<p><i class="fas fa-phone"></i> ${escapeHtml(company.contact_phone)}</p>` : ''}
+                ${company?.contact_email ? `<p><i class="fas fa-envelope"></i> ${escapeHtml(company.contact_email)}</p>` : ''}
+                ${company?.street_address ? `<p><i class="fas fa-map-marker-alt"></i> ${escapeHtml(company.street_address)}${company?.address_number ? `, ${escapeHtml(company.address_number)}` : ''}</p>` : ''}
+                ${company?.city ? `<p>${escapeHtml(company.city)}${company?.state ? ` - ${escapeHtml(company.state)}` : ''}${company?.postal_code ? `, ${escapeHtml(company.postal_code)}` : ''}</p>` : ''}
+              </div>
               
               ${footerConfig.links && footerConfig.links.length > 0 ? `
                 <div>
