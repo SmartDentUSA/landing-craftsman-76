@@ -83,7 +83,7 @@ serve(async (req) => {
       
       prompt = processPromptWithSelectedData(promptConfig.custom_prompt, selectedData);
     } else {
-      // Usar prompt padrão otimizado para PINNING
+      // Usar prompt padrão otimizado para PINNING + AUTORIDADE
       prompt = `Você é um especialista em copywriting para Google Ads com foco em campanhas para ${targetAudience}, PRIORIZANDO CATEGORIAS E SUBCATEGORIAS.
 
 Gere cópias para um Responsive Search Ad (RSA) baseadas nas seguintes informações:
@@ -106,32 +106,42 @@ Os 15 headlines devem seguir esta ORDEM ESPECÍFICA para pinning automático:
 - H5: Benefício técnico (ex: "Impressão Rápida", "Digital Avançado")
 - H6: Qualidade/Certificação (ex: "Qualidade Premium", "ISO Certificado")
 
-**POSIÇÃO 3 (H7-H10): BENEFÍCIOS**
+**POSIÇÃO 3 (H7-H10): BENEFÍCIOS E RESULTADOS**
 - Benefícios para o cliente
 - Resultados esperados
 - Diferenciais competitivos
 
-**POSIÇÃO 3 (H11-H15): CTAs E OFERTAS**
-- H11-H12: Chamadas para ação (ex: "Confira Agora", "Agende Já")
-- H13-H15: Ofertas e condições (ex: "Parcelamento 12x", "Frete Grátis")
+**POSIÇÃO 3 (H11-H15): AUTORIDADE + CTAs + OFERTAS** ⚠️ IMPORTANTE
+- H11: Autoridade técnica (ex: "Suporte Técnico Brasil", "Assistência 24h")
+- H12: Prova social/Confiança (ex: "Nota Fiscal Garantida", "Loja Oficial")
+- H13: CTA direto (ex: "Solicite Orçamento", "Agende Demonstração")
+- H14: Oferta específica (ex: "Parcele em 12x", "Entrega Expressa")
+- H15: Urgência sutil (ex: "Últimas Unidades", "Promoção Limitada")
+
+❌ **HEADLINES PROIBIDOS (GENÉRICOS DEMAIS):**
+- "Garanta Já a Sua" → ✅ Substituir por "Suporte Técnico Brasil"
+- "Clique Aqui" → ✅ Substituir por "Agende Demonstração"
+- "A Melhor Opção" → ✅ Substituir por "10 Anos de Experiência"
+- "Qualidade Garantida" sem contexto → ✅ Substituir por "Garantia de 1 Ano"
 
 📊 **INSTRUÇÕES PARA DESCRIÇÕES COM NÚMEROS/ESTATÍSTICAS:**
-1. Se houver garantia, inclua (ex: "Garantia de 1 ano")
-2. Se houver velocidade/tempo, inclua (ex: "Impressão 30% mais rápida", "Entrega em 24h")
-3. Se houver experiência, inclua (ex: "10 anos de experiência")
-4. Se houver parcelamento, inclua (ex: "Parcele em até 12x")
-5. **Priorize números específicos** (37% > 40%, 1 ano > longo prazo)
+1. **OBRIGATÓRIO**: Pelo menos 2 descrições devem conter números específicos
+2. Se houver garantia, inclua (ex: "Garantia de 1 ano")
+3. Se houver velocidade/tempo, inclua (ex: "Impressão 30% mais rápida", "Entrega em 24h")
+4. Se houver experiência, inclua (ex: "10 anos de experiência no mercado")
+5. Se houver parcelamento, inclua (ex: "Parcele em até 12x sem juros")
+6. **Priorize números específicos e ímpares** (37% > 40%, 1 ano > longo prazo)
 
 REGRAS OBRIGATÓRIAS:
 1. Headlines: **EXATAMENTE 15 variações**, máximo 30 caracteres cada
 2. Descriptions: **EXATAMENTE 4 variações**, máximo 90 caracteres cada
 3. Paths: 2 caminhos, máximo 15 caracteres cada (use categorias se possível)
 4. Linguagem: português brasileiro
-5. Tom: profissional, confiável, sem sensacionalismo
+5. Tom: profissional, confiável, SEM sensacionalismo
 6. Incluir keyword principal em pelo menos 2 headlines
 7. Se categoria/subcategoria identificáveis no conteúdo, use nos headlines
 8. EVITAR: alegações médicas proibidas, CAPSLOCK, termos como "cura", "milagre", "garantido"
-9. INCLUIR: benefícios claros, chamadas para ação sutis
+9. INCLUIR: benefícios claros, chamadas para ação sutis, NÚMEROS ESPECÍFICOS
 10. **PROIBIDO**: Quebras de linha (\\n), aspas duplas não escapadas, truncamentos
 
 🚨 **VALIDAÇÃO PRÉ-PROMPT CRÍTICA** 🚨

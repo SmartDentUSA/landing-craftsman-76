@@ -181,6 +181,74 @@ interface AdGroup {
   keywords: KeywordWithMatchType[];
 }
 
+// ✅ NOVO: Lista padrão de keywords negativas
+const DEFAULT_NEGATIVE_KEYWORDS = [
+  'usada', 'usado', 'olx', 'mercado livre', 'ml',
+  'caseira', 'caseiro', 'grátis', 'gratuito', 'free',
+  'como fazer', 'diy', 'pdf', 'download',
+  'curso', 'tutorial', 'emprego', 'vaga',
+  'reclamação', 'reclamar', 'problema',
+  'defeito', 'quebrado', 'conserto', 'reparo'
+];
+
+// ✅ NOVO: Gerar variações curtas de keywords
+function generateShortKeywordVariations(productName: string, category?: string): KeywordWithMatchType[] {
+  const shortVariations: KeywordWithMatchType[] = [];
+  if (!productName) return shortVariations;
+  
+  const words = productName.split(/\s+/).filter(w => w.length > 2);
+  
+  // Variação 1: Apenas marca + modelo (máx 3 palavras)
+  if (words.length >= 2) {
+    const shortName = words.slice(0, 3).join(' ').toLowerCase();
+    shortVariations.push({
+      text: shortName,
+      match_type: 'PHRASE',
+      source: 'short_variation',
+      search_intent: 'product'
+    });
+  }
+  
+  // Variação 2: "preço [produto curto]"
+  if (words.length >= 2) {
+    const priceVariation = `preço ${words.slice(0, 2).join(' ')}`.toLowerCase();
+    if (priceVariation.length <= 50) {
+      shortVariations.push({
+        text: priceVariation,
+        match_type: 'PHRASE',
+        source: 'short_variation',
+        search_intent: 'commercial'
+      });
+    }
+  }
+  
+  // Variação 3: "[categoria] [marca]" genérico
+  if (category && words.length >= 1) {
+    const categoryVariation = `${category} ${words[0]}`.toLowerCase();
+    if (categoryVariation.length <= 50) {
+      shortVariations.push({
+        text: categoryVariation,
+        match_type: 'PHRASE',
+        source: 'short_variation',
+        search_intent: 'product'
+      });
+    }
+  }
+  
+  // Variação 4: Apenas marca principal
+  if (words.length >= 1) {
+    shortVariations.push({
+      text: words[0].toLowerCase(),
+      match_type: 'BROAD',
+      source: 'short_variation',
+      search_intent: 'product'
+    });
+  }
+  
+  console.log(`✅ ${shortVariations.length} variações curtas geradas para "${productName}"`);
+  return shortVariations;
+}
+
 // ✅ NOVO: Detectar intenção de busca da keyword
 function detectSearchIntent(keyword: string): 'commercial' | 'informational' | 'product' | 'general' {
   const commercialTerms = ['comprar', 'preço', 'valor', 'custo', 'oferta', 'promoção', 'desconto', 'loja', 'venda', 'onde comprar', 'melhor preço'];
@@ -490,8 +558,24 @@ async function collectKeywords(supabase: any, landingPageData: any, config: any,
   const lpName = landingPageData.name || productName || '';
   result = expandKeywords(result, lpName, productCategory);
   
+  // ✅ NOVO: Adicionar variações curtas para evitar volume baixo
+  const shortVariations = generateShortKeywordVariations(lpName, productCategory);
+  const existingTexts = new Set(result.map(k => k.text.toLowerCase()));
+  shortVariations.forEach(sv => {
+    if (!existingTexts.has(sv.text)) {
+      result.push(sv);
+      existingTexts.add(sv.text);
+    }
+  });
+  
   // ✅ NOVO: Balancear match types
   result = balanceMatchTypes(result);
+  
+  // ✅ NOVO: Mesclar negativas padrão com negativas do usuário
+  const userNegatives = config.negatives || [];
+  const allNegatives = [...new Set([...DEFAULT_NEGATIVE_KEYWORDS, ...userNegatives])];
+  config.negatives = allNegatives;
+  console.log(`✅ ${allNegatives.length} keywords negativas configuradas (${DEFAULT_NEGATIVE_KEYWORDS.length} padrão + ${userNegatives.length} customizadas)`);
   
   console.log(`✅ Keywords após processamento completo: ${result.length}`);
   

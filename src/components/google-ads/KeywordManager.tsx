@@ -1,13 +1,25 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Trash2, Plus } from 'lucide-react';
+import { Trash2, Plus, ShieldAlert, Info } from 'lucide-react';
 import { KeywordCollector } from '@/lib/google-ads/collectors/KeywordCollector';
 import { useSelectedProducts } from '@/hooks/useSelectedProducts';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+
+// ✅ NOVO: Lista padrão de keywords negativas
+const DEFAULT_NEGATIVE_KEYWORDS = [
+  'usada', 'usado', 'olx', 'mercado livre', 'ml',
+  'caseira', 'caseiro', 'grátis', 'gratuito', 'free',
+  'como fazer', 'diy', 'pdf', 'download',
+  'curso', 'tutorial', 'emprego', 'vaga',
+  'reclamação', 'reclamar', 'problema',
+  'defeito', 'quebrado', 'conserto', 'reparo'
+];
 
 interface KeywordManagerProps {
   config: any;
@@ -22,6 +34,8 @@ export const KeywordManager = ({ config, data, selectedProductIds = [], onChange
   const [extraKeywords, setExtraKeywords] = useState<string>('');
   const [negativeKeywords, setNegativeKeywords] = useState<string>('');
   const [productKeywords, setProductKeywords] = useState<string[]>([]);
+  const [includeDefaultNegatives, setIncludeDefaultNegatives] = useState(config.include_default_negatives ?? true);
+  const [showDefaultNegatives, setShowDefaultNegatives] = useState(false);
 
   useEffect(() => {
     generateKeywords();
@@ -290,17 +304,64 @@ export const KeywordManager = ({ config, data, selectedProductIds = [], onChange
       {/* Negative Keywords */}
       <Card>
         <CardHeader>
-          <CardTitle>Keywords Negativas</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <ShieldAlert className="w-5 h-5" />
+            Keywords Negativas
+          </CardTitle>
+          <CardDescription>
+            Evita que seus anúncios apareçam para pesquisas irrelevantes
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* ✅ NOVO: Toggle para negativas padrão */}
+          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+            <div className="flex-1">
+              <Label htmlFor="default-negatives" className="font-medium">
+                Incluir Negativas Recomendadas
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Adiciona automaticamente {DEFAULT_NEGATIVE_KEYWORDS.length} termos como: usada, olx, grátis...
+              </p>
+            </div>
+            <Switch
+              id="default-negatives"
+              checked={includeDefaultNegatives}
+              onCheckedChange={(checked) => {
+                setIncludeDefaultNegatives(checked);
+                onChange({ include_default_negatives: checked });
+              }}
+            />
+          </div>
+
+          {/* ✅ NOVO: Lista expansível de negativas padrão */}
+          {includeDefaultNegatives && (
+            <Collapsible open={showDefaultNegatives} onOpenChange={setShowDefaultNegatives}>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="gap-1 text-xs">
+                  <Info className="w-3 h-3" />
+                  {showDefaultNegatives ? 'Ocultar' : 'Ver'} negativas padrão ({DEFAULT_NEGATIVE_KEYWORDS.length})
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-2">
+                <div className="flex flex-wrap gap-1 p-2 bg-muted/30 rounded">
+                  {DEFAULT_NEGATIVE_KEYWORDS.map((neg, i) => (
+                    <Badge key={i} variant="outline" className="text-xs">
+                      -{neg}
+                    </Badge>
+                  ))}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
+
           <div>
-            <Label htmlFor="negative-keywords">Keywords para Excluir</Label>
+            <Label htmlFor="negative-keywords">Keywords Negativas Customizadas</Label>
             <p className="text-sm text-muted-foreground mb-2">
-              Uma keyword por linha. Evita que seus anúncios apareçam para estas pesquisas.
+              Uma keyword por linha. Adicione termos específicos para seu nicho.
             </p>
             <Textarea
               id="negative-keywords"
-              placeholder="grátis&#10;barato&#10;promoção"
+              placeholder="concorrente1&#10;concorrente2&#10;termo específico"
               value={negativeKeywords}
               onChange={(e) => handleNegativeKeywordsChange(e.target.value)}
               rows={3}
@@ -309,7 +370,7 @@ export const KeywordManager = ({ config, data, selectedProductIds = [], onChange
 
           {config.negatives?.length > 0 && (
             <div>
-              <Label>Keywords Negativas ({config.negatives.length})</Label>
+              <Label>Keywords Negativas Customizadas ({config.negatives.length})</Label>
               <div className="flex flex-wrap gap-2 mt-2">
                 {config.negatives.map((keyword: string, index: number) => (
                   <Badge key={index} variant="destructive" className="gap-1">

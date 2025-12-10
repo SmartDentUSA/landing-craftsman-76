@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Download, AlertTriangle, CheckCircle, Settings, RefreshCw } from 'lucide-react';
+import { Download, AlertTriangle, CheckCircle, Settings, RefreshCw, Info, Target } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { GoogleAdsCampaignConfig, ValidationWarning, AdPreview } from '@/types/google-ads';
@@ -21,6 +21,7 @@ import { VideoCollector } from '@/lib/google-ads/collectors/VideoCollector';
 import { SitelinksCollector } from '@/lib/google-ads/collectors/SitelinksCollector';
 import { useToast } from '@/hooks/use-toast';
 import { useDebounce } from '@/hooks/useDebounce';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface GoogleAdsTabProps {
   landingPageId: string;
@@ -583,6 +584,22 @@ export const GoogleAdsTab = ({ landingPageId, data, selectedProductIds, onUpdate
               </div>
             </CardContent>
           </Card>
+        )}
+        
+        {/* ✅ NOVO: Alertas importantes antes do export */}
+        {campaignConfig.enabled && (
+          <Alert className="border-amber-500/50 bg-amber-500/10">
+            <Target className="h-4 w-4 text-amber-600" />
+            <AlertTitle className="text-amber-700">Configurações Importantes Antes de Lançar</AlertTitle>
+            <AlertDescription className="text-amber-600">
+              <ul className="list-disc ml-4 mt-2 text-sm space-y-1">
+                <li>Configure a <strong>tag de conversão</strong> no botão "Comprar" ou formulário de contato</li>
+                <li>Verifique se a página de destino está <strong>otimizada para mobile</strong></li>
+                <li>Após importar no Google Ads, adicione <strong>extensões de Callout</strong> manualmente: Suporte Técnico, Garantia Oficial, Nota Fiscal</li>
+                <li>Adicione <strong>extensões de Snippets Estruturados</strong>: Tipos de produtos, Marcas atendidas</li>
+              </ul>
+            </AlertDescription>
+          </Alert>
         )}
         
         {/* Export Button - Only show when campaign is enabled */}
