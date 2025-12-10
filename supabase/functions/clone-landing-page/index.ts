@@ -1112,22 +1112,22 @@ function injectPremiumCSS(): string {
         color: var(--accent-tech);
       }
 
-      /* ===== FOOTER - LAYOUT IGUAL IMAGEM SD PREMIUM ===== */
+      /* ===== FOOTER - SMART DENT PREMIUM (CORES #3E4B5E e #EE7A3E) ===== */
       .sd-premium-footer {
         margin: 0 !important;
         padding: 0 !important;
       }
 
-      /* Barra de acento no topo */
+      /* Barra de acento no topo - Laranja Smart Dent */
       .footer-accent-bar {
         height: 8px;
-        background: linear-gradient(90deg, #E8C4A0, #D4A574) !important;
+        background: linear-gradient(90deg, #EE7A3E, #FF9B67) !important;
         width: 100%;
       }
 
-      /* Seção principal (azul/teal) */
+      /* Seção principal - Azul Smart Dent */
       .footer-main-section {
-        background: #587B86 !important;
+        background: linear-gradient(to bottom, #3E4B5E, #2d3a4a) !important;
         padding: 2.5rem 0;
         color: #fff;
       }
@@ -1188,11 +1188,11 @@ function injectPremiumCSS(): string {
         min-width: 16px;
         margin-right: 6px;
         margin-top: 2px;
-        color: #e74c88;
+        color: #FF9B67;
       }
 
       .footer-links-column a {
-        color: #e74c88;
+        color: #FF9B67;
         text-decoration: none;
         font-size: 14px;
         display: block;
@@ -1207,7 +1207,7 @@ function injectPremiumCSS(): string {
 
       /* ===== SEÇÃO REDES SOCIAIS ===== */
       .footer-social-section {
-        background: #587B86 !important;
+        background: #3E4B5E !important;
         padding: 1.5rem 0;
         max-width: 1200px;
         margin: 0 auto;
@@ -1217,7 +1217,7 @@ function injectPremiumCSS(): string {
       }
 
       .footer-social-section strong {
-        color: #e74c88;
+        color: #EE7A3E;
         font-weight: 600;
         font-size: 14px;
         display: block;
@@ -1243,8 +1243,8 @@ function injectPremiumCSS(): string {
       }
 
       .footer-social-links a:hover {
-        background: #e74c88;
-        border-color: #e74c88;
+        background: #EE7A3E;
+        border-color: #EE7A3E;
         transform: translateY(-2px);
       }
 
@@ -1255,7 +1255,7 @@ function injectPremiumCSS(): string {
 
       /* ===== SEÇÃO CROSS-LINKS (Navegue pelo Site) ===== */
       .footer-cross-links {
-        background: #4a6670 !important;
+        background: #2d3a4a !important;
         padding: 1.5rem 2rem;
         max-width: 1200px;
         margin: 0 auto;
@@ -1263,7 +1263,7 @@ function injectPremiumCSS(): string {
       }
 
       .footer-cross-links strong {
-        color: #e74c88;
+        color: #EE7A3E;
         font-weight: 600;
         font-size: 14px;
         display: block;
@@ -1299,9 +1299,9 @@ function injectPremiumCSS(): string {
         }
       }
 
-      /* ===== COPYRIGHT (barra verde escuro) ===== */
+      /* ===== COPYRIGHT (Azul Smart Dent escuro) ===== */
       .footer-copyright-section {
-        background: #4a5538 !important;
+        background: #1e293b !important;
         padding: 1rem 0;
       }
 
@@ -2308,10 +2308,15 @@ function insertSmartDentHeaderFooter(
   
   // Insert after <body>
   result = result.replace(/<body[^>]*>/i, `$&\n${PREMIUM_HEADER}`);
-  // Insert before </body>
+  
+  // ✅ REMOVER footer existente ANTES de injetar o novo (evita duplicação)
+  result = result.replace(/<footer[^>]*class="[^"]*footer[^"]*"[^>]*>[\s\S]*?<\/footer>/gi, '<!-- ORIGINAL FOOTER REMOVED -->');
+  result = result.replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, '<!-- FOOTER REMOVED -->');
+  
+  // Insert premium footer before </body>
   result = result.replace(/<\/body>/i, `${PREMIUM_FOOTER}\n</body>`);
   
-  console.log(`✅ Header/Footer SPIN inserted (dynamic: ${hasCustomFooter ? 'yes' : 'fallback'})`);
+  console.log(`✅ Header/Footer SPIN inserted (dynamic: ${hasCustomFooter ? 'yes' : 'fallback'}, duplicated footers removed)`);
   
   return result;
 }
