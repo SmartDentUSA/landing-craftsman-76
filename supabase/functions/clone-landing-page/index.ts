@@ -1132,29 +1132,38 @@ function injectPremiumCSS(): string {
         color: #fff;
       }
 
+      /* Layout 2 áreas: Locations (esq) + Links/Sociais (dir) */
       .footer-columns {
         display: grid;
-        grid-template-columns: repeat(5, 1fr);
-        gap: 1.5rem;
+        grid-template-columns: 2fr 1fr;
+        gap: 2rem;
         max-width: 1200px;
         margin: 0 auto;
         padding: 0 2rem;
       }
 
+      .footer-locations-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+      }
+
+      .footer-right-column {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+      }
+
       @media (max-width: 992px) {
         .footer-columns {
-          grid-template-columns: repeat(3, 1fr);
+          grid-template-columns: 1fr 1fr;
+        }
+        .footer-locations-grid {
+          grid-template-columns: 1fr;
         }
       }
 
       @media (max-width: 768px) {
-        .footer-columns {
-          grid-template-columns: 1fr 1fr;
-          gap: 2rem;
-        }
-      }
-
-      @media (max-width: 480px) {
         .footer-columns {
           grid-template-columns: 1fr;
         }
@@ -1203,6 +1212,15 @@ function injectPremiumCSS(): string {
       .footer-links-column a:hover {
         opacity: 0.8;
         text-decoration: underline;
+      }
+
+      /* ===== SOCIAL INLINE (dentro da coluna direita) ===== */
+      .footer-social-inline strong {
+        color: #EE7A3E;
+        font-weight: 600;
+        font-size: 14px;
+        display: block;
+        margin-bottom: 0.75rem;
       }
 
       /* ===== SEÇÃO REDES SOCIAIS ===== */
@@ -2159,83 +2177,105 @@ function insertSmartDentHeaderFooter(
   let socialHtml = '';
   
   if (hasCustomFooter) {
-    // Localizações (4 colunas lado a lado)
-    locationsHtml = footerConfig.locations && footerConfig.locations.length > 0 
+    // Localizações em grid 2x2
+    const locationsItems = footerConfig.locations && footerConfig.locations.length > 0 
       ? footerConfig.locations.map((loc: any) => `
           <div class="footer-location">
-            <strong>${loc.label || loc.title || company}</strong>
-            ${loc.address ? `<p><i class="fas fa-map-marker-alt"></i> ${loc.address}</p>` : ''}
-            ${loc.phone ? `<p><i class="fas fa-phone"></i> ${loc.phone}</p>` : ''}
-            ${loc.email ? `<p><i class="fas fa-envelope"></i> ${loc.email}</p>` : ''}
+            <strong>${escapeHtml(loc.title || loc.label || company)}</strong>
+            ${loc.address ? `<p><i class="fas fa-map-marker-alt"></i> ${escapeHtml(loc.address)}</p>` : ''}
+            ${loc.phone ? `<p><i class="fas fa-phone"></i> ${escapeHtml(loc.phone)}</p>` : ''}
+            ${loc.email ? `<p><i class="fas fa-envelope"></i> ${escapeHtml(loc.email)}</p>` : ''}
           </div>
         `).join('') 
       : `
           <div class="footer-location">
-            <strong>${company}</strong>
-            ${streetAddress ? `<p><i class="fas fa-map-marker-alt"></i> ${streetAddress}${addressNumber ? `, ${addressNumber}` : ''}, ${city} - ${state}</p>` : ''}
-            ${phone ? `<p><i class="fas fa-phone"></i> ${phone}</p>` : ''}
-            ${email ? `<p><i class="fas fa-envelope"></i> ${email}</p>` : ''}
+            <strong>${escapeHtml(company)}</strong>
+            ${streetAddress ? `<p><i class="fas fa-map-marker-alt"></i> ${escapeHtml(streetAddress)}${addressNumber ? `, ${escapeHtml(addressNumber)}` : ''}, ${escapeHtml(city)} - ${escapeHtml(state)}</p>` : ''}
+            ${phone ? `<p><i class="fas fa-phone"></i> ${escapeHtml(phone)}</p>` : ''}
+            ${email ? `<p><i class="fas fa-envelope"></i> ${escapeHtml(email)}</p>` : ''}
           </div>
         `;
     
-    // Links Úteis (1 coluna separada)
-    linksHtml = footerConfig.links && footerConfig.links.length > 0 
-      ? `
-        <div class="footer-links-column">
-          <strong>Links Úteis</strong>
-          ${footerConfig.links.map((link: any) => `
-            <a href="${link.href}" target="${link.openInNewTab ? '_blank' : '_self'}" rel="noopener">${link.label}</a>
-          `).join('')}
-        </div>
-      ` 
+    locationsHtml = `<div class="footer-locations-grid">${locationsItems}</div>`;
+    
+    // Links Úteis
+    const linksItems = footerConfig.links && footerConfig.links.length > 0 
+      ? footerConfig.links.map((link: any) => `
+          <a href="${escapeHtml(link.href)}" target="${link.openInNewTab ? '_blank' : '_self'}" rel="noopener">${escapeHtml(link.label)}</a>
+        `).join('')
       : '';
     
-    // Redes Sociais (seção separada abaixo)
-    socialHtml = footerConfig.social_links && footerConfig.social_links.length > 0 
-      ? `
-        <div class="footer-social-section">
-          <strong>Redes Sociais</strong>
-          <div class="footer-social-links">
-            ${footerConfig.social_links.map((social: any) => `
-              <a href="${social.href}" target="_blank" rel="noopener noreferrer" title="${social.icon_alt || social.platform || ''}">
-                <i class="fab fa-${social.platform || 'link'}"></i>
-              </a>
-            `).join('')}
-          </div>
-        </div>
-      ` 
+    // Deduplificar redes sociais por platform e limitar a 6
+    const uniqueSocials = footerConfig.social_links && footerConfig.social_links.length > 0
+      ? footerConfig.social_links
+          .filter((s: any, i: number, arr: any[]) => arr.findIndex((x: any) => x.platform === s.platform) === i)
+          .slice(0, 6)
+      : [];
+    
+    const socialItems = uniqueSocials.length > 0
+      ? uniqueSocials.map((social: any) => `
+          <a href="${escapeHtml(social.href)}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(social.icon_alt || social.platform || '')}">
+            <i class="fab fa-${escapeHtml(social.platform || 'link')}"></i>
+          </a>
+        `).join('')
       : '';
+    
+    // Combinar Links + Sociais na coluna direita
+    linksHtml = `
+      <div class="footer-right-column">
+        ${linksItems ? `
+          <div class="footer-links-column">
+            <strong>Links Úteis</strong>
+            ${linksItems}
+          </div>
+        ` : ''}
+        ${socialItems ? `
+          <div class="footer-social-inline">
+            <strong>Redes Sociais</strong>
+            <div class="footer-social-links">
+              ${socialItems}
+            </div>
+          </div>
+        ` : ''}
+      </div>
+    `;
+    
+    // Social section vazio pois já está na coluna direita
+    socialHtml = '';
   } else {
     // Fallback padrão
     locationsHtml = `
-      <div class="footer-location">
-        <strong>${company}</strong>
-        ${streetAddress ? `<p><i class="fas fa-map-marker-alt"></i> ${streetAddress}${addressNumber ? `, ${addressNumber}` : ''}, ${city} - ${state}</p>` : ''}
-        ${phone ? `<p><i class="fas fa-phone"></i> ${phone}</p>` : ''}
-        ${email ? `<p><i class="fas fa-envelope"></i> ${email}</p>` : ''}
+      <div class="footer-locations-grid">
+        <div class="footer-location">
+          <strong>${escapeHtml(company)}</strong>
+          ${streetAddress ? `<p><i class="fas fa-map-marker-alt"></i> ${escapeHtml(streetAddress)}${addressNumber ? `, ${escapeHtml(addressNumber)}` : ''}, ${escapeHtml(city)} - ${escapeHtml(state)}</p>` : ''}
+          ${phone ? `<p><i class="fas fa-phone"></i> ${escapeHtml(phone)}</p>` : ''}
+          ${email ? `<p><i class="fas fa-envelope"></i> ${escapeHtml(email)}</p>` : ''}
+        </div>
       </div>
     `;
     
     linksHtml = `
-      <div class="footer-links-column">
-        <strong>Links Úteis</strong>
-        <a href="${websiteUrl}/politica-privacidade" rel="noopener">Política de Privacidade</a>
-        <a href="${websiteUrl}/termos" rel="noopener">Termos de Uso</a>
-        <a href="${websiteUrl}" rel="noopener">Site Principal</a>
-        <a href="https://loja.smartdent.com.br/" rel="noopener" target="_blank">Loja Online</a>
-      </div>
-    `;
-    
-    socialHtml = `
-      <div class="footer-social-section">
-        <strong>Redes Sociais</strong>
-        <div class="footer-social-links">
-          ${instagram ? `<a href="${instagram}" target="_blank" rel="noopener noreferrer" title="Instagram ${company}"><i class="fab fa-instagram"></i></a>` : ''}
-          ${youtube ? `<a href="${youtube}" target="_blank" rel="noopener noreferrer" title="YouTube ${company}"><i class="fab fa-youtube"></i></a>` : ''}
-          <a href="${ctaUrl}" target="_blank" rel="noopener noreferrer" title="WhatsApp ${company}"><i class="fab fa-whatsapp"></i></a>
+      <div class="footer-right-column">
+        <div class="footer-links-column">
+          <strong>Links Úteis</strong>
+          <a href="${websiteUrl}/politica-privacidade" rel="noopener">Política de Privacidade</a>
+          <a href="${websiteUrl}/termos" rel="noopener">Termos de Uso</a>
+          <a href="${websiteUrl}" rel="noopener">Site Principal</a>
+          <a href="https://loja.smartdent.com.br/" rel="noopener" target="_blank">Loja Online</a>
+        </div>
+        <div class="footer-social-inline">
+          <strong>Redes Sociais</strong>
+          <div class="footer-social-links">
+            ${instagram ? `<a href="${instagram}" target="_blank" rel="noopener noreferrer" title="Instagram ${escapeHtml(company)}"><i class="fab fa-instagram"></i></a>` : ''}
+            ${youtube ? `<a href="${youtube}" target="_blank" rel="noopener noreferrer" title="YouTube ${escapeHtml(company)}"><i class="fab fa-youtube"></i></a>` : ''}
+            <a href="${ctaUrl}" target="_blank" rel="noopener noreferrer" title="WhatsApp ${escapeHtml(company)}"><i class="fab fa-whatsapp"></i></a>
+          </div>
         </div>
       </div>
     `;
+    
+    socialHtml = '';
   }
   
   // ✅ CROSS-LINKS - Links para outras páginas publicadas
