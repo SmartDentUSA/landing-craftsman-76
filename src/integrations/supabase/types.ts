@@ -972,6 +972,42 @@ export type Database = {
         }
         Relationships: []
       }
+      knowledge_vectors: {
+        Row: {
+          chunk_type: string
+          content: string
+          created_at: string | null
+          embedding: string | null
+          id: string
+          metadata: Json | null
+          product_id: string
+          product_name: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          chunk_type: string
+          content: string
+          created_at?: string | null
+          embedding?: string | null
+          id?: string
+          metadata?: Json | null
+          product_id: string
+          product_name?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          chunk_type?: string
+          content?: string
+          created_at?: string | null
+          embedding?: string | null
+          id?: string
+          metadata?: Json | null
+          product_id?: string
+          product_name?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       landing_pages: {
         Row: {
           blog_generated: boolean | null
@@ -2088,6 +2124,24 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      match_knowledge_chunks: {
+        Args: {
+          filter_chunk_type?: string
+          filter_product_id?: string
+          match_count?: number
+          match_threshold?: number
+          query_embedding: string
+        }
+        Returns: {
+          chunk_type: string
+          content: string
+          id: string
+          metadata: Json
+          product_id: string
+          product_name: string
+          similarity: number
+        }[]
       }
       promote_user_to_admin: { Args: { _email: string }; Returns: boolean }
     }

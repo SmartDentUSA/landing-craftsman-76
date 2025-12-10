@@ -176,3 +176,9 @@ verify_jwt = true
 
 [functions.publish-product-blog-cloudflare]
 verify_jwt = true
+
+[functions.index-knowledge-base]
+verify_jwt = true
+
+[functions.rag-chat]
+verify_jwt = false
