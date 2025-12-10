@@ -9,7 +9,7 @@ const corsHeaders = {
 };
 
 interface KnowledgeBaseParams {
-  format?: 'json' | 'ai_training' | 'system_b';
+  format?: 'json' | 'ai_training' | 'system_b' | 'rag';
   include_company?: boolean;
   include_categories?: boolean;
   include_links?: boolean;
@@ -26,6 +26,41 @@ interface KnowledgeBaseParams {
   limit?: number;
   offset?: number;
 }
+
+// ============= UTILITY FUNCTIONS FOR LLM OPTIMIZATION =============
+
+/**
+ * Remove HTML tags and normalize text for token economy
+ */
+function stripHtml(html: string | null | undefined): string {
+  if (!html) return '';
+  return html
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Omit null, undefined, empty strings, empty arrays, and empty objects for token economy
+ */
+function omitEmpty(obj: Record<string, any>): Record<string, any> {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([_, v]) => 
+      v !== null && v !== undefined && v !== '' && 
+      !(Array.isArray(v) && v.length === 0) &&
+      !(typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length === 0)
+    )
+  );
+}
+
+// ============= FORMAT FUNCTIONS =============
 
 function formatAsJSON(data: any): any {
   return {
@@ -44,7 +79,7 @@ function formatForAITraining(data: any): string {
     const cp = data.company_profile;
     text += `## PERFIL DA EMPRESA\n\n`;
     text += `**Nome:** ${cp.company_name}\n`;
-    text += `**Descrição:** ${cp.company_description || 'N/A'}\n`;
+    text += `**Descrição:** ${stripHtml(cp.company_description) || 'N/A'}\n`;
     text += `**Setor:** ${cp.business_sector || 'N/A'}\n`;
     text += `**Missão:** ${cp.mission_statement || 'N/A'}\n`;
     text += `**Visão:** ${cp.vision_statement || 'N/A'}\n`;
@@ -380,6 +415,26 @@ function formatForAITraining(data: any): string {
         text += `**Keywords de Mercado:** ${cat.market_keywords.join(', ')}\n`;
       }
       
+      // ✅ Regras Anti-Alucinação da Categoria
+      if (cat.anti_hallucination_rules) {
+        const rules = cat.anti_hallucination_rules;
+        if (rules.never_claim?.length > 0 || rules.always_require?.length > 0 || rules.never_mix_with?.length > 0) {
+          text += `\n⚠️ REGRAS ANTI-ALUCINAÇÃO DA CATEGORIA:\n`;
+          if (rules.never_claim?.length > 0) {
+            text += `- NUNCA afirmar: ${rules.never_claim.join('; ')}\n`;
+          }
+          if (rules.never_mix_with?.length > 0) {
+            text += `- NUNCA misturar com: ${rules.never_mix_with.join('; ')}\n`;
+          }
+          if (rules.always_require?.length > 0) {
+            text += `- SEMPRE exigir: ${rules.always_require.join('; ')}\n`;
+          }
+          if (rules.always_explain?.length > 0) {
+            text += `- SEMPRE explicar: ${rules.always_explain.join('; ')}\n`;
+          }
+        }
+      }
+      
       text += `\n`;
     });
   }
@@ -408,11 +463,28 @@ function formatForAITraining(data: any): string {
     data.products.forEach((item: any) => {
       const p = item.product;
       text += `### ${p.name}\n`;
-      text += `**Descrição:** ${p.description || 'N/A'}\n`;
-      if (p.price) text += `**Preço:** R$ ${p.price}\n`;
-      if (p.promo_price) text += `**Preço Promocional:** R$ ${p.promo_price}\n`;
+      text += `**Descrição:** ${stripHtml(p.description) || 'N/A'}\n`;
+      
+      // ✅ Preço com fallback inteligente
+      const effectivePrice = p.promo_price || p.price;
+      if (effectivePrice) text += `**Preço:** R$ ${effectivePrice}\n`;
+      if (p.promo_price && p.price && p.price !== p.promo_price) {
+        text += `**Preço Original:** R$ ${p.price}\n`;
+      }
+      
       if (p.category) text += `**Categoria:** ${p.category}${p.subcategory ? ` > ${p.subcategory}` : ''}\n`;
       if (p.brand) text += `**Marca:** ${p.brand}\n`;
+      
+      // ✅ STATUS DE DESTAQUE (NOVO)
+      const statusBadges: string[] = [];
+      if (p.promotion) statusBadges.push('🏷️ EM PROMOÇÃO');
+      if (p.featured) statusBadges.push('⭐ DESTAQUE');
+      if (p.launch) statusBadges.push('🆕 LANÇAMENTO');
+      if (p.showcase) statusBadges.push('🎯 VITRINE');
+      if (p.free_shipping) statusBadges.push('🚚 FRETE GRÁTIS');
+      if (statusBadges.length > 0) {
+        text += `**Status:** ${statusBadges.join(' | ')}\n`;
+      }
       
       if (p.benefits && Array.isArray(p.benefits) && p.benefits.length > 0) {
         text += `**Benefícios:**\n`;
@@ -489,6 +561,7 @@ function formatForAITraining(data: any): string {
       if (p.gtin) text += `**GTIN:** ${p.gtin}\n`;
       if (p.mpn) text += `**MPN:** ${p.mpn}\n`;
       if (p.ean) text += `**EAN:** ${p.ean}\n`;
+      if (p.ncm) text += `**NCM:** ${p.ncm}\n`;
       if (p.google_product_category) text += `**Google Product Category:** ${p.google_product_category}\n`;
       if (p.availability) text += `**Disponibilidade:** ${p.availability}\n`;
       if (p.condition) text += `**Condição:** ${p.condition}\n`;
@@ -568,10 +641,54 @@ function formatForAITraining(data: any): string {
         });
       }
       
+      // ✅ FAQ com HTML removido
       if (p.faq && Array.isArray(p.faq) && p.faq.length > 0) {
         text += `**FAQ:**\n`;
         p.faq.forEach((faq: any) => {
-          text += `Q: ${faq.question}\nA: ${faq.answer}\n\n`;
+          text += `Q: ${faq.question}\nA: ${stripHtml(faq.answer)}\n\n`;
+        });
+      }
+      
+      // ✅ REGRAS ANTI-ALUCINAÇÃO (CRÍTICO PARA LLMs)
+      if (p.anti_hallucination_rules) {
+        const rules = p.anti_hallucination_rules;
+        const hasRules = rules.never_claim?.length > 0 || rules.never_mix_with?.length > 0 || 
+                        rules.always_require?.length > 0 || rules.always_explain?.length > 0 ||
+                        rules.never_use_in_stages?.length > 0;
+        
+        if (hasRules) {
+          text += `\n⚠️ REGRAS ANTI-ALUCINAÇÃO:\n`;
+          if (rules.never_claim?.length > 0) {
+            text += `**NUNCA afirmar:** ${rules.never_claim.join('; ')}\n`;
+          }
+          if (rules.never_mix_with?.length > 0) {
+            text += `**NUNCA misturar com:** ${rules.never_mix_with.join('; ')}\n`;
+          }
+          if (rules.always_require?.length > 0) {
+            text += `**SEMPRE exigir:** ${rules.always_require.join('; ')}\n`;
+          }
+          if (rules.always_explain?.length > 0) {
+            text += `**SEMPRE explicar:** ${rules.always_explain.join('; ')}\n`;
+          }
+          if (rules.never_use_in_stages?.length > 0) {
+            text += `**NUNCA usar nas etapas:** ${rules.never_use_in_stages.join('; ')}\n`;
+          }
+        }
+      }
+      
+      // ✅ PRODUTOS REQUERIDOS (para cross-sell correto)
+      if (p.required_products && Array.isArray(p.required_products) && p.required_products.length > 0) {
+        text += `\n🔗 PRODUTOS REQUERIDOS (sempre recomendar junto):\n`;
+        p.required_products.forEach((rp: any) => {
+          text += `- ${rp.product_name || rp.name}: ${rp.context || rp.reason || 'Complementar'}\n`;
+        });
+      }
+      
+      // ✅ PRODUTOS PROIBIDOS (NUNCA misturar)
+      if (p.forbidden_products && Array.isArray(p.forbidden_products) && p.forbidden_products.length > 0) {
+        text += `\n🚫 PRODUTOS PROIBIDOS (NUNCA misturar):\n`;
+        p.forbidden_products.forEach((fp: any) => {
+          text += `- ${fp.product_name || fp.name}: ${fp.reason || 'Incompatível'}\n`;
         });
       }
       
@@ -616,12 +733,7 @@ function formatForAITraining(data: any): string {
         text += `**Descrição E-commerce (Gerada por IA):**\n`;
         
         // Preview do HTML (sem tags) - limitado a 500 caracteres
-        const htmlPreview = p.ecommerce_html.html_content
-          .replace(/<[^>]*>/g, '')
-          .replace(/&nbsp;/g, ' ')
-          .replace(/&amp;/g, '&')
-          .replace(/\s+/g, ' ')
-          .trim();
+        const htmlPreview = stripHtml(p.ecommerce_html.html_content);
         text += `${htmlPreview.substring(0, 500)}...\n\n`;
         
         // Benefícios E-commerce específicos
@@ -731,12 +843,12 @@ function formatForAITraining(data: any): string {
         text += `\n📰 CONTEÚDO DE BLOG INDIVIDUAL:\n`;
         if (p.individual_blog_content.technical) {
           text += `  Blog Técnico:\n`;
-          const technicalPreview = p.individual_blog_content.technical.substring(0, 500);
+          const technicalPreview = stripHtml(p.individual_blog_content.technical).substring(0, 500);
           text += `  ${technicalPreview}${p.individual_blog_content.technical.length > 500 ? '...' : ''}\n\n`;
         }
         if (p.individual_blog_content.commercial) {
           text += `  Blog Comercial:\n`;
-          const commercialPreview = p.individual_blog_content.commercial.substring(0, 500);
+          const commercialPreview = stripHtml(p.individual_blog_content.commercial).substring(0, 500);
           text += `  ${commercialPreview}${p.individual_blog_content.commercial.length > 500 ? '...' : ''}\n\n`;
         }
       }
@@ -758,7 +870,7 @@ function formatForAITraining(data: any): string {
         // Dados da tabela
         const tableData = p.competitor_comparison.table_data || [];
         tableData.forEach((row: any) => {
-          const cells = headers.map(header => row[header] || '-');
+          const cells = headers.map((header: string) => row[header] || '-');
           text += `| ${cells.join(' | ')} |\n`;
         });
         text += `\n`;
@@ -820,26 +932,24 @@ function formatForAITraining(data: any): string {
     data.video_testimonials.forEach((testimonial: any) => {
       text += `### ${testimonial.client_name}\n`;
       if (testimonial.profession) text += `**Profissão:** ${testimonial.profession}\n`;
-      if (testimonial.location) text += `**Localização:** ${testimonial.location}${testimonial.state ? `, ${testimonial.state}` : ''}\n`;
-      if (testimonial.specialty) text += `**Especialidade:** ${testimonial.specialty}\n`;
-      text += `**Depoimento:**\n${testimonial.testimonial_text}\n`;
-      if (testimonial.youtube_url) text += `**YouTube:** ${testimonial.youtube_url}\n`;
-      if (testimonial.instagram_url) text += `**Instagram:** ${testimonial.instagram_url}\n`;
-      if (testimonial.sentiment_score) text += `**Sentimento:** ${testimonial.sentiment_score}\n`;
+      if (testimonial.city) text += `**Cidade:** ${testimonial.city}\n`;
+      if (testimonial.video_url) text += `**Vídeo:** ${testimonial.video_url}\n`;
+      if (testimonial.testimonial_text) text += `**Depoimento:** ${testimonial.testimonial_text}\n`;
       text += `\n`;
     });
   }
   
   // Google Reviews
   if (data.google_reviews && Array.isArray(data.google_reviews)) {
-    text += `## AVALIAÇÕES DO GOOGLE (${data.google_reviews.length})\n\n`;
+    text += `## AVALIAÇÕES GOOGLE (${data.google_reviews.length})\n\n`;
     data.google_reviews.forEach((review: any) => {
       const raw = review.raw_review;
-      text += `### ${raw.author_name} - ${raw.rating}⭐\n`;
-      text += `**Data:** ${raw.review_date}\n`;
-      if (raw.review_text) text += `**Avaliação:** ${raw.review_text}\n`;
-      if (raw.response_from_owner) text += `**Resposta:** ${raw.response_from_owner}\n`;
-      text += `\n`;
+      if (raw) {
+        text += `### ${raw.author_name} - ${raw.rating}⭐\n`;
+        if (raw.review_text) text += `"${raw.review_text}"\n`;
+        if (raw.relative_time) text += `*${raw.relative_time}*\n`;
+        text += `\n`;
+      }
     });
   }
   
@@ -849,9 +959,7 @@ function formatForAITraining(data: any): string {
     data.key_opinion_leaders.forEach((kol: any) => {
       text += `### ${kol.full_name}\n`;
       if (kol.specialty) text += `**Especialidade:** ${kol.specialty}\n`;
-      if (kol.mini_cv) text += `**Mini CV:** ${kol.mini_cv}\n`;
-      if (kol.lattes_url) text += `**Lattes:** ${kol.lattes_url}\n`;
-      if (kol.website_url) text += `**Website:** ${kol.website_url}\n`;
+      if (kol.mini_cv) text += `**Mini-CV:** ${kol.mini_cv}\n`;
       if (kol.instagram_url) text += `**Instagram:** ${kol.instagram_url}\n`;
       if (kol.youtube_url) text += `**YouTube:** ${kol.youtube_url}\n`;
       text += `\n`;
@@ -861,41 +969,78 @@ function formatForAITraining(data: any): string {
   // SPIN Selling Solutions
   if (data.spin_solutions && Array.isArray(data.spin_solutions)) {
     text += `## SOLUÇÕES SPIN SELLING (${data.spin_solutions.length})\n\n`;
-    
     data.spin_solutions.forEach((solution: any) => {
       text += `### ${solution.title}\n`;
       text += `**Tipo de Dor:** ${solution.pain_type}\n`;
-      text += `**Prioridade:** ${solution.priority}\n`;
-      text += `**Frequência:** ${solution.frequency || 'N/A'}\n\n`;
+      if (solution.frequency) text += `**Frequência:** ${solution.frequency}\n`;
+      if (solution.priority) text += `**Prioridade:** ${solution.priority}\n`;
       
-      // PITCH DE VENDAS (campo mais importante)
+      // Sales Pitch
       if (solution.sales_pitch) {
-        text += `**Pitch de Vendas Completo:**\n`;
-        text += `${solution.sales_pitch}\n\n`;
+        text += `**Pitch de Vendas:** ${solution.sales_pitch}\n`;
+      }
+      
+      // Storytelling
+      if (solution.storytelling_auto_generated) {
+        text += `**Storytelling:** ${solution.storytelling_auto_generated}\n`;
+      }
+      
+      // JORNADA SPIN
+      if (solution.spin_journey) {
+        text += `**Jornada SPIN:**\n`;
+        if (solution.spin_journey.situation) {
+          text += `- Situação: ${solution.spin_journey.situation}\n`;
+        }
+        if (solution.spin_journey.problem) {
+          text += `- Problema: ${solution.spin_journey.problem}\n`;
+        }
+        if (solution.spin_journey.implication) {
+          text += `- Implicação: ${solution.spin_journey.implication}\n`;
+        }
+        if (solution.spin_journey.need_payoff) {
+          text += `- Necessidade/Solução: ${solution.spin_journey.need_payoff}\n`;
+        }
+        text += `\n`;
+      }
+      
+      // LABELS PERSONALIZADOS DA JORNADA
+      if (solution.spin_journey_labels) {
+        text += `**Labels da Jornada:**\n`;
+        Object.entries(solution.spin_journey_labels).forEach(([key, value]: [string, any]) => {
+          if (value) text += `- ${key}: ${value}\n`;
+        });
+        text += `\n`;
       }
       
       // CASOS DE SUCESSO
       if (solution.success_cases && solution.success_cases.length > 0) {
-        text += `**Casos de Sucesso (${solution.success_cases.length}):**\n`;
-        solution.success_cases.forEach((sc: any, index: number) => {
-          text += `${index + 1}. ${sc.client_name} - ${sc.specialty}\n`;
-          text += `   Local: ${sc.city}, ${sc.state}\n`;
-          text += `   Resultados: ${sc.results_achieved}\n`;
-          if (sc.usage_time) text += `   Tempo de uso: ${sc.usage_time}\n`;
-          if (sc.instagram) text += `   Instagram: ${sc.instagram}\n`;
-          text += `\n`;
+        text += `**Casos de Sucesso:**\n`;
+        solution.success_cases.forEach((sc: any) => {
+          text += `- ${sc.title || 'Caso'}: ${sc.description || sc.result}\n`;
         });
+        text += `\n`;
       }
       
-      // CITAÇÕES REAIS DE CLIENTES (Jornada SPIN)
+      // CITAÇÕES REAIS
       if (solution.real_quotes && solution.real_quotes.length > 0) {
-        text += `**Depoimentos SPIN (${solution.real_quotes.length}):**\n`;
-        solution.real_quotes.forEach((quote: any, index: number) => {
-          text += `${index + 1}. ${quote.client_name}\n`;
-          text += `   Desejo: "${quote.desire}"\n`;
-          text += `   Dor: "${quote.pain}"\n`;
-          text += `   Resultado Esperado: "${quote.expected_result}"\n\n`;
+        text += `**Citações Reais de Clientes:**\n`;
+        solution.real_quotes.forEach((quote: any) => {
+          text += `- "${quote.quote}" - ${quote.author || 'Cliente'}\n`;
         });
+        text += `\n`;
+      }
+      
+      // MÉTRICAS DE IMPACTO
+      if (solution.impact_metrics && Object.keys(solution.impact_metrics).length > 0) {
+        text += `**Métricas de Impacto:**\n`;
+        Object.entries(solution.impact_metrics).forEach(([key, value]: [string, any]) => {
+          if (typeof value === 'object' && value.label) {
+            text += `- ${value.label}: ${value.value} ${value.unit}\n`;
+          } else {
+            text += `- ${key}: ${value}\n`;
+          }
+        });
+        text += `\n`;
       }
       
       // TABELA DE COMPARAÇÃO COM CONCORRENTES
@@ -915,7 +1060,7 @@ function formatForAITraining(data: any): string {
         // Dados da tabela
         const tableData = solution.competitor_comparison.table_data || [];
         tableData.forEach((row: any) => {
-          const cells = headers.map(header => row[header] || '-');
+          const cells = headers.map((header: string) => row[header] || '-');
           text += `| ${cells.join(' | ')} |\n`;
         });
         text += `\n`;
@@ -939,7 +1084,7 @@ function formatForAITraining(data: any): string {
         text += `**Perguntas Frequentes (${solution.faq.length}):**\n`;
         solution.faq.forEach((faq: any, index: number) => {
           text += `Q${index + 1}: ${faq.question}\n`;
-          text += `A${index + 1}: ${faq.answer}\n\n`;
+          text += `A${index + 1}: ${stripHtml(faq.answer)}\n\n`;
         });
       }
       
@@ -988,9 +1133,9 @@ function formatForAITraining(data: any): string {
       if (post.youtube_video_url) {
         text += `**Vídeo YouTube:** ${post.youtube_video_url}\n`;
       }
-      // Preview do conteúdo (primeiros 300 caracteres)
+      // Preview do conteúdo (primeiros 300 caracteres) - limpo de HTML
       if (post.content) {
-        const preview = post.content.replace(/<[^>]*>/g, '').substring(0, 300);
+        const preview = stripHtml(post.content).substring(0, 300);
         text += `**Preview:** ${preview}...\n`;
       }
       text += `\n`;
@@ -1063,6 +1208,178 @@ function formatForAITraining(data: any): string {
   }
   
   return text;
+}
+
+// ============= NEW RAG FORMAT - OPTIMIZED FOR LLMs =============
+
+function formatForRAG(data: any): any {
+  // Process products with optimizations
+  const products = data.products?.map((item: any) => {
+    const p = item.product;
+    
+    // Price: ensure non-zero value with fallback
+    const effectivePrice = p.promo_price || p.price || null;
+    
+    // Technical Specs: structured as key/value
+    const techSpecs = Array.isArray(p.technical_specifications) 
+      ? p.technical_specifications.map((s: any) => ({
+          key: s.label || s.name || s.key,
+          value: s.value
+        }))
+      : [];
+    
+    // FAQ: answers cleaned of HTML
+    const cleanFaq = Array.isArray(p.faq) 
+      ? p.faq.map((f: any) => ({
+          question: f.question?.trim(),
+          answer: stripHtml(f.answer)
+        }))
+      : [];
+    
+    // Anti-hallucination consolidated
+    const antiHallucination = omitEmpty({
+      never_claim: p.anti_hallucination_rules?.never_claim,
+      never_mix_with: p.anti_hallucination_rules?.never_mix_with,
+      always_require: p.anti_hallucination_rules?.always_require,
+      always_explain: p.anti_hallucination_rules?.always_explain,
+      never_use_in_stages: p.anti_hallucination_rules?.never_use_in_stages,
+      required_products: p.required_products?.map((rp: any) => ({
+        name: rp.product_name || rp.name,
+        context: rp.context || rp.reason
+      })),
+      forbidden_products: p.forbidden_products?.map((fp: any) => ({
+        name: fp.product_name || fp.name,
+        reason: fp.reason
+      }))
+    });
+    
+    // Status flags consolidated
+    const statusFlags = omitEmpty({
+      promotion: p.promotion || undefined,
+      featured: p.featured || undefined,
+      launch: p.launch || undefined,
+      showcase: p.showcase || undefined,
+      free_shipping: p.free_shipping || undefined
+    });
+    
+    // Competitor comparison (if enabled)
+    const competitorComparison = (p.competitor_comparison?.enabled && p.competitor_comparison?.table_data?.length > 0) 
+      ? {
+          title: p.competitor_comparison.title,
+          subtitle: p.competitor_comparison.subtitle,
+          headers: p.competitor_comparison.table_headers,
+          data: p.competitor_comparison.table_data
+        }
+      : undefined;
+    
+    return omitEmpty({
+      id: p.id,
+      name: p.name,
+      description: stripHtml(p.description),
+      price: effectivePrice,
+      original_price: (p.promo_price && p.price && p.price !== p.promo_price) ? p.price : undefined,
+      category: p.category,
+      subcategory: p.subcategory,
+      brand: p.brand,
+      gtin: p.gtin,
+      mpn: p.mpn,
+      ean: p.ean,
+      ncm: p.ncm,
+      product_url: p.product_url,
+      image_url: p.image_url,
+      slug: p.slug,
+      sales_pitch: p.sales_pitch,
+      applications: p.applications,
+      technical_specifications: techSpecs.length > 0 ? techSpecs : undefined,
+      benefits: p.benefits?.length > 0 ? p.benefits : undefined,
+      features: p.features?.length > 0 ? p.features : undefined,
+      faq: cleanFaq.length > 0 ? cleanFaq : undefined,
+      keywords: p.keywords?.length > 0 ? p.keywords : undefined,
+      market_keywords: p.market_keywords?.length > 0 ? p.market_keywords : undefined,
+      target_audience: p.target_audience?.length > 0 ? p.target_audience : undefined,
+      bot_trigger_words: p.bot_trigger_words?.length > 0 ? p.bot_trigger_words : undefined,
+      anti_hallucination: Object.keys(antiHallucination).length > 0 ? antiHallucination : undefined,
+      status: Object.keys(statusFlags).length > 0 ? statusFlags : undefined,
+      competitor_comparison: competitorComparison,
+      completion_score: item.completion_score?.completion_score
+    });
+  }) || [];
+  
+  // Process company profile with optimizations
+  const company = data.company_profile ? omitEmpty({
+    name: data.company_profile.company_name,
+    description: stripHtml(data.company_profile.company_description),
+    sector: data.company_profile.business_sector,
+    mission: data.company_profile.mission_statement,
+    vision: data.company_profile.vision_statement,
+    values: data.company_profile.brand_values,
+    differentiators: data.company_profile.differentiators,
+    target_audience: data.company_profile.target_audience,
+    website: data.company_profile.website_url,
+    contact_email: data.company_profile.contact_email,
+    contact_phone: data.company_profile.contact_phone,
+    location: data.company_profile.location,
+    city: data.company_profile.city,
+    state: data.company_profile.state
+  }) : undefined;
+  
+  // Process categories with anti-hallucination rules
+  const categories = data.categories_config?.map((cat: any) => {
+    const antiHallucination = omitEmpty({
+      never_claim: cat.anti_hallucination_rules?.never_claim,
+      never_mix_with: cat.anti_hallucination_rules?.never_mix_with,
+      always_require: cat.anti_hallucination_rules?.always_require,
+      always_explain: cat.anti_hallucination_rules?.always_explain
+    });
+    
+    return omitEmpty({
+      category: cat.category,
+      subcategory: cat.subcategory,
+      keywords: cat.keywords?.length > 0 ? cat.keywords : undefined,
+      market_keywords: cat.market_keywords?.length > 0 ? cat.market_keywords : undefined,
+      target_audience: cat.target_audience?.length > 0 ? cat.target_audience : undefined,
+      anti_hallucination: Object.keys(antiHallucination).length > 0 ? antiHallucination : undefined
+    });
+  }) || [];
+  
+  // Process SPIN solutions
+  const spinSolutions = data.spin_solutions?.map((sol: any) => omitEmpty({
+    id: sol.id,
+    title: sol.title,
+    pain_type: sol.pain_type,
+    frequency: sol.frequency,
+    sales_pitch: sol.sales_pitch,
+    storytelling: sol.storytelling_auto_generated,
+    spin_journey: sol.spin_journey,
+    product_ids: sol.product_ids?.length > 0 ? sol.product_ids : undefined,
+    faq: sol.faq?.map((f: any) => ({
+      question: f.question,
+      answer: stripHtml(f.answer)
+    }))
+  })) || [];
+
+  return {
+    api_version: "2.0.0",
+    format: "rag_optimized",
+    optimization_notes: [
+      "HTML removed from descriptions and FAQs",
+      "Empty fields omitted for token economy",
+      "Technical specifications structured as key/value pairs",
+      "Anti-hallucination rules consolidated per product and category",
+      "Price with intelligent fallback to promo_price",
+      "Status flags (promotion, featured, launch) included"
+    ],
+    timestamp: new Date().toISOString(),
+    data: omitEmpty({
+      company,
+      categories: categories.length > 0 ? categories : undefined,
+      products,
+      spin_solutions: spinSolutions.length > 0 ? spinSolutions : undefined,
+      total_products: products.length,
+      total_categories: categories.length,
+      total_spin_solutions: spinSolutions.length
+    })
+  };
 }
 
 function formatForSystemB(data: any): any {
@@ -1267,6 +1584,10 @@ serve(async (req) => {
     let contentType = 'application/json';
     
     switch (params.format) {
+      case 'rag':
+        console.log('🤖 Formatting for RAG/LLM optimization...');
+        response = formatForRAG(data);
+        break;
       case 'ai_training':
         response = formatForAITraining(data);
         contentType = 'text/plain';
