@@ -39,11 +39,14 @@ serve(async (req) => {
     // Generate ad copies using AI
     const adCopies = await generateAdCopies(finalLandingPageData, keywords);
 
-    // Build CSV
+    // ✅ NOVO: Criar múltiplos Ad Groups por intenção
+    const adGroups = createSmartAdGroups(keywords, finalLandingPageData.name);
+    
+    // Build CSV with multiple Ad Groups
     const csvData = buildGoogleAdsCSV({
-      campaignName: `LP ${finalLandingPageData.name} - Search`,
+      campaignName: `Campaign_${finalLandingPageData.name.replace(/\s+/g, '_')}`,
       config,
-      keywords,
+      adGroups, // ✅ NOVO: Passar Ad Groups em vez de keywords
       adCopies,
       sitelinks,
       videos,
@@ -57,11 +60,23 @@ serve(async (req) => {
       last_exported: new Date().toISOString()
     });
 
-    console.log('✅ CSV gerado com sucesso');
+    // Gerar estatísticas do CSV
+    const stats = {
+      adGroupsCount: adGroups.length,
+      totalKeywords: keywords.length,
+      matchTypeDistribution: {
+        exact: keywords.filter(k => k.match_type === 'EXACT').length,
+        phrase: keywords.filter(k => k.match_type === 'PHRASE').length,
+        broad: keywords.filter(k => k.match_type === 'BROAD').length
+      }
+    };
+    
+    console.log('✅ CSV gerado com sucesso:', stats);
 
     return new Response(JSON.stringify({ 
       csv: csvData,
-      warnings: [] // TODO: Implement validation warnings
+      stats,
+      warnings: []
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -157,6 +172,167 @@ interface KeywordWithMatchType {
   match_type: 'BROAD' | 'PHRASE' | 'EXACT';
   source: string;
   keyword_type?: string;
+  search_intent?: 'commercial' | 'informational' | 'product' | 'general';
+}
+
+interface AdGroup {
+  name: string;
+  theme: 'commercial' | 'informational' | 'product' | 'general';
+  keywords: KeywordWithMatchType[];
+}
+
+// ✅ NOVO: Detectar intenção de busca da keyword
+function detectSearchIntent(keyword: string): 'commercial' | 'informational' | 'product' | 'general' {
+  const commercialTerms = ['comprar', 'preço', 'valor', 'custo', 'oferta', 'promoção', 'desconto', 'loja', 'venda', 'onde comprar', 'melhor preço'];
+  const informationalTerms = ['como', 'o que é', 'qual', 'porque', 'quando', 'para que serve', 'benefícios', 'vantagens', 'diferença'];
+  
+  const lowerKeyword = keyword.toLowerCase();
+  
+  if (commercialTerms.some(term => lowerKeyword.includes(term))) {
+    return 'commercial';
+  }
+  if (informationalTerms.some(term => lowerKeyword.includes(term))) {
+    return 'informational';
+  }
+  
+  // Keywords de produto: contém nome de marca/modelo específico
+  if (/rayshape|medit|3shape|exocad|scanner|impressora/i.test(keyword)) {
+    return 'product';
+  }
+  
+  return 'general';
+}
+
+// ✅ NOVO: Criar múltiplos Ad Groups por intenção
+function createSmartAdGroups(keywords: KeywordWithMatchType[], productName: string): AdGroup[] {
+  const sanitizedName = productName.replace(/[^a-zA-Z0-9\s]/g, '').substring(0, 30);
+  
+  const adGroups: AdGroup[] = [
+    {
+      name: `AG_COMERCIAL_${sanitizedName}`.replace(/\s+/g, '_'),
+      theme: 'commercial',
+      keywords: keywords.filter(k => k.search_intent === 'commercial')
+    },
+    {
+      name: `AG_INFORMACIONAL_${sanitizedName}`.replace(/\s+/g, '_'),
+      theme: 'informational',
+      keywords: keywords.filter(k => k.search_intent === 'informational')
+    },
+    {
+      name: `AG_PRODUTO_${sanitizedName}`.replace(/\s+/g, '_'),
+      theme: 'product',
+      keywords: keywords.filter(k => k.search_intent === 'product')
+    }
+  ].filter(ag => ag.keywords.length > 0);
+  
+  // Se nenhum grupo foi criado, criar um grupo geral
+  if (adGroups.length === 0) {
+    adGroups.push({
+      name: `AG_GERAL_${sanitizedName}`.replace(/\s+/g, '_'),
+      theme: 'general',
+      keywords: keywords
+    });
+  }
+  
+  console.log(`✅ ${adGroups.length} Ad Groups criados:`, adGroups.map(ag => `${ag.name} (${ag.keywords.length} keywords)`));
+  
+  return adGroups;
+}
+
+// ✅ NOVO: Balancear match types automaticamente
+function balanceMatchTypes(keywords: KeywordWithMatchType[]): KeywordWithMatchType[] {
+  // Distribuição ideal: 30% EXACT, 50% PHRASE, 20% BROAD
+  const totalKeywords = keywords.length;
+  const targetExact = Math.ceil(totalKeywords * 0.3);
+  const targetBroad = Math.ceil(totalKeywords * 0.2);
+  
+  let exactCount = 0;
+  let broadCount = 0;
+  
+  return keywords.map(k => {
+    // Manter EXACT para brand keywords e manual
+    if (k.source === 'manual' || k.keyword_type === 'brand') {
+      return k;
+    }
+    
+    // Manter original se for keyword muito específica (longtail)
+    if (k.keyword_type === 'longtail' || k.text.split(' ').length >= 4) {
+      return { ...k, match_type: 'EXACT' };
+    }
+    
+    // Balancear restante
+    if (k.search_intent === 'commercial' && exactCount < targetExact) {
+      exactCount++;
+      return { ...k, match_type: 'EXACT' };
+    }
+    
+    if (k.search_intent === 'informational' && broadCount < targetBroad) {
+      broadCount++;
+      return { ...k, match_type: 'BROAD' };
+    }
+    
+    return k; // Manter PHRASE como default
+  });
+}
+
+// ✅ NOVO: Expandir keywords com variações
+function expandKeywords(baseKeywords: KeywordWithMatchType[], productName: string, category?: string): KeywordWithMatchType[] {
+  const expanded: KeywordWithMatchType[] = [...baseKeywords];
+  const existingTexts = new Set(baseKeywords.map(k => k.text.toLowerCase()));
+  
+  // Gerar variações comerciais
+  const commercialPrefixes = ['comprar', 'preço', 'onde comprar', 'melhor'];
+  const commercialSuffixes = ['oferta', 'promoção', 'preço baixo'];
+  
+  // Adicionar variações de produto
+  if (productName && !existingTexts.has(productName.toLowerCase())) {
+    expanded.push({
+      text: productName.toLowerCase(),
+      match_type: 'EXACT',
+      source: 'expanded',
+      search_intent: 'product'
+    });
+    
+    // Variações comerciais do produto
+    commercialPrefixes.forEach(prefix => {
+      const variation = `${prefix} ${productName}`.toLowerCase();
+      if (!existingTexts.has(variation) && variation.length <= 80) {
+        expanded.push({
+          text: variation,
+          match_type: 'PHRASE',
+          source: 'expanded',
+          search_intent: 'commercial'
+        });
+        existingTexts.add(variation);
+      }
+    });
+  }
+  
+  // Adicionar variações de categoria
+  if (category && !existingTexts.has(category.toLowerCase())) {
+    expanded.push({
+      text: category.toLowerCase(),
+      match_type: 'BROAD',
+      source: 'expanded',
+      search_intent: 'informational'
+    });
+    
+    commercialPrefixes.slice(0, 2).forEach(prefix => {
+      const variation = `${prefix} ${category}`.toLowerCase();
+      if (!existingTexts.has(variation) && variation.length <= 80) {
+        expanded.push({
+          text: variation,
+          match_type: 'PHRASE',
+          source: 'expanded',
+          search_intent: 'commercial'
+        });
+        existingTexts.add(variation);
+      }
+    });
+  }
+  
+  console.log(`✅ Keywords expandidas: ${baseKeywords.length} → ${expanded.length}`);
+  return expanded;
 }
 
 async function collectKeywords(supabase: any, landingPageData: any, config: any, selectedProductIds: string[] = []): Promise<KeywordWithMatchType[]> {
@@ -174,11 +350,13 @@ async function collectKeywords(supabase: any, landingPageData: any, config: any,
     if (externalLinks && externalLinks.length > 0) {
       externalLinks.forEach((link: any) => {
         if (link.name && typeof link.name === 'string') {
+          const text = link.name.trim().toLowerCase();
           keywords.push({
-            text: link.name.trim().toLowerCase(),
+            text,
             match_type: mapKeywordTypeToMatchType(link.keyword_type, link.search_intent, 'external_links'),
             source: 'external_links',
-            keyword_type: link.keyword_type
+            keyword_type: link.keyword_type,
+            search_intent: detectSearchIntent(text)
           });
         }
         // related_keywords herdam o mesmo match_type
@@ -186,11 +364,13 @@ async function collectKeywords(supabase: any, landingPageData: any, config: any,
           link.related_keywords
             .filter((k: any) => typeof k === 'string')
             .forEach((k: string) => {
+              const text = k.trim().toLowerCase();
               keywords.push({
-                text: k.trim().toLowerCase(),
+                text,
                 match_type: mapKeywordTypeToMatchType(link.keyword_type, link.search_intent, 'external_links'),
                 source: 'external_links',
-                keyword_type: link.keyword_type
+                keyword_type: link.keyword_type,
+                search_intent: detectSearchIntent(text)
               });
             });
         }
@@ -205,18 +385,30 @@ async function collectKeywords(supabase: any, landingPageData: any, config: any,
   // AI keywords = PHRASE por padrão
   if (config.include_ai_keywords && landingPageData.ai_keywords) {
     collectFromAI(landingPageData.ai_keywords).forEach(k => {
-      keywords.push({ text: k, match_type: 'PHRASE', source: 'ai' });
+      keywords.push({ 
+        text: k, 
+        match_type: 'PHRASE', 
+        source: 'ai',
+        search_intent: detectSearchIntent(k)
+      });
     });
   }
 
   // FAQ keywords = PHRASE (perguntas específicas)
   if (config.include_faq_longtail && landingPageData.faq) {
     collectFromFAQ(landingPageData.faq).forEach(k => {
-      keywords.push({ text: k, match_type: 'PHRASE', source: 'faq' });
+      keywords.push({ 
+        text: k, 
+        match_type: 'PHRASE', 
+        source: 'faq',
+        search_intent: 'informational'
+      });
     });
   }
 
   // Product keywords = PHRASE
+  let productName = '';
+  let productCategory = '';
   if (selectedProductIds.length > 0) {
     try {
       const { data: products } = await supabase
@@ -225,9 +417,17 @@ async function collectKeywords(supabase: any, landingPageData: any, config: any,
         .in('id', selectedProductIds)
         .eq('approved', true);
 
-      if (products) {
+      if (products && products.length > 0) {
+        productName = products[0].name || '';
+        productCategory = products[0].category || '';
+        
         collectFromProducts(products).forEach(k => {
-          keywords.push({ text: k, match_type: 'PHRASE', source: 'product' });
+          keywords.push({ 
+            text: k, 
+            match_type: 'PHRASE', 
+            source: 'product',
+            search_intent: detectSearchIntent(k)
+          });
         });
       }
     } catch (error) {
@@ -252,7 +452,12 @@ async function collectKeywords(supabase: any, landingPageData: any, config: any,
           .slice(0, 10);
         
         extractedKeywords.forEach(k => {
-          keywords.push({ text: k, match_type: 'PHRASE', source: 'review' });
+          keywords.push({ 
+            text: k, 
+            match_type: 'PHRASE', 
+            source: 'review',
+            search_intent: 'general'
+          });
         });
       });
       
@@ -267,13 +472,28 @@ async function collectKeywords(supabase: any, landingPageData: any, config: any,
     config.extra_keywords
       .filter((k: any) => typeof k === 'string')
       .forEach((k: string) => {
-        keywords.push({ text: k.trim().toLowerCase(), match_type: 'EXACT', source: 'manual' });
+        keywords.push({ 
+          text: k.trim().toLowerCase(), 
+          match_type: 'EXACT', 
+          source: 'manual',
+          search_intent: detectSearchIntent(k)
+        });
       });
   }
 
   console.log(`📊 Total keywords coletadas antes do filtro: ${keywords.length}`);
-  const result = deduplicateKeywords(keywords);
-  console.log(`✅ Keywords após deduplicateKeywords (com isValidKeyword): ${result.length}`);
+  
+  // Deduplicate e validar
+  let result = deduplicateKeywords(keywords);
+  
+  // ✅ NOVO: Expandir keywords
+  const lpName = landingPageData.name || productName || '';
+  result = expandKeywords(result, lpName, productCategory);
+  
+  // ✅ NOVO: Balancear match types
+  result = balanceMatchTypes(result);
+  
+  console.log(`✅ Keywords após processamento completo: ${result.length}`);
   
   return result;
 }
@@ -562,9 +782,9 @@ async function generateAdCopies(landingPageData: any, keywords: string[]) {
   };
 }
 
-// ✅ buildGoogleAdsCSV - Row Type Format with COL Constants
+// ✅ buildGoogleAdsCSV - Row Type Format with Multiple Ad Groups
 function buildGoogleAdsCSV(params: any): string {
-  const { campaignName, config, keywords, adCopies, sitelinks, videos, finalUrl } = params;
+  const { campaignName, config, adGroups, adCopies, sitelinks, videos, finalUrl } = params;
 
   function sanitizeText(text: string, maxLength: number): string {
     if (!text || !text.trim()) return '';
@@ -601,11 +821,11 @@ function buildGoogleAdsCSV(params: any): string {
     'Bid strategy type',
     'Location',
     'Language',
-    'EU political ads',  // ✅ OBRIGATÓRIO - Campo obrigatório no Editor
+    'EU political ads',
     'Ad Group',
     'Keyword',
-    'Type',              // ✅ CORRIGIDO - Match type de keywords
-    'Ad type',           // ✅ NOVO - Obrigatório para linhas de anúncio
+    'Type',
+    'Ad type',
     'Final URL',
     'Path 1',
     'Path 2',
@@ -624,16 +844,16 @@ function buildGoogleAdsCSV(params: any): string {
     BID_STRATEGY: 4,
     LOCATION: 5,
     LANGUAGE: 6,
-    EU_POLITICAL: 7,     // ✅ NOVO - EU political ads
+    EU_POLITICAL: 7,
     AD_GROUP: 8,
     KEYWORD: 9,
-    TYPE: 10,            // ✅ Match type para keywords
-    AD_TYPE: 11,         // ✅ NOVO - Ad type para anúncios
+    TYPE: 10,
+    AD_TYPE: 11,
     FINAL_URL: 12,
     PATH_1: 13,
     PATH_2: 14,
-    HEADLINE_START: 15,  // Headlines: 15-29 (15 headlines)
-    DESC_START: 30       // Descriptions: 30-33 (4 descriptions)
+    HEADLINE_START: 15,
+    DESC_START: 30
   };
 
   const rows: string[][] = [];
@@ -673,36 +893,9 @@ function buildGoogleAdsCSV(params: any): string {
   campaignRow[COL.BID_STRATEGY] = bidStrategyMap[rawStrategy] || 'Maximize conversions';
   
   campaignRow[COL.LOCATION] = csvEscape(config.locations?.join(';') || 'Brazil');
-  campaignRow[COL.LANGUAGE] = 'pt';  // ✅ CORRIGIDO - Código de idioma
-  campaignRow[COL.EU_POLITICAL] = 'Não';  // ✅ OBRIGATÓRIO - Campo obrigatório
+  campaignRow[COL.LANGUAGE] = 'pt';
+  campaignRow[COL.EU_POLITICAL] = 'Não';
   rows.push(campaignRow);
-
-  // 2. Ad Group Row
-  const adGroupRow = new Array(34).fill('');
-  adGroupRow[COL.CAMPAIGN] = csvEscape(campaignName);
-  adGroupRow[COL.AD_GROUP] = 'Geral';
-  // Todas outras colunas vazias - Google Ads Editor infere que é Ad Group
-  rows.push(adGroupRow);
-
-  // 3. Ad Row (RSA)
-  const adRow = new Array(34).fill('');
-  adRow[COL.CAMPAIGN] = csvEscape(campaignName);
-  adRow[COL.AD_GROUP] = 'Geral';
-  // Keyword fica VAZIO - Google Ads Editor infere que é um anúncio
-  adRow[COL.AD_TYPE] = 'Anúncio responsivo de pesquisa';  // ✅ PORTUGUÊS - Google Ads Editor BR
-  adRow[COL.FINAL_URL] = csvEscape(finalUrl);
-  adRow[COL.PATH_1] = csvEscape(sanitizeText(adCopies.paths?.[0] || 'produtos', 15));
-  adRow[COL.PATH_2] = csvEscape(sanitizeText(adCopies.paths?.[1] || 'ofertas', 15));
-  
-  // ✅ LOG DIAGNÓSTICO - Confirmar geração da linha de anúncio
-  console.log('📢 Ad Row gerada (Landing Page):', JSON.stringify({
-    campaign: adRow[COL.CAMPAIGN],
-    adGroup: adRow[COL.AD_GROUP],
-    adType: adRow[COL.AD_TYPE],
-    finalUrl: adRow[COL.FINAL_URL],
-    headline1: adCopies.headlines?.[0],
-    desc1: adCopies.descriptions?.[0]
-  }));
 
   // ✅ Fallbacks contextualizados
   const fallbackHeadlines = [
@@ -730,36 +923,53 @@ function buildGoogleAdsCSV(params: any): string {
     'Produtos de alta qualidade. Satisfação garantida.'
   ];
 
-  // Headlines (COL.HEADLINE_START até COL.HEADLINE_START + 14)
-  for (let i = 0; i < 15; i++) {
-    const h = adCopies.headlines?.[i];
-    const fallback = fallbackHeadlines[i] || `Headline ${i + 1}`;
-    const text = (h && typeof h === 'string' && h.trim()) ? h : fallback;
-    adRow[COL.HEADLINE_START + i] = csvEscape(sanitizeText(text, 30));
+  // ✅ NOVO: Iterar sobre múltiplos Ad Groups
+  for (const adGroup of adGroups) {
+    // 2. Ad Group Row
+    const adGroupRow = new Array(34).fill('');
+    adGroupRow[COL.CAMPAIGN] = csvEscape(campaignName);
+    adGroupRow[COL.AD_GROUP] = csvEscape(adGroup.name);
+    rows.push(adGroupRow);
+
+    // 3. Ad Row (RSA) para cada Ad Group
+    const adRow = new Array(34).fill('');
+    adRow[COL.CAMPAIGN] = csvEscape(campaignName);
+    adRow[COL.AD_GROUP] = csvEscape(adGroup.name);
+    adRow[COL.AD_TYPE] = 'Anúncio responsivo de pesquisa';
+    adRow[COL.FINAL_URL] = csvEscape(finalUrl);
+    adRow[COL.PATH_1] = csvEscape(sanitizeText(adCopies.paths?.[0] || 'produtos', 15));
+    adRow[COL.PATH_2] = csvEscape(sanitizeText(adCopies.paths?.[1] || 'ofertas', 15));
+    
+    // Headlines (COL.HEADLINE_START até COL.HEADLINE_START + 14)
+    for (let i = 0; i < 15; i++) {
+      const h = adCopies.headlines?.[i];
+      const fallback = fallbackHeadlines[i] || `Headline ${i + 1}`;
+      const text = (h && typeof h === 'string' && h.trim()) ? h : fallback;
+      adRow[COL.HEADLINE_START + i] = csvEscape(sanitizeText(text, 30));
+    }
+
+    // Descriptions (COL.DESC_START até COL.DESC_START + 3)
+    for (let i = 0; i < 4; i++) {
+      const d = adCopies.descriptions?.[i];
+      const fallback = fallbackDescriptions[i] || `Descrição profissional ${i + 1}.`;
+      const text = (d && typeof d === 'string' && d.trim()) ? d : fallback;
+      adRow[COL.DESC_START + i] = csvEscape(sanitizeText(text, 90));
+    }
+
+    rows.push(adRow);
+    
+    console.log(`📢 Ad Group "${adGroup.name}" (${adGroup.theme}): ${adGroup.keywords.length} keywords`);
+
+    // 4. Keyword Rows para este Ad Group
+    for (const keyword of adGroup.keywords) {
+      const keywordRow = new Array(34).fill('');
+      keywordRow[COL.CAMPAIGN] = csvEscape(campaignName);
+      keywordRow[COL.AD_GROUP] = csvEscape(adGroup.name);
+      keywordRow[COL.KEYWORD] = csvEscape(sanitizeKeyword(keyword.text));
+      keywordRow[COL.TYPE] = matchTypeMap[keyword.match_type] || 'Frase';
+      rows.push(keywordRow);
+    }
   }
-
-  // Descriptions (COL.DESC_START até COL.DESC_START + 3)
-  for (let i = 0; i < 4; i++) {
-    const d = adCopies.descriptions?.[i];
-    const fallback = fallbackDescriptions[i] || `Descrição profissional ${i + 1}.`;
-    const text = (d && typeof d === 'string' && d.trim()) ? d : fallback;
-    adRow[COL.DESC_START + i] = csvEscape(sanitizeText(text, 90));
-  }
-
-  rows.push(adRow);
-
-  // 4. Keyword Rows
-  for (const keyword of keywords) {
-    const keywordRow = new Array(34).fill('');
-    keywordRow[COL.CAMPAIGN] = csvEscape(campaignName);
-    keywordRow[COL.AD_GROUP] = 'Geral';
-    keywordRow[COL.KEYWORD] = csvEscape(sanitizeKeyword(keyword.text));  // ✅ Sanitização aplicada
-    keywordRow[COL.TYPE] = matchTypeMap[keyword.match_type] || 'Frase';  // ✅ Fallback em PT-BR
-    // Google Ads Editor infere que é Keyword porque Keyword e Type estão preenchidos
-    rows.push(keywordRow);
-  }
-
-  // ✅ REMOVIDO: Sitelinks não podem ser importados no formato Row Type
 
   // Construir CSV
   const csvLines = [
@@ -767,6 +977,6 @@ function buildGoogleAdsCSV(params: any): string {
     ...rows.map(row => row.join(','))
   ];
 
-  console.log(`✅ CSV gerado com Row Type format: ${rows.length} linhas, ${headers.length} colunas`);
+  console.log(`✅ CSV gerado: ${adGroups.length} Ad Groups, ${rows.length} linhas totais`);
   return csvLines.join('\n');
 }

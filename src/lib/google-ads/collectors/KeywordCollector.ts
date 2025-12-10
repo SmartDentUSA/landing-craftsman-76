@@ -134,11 +134,11 @@ export class KeywordCollector {
     
     return Array.from(themes.entries()).map(([theme, keywords]) => ({
       name: this.formatAdGroupName(theme),
-      theme,
+      theme: this.mapThemeToIntent(theme),
       keywords: keywords.map(text => ({
         text,
         match_type: 'PHRASE' as MatchType,
-        theme
+        theme: this.mapThemeToIntent(theme)
       }))
     }));
   }
@@ -189,6 +189,19 @@ export class KeywordCollector {
     }
     
     return 'geral';
+  }
+
+  private static mapThemeToIntent(theme: string): 'commercial' | 'informational' | 'product' | 'general' {
+    const themeToIntent: Record<string, 'commercial' | 'informational' | 'product' | 'general'> = {
+      'scanner': 'product',
+      'equipamento': 'product',
+      'software': 'product',
+      'consultoria': 'commercial',
+      'tratamento': 'commercial',
+      'curso': 'informational',
+      'geral': 'general'
+    };
+    return themeToIntent[theme] || 'general';
   }
   
   private static formatAdGroupName(theme: string): string {

@@ -9,7 +9,7 @@ export interface KeywordWithMatchType {
   match_type: MatchType;
   source: KeywordSource;
   keyword_type?: string; // tipo semântico original (primary, longtail, etc)
-  search_intent?: string; // intenção de busca
+  search_intent?: 'commercial' | 'informational' | 'product' | 'general';
 }
 
 export interface UTMParams {
@@ -64,13 +64,13 @@ export interface GoogleAdsCampaignConfig {
 export interface Keyword {
   text: string;
   match_type: MatchType;
-  theme?: string;
+  theme?: 'commercial' | 'informational' | 'product' | 'general';
 }
 
 export interface AdGroup {
   name: string;
   keywords: Keyword[];
-  theme: string;
+  theme: 'commercial' | 'informational' | 'product' | 'general';
 }
 
 export interface AdCopy {
