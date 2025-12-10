@@ -233,12 +233,12 @@ products.forEach(product => {
       };
     }
 
-    // ✅ AggregateRating para Rich Snippets com estrelas no Google (dinâmico ou fallback)
-    // Nota: aggregateRating será passado via parâmetro na função generateLandingPageHTML
+    // ✅ AggregateRating para Rich Snippets com estrelas no Google
+    // DINÂMICO: usa dados do Google via aggregateRating passado como parâmetro
     productSchema.aggregateRating = {
       '@type': 'AggregateRating',
-      ratingValue: '4.8',
-      reviewCount: 30,
+      ratingValue: aggregateRating?.ratingValue || '5.0',
+      reviewCount: aggregateRating?.reviewCount || 150,
       bestRating: 5,
       worstRating: 1
     };

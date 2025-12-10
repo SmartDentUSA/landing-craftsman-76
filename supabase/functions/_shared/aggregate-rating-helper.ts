@@ -1,32 +1,58 @@
 /**
  * Helper para buscar dados de AggregateRating do banco de dados
- * Consolida ratings de approved_reviews, raw_reviews e video_testimonials
+ * PRIORIZA dados do Google (google_aggregate_rating) quando disponíveis
+ * Fallback: calcula de approved_reviews, raw_reviews e video_testimonials
  */
 
 export interface AggregateRatingData {
-  ratingValue: string;  // Ex: "4.8"
-  reviewCount: number;  // Ex: 30
+  ratingValue: string;  // Ex: "5.0"
+  reviewCount: number;  // Ex: 150
   bestRating: number;   // 5
   worstRating: number;  // 1
 }
 
-// Valores padrão caso não haja dados no banco
+// Valores padrão baseados nos dados REAIS do Google Smart Dent
 const DEFAULT_RATING: AggregateRatingData = {
-  ratingValue: "4.8",
-  reviewCount: 30,
+  ratingValue: "5.0",
+  reviewCount: 150,
   bestRating: 5,
   worstRating: 1
 };
 
 /**
  * Busca dados de rating agregados do banco de dados
- * Combina: approved_reviews + video_testimonials (implícito 5 estrelas)
+ * PRIORIDADE:
+ * 1. google_aggregate_rating do company_profile (dados do Google)
+ * 2. Cálculo interno de approved_reviews + video_testimonials
+ * 3. Valores padrão
  */
 export async function fetchAggregateRating(supabase: any): Promise<AggregateRatingData> {
   try {
+    // ✅ PRIORIDADE 1: Verificar se há dados diretos do Google no company_profile
+    const { data: companyProfile, error: companyError } = await supabase
+      .from('company_profile')
+      .select('google_aggregate_rating, company_reviews')
+      .limit(1)
+      .single();
+
+    // Se tem dados do Google configurados, usar eles
+    if (!companyError && companyProfile?.google_aggregate_rating) {
+      const googleData = companyProfile.google_aggregate_rating;
+      if (googleData.ratingValue && googleData.reviewCount) {
+        console.log(`✅ [AggregateRating] Usando dados do Google: ${googleData.ratingValue} (${googleData.reviewCount} avaliações)`);
+        return {
+          ratingValue: String(googleData.ratingValue),
+          reviewCount: Number(googleData.reviewCount),
+          bestRating: 5,
+          worstRating: 1
+        };
+      }
+    }
+
+    // ✅ PRIORIDADE 2: Calcular de fontes internas
     const ratings: number[] = [];
 
-    // 1. Buscar ratings de approved_reviews via raw_reviews
+    // 2a. Buscar ratings de approved_reviews via raw_reviews
     const { data: approvedReviews, error: reviewsError } = await supabase
       .from('approved_reviews')
       .select('raw_review_id, raw_reviews(rating)')
@@ -40,26 +66,19 @@ export async function fetchAggregateRating(supabase: any): Promise<AggregateRati
       });
     }
 
-    // 2. Buscar video_testimonials aprovados (implícito 5 estrelas)
+    // 2b. Buscar video_testimonials aprovados (implícito 5 estrelas)
     const { data: videoTestimonials, error: videosError } = await supabase
       .from('video_testimonials')
       .select('id')
       .eq('approved', true);
 
     if (!videosError && videoTestimonials) {
-      // Video testimonials contam como 5 estrelas
       videoTestimonials.forEach(() => {
         ratings.push(5);
       });
     }
 
-    // 3. Buscar reviews manuais da company_profile
-    const { data: companyProfile, error: companyError } = await supabase
-      .from('company_profile')
-      .select('company_reviews')
-      .limit(1)
-      .single();
-
+    // 2c. Buscar reviews manuais da company_profile
     if (!companyError && companyProfile?.company_reviews?.manual_reviews) {
       const manualReviews = companyProfile.company_reviews.manual_reviews;
       if (Array.isArray(manualReviews)) {
@@ -71,16 +90,16 @@ export async function fetchAggregateRating(supabase: any): Promise<AggregateRati
       }
     }
 
-    // Calcular média
+    // Calcular média se tiver dados
     if (ratings.length === 0) {
-      console.log('ℹ️ [AggregateRating] Sem ratings no banco, usando defaults');
+      console.log('ℹ️ [AggregateRating] Sem ratings no banco, usando defaults do Google (5.0 / 150)');
       return DEFAULT_RATING;
     }
 
     const sum = ratings.reduce((a, b) => a + b, 0);
     const avgRating = (sum / ratings.length).toFixed(1);
 
-    console.log(`✅ [AggregateRating] ${ratings.length} ratings encontrados, média: ${avgRating}`);
+    console.log(`✅ [AggregateRating] ${ratings.length} ratings internos, média: ${avgRating}`);
 
     return {
       ratingValue: avgRating,

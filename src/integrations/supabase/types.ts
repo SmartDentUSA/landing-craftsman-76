@@ -330,6 +330,7 @@ export type Database = {
           founder_linkedin: string | null
           founder_name: string | null
           founder_title: string | null
+          google_aggregate_rating: Json | null
           id: string
           instagram_profile: string | null
           instagram_verified: boolean | null
@@ -395,6 +396,7 @@ export type Database = {
           founder_linkedin?: string | null
           founder_name?: string | null
           founder_title?: string | null
+          google_aggregate_rating?: Json | null
           id?: string
           instagram_profile?: string | null
           instagram_verified?: boolean | null
@@ -460,6 +462,7 @@ export type Database = {
           founder_linkedin?: string | null
           founder_name?: string | null
           founder_title?: string | null
+          google_aggregate_rating?: Json | null
           id?: string
           instagram_profile?: string | null
           instagram_verified?: boolean | null
