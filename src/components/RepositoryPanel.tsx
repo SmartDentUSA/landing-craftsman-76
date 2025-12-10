@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Package, Star, DollarSign, Eye, EyeOff, RefreshCw, RotateCcw, Edit, Trash2, Plus, Building2, VideoIcon, Download, FileDown, CheckCircle } from "lucide-react";
+import { Search, Package, Star, DollarSign, Eye, EyeOff, RefreshCw, RotateCcw, Edit, Trash2, Plus, Building2, VideoIcon, Download, FileDown, CheckCircle, Brain } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useProductSync } from "@/hooks/useProductSync";
@@ -726,6 +726,69 @@ export function RepositoryPanel({
     }
   };
 
+  const handleExportForLLM = async () => {
+    setExportingData(true);
+    try {
+      console.log('🤖 Exportando Knowledge Base otimizada para LLMs...');
+      
+      const { data, error } = await supabase.functions.invoke('knowledge-base', {
+        body: { 
+          format: 'rag',
+          include_company: true,
+          include_categories: true,
+          include_links: true,
+          include_products: true,
+          include_video_testimonials: true,
+          include_google_reviews: true,
+          include_kols: true,
+          include_spin_solutions: true,
+          approved_only: true,
+          limit: 1000
+        }
+      });
+
+      if (error) throw error;
+
+      const timestamp = new Date().toISOString().split('T')[0];
+      const filename = `knowledge_base_llm_optimized_${timestamp}.json`;
+      
+      const jsonContent = JSON.stringify(data, null, 2);
+      const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
+      
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', filename);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      const stats = {
+        totalProducts: data?.data?.products?.length || 0,
+        format: data?.format || 'rag_optimized',
+        optimizations: data?.optimization_notes?.length || 0
+      };
+
+      console.log('✅ Exportação LLM completa:', stats);
+
+      toast({
+        title: "✅ Knowledge Base para LLMs Exportada",
+        description: `${stats.totalProducts} produtos otimizados para RAG/LLMs. HTML removido, campos limpos.`,
+      });
+
+    } catch (error) {
+      console.error('❌ Erro na exportação LLM:', error);
+      toast({
+        title: "Erro na Exportação",
+        description: "Erro ao exportar para LLMs. Verifique os logs.",
+        variant: "destructive"
+      });
+    } finally {
+      setExportingData(false);
+    }
+  };
+
   if (loading) {
     return (
       <Card className={className}>
@@ -856,12 +919,32 @@ export function RepositoryPanel({
                     {exportingData ? (
                       <>
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
-                        Exportando Knowledge Base...
+                        Exportando...
                       </>
                     ) : (
                       <>
                         <FileDown className="h-4 w-4" />
-                        Exportar Knowledge Base
+                        Exportar KB
+                      </>
+                    )}
+                  </Button>
+
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handleExportForLLM}
+                    disabled={exportingData}
+                    className="gap-2 bg-purple-600 hover:bg-purple-700"
+                  >
+                    {exportingData ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+                        Exportando...
+                      </>
+                    ) : (
+                      <>
+                        <Brain className="h-4 w-4" />
+                        Exportar para LLMs
                       </>
                     )}
                   </Button>
