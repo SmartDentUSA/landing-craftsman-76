@@ -987,7 +987,8 @@ serve(async (req) => {
       finalAiContent, // ✅ Passar AI + depoimentos reais + Sistema B
       false, // ✅ preview = false (produção - com tracking)
       authorityData, // ✅ FASE 10: Authority Data completo
-      videoTestimonials // ✅ FASE 10: Video Testimonials
+      videoTestimonials, // ✅ FASE 10: Video Testimonials
+      aggregateRating // ✅ CORREÇÃO: Passar aggregateRating para schemas
     );
 
     console.log('✅ Checkpoint 4: HTML gerado:', html.length, 'caracteres');

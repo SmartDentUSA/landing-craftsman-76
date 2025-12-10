@@ -30,6 +30,8 @@ import {
   generateVideoGallerySchema,
   generateSameAsSchema
 } from '../_shared/authority-data-helper.ts';
+// ✅ CORREÇÃO: Import AggregateRatingData para tipagem
+import { type AggregateRatingData } from '../_shared/aggregate-rating-helper.ts';
 
 // ═══════════════════════════════════════════════════════════
 // 🛡️ SANITIZAÇÃO DE NOME DA EMPRESA
@@ -52,7 +54,8 @@ function generateSPINSchemas(
   faqs: any[],
   successCases: any[],
   canonicalUrl: string,
-  authorKOL?: PersonSchemaData | null
+  authorKOL?: PersonSchemaData | null,
+  aggregateRating?: AggregateRatingData | null
 ): any[] {
   const schemas: any[] = [];
 
@@ -488,7 +491,8 @@ export function generateLandingPageHTML(
   aiContent?: any,
   preview: boolean = false,
   authorityData?: AuthorityData | null,
-  videoTestimonials?: VideoTestimonial[]
+  videoTestimonials?: VideoTestimonial[],
+  aggregateRating?: AggregateRatingData | null
 ): string {
   const mainProduct = products[0] || {};
   const successCases = solution.success_cases || [];
@@ -737,7 +741,8 @@ export function generateLandingPageHTML(
     faqs,
     successCases,
     canonicalUrl,
-    authorKOL // ✅ FASE 3: Passar KOL para Person Schema
+    authorKOL, // ✅ FASE 3: Passar KOL para Person Schema
+    aggregateRating // ✅ CORREÇÃO: Passar aggregateRating para Product schemas
   );
 
   // 🔗 INTEGRAÇÃO SISTEMA B: Adicionar VideoObject e DigitalDocument schemas
