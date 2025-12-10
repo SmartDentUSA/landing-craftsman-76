@@ -1961,82 +1961,133 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
       border-radius: 8px;
     }
 
-    /* ===== FOOTER - CORES DO LOGO ===== */
+    /* ===== FOOTER - SMART DENT COLORS ===== */
     footer {
-      background: linear-gradient(to bottom, var(--primary-dark), var(--primary-gradient-dark));
-      padding: 3rem 0 2rem;
+      background: #3E4B5E !important;
+      padding: 0 !important;
+    }
+
+    .footer-top-bar {
+      background: #EE7A3E !important;
+      height: 6px !important;
+      width: 100% !important;
+    }
+
+    .footer-content {
+      padding: 2.5rem 0 1.5rem !important;
     }
 
     .footer-columns {
-      display: flex;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 2rem;
+      display: grid !important;
+      grid-template-columns: 2fr 1fr !important;
+      gap: 2rem !important;
     }
 
-    .footer-columns > div {
-      flex: 1;
-      min-width: 250px;
+    .footer-locations-grid {
+      display: grid !important;
+      grid-template-columns: repeat(2, 1fr) !important;
+      gap: 1.5rem !important;
     }
 
-    .footer-columns strong {
-      font-weight: 700;
-      display: block;
-      margin-bottom: 0.75rem;
-      font-size: 18px;
-      color: var(--accent-glow);
+    .footer-location-card {
+      display: block !important;
+      padding: 0 !important;
+      margin: 0 !important;
     }
 
-    .footer-columns p {
-      font-size: 15px;
-      line-height: 1.8;
-      margin: 0.5rem 0;
-      color: #ccc;
+    .footer-location-card strong {
+      display: block !important;
+      font-weight: 700 !important;
+      font-size: 16px !important;
+      color: #EE7A3E !important;
+      margin-bottom: 8px !important;
     }
 
-    .footer-columns a {
-      color: #b0c4de;
-      text-decoration: none;
-      font-size: 15px;
-      display: block;
-      margin: 0.6rem 0;
-      transition: color 0.2s;
+    .footer-location-card p {
+      display: block !important;
+      font-size: 14px !important;
+      line-height: 1.6 !important;
+      color: #ccc !important;
+      margin: 0 !important;
     }
 
-    .footer-columns a:hover {
-      color: var(--accent-tech);
-      text-decoration: underline;
+    .footer-location-card i {
+      color: #EE7A3E !important;
+      margin-right: 6px !important;
     }
 
-    /* ===== ÍCONES SOCIAIS EM LINHA ===== */
+    .footer-links-column {
+      display: flex !important;
+      flex-direction: column !important;
+    }
+
+    .footer-links-column strong {
+      font-weight: 700 !important;
+      display: block !important;
+      margin-bottom: 0.75rem !important;
+      font-size: 16px !important;
+      color: #EE7A3E !important;
+    }
+
+    .footer-links-column a {
+      color: #b0c4de !important;
+      text-decoration: none !important;
+      font-size: 14px !important;
+      display: block !important;
+      margin: 0.4rem 0 !important;
+      transition: color 0.2s !important;
+    }
+
+    .footer-links-column a:hover {
+      color: #EE7A3E !important;
+      text-decoration: underline !important;
+    }
+
+    /* ===== SOCIAL ICONS - HORIZONTAL ROW ===== */
+    .footer-social-inline {
+      margin-top: 1.5rem !important;
+      padding-top: 1rem !important;
+      border-top: 1px solid rgba(255,255,255,0.1) !important;
+    }
+
     .footer-social-links {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.75rem;
-      margin-top: 0.5rem;
+      display: flex !important;
+      flex-direction: row !important;
+      flex-wrap: wrap !important;
+      gap: 10px !important;
+      margin-top: 0.5rem !important;
     }
 
     .footer-social-links a {
       display: inline-flex !important;
-      align-items: center;
-      justify-content: center;
-      width: 40px;
-      height: 40px;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 50%;
+      align-items: center !important;
+      justify-content: center !important;
+      width: 36px !important;
+      height: 36px !important;
+      background: rgba(255, 255, 255, 0.15) !important;
+      border-radius: 50% !important;
       margin: 0 !important;
-      transition: all 0.3s ease;
+      transition: all 0.3s ease !important;
     }
 
     .footer-social-links a:hover {
-      background: var(--accent-tech);
-      transform: translateY(-3px);
-      text-decoration: none;
+      background: #EE7A3E !important;
+      transform: translateY(-3px) !important;
+      text-decoration: none !important;
     }
 
     .footer-social-links a i {
-      font-size: 18px;
-      color: #fff;
+      font-size: 16px !important;
+      color: #fff !important;
+    }
+
+    .footer-copyright {
+      text-align: center !important;
+      padding: 1rem 0 !important;
+      border-top: 1px solid rgba(255,255,255,0.1) !important;
+      margin-top: 1.5rem !important;
+      color: #999 !important;
+      font-size: 13px !important;
     }
 
     /* ===== RESPONSIVO TABLET ===== */
@@ -2804,88 +2855,101 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
 
   <!-- Footer -->
   <footer>
-    <div class="container">
+    <div class="footer-top-bar"></div>
+    <div class="container footer-content">
       ${(() => {
         // ✅ NOVO: Usar navigation_footer_config se disponível
         const navConfig = company?.navigation_footer_config;
         const footerConfig = navConfig?.footer;
         const hasCustomFooter = footerConfig && (footerConfig.locations?.length > 0 || footerConfig.links?.length > 0 || footerConfig.social_links?.length > 0);
         
+        // Deduplicate social links by platform, limit to 6
+        const seenPlatforms = new Set<string>();
+        const uniqueSocials = (footerConfig?.social_links || [])
+          .filter((s: any) => {
+            if (!s.platform || seenPlatforms.has(s.platform)) return false;
+            seenPlatforms.add(s.platform);
+            return true;
+          })
+          .slice(0, 6);
+        
         if (hasCustomFooter) {
           // Footer dinâmico baseado em navigation_footer_config
           return `
             <div class="footer-columns">
-              ${footerConfig.locations && footerConfig.locations.length > 0 ? footerConfig.locations.map((loc: any) => `
-                <div>
-                  <strong>${escapeHtml(loc.title || loc.label || sanitizeCompanyName(company?.company_name))}</strong>
-                  ${loc.address ? `<p><i class="fas fa-map-marker-alt"></i> ${escapeHtml(loc.address)}</p>` : ''}
-                </div>
-              `).join('') : ''}
-              
-              <!-- Contato sempre do company_profile -->
-              <div>
-                <strong>Contato</strong>
-                ${company?.contact_phone ? `<p><i class="fas fa-phone"></i> ${escapeHtml(company.contact_phone)}</p>` : ''}
-                ${company?.contact_email ? `<p><i class="fas fa-envelope"></i> ${escapeHtml(company.contact_email)}</p>` : ''}
-                ${company?.street_address ? `<p><i class="fas fa-map-marker-alt"></i> ${escapeHtml(company.street_address)}${company?.address_number ? `, ${escapeHtml(company.address_number)}` : ''}</p>` : ''}
-                ${company?.city ? `<p>${escapeHtml(company.city)}${company?.state ? ` - ${escapeHtml(company.state)}` : ''}${company?.postal_code ? `, ${escapeHtml(company.postal_code)}` : ''}</p>` : ''}
+              <!-- ÁREA 1: Locations em Grid 2x2 -->
+              <div class="footer-locations-grid">
+                ${footerConfig.locations && footerConfig.locations.length > 0 ? footerConfig.locations.map((loc: any) => `
+                  <article class="footer-location-card" style="display: block !important;">
+                    <strong style="display: block !important; font-weight: 700 !important; font-size: 16px !important; color: #EE7A3E !important; margin-bottom: 8px !important;">${escapeHtml(loc.title || loc.label || sanitizeCompanyName(company?.company_name))}</strong>
+                    ${loc.address ? `<p style="display: block !important; font-size: 14px !important; color: #ccc !important; margin: 0 !important; line-height: 1.6 !important;"><i class="fas fa-map-marker-alt" style="color: #EE7A3E !important; margin-right: 6px !important;"></i> ${escapeHtml(loc.address)}</p>` : ''}
+                  </article>
+                `).join('') : ''}
               </div>
               
-              ${footerConfig.links && footerConfig.links.length > 0 ? `
-                <div>
+              <!-- ÁREA 2: Links + Sociais -->
+              <div class="footer-links-column">
+                ${footerConfig.links && footerConfig.links.length > 0 ? `
                   <strong>Links Úteis</strong>
-                  ${footerConfig.links.map((link: any) => `
+                  ${footerConfig.links.slice(0, 6).map((link: any) => `
                     <a href="${escapeHtml(link.href)}" target="${link.openInNewTab ? '_blank' : '_self'}" rel="noopener">${escapeHtml(link.label)}</a>
                   `).join('')}
-                </div>
-              ` : institutionalLinks.length > 0 ? `
-                <div>
+                ` : institutionalLinks.length > 0 ? `
                   <strong>Links Úteis</strong>
-                  ${institutionalLinks.slice(0, 5).map((link: any) => `
+                  ${institutionalLinks.slice(0, 6).map((link: any) => `
                     <a href="${escapeHtml(link.url)}" target="_blank" rel="noopener">${escapeHtml(link.label)}</a>
                   `).join('')}
-                </div>
-              ` : ''}
-              
-              ${footerConfig.social_links && footerConfig.social_links.length > 0 ? `
-                <div>
-                  <strong>Redes Sociais</strong>
-                  <div class="footer-social-links">
-                    ${footerConfig.social_links.map((social: any) => `
-                      <a href="${escapeHtml(social.href)}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(social.icon_alt || social.platform || '')}">
-                        <i class="fab fa-${escapeHtml(social.platform || 'link')}"></i>
-                      </a>
-                    `).join('')}
+                ` : ''}
+                
+                ${uniqueSocials.length > 0 ? `
+                  <div class="footer-social-inline">
+                    <strong>Redes Sociais</strong>
+                    <div class="footer-social-links" style="display: flex !important; flex-direction: row !important; flex-wrap: wrap !important; gap: 10px !important;">
+                      ${uniqueSocials.map((social: any) => `
+                        <a href="${escapeHtml(social.href)}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(social.icon_alt || social.platform || '')}" style="display: inline-flex !important; width: 36px !important; height: 36px !important; align-items: center !important; justify-content: center !important; background: rgba(255,255,255,0.15) !important; border-radius: 50% !important; margin: 0 !important;">
+                          <i class="fab fa-${escapeHtml(social.platform || 'link')}" style="font-size: 16px !important; color: #fff !important;"></i>
+                        </a>
+                      `).join('')}
+                    </div>
                   </div>
-                </div>
-              ` : ''}
+                ` : ''}
+              </div>
+            </div>
+            
+            <div class="footer-copyright">
+              © ${new Date().getFullYear()} ${escapeHtml(sanitizeCompanyName(company?.company_name))} - Todos os direitos reservados
             </div>
           `;
         } else {
           // Footer padrão (fallback)
           return `
             <div class="footer-columns">
-              <div>
-                <strong>${escapeHtml(sanitizeCompanyName(company?.company_name))} - Brasil</strong>
-                <p><i class="fas fa-phone"></i> Atendimento: ${escapeHtml(company?.contact_phone || company?.phone_number || '')}</p>
-                <p><i class="fas fa-envelope"></i> Comercial: ${escapeHtml(company?.contact_email || company?.email || '')}</p>
-                <p>${escapeHtml(company?.street_address || '')}, ${escapeHtml(company?.address_number || '')}</p>
-                <p>${escapeHtml(company?.city || '')} - ${escapeHtml(company?.state || '')}, ${escapeHtml(company?.postal_code || '')}</p>
+              <div class="footer-locations-grid">
+                <article class="footer-location-card">
+                  <strong>${escapeHtml(sanitizeCompanyName(company?.company_name))} - Brasil</strong>
+                  <p><i class="fas fa-phone"></i> ${escapeHtml(company?.contact_phone || '')}</p>
+                  <p><i class="fas fa-envelope"></i> ${escapeHtml(company?.contact_email || '')}</p>
+                  <p><i class="fas fa-map-marker-alt"></i> ${escapeHtml(company?.street_address || '')}${company?.address_number ? `, ${escapeHtml(company.address_number)}` : ''}</p>
+                </article>
+                ${company?.usa_address ? `
+                <article class="footer-location-card">
+                  <strong>${escapeHtml(sanitizeCompanyName(company?.company_name))} - USA</strong>
+                  <p><i class="fas fa-map-marker-alt"></i> ${escapeHtml(company.usa_address)}</p>
+                </article>
+                ` : ''}
               </div>
-              ${company?.usa_address ? `
-              <div>
-                <strong>${escapeHtml(sanitizeCompanyName(company?.company_name))} - USA</strong>
-                <p>${escapeHtml(company.usa_address)}</p>
+              <div class="footer-links-column">
+                ${institutionalLinks.length > 0 ? `
+                  <strong>Links Úteis</strong>
+                  ${institutionalLinks.slice(0, 6).map((link: any) => `
+                    <a href="${escapeHtml(link.url)}" target="_blank" rel="noopener">${escapeHtml(link.label)}</a>
+                  `).join('')}
+                ` : ''}
               </div>
-              ` : ''}
-              ${institutionalLinks.length > 0 ? `
-              <div>
-                <strong>Links Úteis</strong>
-                ${institutionalLinks.slice(0, 5).map((link: any) => `
-                  <a href="${escapeHtml(link.url)}" target="_blank" rel="noopener">${escapeHtml(link.label)}</a>
-                `).join('')}
-              </div>
-              ` : ''}
+            </div>
+            
+            <div class="footer-copyright">
+              © ${new Date().getFullYear()} ${escapeHtml(sanitizeCompanyName(company?.company_name))} - Todos os direitos reservados
             </div>
           `;
         }
