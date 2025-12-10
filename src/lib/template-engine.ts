@@ -1749,256 +1749,143 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         .cta-content a { margin: 0 .25rem; }
 
         /* ========================================
-           FOOTER - ENTERPRISE LEVEL (SEM ALTERAR HTML)
+           FOOTER - SMART DENT COLORS (SPIN STYLE)
            ======================================== */
-
-        /* Base Mobile-first */
         .footer {
-          background: linear-gradient(180deg, #0f172a 0%, #0b1220 100%);
+          background: #3E4B5E !important;
+          padding: 0 !important;
           color: #e2e8f0;
-          padding: 3rem 1.5rem 2rem;
-          font-size: 0.9375rem;
-          line-height: 1.6;
           position: relative;
         }
 
-        .footer-grid {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 2.5rem;
+        .footer-top-bar {
+          background: #EE7A3E !important;
+          height: 6px !important;
+          width: 100% !important;
+        }
+
+        .footer-content {
+          padding: 2.5rem 1.5rem 1.5rem !important;
           max-width: 1200px;
           margin: 0 auto;
         }
 
-        /* Títulos */
-        .footer h3 {
-          color: #ffffff;
-          font-size: 1.125rem;
-          font-weight: 600;
-          margin-bottom: 1rem;
-          padding-bottom: 0.5rem;
-          border-bottom: 2px solid rgba(59,130,246,.45);
-          display: inline-block;
+        .footer-columns {
+          display: grid !important;
+          grid-template-columns: 2fr 1fr !important;
+          gap: 2rem !important;
         }
 
-        /* INFO */
-        .footer-info p {
-          color: #cbd5e1;
-          margin-bottom: 0.75rem;
-          line-height: 1.5;
+        .footer-locations-grid {
+          display: grid !important;
+          grid-template-columns: repeat(2, 1fr) !important;
+          gap: 1.5rem !important;
         }
 
-        /* LINKS */
-        .footer-links ul {
-          list-style: none;
-          margin: 0;
-          padding: 0;
+        .footer-location-card {
+          display: block !important;
+          padding: 0 !important;
+          margin: 0 !important;
         }
 
-        .footer-links li {
-          margin: 0.75rem 0;
+        .footer-location-card strong {
+          display: block !important;
+          font-weight: 700 !important;
+          font-size: 16px !important;
+          color: #EE7A3E !important;
+          margin-bottom: 8px !important;
         }
 
-        .footer-links a {
-          color: #94a3b8;
-          text-decoration: none;
-          display: inline-flex;
-          align-items: center;
-          gap: .5rem;
-          transition: all .2s ease;
-          position: relative;
+        .footer-location-card p {
+          display: block !important;
+          font-size: 14px !important;
+          line-height: 1.6 !important;
+          color: #ccc !important;
+          margin: 0 !important;
         }
 
-        .footer-links a::before {
-          content: '→';
-          opacity: 0;
-          transform: translateX(-4px);
-          transition: .2s;
-          color: #3b82f6;
+        .footer-links-column {
+          display: flex !important;
+          flex-direction: column !important;
         }
 
-        .footer-links a:hover {
-          color: #ffffff;
-          padding-left: .25rem;
+        .footer-links-column strong {
+          font-weight: 700 !important;
+          display: block !important;
+          margin-bottom: 0.75rem !important;
+          font-size: 16px !important;
+          color: #EE7A3E !important;
         }
 
-        .footer-links a:hover::before {
-          opacity: 1;
-          transform: translateX(0);
+        .footer-links-column a {
+          color: #b0c4de !important;
+          text-decoration: none !important;
+          font-size: 14px !important;
+          display: block !important;
+          margin: 0.4rem 0 !important;
+          transition: color 0.2s !important;
         }
 
-        /* SOCIAL */
-        .footer-social {
-          display: flex;
-          gap: 1rem;
-          flex-wrap: wrap;
-          justify-content: flex-start;
+        .footer-links-column a:hover {
+          color: #EE7A3E !important;
+          text-decoration: underline !important;
         }
 
-        .footer-social a {
-          width: 44px;
-          height: 44px;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          background: rgba(255,255,255,.1);
-          border-radius: 50%;
-          color: #e2e8f0;
-          transition: all .3s ease;
+        /* Social Icons - Horizontal Row */
+        .footer-social-inline {
+          margin-top: 1.5rem !important;
+          padding-top: 1rem !important;
+          border-top: 1px solid rgba(255,255,255,0.1) !important;
         }
 
-        .footer-social a:hover {
-          background: #3b82f6;
-          transform: translateY(-3px);
-          box-shadow: 0 4px 12px rgba(59,130,246,.4);
+        .footer-social-links {
+          display: flex !important;
+          flex-direction: row !important;
+          flex-wrap: wrap !important;
+          gap: 10px !important;
+          margin-top: 0.5rem !important;
         }
 
-        .footer-social a svg {
-          width: 20px;
-          height: 20px;
+        .footer-social-links a {
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          width: 36px !important;
+          height: 36px !important;
+          background: rgba(255, 255, 255, 0.15) !important;
+          border-radius: 50% !important;
+          color: #e2e8f0 !important;
+          transition: all 0.3s ease !important;
         }
 
-        /* COMPANY AUTO FOOTER */
-        .company-auto-footer {
-          margin-top: 2rem;
-          padding-top: 1.5rem;
-          border-top: 1px solid rgba(255,255,255,.1);
+        .footer-social-links a:hover {
+          background: #EE7A3E !important;
+          transform: translateY(-3px) !important;
         }
 
-        .company-auto-footer h3 {
-          font-size: 1rem;
-          border-bottom: none;
-          margin-bottom: .75rem;
+        .footer-social-links a svg {
+          width: 18px !important;
+          height: 18px !important;
         }
 
-        .company-auto-footer p {
-          font-size: .875rem;
-          color: #94a3b8;
-          margin: .5rem 0;
+        .footer-copyright {
+          text-align: center !important;
+          padding: 1rem 0 !important;
+          border-top: 1px solid rgba(255,255,255,0.1) !important;
+          margin-top: 1.5rem !important;
+          color: #999 !important;
+          font-size: 13px !important;
         }
 
-        .company-auto-footer a {
-          color: #60a5fa;
-          text-decoration: none;
-        }
-
-        .company-auto-footer a:hover {
-          color: #93c5fd;
-          text-decoration: underline;
-        }
-
-        /* LINKS INSTITUCIONAIS */
-        .institutional-links {
-          margin-top: 1.5rem;
-        }
-
-        .institutional-links h4 {
-          font-size: .9375rem;
-          color: #f1f5f9;
-          margin-bottom: 1rem;
-          font-weight: 500;
-        }
-
-        .institutional-links-grid {
-          display: flex;
-          flex-wrap: wrap;
-          gap: .75rem;
-        }
-
-        .institutional-link {
-          background: rgba(255,255,255,.08);
-          color: #cbd5e1;
-          padding: .5rem 1rem;
-          border-radius: .5rem;
-          text-decoration: none;
-          font-size: .8125rem;
-          transition: all .2s ease;
-          border-left: 3px solid transparent;
-        }
-
-        .institutional-link:hover {
-          background: rgba(255,255,255,.15);
-          color: #fff;
-          transform: translateX(2px);
-        }
-
-        .institutional-link.legal { border-left-color: #f59e0b; }
-        .institutional-link.policy { border-left-color: #3b82f6; }
-        .institutional-link.support { border-left-color: #10b981; }
-
-        /* ========================================
-           BREAKPOINT TABLET (768px - 1023px)
-           ======================================== */
-        @media (min-width: 768px) and (max-width: 1023px) {
-          .footer {
-            padding: 3.5rem 2rem 2.5rem;
+        /* Responsivo */
+        @media (max-width: 768px) {
+          .footer-columns {
+            grid-template-columns: 1fr !important;
+            gap: 1.5rem !important;
           }
-
-          .footer-grid {
-            grid-template-columns: 1fr 1fr;
-            gap: 2.5rem;
+          .footer-locations-grid {
+            grid-template-columns: 1fr !important;
           }
-
-          .footer-social {
-            grid-column: 1 / -1;
-            justify-content: center;
-            padding-top: 1.5rem;
-            border-top: 1px solid rgba(255,255,255,.1);
-          }
-        }
-
-        /* ========================================
-           BREAKPOINT DESKTOP (1024px+)
-           ======================================== */
-        @media (min-width: 1024px) {
-          .footer {
-            padding: 4rem 2rem 3rem;
-          }
-
-          .footer-grid {
-            grid-template-columns: 1.5fr 1fr auto;
-            gap: 3rem;
-            align-items: start;
-          }
-
-          .footer-social {
-            flex-direction: column;
-            gap: .75rem;
-            justify-content: flex-start;
-          }
-
-          .footer-info {
-            max-width: 400px;
-          }
-        }
-
-        /* ========================================
-           LARGE DESKTOP (1280px+)
-           ======================================== */
-        @media (min-width: 1280px) {
-          .footer-grid {
-            grid-template-columns: 1.5fr 1fr 1fr auto;
-            gap: 4rem;
-          }
-
-          .institutional-links {
-            margin-top: 0;
-          }
-        }
-
-        /* ========================================
-           DIVISÓRIA DECORATIVA SUPERIOR
-           ======================================== */
-        .footer::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 80%;
-          max-width: 400px;
-          height: 3px;
-          background: linear-gradient(90deg, transparent, #3b82f6, transparent);
         }
 
         /* Visually hidden for entity definitions - prevents visible placeholder text */
@@ -2597,8 +2484,10 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     {{/visible_any}}
     {{/knowledge_feed_section}}
 
-    <!-- Footer - Enterprise Structured with LocalBusiness Microdata -->
-  <footer class="footer" role="contentinfo" itemscope itemtype="https://schema.org/LocalBusiness">
+    <!-- Footer - Smart Dent SPIN Style with LocalBusiness Microdata -->
+    <footer class="footer" role="contentinfo" itemscope itemtype="https://schema.org/LocalBusiness">
+        <div class="footer-top-bar"></div>
+        
         <!-- Hidden structured data for crawlers -->
         <meta itemprop="@type" content="LocalBusiness">
         {{#company_profile.company_logo_url}}
@@ -2608,24 +2497,15 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         <link itemprop="url" href="{{company_profile.website_url}}">
         {{/company_profile.website_url}}
         
-        <div class="container footer-grid">
-            <!-- Coluna 1: Identidade da Empresa -->
-            <div class="footer-info">
-                {{#company_profile.company_name}}
-                <h3 itemprop="name">{{company_profile.company_name}}</h3>
-                {{/company_profile.company_name}}
-                {{^company_profile.company_name}}
-                {{#footer.locations}}
-                <h3>{{title}}</h3>
-                {{/footer.locations}}
-                {{/company_profile.company_name}}
-                
-                <!-- Endereço Estruturado -->
-                <div itemprop="address" itemscope itemtype="https://schema.org/PostalAddress">
+        <div class="footer-content">
+            <div class="footer-columns">
+                <!-- Área 1: Locations em Grid 2x2 -->
+                <div class="footer-locations-grid" itemprop="address" itemscope itemtype="https://schema.org/PostalAddress">
                     {{#footer.locations}}
-                    <p>
-                        <span itemprop="streetAddress">{{address}}</span>
-                    </p>
+                    <article class="footer-location-card">
+                        <strong>{{title}}</strong>
+                        <p itemprop="streetAddress">📍 {{address}}</p>
+                    </article>
                     {{/footer.locations}}
                     {{#company_profile.city}}
                     <meta itemprop="addressLocality" content="{{company_profile.city}}">
@@ -2641,56 +2521,44 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                     {{/company_profile.country}}
                 </div>
                 
-                <!-- Contato Estruturado -->
-                <div itemprop="contactPoint" itemscope itemtype="https://schema.org/ContactPoint">
-                    <meta itemprop="contactType" content="customer service">
-                    {{#company_profile.contact_phone}}
-                    <p><a href="tel:{{company_profile.contact_phone}}" itemprop="telephone">{{company_profile.contact_phone}}</a></p>
-                    {{/company_profile.contact_phone}}
-                    {{#company_profile.contact_email}}
-                    <p><a href="mailto:{{company_profile.contact_email}}" itemprop="email">{{company_profile.contact_email}}</a></p>
-                    {{/company_profile.contact_email}}
-                </div>
-                
-                <!-- Informações Automáticas da Empresa -->
-                {{#company_footer}}
-                <div class="company-auto-footer">
-                    {{{company_footer}}}
-                </div>
-                {{/company_footer}}
-            </div>
-            
-            <!-- Coluna 2: Links -->
-            <div class="footer-links">
-                <h3>{{footer_links_title}}</h3>
-                <ul>
+                <!-- Área 2: Links + Sociais -->
+                <div class="footer-links-column">
+                    <strong>{{footer_links_title}}</strong>
                     {{#footer.links}}
-                    <li><a href="{{href}}">{{label}}</a></li>
+                    <a href="{{href}}">{{label}}</a>
                     {{/footer.links}}
-                </ul>
-                
-                <!-- Links Institucionais Automáticos -->
-                {{#institutional_links_html}}
-                <div class="institutional-links">
-                    <h4>Links Institucionais</h4>
-                    <div class="institutional-links-grid">
-                        {{{institutional_links_html}}}
+                    
+                    <!-- Contato -->
+                    <div itemprop="contactPoint" itemscope itemtype="https://schema.org/ContactPoint" style="margin-top: 1rem;">
+                        <meta itemprop="contactType" content="customer service">
+                        {{#company_profile.contact_phone}}
+                        <a href="tel:{{company_profile.contact_phone}}" itemprop="telephone" style="display: block; margin: 0.4rem 0;">📞 {{company_profile.contact_phone}}</a>
+                        {{/company_profile.contact_phone}}
+                        {{#company_profile.contact_email}}
+                        <a href="mailto:{{company_profile.contact_email}}" itemprop="email" style="display: block; margin: 0.4rem 0;">✉️ {{company_profile.contact_email}}</a>
+                        {{/company_profile.contact_email}}
+                    </div>
+                    
+                    <!-- Social Icons - Horizontal -->
+                    <div class="footer-social-inline">
+                        <strong>Redes Sociais</strong>
+                        <div class="footer-social-links">
+                            {{#footer.social}}
+                            <a href="{{href}}" title="{{platform}}" itemprop="sameAs">
+                                {{{iconSvg}}}
+                            </a>
+                            {{/footer.social}}
+                        </div>
                     </div>
                 </div>
-                {{/institutional_links_html}}
             </div>
             
-            <!-- Coluna 3: Social com sameAs -->
-            <div class="footer-social">
-                {{#footer.social}}
-                <a href="{{href}}" title="{{platform}}" itemprop="sameAs">
-                    {{{iconSvg}}}
-                </a>
-                {{/footer.social}}
+            <div class="footer-copyright">
+                © {{current_year}} {{#company_profile.company_name}}{{company_profile.company_name}}{{/company_profile.company_name}}{{^company_profile.company_name}}Smart Dent{{/company_profile.company_name}} - Todos os direitos reservados
             </div>
         </div>
         
-        <!-- GeoCoordinates invisível (se disponível) -->
+        <!-- GeoCoordinates invisível -->
         {{#company_profile.latitude}}
         <div itemprop="geo" itemscope itemtype="https://schema.org/GeoCoordinates" hidden>
             <meta itemprop="latitude" content="{{company_profile.latitude}}">
@@ -2698,7 +2566,6 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         </div>
         {{/company_profile.latitude}}
         
-        <!-- Horário de funcionamento -->
         <meta itemprop="openingHours" content="Mo-Fr 08:00-18:00">
     </footer>
 
