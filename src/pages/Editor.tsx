@@ -56,10 +56,11 @@ import { useDebounceValue } from "@/hooks/useDebounceValue";
 import { useDesktopInfoAutoSave } from "@/hooks/useDesktopInfoAutoSave";
 import { useExplanatoryVideoAutoSave } from "@/hooks/useExplanatoryVideoAutoSave";
 import { useAnimatedBannerAutoSave } from "@/hooks/useAnimatedBannerAutoSave";
+import { useAutoSaveProtection } from "@/hooks/useAutoSaveProtection";
 import { AutoSaveIndicator } from "@/components/AutoSaveIndicator";
 import { generateHTML, generateEmailHTML, generateBlogHTML, generatePreviewHTML } from "@/lib/template-engine";
 import { supabase } from "@/integrations/supabase/client";
-import { deepMerge } from "@/lib/deepMerge";
+import { deepMerge, deepMergeSafe } from "@/lib/deepMerge";
 import { useAutoFooterPopulation } from "@/hooks/useAutoFooterPopulation";
 import { SOCIAL_PLATFORMS, SocialIcon } from "@/components/icons/SocialIcons";
 import { validateMetaDescription, validateCanonicalURL } from "@/lib/seo-validators";
@@ -2545,6 +2546,24 @@ const EditorContent = () => {
           productsCount: ((freshLP as any).selected_product_ids || []).length
         });
         
+        // 🛡️ PROTEÇÃO: Inicializar contagens conhecidas ANTES de atualizar estado
+        // Isso permite que os hooks de auto-save saibam quais dados existiam
+        const partnersCount = safe.animated_banner_section?.partners?.length || 0;
+        const tableDataCount = safe.desktop_info?.table_data?.length || 0;
+        const hasVideo = !!safe.explanatory_video_section?.selected_video;
+        
+        console.log('🛡️ [Rehydrate] Inicializando contagens de proteção ANTES do estado:', {
+          partners: partnersCount,
+          tableData: tableDataCount,
+          hasVideo
+        });
+        
+        // ✅ ORDEM CORRETA: Inicializar contagens ANTES de liberar hidratação
+        initAnimatedBannerCount(partnersCount);
+        initDesktopInfoCount(tableDataCount);
+        initVideoState(hasVideo);
+        
+        // Atualizar estado
         setReplace(safe);
         setSelectedProductIds((freshLP as any).selected_product_ids || []);
         productsLoadedRef.current = true;
@@ -2558,26 +2577,13 @@ const EditorContent = () => {
           console.info('💾 [Rehydrate] Persistido no servidor:', ts.toISOString());
         }
         
-        // 🛡️ PROTEÇÃO: Inicializar contagens conhecidas após hidratação
-        // Isso permite que os hooks de auto-save saibam quais dados existiam
-        const partnersCount = safe.animated_banner_section?.partners?.length || 0;
-        const tableDataCount = safe.desktop_info?.table_data?.length || 0;
-        const hasVideo = !!safe.explanatory_video_section?.selected_video;
-        
-        console.log('🛡️ [Rehydrate] Inicializando contagens de proteção:', {
-          partners: partnersCount,
-          tableData: tableDataCount,
-          hasVideo
-        });
-        
-        // Aguardar um tick para garantir que o estado foi atualizado
+        // 🛡️ PROTEÇÃO: Delay antes de liberar hidratação (500ms)
+        // Isso garante que os hooks de auto-save não disparem durante a atualização do estado
         setTimeout(() => {
-          initAnimatedBannerCount(partnersCount);
-          initDesktopInfoCount(tableDataCount);
-          initVideoState(hasVideo);
-        }, 100);
+          console.log('✅ [Rehydrate] Delay de proteção concluído - liberando hidratação');
+          setIsHydratingFromServer(false);
+        }, 500);
         
-        setIsHydratingFromServer(false);
         return true;
       }
       

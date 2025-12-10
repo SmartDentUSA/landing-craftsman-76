@@ -1,4 +1,14 @@
-import { useCallback, useRef } from 'react';
+/**
+ * 🛡️ Hook de Auto-Save para Desktop Info com Proteção Anti-Perda de Dados
+ * 
+ * Implementa múltiplas camadas de proteção:
+ * - Bloqueio durante hidratação
+ * - Delay pós-hidratação
+ * - Verificação de integridade de dados
+ * - Backup automático antes de salvar
+ */
+
+import { useCallback, useRef, useState, useEffect } from 'react';
 import { useDebounce } from './useDebounce';
 
 interface LandingPageData {
@@ -19,6 +29,9 @@ interface DesktopInfoAutoSaveOptions {
   isHydratingFromServer?: boolean;
 }
 
+const BACKUP_KEY = 'desktop-info-backup';
+const POST_HYDRATION_DELAY_MS = 500; // Delay adicional após hidratação
+
 export const useDesktopInfoAutoSave = (
   saveLandingPage: (id: string, data: Partial<LandingPageData>) => Promise<boolean | void>,
   pageId?: string,
@@ -26,8 +39,49 @@ export const useDesktopInfoAutoSave = (
 ) => {
   const lastSaveRef = useRef<Date>();
   const lastKnownTableDataCountRef = useRef<number | null>(null);
+  const hydrationEndTimeRef = useRef<number | null>(null);
+  const [isPostHydrationReady, setIsPostHydrationReady] = useState(false);
 
-  const debouncedAutoSave = useDebounce(async (updatedData: LandingPageData, isHydrating: boolean) => {
+  // Gerenciar delay pós-hidratação
+  useEffect(() => {
+    if (!options.isHydratingFromServer && !isPostHydrationReady) {
+      // Hidratação acabou de terminar - aguardar delay adicional
+      const timeout = setTimeout(() => {
+        console.log('✅ [DESKTOP-INFO] Delay pós-hidratação concluído - auto-save liberado');
+        hydrationEndTimeRef.current = Date.now();
+        setIsPostHydrationReady(true);
+      }, POST_HYDRATION_DELAY_MS);
+      
+      return () => clearTimeout(timeout);
+    }
+  }, [options.isHydratingFromServer, isPostHydrationReady]);
+
+  // Reset quando hidratação inicia
+  useEffect(() => {
+    if (options.isHydratingFromServer) {
+      setIsPostHydrationReady(false);
+      hydrationEndTimeRef.current = null;
+    }
+  }, [options.isHydratingFromServer]);
+
+  // Criar backup local
+  const createLocalBackup = useCallback((data: any) => {
+    if (!pageId || !data) return;
+    
+    try {
+      const backup = {
+        timestamp: Date.now(),
+        pageId,
+        desktop_info: data.desktop_info
+      };
+      localStorage.setItem(`${BACKUP_KEY}-${pageId}`, JSON.stringify(backup));
+      console.log('💾 [DESKTOP-INFO] Backup local criado');
+    } catch (error) {
+      console.error('❌ [DESKTOP-INFO] Erro ao criar backup:', error);
+    }
+  }, [pageId]);
+
+  const debouncedAutoSave = useDebounce(async (updatedData: LandingPageData, isHydrating: boolean, isReady: boolean) => {
     if (!pageId) return;
     
     // 🛡️ PROTEÇÃO 1: Não salvar durante hidratação
@@ -36,9 +90,15 @@ export const useDesktopInfoAutoSave = (
       return;
     }
     
+    // 🛡️ PROTEÇÃO 2: Não salvar antes do delay pós-hidratação
+    if (!isReady) {
+      console.log('🛡️ [AUTO-SAVE] Aguardando delay pós-hidratação - Desktop Info');
+      return;
+    }
+    
     const currentTableDataCount = updatedData.desktop_info?.table_data?.length || 0;
     
-    // 🛡️ PROTEÇÃO 2: Não salvar array vazio se havia dados antes
+    // 🛡️ PROTEÇÃO 3: Não salvar array vazio se havia dados antes
     if (currentTableDataCount === 0 && lastKnownTableDataCountRef.current && lastKnownTableDataCountRef.current > 0) {
       console.warn('⚠️ [AUTO-SAVE] BLOQUEADO: Tentativa de salvar table_data como array vazio!', {
         lastKnownCount: lastKnownTableDataCountRef.current,
@@ -51,6 +111,9 @@ export const useDesktopInfoAutoSave = (
     if (currentTableDataCount > 0) {
       lastKnownTableDataCountRef.current = currentTableDataCount;
     }
+    
+    // 🛡️ PROTEÇÃO 4: Criar backup antes de salvar
+    createLocalBackup(updatedData);
     
     console.log('🔧 [AUTO-SAVE] Salvando alterações automaticamente...', { 
       desktop_info: updatedData.desktop_info,
@@ -84,9 +147,15 @@ export const useDesktopInfoAutoSave = (
       return;
     }
     
+    // 🛡️ Bloquear antes do delay pós-hidratação
+    if (!isPostHydrationReady) {
+      console.log('🛡️ [DESKTOP-INFO] Auto-save bloqueado - aguardando delay pós-hidratação');
+      return;
+    }
+    
     console.log('🔧 [DESKTOP-INFO] Iniciando auto-save para:', updatedData.desktop_info);
-    debouncedAutoSave(updatedData, isHydrating);
-  }, [debouncedAutoSave, options.isHydratingFromServer]);
+    debouncedAutoSave(updatedData, isHydrating, isPostHydrationReady);
+  }, [debouncedAutoSave, options.isHydratingFromServer, isPostHydrationReady]);
 
   // Função para inicializar contagem conhecida (chamada após hidratação)
   const initializeKnownCount = useCallback((count: number) => {
@@ -96,9 +165,27 @@ export const useDesktopInfoAutoSave = (
     }
   }, []);
 
+  // Função para restaurar backup
+  const restoreBackup = useCallback((): any | null => {
+    if (!pageId) return null;
+    
+    try {
+      const backupStr = localStorage.getItem(`${BACKUP_KEY}-${pageId}`);
+      if (!backupStr) return null;
+      
+      const backup = JSON.parse(backupStr);
+      console.log('🔄 [DESKTOP-INFO] Backup restaurado de', new Date(backup.timestamp).toLocaleString());
+      return backup.desktop_info;
+    } catch {
+      return null;
+    }
+  }, [pageId]);
+
   return {
     saveDesktopInfo,
     lastSave: lastSaveRef.current,
-    initializeKnownCount
+    initializeKnownCount,
+    restoreBackup,
+    isReady: isPostHydrationReady
   };
 };

@@ -1,7 +1,28 @@
 /**
  * Deep Merge Utility
  * Faz merge profundo de objetos preservando dados existentes
+ * 
+ * 🛡️ PROTEÇÃO ANTI-PERDA DE DADOS:
+ * - Arrays críticos são protegidos por padrão
+ * - Bloqueia substituição de arrays não-vazios por vazios
+ * - Suporta lista de arrays críticos configurável
  */
+
+// Arrays críticos que NUNCA devem ser zerados automaticamente
+export const CRITICAL_ARRAYS = [
+  'offers',
+  'partners', 
+  'table_data',
+  'solutions',
+  'faq',
+  'breadcrumb',
+  'menu',
+  'locations',
+  'links',
+  'social',
+  'images',
+  'hreflang'
+] as const;
 
 export interface DeepMergeOptions {
   /**
@@ -16,6 +37,18 @@ export interface DeepMergeOptions {
    * Se definido, apenas esses arrays são protegidos
    */
   protectedArrayPaths?: string[];
+  
+  /**
+   * Se true, usa lista de arrays críticos para proteção extra
+   * @default true
+   */
+  useCriticalArraysList?: boolean;
+  
+  /**
+   * Se true, loga warnings quando proteção é ativada
+   * @default true
+   */
+  logWarnings?: boolean;
 }
 
 /**
@@ -28,6 +61,25 @@ function isPlainObject(value: any): boolean {
     !Array.isArray(value) &&
     !(value instanceof Date)
   );
+}
+
+/**
+ * Verifica se um array é crítico e deve ser protegido
+ */
+function isCriticalArray(key: string, options: DeepMergeOptions): boolean {
+  const { protectedArrayPaths, useCriticalArraysList = true } = options;
+  
+  // Se há lista específica, usar ela
+  if (protectedArrayPaths && protectedArrayPaths.length > 0) {
+    return protectedArrayPaths.includes(key);
+  }
+  
+  // Se deve usar lista de críticos, verificar
+  if (useCriticalArraysList) {
+    return CRITICAL_ARRAYS.includes(key as any);
+  }
+  
+  return false;
 }
 
 /**
@@ -48,7 +100,7 @@ export function deepMerge<T = any>(
 ): T {
   const { 
     protectNonEmptyArrays = true,
-    protectedArrayPaths 
+    logWarnings = true
   } = options;
 
   // Se target não é objeto, retorna source
@@ -73,17 +125,18 @@ export function deepMerge<T = any>(
       // 🛡️ PROTEÇÃO DE ARRAYS
       if (Array.isArray(sourceValue) && Array.isArray(targetValue)) {
         // Verificar se deve proteger este array
-        const shouldProtect = protectNonEmptyArrays && (
-          !protectedArrayPaths || 
-          protectedArrayPaths.includes(key)
-        );
+        const isProtected = isCriticalArray(key, options);
+        const shouldProtect = protectNonEmptyArrays && isProtected;
         
         // Se source é vazio mas target tem dados, preservar target
         if (shouldProtect && sourceValue.length === 0 && targetValue.length > 0) {
-          console.warn(`🛡️ [deepMerge] Protegendo array "${key}" de ser zerado`, {
-            targetLength: targetValue.length,
-            sourceLength: sourceValue.length
-          });
+          if (logWarnings) {
+            console.warn(`🛡️ [deepMerge] BLOQUEADO: Tentativa de zerar array crítico "${key}"`, {
+              targetLength: targetValue.length,
+              sourceLength: sourceValue.length,
+              action: 'preservando dados existentes'
+            });
+          }
           result[key] = targetValue;
           continue;
         }
@@ -108,10 +161,14 @@ export function deepMerge<T = any>(
 
 /**
  * Deep merge SEM proteção de arrays (comportamento original)
- * Use apenas quando realmente precisa substituir arrays vazios
+ * ⚠️ Use apenas quando realmente precisa substituir arrays vazios
  */
 export function deepMergeUnsafe<T = any>(target: T, source: Partial<T>): T {
-  return deepMerge(target, source, { protectNonEmptyArrays: false });
+  return deepMerge(target, source, { 
+    protectNonEmptyArrays: false,
+    useCriticalArraysList: false,
+    logWarnings: false
+  });
 }
 
 /**
@@ -124,6 +181,19 @@ export function deepMergeProtected<T = any>(
 ): T {
   return deepMerge(target, source, { 
     protectNonEmptyArrays: true,
-    protectedArrayPaths: protectedPaths 
+    protectedArrayPaths: protectedPaths,
+    useCriticalArraysList: false
+  });
+}
+
+/**
+ * Deep merge com proteção máxima (todos os arrays críticos)
+ * Recomendado para operações de auto-save
+ */
+export function deepMergeSafe<T = any>(target: T, source: Partial<T>): T {
+  return deepMerge(target, source, {
+    protectNonEmptyArrays: true,
+    useCriticalArraysList: true,
+    logWarnings: true
   });
 }
