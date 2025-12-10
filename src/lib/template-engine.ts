@@ -2508,7 +2508,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                 <div class="footer-locations-grid" itemprop="address" itemscope itemtype="https://schema.org/PostalAddress">
                     {{#footer.locations}}
                     <article class="footer-location-card">
-                        <strong>{{title}}</strong>
+                        <strong>{{{flagIcon}}} {{title}}</strong>
                         <p itemprop="streetAddress">📍 {{address}}</p>
                     </article>
                     {{/footer.locations}}
@@ -3423,6 +3423,10 @@ export const generatePreviewHTML = async (data: any): Promise<string> => {
     // 🆕 Footer com processamento de ícones SVG (sincronizado com generateHTML)
     footer: {
       ...data.footer,
+      locations: (data.footer?.locations || []).map((location: any) => ({
+        ...location,
+        flagIcon: location.country === 'Brazil' ? '🇧🇷' : location.country === 'USA' ? '🇺🇸' : ''
+      })),
       social: (data.footer?.social || []).map((social: any) => ({
         ...social,
         iconSvg: SOCIAL_ICONS[social.platform] || SOCIAL_ICONS.website
@@ -3662,6 +3666,10 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
     }),
     footer: {
       ...data.footer,
+      locations: (data.footer?.locations || []).map((location: any) => ({
+        ...location,
+        flagIcon: location.country === 'Brazil' ? '🇧🇷' : location.country === 'USA' ? '🇺🇸' : ''
+      })),
       social: (data.footer?.social || []).map((social: any) => ({
         ...social,
         iconSvg: SOCIAL_ICONS[social.platform] || SOCIAL_ICONS.website

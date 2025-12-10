@@ -17,6 +17,7 @@ interface NavigationMenuItem {
 interface FooterLocation {
   title: string;
   address: string;
+  country?: 'Brazil' | 'USA' | '';
 }
 
 interface FooterLink {
@@ -110,7 +111,7 @@ export function NavigationFooterTab({ config = defaultConfig, onChange }: Naviga
       ...safeConfig,
       footer: {
         ...safeConfig.footer,
-        locations: [...safeConfig.footer.locations, { title: '', address: '' }]
+        locations: [...safeConfig.footer.locations, { title: '', address: '', country: '' }]
       }
     });
   };
@@ -335,12 +336,31 @@ export function NavigationFooterTab({ config = defaultConfig, onChange }: Naviga
         <CardContent className="space-y-3">
           {safeConfig.footer.locations.map((location, index) => (
             <div key={index} className="flex items-start gap-2 p-3 border rounded-lg bg-muted/30">
-              <div className="flex-1 grid grid-cols-1 gap-2">
-                <Input
-                  placeholder="Título (ex: Matriz, Filial SP)"
-                  value={location.title}
-                  onChange={(e) => updateLocation(index, 'title', e.target.value)}
-                />
+              <div className="flex-1 space-y-2">
+                <div className="grid grid-cols-[1fr_100px] gap-2">
+                  <Input
+                    placeholder="Título (ex: Matriz, Filial SP)"
+                    value={location.title}
+                    onChange={(e) => updateLocation(index, 'title', e.target.value)}
+                  />
+                  <Select
+                    value={location.country || ''}
+                    onValueChange={(value) => updateLocation(index, 'country', value)}
+                  >
+                    <SelectTrigger className="bg-background">
+                      <SelectValue placeholder="País">
+                        {location.country === 'Brazil' && '🇧🇷'}
+                        {location.country === 'USA' && '🇺🇸'}
+                        {!location.country && '🌎'}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover">
+                      <SelectItem value="">🌎 Nenhum</SelectItem>
+                      <SelectItem value="Brazil">🇧🇷 Brasil</SelectItem>
+                      <SelectItem value="USA">🇺🇸 USA</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <Input
                   placeholder="Endereço completo"
                   value={location.address}
