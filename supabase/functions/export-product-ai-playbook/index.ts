@@ -998,12 +998,16 @@ function generateAIPlaybookJSON(product: ProductData & {
           (product as any).showcase && 'Vitrine'
         ].filter(Boolean)
       },
-      // ✅ NEW: Competitor Comparison
+      // ✅ NEW: Competitor Comparison (Fixed: access table_data array)
       competitor_comparison: {
-        comparisons: ((product as any).competitor_comparison || []).map((comp: any) => ({
-          competitor_name: comp.competitor_name || comp.name,
-          competitor_price: comp.competitor_price || comp.price,
-          competitor_url: comp.competitor_url || comp.url,
+        enabled: (product as any).competitor_comparison?.enabled || false,
+        title: (product as any).competitor_comparison?.title || '',
+        subtitle: (product as any).competitor_comparison?.subtitle || '',
+        table_headers: (product as any).competitor_comparison?.table_headers || [],
+        comparisons: ((product as any).competitor_comparison?.table_data || []).map((comp: any) => ({
+          competitor_name: comp.competitor_name || comp.name || comp[0] || '',
+          competitor_price: comp.competitor_price || comp.price || comp[1] || null,
+          competitor_url: comp.competitor_url || comp.url || null,
           our_advantages: comp.our_advantages || comp.advantages || [],
           their_advantages: comp.their_advantages || comp.disadvantages || [],
           price_difference: comp.competitor_price && product.price 
@@ -1012,8 +1016,8 @@ function generateAIPlaybookJSON(product: ProductData & {
           notes: comp.notes || null
         })),
         summary: {
-          total_competitors: ((product as any).competitor_comparison || []).length,
-          has_price_advantage: ((product as any).competitor_comparison || []).some((c: any) => 
+          total_competitors: ((product as any).competitor_comparison?.table_data || []).length,
+          has_price_advantage: ((product as any).competitor_comparison?.table_data || []).some((c: any) => 
             c.competitor_price && product.price && c.competitor_price > product.price
           )
         }
@@ -1230,13 +1234,17 @@ ${product.variations?.length ? product.variations.map((v: any) =>
 - Vitrine: ${(product as any).showcase ? '✅ Sim' : '❌ Não'}
 
 ## 📊 COMPARAÇÃO COM CONCORRENTES
-${((product as any).competitor_comparison || []).length > 0 ? ((product as any).competitor_comparison || []).map((comp: any, idx: number) => `
-${idx + 1}. ${comp.competitor_name || comp.name}
-   - Preço Concorrente: R$ ${comp.competitor_price || comp.price || 'N/A'}
+${(product as any).competitor_comparison?.enabled && ((product as any).competitor_comparison?.table_data || []).length > 0 ? `
+Título: ${(product as any).competitor_comparison?.title || 'Comparativo'}
+Subtítulo: ${(product as any).competitor_comparison?.subtitle || ''}
+
+${((product as any).competitor_comparison?.table_data || []).map((comp: any, idx: number) => `
+${idx + 1}. ${comp.competitor_name || comp.name || comp[0] || 'Concorrente'}
+   - Preço Concorrente: R$ ${comp.competitor_price || comp.price || comp[1] || 'N/A'}
    - Nossas Vantagens: ${(comp.our_advantages || comp.advantages || []).join(', ') || 'N/A'}
    - Vantagens Deles: ${(comp.their_advantages || comp.disadvantages || []).join(', ') || 'N/A'}
    - URL: ${comp.competitor_url || comp.url || 'N/A'}
-`).join('\n') : '❌ Nenhuma comparação cadastrada'}
+`).join('\n')}` : '❌ Comparação com concorrentes não configurada'}
 
 ## 🎨 ATRIBUTOS DO PRODUTO
 - Cor: ${product.color || 'N/A'}
