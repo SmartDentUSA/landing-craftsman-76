@@ -1497,7 +1497,7 @@ serve(async (req) => {
       include_kols: bodyParams.include_kols ?? url.searchParams.get('include_kols') === 'true',
       include_spin_solutions: bodyParams.include_spin_solutions ?? url.searchParams.get('include_spin_solutions') !== 'false',
       include_blog_posts: bodyParams.include_blog_posts ?? url.searchParams.get('include_blog_posts') === 'true',
-      include_landing_pages: bodyParams.include_landing_pages ?? url.searchParams.get('include_landing_pages') === 'true',
+      include_landing_pages: bodyParams.include_landing_pages ?? url.searchParams.get('include_landing_pages') !== 'false',
       include_external_videos: bodyParams.include_external_videos ?? url.searchParams.get('include_external_videos') === 'true',
       approved_only: bodyParams.approved_only ?? url.searchParams.get('approved_only') !== 'false',
       category: bodyParams.category || url.searchParams.get('category') || undefined,
