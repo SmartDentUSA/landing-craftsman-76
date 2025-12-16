@@ -1018,6 +1018,54 @@ function generateAIPlaybookJSON(product: ProductData & {
           )
         }
       },
+      // ✅ NEW: SPIN Selling Solutions (Sales Methodology)
+      spin_selling_solutions: {
+        total_solutions: ((product as any).spin_solutions || []).length,
+        solutions: ((product as any).spin_solutions || []).map((sol: any) => ({
+          id: sol.id,
+          title: sol.title,
+          pain_type: sol.pain_type || null,
+          frequency: sol.frequency || null,
+          priority: sol.priority || null,
+          sales_pitch: sol.sales_pitch || null,
+          storytelling: stripHTML(sol.storytelling_auto_generated || ''),
+          spin_journey: sol.spin_journey ? {
+            situation: sol.spin_journey.situation || null,
+            problem: sol.spin_journey.problem || null,
+            implication: sol.spin_journey.implication || null,
+            need_payoff: sol.spin_journey.need_payoff || null
+          } : null,
+          faq: (sol.faq || []).map((f: any) => ({
+            question: f.question,
+            answer: stripHTML(f.answer || '')
+          })),
+          success_cases: (sol.success_cases || []).map((c: any) => ({
+            title: c.title || c.name || null,
+            description: c.description || null,
+            result: c.result || null
+          })),
+          real_quotes: (sol.real_quotes || []).map((q: any) => ({
+            quote: q.quote || q.text || null,
+            author: q.author || null,
+            role: q.role || null
+          })),
+          impact_metrics: sol.impact_metrics || null,
+          competitor_comparison: sol.competitor_comparison || null,
+          whatsapp_message: sol.whatsapp_complete_message || null,
+          video: sol.selected_video_url ? {
+            url: sol.selected_video_url,
+            title: sol.selected_video_title || null
+          } : null,
+          other_products_in_solution: (sol.product_ids || []).filter((id: string) => id !== product.id).length
+        })),
+        summary: {
+          pain_types_addressed: [...new Set(((product as any).spin_solutions || []).map((s: any) => s.pain_type).filter(Boolean))],
+          total_faqs: ((product as any).spin_solutions || []).reduce((acc: number, sol: any) => acc + (sol.faq?.length || 0), 0),
+          total_success_cases: ((product as any).spin_solutions || []).reduce((acc: number, sol: any) => acc + (sol.success_cases?.length || 0), 0),
+          has_storytelling: ((product as any).spin_solutions || []).some((s: any) => s.storytelling_auto_generated),
+          has_whatsapp_messages: ((product as any).spin_solutions || []).some((s: any) => s.whatsapp_complete_message)
+        }
+      },
       customer_service_prompts: [
         `Produto: ${product.name}`,
         `Categoria: ${product.category}${product.subcategory ? ` > ${product.subcategory}` : ''}`,
@@ -1893,6 +1941,59 @@ ${idx + 1}. 📄 ${lp.name}
 
 📌 Total de Landing Pages Aprovadas: ${product.related_landing_pages?.length || 0}
 
+## 🎯 SOLUÇÕES SPIN SELLING (Metodologia de Vendas)
+
+${((product as any).spin_solutions && (product as any).spin_solutions.length > 0) ? 
+  (product as any).spin_solutions.map((sol: any, idx: number) => `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SOLUÇÃO ${idx + 1}: ${sol.title}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📌 IDENTIFICAÇÃO:
+- ID: ${sol.id}
+- Tipo de Dor: ${sol.pain_type || 'N/A'}
+- Frequência: ${sol.frequency || 'N/A'}
+- Prioridade: ${sol.priority || 'N/A'}
+
+💡 PITCH DE VENDAS:
+${sol.sales_pitch || 'N/A'}
+
+📖 STORYTELLING:
+${stripHTML(sol.storytelling_auto_generated || 'N/A')}
+
+🔄 JORNADA SPIN:
+${sol.spin_journey ? `
+- SITUAÇÃO: ${sol.spin_journey.situation || 'N/A'}
+- PROBLEMA: ${sol.spin_journey.problem || 'N/A'}
+- IMPLICAÇÃO: ${sol.spin_journey.implication || 'N/A'}
+- NECESSIDADE-SOLUÇÃO: ${sol.spin_journey.need_payoff || 'N/A'}
+` : 'N/A'}
+
+❓ FAQ DA SOLUÇÃO (${sol.faq?.length || 0}):
+${sol.faq?.map((f: any, fIdx: number) => `
+${fIdx + 1}. ${f.question}
+   ✅ ${stripHTML(f.answer || '')}`).join('\n') || '- Sem FAQ cadastrado'}
+
+🏆 CASOS DE SUCESSO (${sol.success_cases?.length || 0}):
+${sol.success_cases?.map((c: any) => `- ${c.title || c.name || 'Caso de sucesso'}: ${c.description || ''}`).join('\n') || '- Sem casos de sucesso cadastrados'}
+
+💬 CITAÇÕES REAIS:
+${sol.real_quotes?.map((q: any) => `- "${q.quote || q.text}" - ${q.author || 'Anônimo'}`).join('\n') || '- Sem citações cadastradas'}
+
+📊 MÉTRICAS DE IMPACTO:
+${sol.impact_metrics ? JSON.stringify(sol.impact_metrics, null, 2) : '- Sem métricas cadastradas'}
+
+🎬 VÍDEO SELECIONADO:
+${sol.selected_video_url ? `- ${sol.selected_video_title || 'Vídeo'}: ${sol.selected_video_url}` : '- Sem vídeo selecionado'}
+
+📱 MENSAGEM WHATSAPP COMPLETA:
+${sol.whatsapp_complete_message || '- Sem mensagem cadastrada'}
+
+`).join('\n') 
+: '📭 Este produto não está vinculado a nenhuma Solução SPIN'}
+
+📌 Total de Soluções SPIN: ${(product as any).spin_solutions?.length || 0}
+
 ## 🤖 SCRIPTS PARA ATENDIMENTO IA
 ${json.customer_service_prompts.join('\n')}
 
@@ -2106,6 +2207,20 @@ serve(async (req) => {
 
     console.log(`🔗 Links inteligentes carregados: ${intelligentLinksRepo?.length || 0}`);
 
+    // ✅ NEW: Fetch SPIN Selling Solutions where this product is included
+    const { data: spinSolutions, error: spinError } = await supabase
+      .from('spin_selling_solutions')
+      .select('*')
+      .contains('product_ids', [productId])
+      .eq('active', true)
+      .order('priority', { ascending: true });
+
+    if (spinError) {
+      console.warn('⚠️ Erro ao buscar SPIN solutions:', spinError.message);
+    }
+
+    console.log(`🎯 SPIN Solutions carregadas: ${spinSolutions?.length || 0}`);
+
     // Fetch landing page context if product has source_landing_page_id
     let landingPageContext: any = null;
     let landingPageVideos: any[] = [];
@@ -2209,7 +2324,8 @@ serve(async (req) => {
       product_blogs: productBlogs,
       consolidatedVideos,
       intelligent_links_repository: intelligentLinksRepo || [],
-      company_profile: companyProfile || null
+      company_profile: companyProfile || null,
+      spin_solutions: spinSolutions || []
     };
 
     // Generate content based on format
