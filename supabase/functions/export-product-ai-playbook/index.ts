@@ -160,6 +160,39 @@ interface ProductData {
   ai_generated_category?: boolean;
   ai_generated_features?: boolean;
   source_type?: string;
+  
+  // Stock & Logistics
+  stock_quantity?: number;
+  stock_managed?: boolean;
+  min_order_quantity?: number;
+  max_order_quantity?: number;
+  multiple_order_quantity?: number;
+  unit_measure?: string;
+  shipping_time?: string;
+  free_shipping?: boolean;
+  shipping_type?: string;
+
+  // Fiscal
+  ncm?: string;
+  fiscal_class?: string;
+  tax_situation?: string;
+  fiscal_origin?: string;
+
+  // Clinical Brain v1.0
+  product_type?: string;
+  forbidden_products?: any[];
+  required_products?: any[];
+  anti_hallucination_rules?: any[];
+
+  // Status Flags
+  active?: boolean;
+  featured?: boolean;
+  launch?: boolean;
+  promotion?: boolean;
+  showcase?: boolean;
+
+  // Competitor Comparison
+  competitor_comparison?: any[];
 }
 
 /**
@@ -900,6 +933,91 @@ function generateAIPlaybookJSON(product: ProductData & {
             .map(([key]: [string, any]) => key)
         }
       },
+      // ✅ NEW: Stock & Logistics
+      stock_logistics: {
+        inventory: {
+          stock_quantity: (product as any).stock_quantity || 0,
+          stock_managed: (product as any).stock_managed || false,
+          availability_status: product.availability || 'in stock'
+        },
+        order_constraints: {
+          min_order_quantity: (product as any).min_order_quantity || 1,
+          max_order_quantity: (product as any).max_order_quantity || null,
+          multiple_order_quantity: (product as any).multiple_order_quantity || 1,
+          unit_measure: (product as any).unit_measure || 'unidade'
+        },
+        shipping: {
+          shipping_time: (product as any).shipping_time || null,
+          free_shipping: (product as any).free_shipping || false,
+          shipping_type: (product as any).shipping_type || 'standard'
+        }
+      },
+      // ✅ NEW: Fiscal Data (Brazil)
+      fiscal_data: {
+        ncm: (product as any).ncm || null,
+        fiscal_class: (product as any).fiscal_class || null,
+        tax_situation: (product as any).tax_situation || null,
+        fiscal_origin: (product as any).fiscal_origin || null,
+        has_complete_fiscal_data: !!((product as any).ncm && (product as any).fiscal_origin)
+      },
+      // ✅ NEW: Clinical Brain v1.0 (Medical/Dental AI)
+      clinical_brain: {
+        product_type: (product as any).product_type || null,
+        forbidden_products: ((product as any).forbidden_products || []).map((fp: any) => ({
+          product_id: fp.product_id,
+          product_name: fp.product_name,
+          reason: fp.reason || 'Incompatível'
+        })),
+        required_products: ((product as any).required_products || []).map((rp: any) => ({
+          product_id: rp.product_id,
+          product_name: rp.product_name,
+          role: rp.role || 'complementar'
+        })),
+        anti_hallucination_rules: (product as any).anti_hallucination_rules || [],
+        summary: {
+          has_clinical_brain: !!((product as any).product_type || (product as any).forbidden_products?.length || (product as any).required_products?.length),
+          total_forbidden: ((product as any).forbidden_products || []).length,
+          total_required: ((product as any).required_products || []).length,
+          total_rules: ((product as any).anti_hallucination_rules || []).length
+        }
+      },
+      // ✅ NEW: Product Status Flags
+      status_flags: {
+        active: (product as any).active !== false,
+        featured: (product as any).featured || false,
+        launch: (product as any).launch || false,
+        promotion: (product as any).promotion || false,
+        showcase: (product as any).showcase || false,
+        approved: product.approved || false,
+        selected: product.selected || false,
+        use_in_ai_generation: product.use_in_ai_generation !== false,
+        marketing_badges: [
+          (product as any).featured && 'Destaque',
+          (product as any).launch && 'Lançamento',
+          (product as any).promotion && 'Promoção',
+          (product as any).showcase && 'Vitrine'
+        ].filter(Boolean)
+      },
+      // ✅ NEW: Competitor Comparison
+      competitor_comparison: {
+        comparisons: ((product as any).competitor_comparison || []).map((comp: any) => ({
+          competitor_name: comp.competitor_name || comp.name,
+          competitor_price: comp.competitor_price || comp.price,
+          competitor_url: comp.competitor_url || comp.url,
+          our_advantages: comp.our_advantages || comp.advantages || [],
+          their_advantages: comp.their_advantages || comp.disadvantages || [],
+          price_difference: comp.competitor_price && product.price 
+            ? ((comp.competitor_price - product.price) / product.price * 100).toFixed(1) + '%'
+            : null,
+          notes: comp.notes || null
+        })),
+        summary: {
+          total_competitors: ((product as any).competitor_comparison || []).length,
+          has_price_advantage: ((product as any).competitor_comparison || []).some((c: any) => 
+            c.competitor_price && product.price && c.competitor_price > product.price
+          )
+        }
+      },
       customer_service_prompts: [
         `Produto: ${product.name}`,
         `Categoria: ${product.category}${product.subcategory ? ` > ${product.subcategory}` : ''}`,
@@ -1032,6 +1150,45 @@ ${product.variations?.length ? product.variations.map((v: any) =>
 - Altura: ${product.height ? `${product.height} cm` : 'N/A'}
 - Largura: ${product.width ? `${product.width} cm` : 'N/A'}
 - Profundidade: ${product.depth ? `${product.depth} cm` : 'N/A'}
+
+## 📦 ESTOQUE E LOGÍSTICA
+- Estoque Gerenciado: ${(product as any).stock_managed ? '✅ Sim' : '❌ Não'}
+- Quantidade em Estoque: ${(product as any).stock_quantity || 'N/A'}
+- Qtd. Mínima por Pedido: ${(product as any).min_order_quantity || 1}
+- Qtd. Máxima por Pedido: ${(product as any).max_order_quantity || 'Ilimitado'}
+- Múltiplo de Pedido: ${(product as any).multiple_order_quantity || 1}
+- Unidade de Medida: ${(product as any).unit_measure || 'unidade'}
+- Tempo de Envio: ${(product as any).shipping_time || 'N/A'}
+- Frete Grátis: ${(product as any).free_shipping ? '✅ Sim' : '❌ Não'}
+- Tipo de Envio: ${(product as any).shipping_type || 'standard'}
+
+## 🧾 DADOS FISCAIS (BRASIL)
+- NCM: ${(product as any).ncm || 'N/A'}
+- Classe Fiscal: ${(product as any).fiscal_class || 'N/A'}
+- Situação Tributária: ${(product as any).tax_situation || 'N/A'}
+- Origem Fiscal: ${(product as any).fiscal_origin || 'N/A'}
+
+## 🧠 CLINICAL BRAIN v1.0 (IA MÉDICA/ODONTOLÓGICA)
+- Tipo de Produto: ${(product as any).product_type || 'N/A'}
+- Produtos Proibidos: ${((product as any).forbidden_products || []).length > 0 ? ((product as any).forbidden_products || []).map((fp: any) => `${fp.product_name} (${fp.reason || 'Incompatível'})`).join(', ') : 'Nenhum'}
+- Produtos Obrigatórios: ${((product as any).required_products || []).length > 0 ? ((product as any).required_products || []).map((rp: any) => `${rp.product_name} (${rp.role || 'complementar'})`).join(', ') : 'Nenhum'}
+- Regras Anti-Alucinação: ${((product as any).anti_hallucination_rules || []).length} regras
+
+## 🏷️ STATUS FLAGS
+- Ativo: ${(product as any).active !== false ? '✅ Sim' : '❌ Não'}
+- Destaque: ${(product as any).featured ? '✅ Sim' : '❌ Não'}
+- Lançamento: ${(product as any).launch ? '✅ Sim' : '❌ Não'}
+- Promoção: ${(product as any).promotion ? '✅ Sim' : '❌ Não'}
+- Vitrine: ${(product as any).showcase ? '✅ Sim' : '❌ Não'}
+
+## 📊 COMPARAÇÃO COM CONCORRENTES
+${((product as any).competitor_comparison || []).length > 0 ? ((product as any).competitor_comparison || []).map((comp: any, idx: number) => `
+${idx + 1}. ${comp.competitor_name || comp.name}
+   - Preço Concorrente: R$ ${comp.competitor_price || comp.price || 'N/A'}
+   - Nossas Vantagens: ${(comp.our_advantages || comp.advantages || []).join(', ') || 'N/A'}
+   - Vantagens Deles: ${(comp.their_advantages || comp.disadvantages || []).join(', ') || 'N/A'}
+   - URL: ${comp.competitor_url || comp.url || 'N/A'}
+`).join('\n') : '❌ Nenhuma comparação cadastrada'}
 
 ## 🎨 ATRIBUTOS DO PRODUTO
 - Cor: ${product.color || 'N/A'}
@@ -1819,7 +1976,27 @@ function calculateCompleteness(product: ProductData): number {
     
     // Landing page config
     product.resource_cta1?.visible,
-    product.offer_discount_cta?.visible
+    product.offer_discount_cta?.visible,
+    
+    // ✅ NEW: Stock & Logistics
+    product.stock_managed !== undefined,
+    product.shipping_time,
+    product.unit_measure,
+    
+    // ✅ NEW: Fiscal
+    product.ncm,
+    product.fiscal_origin,
+    
+    // ✅ NEW: Clinical Brain
+    product.product_type,
+    product.anti_hallucination_rules?.length,
+    
+    // ✅ NEW: Status Flags
+    product.active !== undefined,
+    product.featured !== undefined,
+    
+    // ✅ NEW: Competitor Comparison
+    product.competitor_comparison?.length
   ];
   
   const filledFields = fields.filter(field => {
