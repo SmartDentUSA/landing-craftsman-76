@@ -12,7 +12,7 @@ import { Progress } from "@/components/ui/progress";
 import { TagInput, TagInputHandle } from "@/components/ui/tag-input";
 import { Badge } from "@/components/ui/badge";
 import { ImageUploader } from "@/components/ImageUploader";
-import { Save, Trash2, Plus, X, Sparkles, Download, Check, ChevronsUpDown, FileText, Package, AlertCircle, Info, Loader2 } from "lucide-react";
+import { Save, Trash2, Plus, X, Sparkles, Download, Check, ChevronsUpDown, FileText, Package, AlertCircle, Info, Loader2, RefreshCw, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { VideoSection } from "@/components/VideoSection";
@@ -34,7 +34,9 @@ import { useProductAutoSave } from '@/hooks/useProductAutoSave';
 import { AutoSaveIndicator } from './AutoSaveIndicator';
 import { WorkflowStagesSection } from './WorkflowStagesSection';
 import { CompetitorComparisonTable } from './CompetitorComparisonTable';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Brain } from 'lucide-react';
+import { useClinicalBrainGenerator } from '@/hooks/useClinicalBrainGenerator';
 import {
   ProductTypeSelector,
   ForbiddenProductsSection,
@@ -229,6 +231,12 @@ interface Product {
   forbidden_products?: ForbiddenProduct[];
   required_products?: RequiredProduct[];
   anti_hallucination_rules?: AntiHallucinationRules;
+  // Clinical Brain Validation Fields
+  clinical_brain_status?: 'empty' | 'ai_generated' | 'validated';
+  clinical_brain_generated_at?: string;
+  clinical_brain_validated_at?: string;
+  clinical_brain_validator_name?: string;
+  clinical_brain_validation_notes?: string;
 }
 
 interface WorkflowStage {
@@ -324,7 +332,13 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
     product_type: null,
     forbidden_products: [],
     required_products: [],
-    anti_hallucination_rules: DEFAULT_ANTI_HALLUCINATION_RULES
+    anti_hallucination_rules: DEFAULT_ANTI_HALLUCINATION_RULES,
+    // Clinical Brain Validation
+    clinical_brain_status: 'empty',
+    clinical_brain_generated_at: undefined,
+    clinical_brain_validated_at: undefined,
+    clinical_brain_validator_name: undefined,
+    clinical_brain_validation_notes: undefined,
   });
   const [promoPrice, setPromoPrice] = useState<number | undefined>(undefined);
   const [benefits, setBenefits] = useState<string[]>([]);
@@ -344,6 +358,10 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
   const [generatingSEO, setGeneratingSEO] = useState(false);
   const [generatingCard, setGeneratingCard] = useState(false);
   const [generatingFAQs, setGeneratingFAQs] = useState(false);
+  const [validationNotes, setValidationNotes] = useState('');
+  
+  // Clinical Brain Generator Hook
+  const { generate: generateClinicalBrain, validate: validateClinicalBrain, generating: generatingClinicalBrain, validating: validatingClinicalBrain } = useClinicalBrainGenerator();
   
   // Images gallery state
   const [imagesGallery, setImagesGallery] = useState<Array<{ url: string; alt: string; order: number; is_main: boolean }>>([]);
@@ -478,7 +496,13 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
       product_type: (product as any).product_type ?? null,
       forbidden_products: (product as any).forbidden_products ?? [],
       required_products: (product as any).required_products ?? [],
-      anti_hallucination_rules: (product as any).anti_hallucination_rules ?? DEFAULT_ANTI_HALLUCINATION_RULES
+      anti_hallucination_rules: (product as any).anti_hallucination_rules ?? DEFAULT_ANTI_HALLUCINATION_RULES,
+      // Clinical Brain Validation
+      clinical_brain_status: (product as any).clinical_brain_status ?? 'empty',
+      clinical_brain_generated_at: (product as any).clinical_brain_generated_at,
+      clinical_brain_validated_at: (product as any).clinical_brain_validated_at,
+      clinical_brain_validator_name: (product as any).clinical_brain_validator_name,
+      clinical_brain_validation_notes: (product as any).clinical_brain_validation_notes,
     });
       setBenefits(product.benefits || []);
       setFeatures(product.features || []);
@@ -2455,17 +2479,159 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
 
           {/* Clinical Brain v1.0 — Regras de Compatibilidade */}
           <Card className="p-4 space-y-4 bg-gradient-to-r from-purple-50/50 to-blue-50/50 dark:from-purple-950/20 dark:to-blue-950/20 border-purple-200 dark:border-purple-800">
-            <div className="flex items-center gap-2">
-              <Brain className="h-5 w-5 text-purple-600" />
-              <h3 className="text-lg font-semibold text-purple-900 dark:text-purple-100">
-                Clinical Brain — Regras de Compatibilidade
-              </h3>
-              <Badge variant="outline" className="text-xs">v1.0</Badge>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <Brain className="h-5 w-5 text-purple-600" />
+                <h3 className="text-lg font-semibold text-purple-900 dark:text-purple-100">
+                  Clinical Brain — Regras de Compatibilidade
+                </h3>
+                <Badge variant="outline" className="text-xs">v1.0</Badge>
+                
+                {/* Status Badge */}
+                {formData.clinical_brain_status === 'validated' && (
+                  <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100 gap-1">
+                    <CheckCircle2 className="h-3 w-3" />
+                    Validado por {formData.clinical_brain_validator_name}
+                  </Badge>
+                )}
+                {formData.clinical_brain_status === 'ai_generated' && (
+                  <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100 gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    Gerado por IA — Aguardando Revisão
+                  </Badge>
+                )}
+              </div>
+              
+              {/* Generate Button */}
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={async () => {
+                  if (!product?.id) {
+                    toast({
+                      title: 'Erro',
+                      description: 'Salve o produto antes de gerar o Clinical Brain',
+                      variant: 'destructive',
+                    });
+                    return;
+                  }
+                  const result = await generateClinicalBrain(product.id, formData.clinical_brain_status === 'validated');
+                  if (result?.generated) {
+                    setFormData(prev => ({
+                      ...prev,
+                      product_type: result.generated.product_type,
+                      workflow_stages: result.generated.workflow_stages,
+                      forbidden_products: result.generated.forbidden_products,
+                      required_products: result.generated.required_products,
+                      anti_hallucination_rules: result.generated.anti_hallucination_rules,
+                      clinical_brain_status: 'ai_generated',
+                      clinical_brain_generated_at: new Date().toISOString(),
+                      clinical_brain_validated_at: undefined,
+                      clinical_brain_validator_name: undefined,
+                    }));
+                  }
+                }}
+                disabled={generatingClinicalBrain || !formData.name || !product?.id}
+                className="gap-2"
+              >
+                <Sparkles className="h-4 w-4" />
+                {generatingClinicalBrain ? 'Gerando...' : formData.clinical_brain_status !== 'empty' ? '🔄 Regenerar Clinical Brain' : '🧠 Gerar Clinical Brain com IA'}
+              </Button>
             </div>
             
             <p className="text-sm text-muted-foreground">
               Configure regras clínicas para garantir que a IA nunca gere conteúdo incorreto sobre este produto.
             </p>
+
+            {/* Validation Panel - Only shows for ai_generated status */}
+            {formData.clinical_brain_status === 'ai_generated' && (
+              <Alert className="border-amber-300 bg-amber-50 dark:bg-amber-950/30">
+                <AlertCircle className="h-4 w-4 text-amber-600" />
+                <AlertTitle className="text-amber-800 dark:text-amber-200">⚠️ Revisão Necessária</AlertTitle>
+                <AlertDescription className="text-amber-700 dark:text-amber-300">
+                  <p className="mb-3">
+                    Conteúdo gerado por IA em {formData.clinical_brain_generated_at ? new Date(formData.clinical_brain_generated_at).toLocaleString('pt-BR') : 'data desconhecida'}.
+                    Revise os campos abaixo antes de validar.
+                  </p>
+                  <div className="flex flex-col gap-2">
+                    <Textarea
+                      placeholder="Notas de validação (opcional)..."
+                      value={validationNotes}
+                      onChange={(e) => setValidationNotes(e.target.value)}
+                      className="bg-white dark:bg-background"
+                      rows={2}
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700 text-white gap-1"
+                        onClick={async () => {
+                          if (!product?.id) return;
+                          const success = await validateClinicalBrain(product.id, 'Administrador', validationNotes);
+                          if (success) {
+                            setFormData(prev => ({
+                              ...prev,
+                              clinical_brain_status: 'validated',
+                              clinical_brain_validated_at: new Date().toISOString(),
+                              clinical_brain_validator_name: 'Administrador',
+                              clinical_brain_validation_notes: validationNotes || undefined,
+                            }));
+                            setValidationNotes('');
+                          }
+                        }}
+                        disabled={validatingClinicalBrain}
+                      >
+                        <CheckCircle2 className="h-4 w-4" />
+                        {validatingClinicalBrain ? 'Validando...' : '✅ Validar Clinical Brain'}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={async () => {
+                          if (!product?.id) return;
+                          const result = await generateClinicalBrain(product.id, true);
+                          if (result?.generated) {
+                            setFormData(prev => ({
+                              ...prev,
+                              product_type: result.generated.product_type,
+                              workflow_stages: result.generated.workflow_stages,
+                              forbidden_products: result.generated.forbidden_products,
+                              required_products: result.generated.required_products,
+                              anti_hallucination_rules: result.generated.anti_hallucination_rules,
+                              clinical_brain_status: 'ai_generated',
+                              clinical_brain_generated_at: new Date().toISOString(),
+                            }));
+                          }
+                        }}
+                        disabled={generatingClinicalBrain}
+                        className="gap-1"
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                        🔄 Regenerar
+                      </Button>
+                    </div>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Validated Info */}
+            {formData.clinical_brain_status === 'validated' && formData.clinical_brain_validated_at && (
+              <Alert className="border-green-300 bg-green-50 dark:bg-green-950/30">
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <AlertTitle className="text-green-800 dark:text-green-200">✅ Clinical Brain Validado</AlertTitle>
+                <AlertDescription className="text-green-700 dark:text-green-300">
+                  Validado por <strong>{formData.clinical_brain_validator_name}</strong> em{' '}
+                  {new Date(formData.clinical_brain_validated_at).toLocaleString('pt-BR')}
+                  {formData.clinical_brain_validation_notes && (
+                    <p className="mt-1 italic">Notas: {formData.clinical_brain_validation_notes}</p>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
 
             <ProductTypeSelector
               value={formData.product_type ?? null}

@@ -1314,6 +1314,11 @@ export type Database = {
           brand: string | null
           canonical_url: string | null
           category: string | null
+          clinical_brain_generated_at: string | null
+          clinical_brain_status: string | null
+          clinical_brain_validated_at: string | null
+          clinical_brain_validation_notes: string | null
+          clinical_brain_validator_name: string | null
           color: string | null
           competitor_comparison: Json | null
           condition: string | null
@@ -1424,6 +1429,11 @@ export type Database = {
           brand?: string | null
           canonical_url?: string | null
           category?: string | null
+          clinical_brain_generated_at?: string | null
+          clinical_brain_status?: string | null
+          clinical_brain_validated_at?: string | null
+          clinical_brain_validation_notes?: string | null
+          clinical_brain_validator_name?: string | null
           color?: string | null
           competitor_comparison?: Json | null
           condition?: string | null
@@ -1534,6 +1544,11 @@ export type Database = {
           brand?: string | null
           canonical_url?: string | null
           category?: string | null
+          clinical_brain_generated_at?: string | null
+          clinical_brain_status?: string | null
+          clinical_brain_validated_at?: string | null
+          clinical_brain_validation_notes?: string | null
+          clinical_brain_validator_name?: string | null
           color?: string | null
           competitor_comparison?: Json | null
           condition?: string | null
