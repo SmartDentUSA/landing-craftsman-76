@@ -1656,12 +1656,41 @@ serve(async (req) => {
         break;
     }
 
+    // Save to cache after generating fresh data (for RAG and JSON formats)
+    if ((params.format === 'rag' || params.format === 'json') && !forceRefresh) {
+      const productsCount = data?.products?.length || 0;
+      const now = new Date().toISOString();
+      const expiresAt = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString();
+      
+      console.log(`💾 Saving fresh data to cache (format: ${params.format}, products: ${productsCount})...`);
+      
+      const { error: cacheError } = await supabase
+        .from('knowledge_base_cache')
+        .upsert({
+          format: params.format,
+          data: response,
+          products_count: productsCount,
+          updated_at: now,
+          expires_at: expiresAt
+        }, {
+          onConflict: 'format'
+        });
+
+      if (cacheError) {
+        console.error('⚠️ Failed to save cache:', cacheError.message);
+      } else {
+        console.log(`✅ Cache saved successfully for format: ${params.format}`);
+      }
+    }
+
     return new Response(
       typeof response === 'string' ? response : JSON.stringify(response, null, 2),
       {
         headers: {
           ...corsHeaders,
-          'Content-Type': contentType
+          'Content-Type': contentType,
+          'X-Cache': 'MISS',
+          'X-Cache-Updated': new Date().toISOString()
         }
       }
     );
