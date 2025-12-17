@@ -73,38 +73,30 @@ serve(async (req) => {
     // Format for RAG (token-optimized)
     const ragData = formatForRAG(completeKB);
 
-    // Upsert cache for RAG format
+    const now = new Date().toISOString();
+    const expiresAt = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString(); // 3 hours
+
+    // Save RAG cache (optimized for LLMs, smaller payload)
     console.log('💾 Saving RAG cache...');
-    const { error: upsertError } = await supabase
+    
+    const { error: ragError } = await supabase
       .from('knowledge_base_cache')
       .upsert({
         format: 'rag',
         data: ragData,
         products_count: productsCount,
-        updated_at: new Date().toISOString(),
-        expires_at: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString() // 3 hours
-      }, {
-        onConflict: 'format'
-      });
+        updated_at: now,
+        expires_at: expiresAt
+      }, { onConflict: 'format' });
 
-    if (upsertError) {
-      console.error('❌ Error upserting cache:', upsertError);
-      throw upsertError;
+    if (ragError) {
+      console.error('❌ Error saving RAG cache:', ragError);
+      throw ragError;
     }
-
-    // Also cache JSON format
-    console.log('💾 Saving JSON cache...');
-    await supabase
-      .from('knowledge_base_cache')
-      .upsert({
-        format: 'json',
-        data: completeKB,
-        products_count: productsCount,
-        updated_at: new Date().toISOString(),
-        expires_at: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString()
-      }, {
-        onConflict: 'format'
-      });
+    
+    console.log('✅ RAG cache saved successfully');
+    
+    // Note: JSON format is too large for batch caching, will be generated on-demand by knowledge-base function
 
     const elapsed = Date.now() - startTime;
     console.log(`✅ [refresh-knowledge-base] Cache refreshed in ${elapsed}ms. Products: ${productsCount}`);
