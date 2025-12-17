@@ -975,6 +975,36 @@ export type Database = {
         }
         Relationships: []
       }
+      knowledge_base_cache: {
+        Row: {
+          created_at: string | null
+          data: Json
+          expires_at: string | null
+          format: string
+          id: string
+          products_count: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          data: Json
+          expires_at?: string | null
+          format?: string
+          id?: string
+          products_count?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          data?: Json
+          expires_at?: string | null
+          format?: string
+          id?: string
+          products_count?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       knowledge_vectors: {
         Row: {
           chunk_type: string

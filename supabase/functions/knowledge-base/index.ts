@@ -1505,12 +1505,54 @@ serve(async (req) => {
       offset: bodyParams.offset ?? parseInt(url.searchParams.get('offset') || '0')
     };
 
-    console.log('Knowledge Base API called with params:', params);
+    // Check for use_cache parameter (default true for RAG format)
+    const useCache = (bodyParams as any).use_cache ?? url.searchParams.get('use_cache') !== 'false';
+    const forceRefresh = (bodyParams as any).force_refresh ?? url.searchParams.get('force_refresh') === 'true';
+
+    console.log('Knowledge Base API called with params:', params, { useCache, forceRefresh });
 
     // Criar cliente Supabase
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Check cache first for RAG/JSON formats (if not forcing refresh)
+    if (useCache && !forceRefresh && (params.format === 'rag' || params.format === 'json')) {
+      console.log('🔍 Checking cache for format:', params.format);
+      
+      const { data: cache, error: cacheError } = await supabase
+        .from('knowledge_base_cache')
+        .select('*')
+        .eq('format', params.format)
+        .gt('expires_at', new Date().toISOString())
+        .single();
+
+      if (!cacheError && cache) {
+        console.log(`✅ Cache HIT! Last updated: ${cache.updated_at}, Products: ${cache.products_count}`);
+        
+        // Return cached data with cache metadata
+        const cachedResponse = {
+          ...cache.data,
+          _cache: {
+            hit: true,
+            updated_at: cache.updated_at,
+            expires_at: cache.expires_at,
+            products_count: cache.products_count
+          }
+        };
+
+        return new Response(JSON.stringify(cachedResponse, null, 2), {
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json',
+            'X-Cache': 'HIT',
+            'X-Cache-Updated': cache.updated_at
+          }
+        });
+      }
+      
+      console.log('⚠️ Cache MISS or expired, fetching fresh data...');
+    }
 
     // Chamar SQL function
     const { data, error } = await supabase.rpc('get_complete_knowledge_base', {

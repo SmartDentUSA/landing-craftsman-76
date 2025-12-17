@@ -185,3 +185,6 @@ verify_jwt = false
 
 [functions.generate-clinical-brain]
 verify_jwt = true
+
+[functions.refresh-knowledge-base]
+verify_jwt = false
