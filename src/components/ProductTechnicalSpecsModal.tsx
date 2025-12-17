@@ -90,44 +90,35 @@ export const ProductTechnicalSpecsModal: React.FC<ProductTechnicalSpecsModalProp
 
       if (parsed.data && parsed.data.length > 0) {
         const importedSpecs: TechnicalSpec[] = [];
-        const labelFields = ['Especificação', 'especificacao', 'Especificacao', 'label', 'Label', 'spec', 'Spec', 'Specification'];
-        const valueFields = ['Valor', 'valor', 'value', 'Value'];
+        const headers = Object.keys(parsed.data[0] || {});
+        
+        // Detectar qual formato de CSV está sendo usado
+        let labelColumn = '';
+        let valueColumn = '';
+        
+        // Formato 1: "Item" + "Especificação" (user's format)
+        if (headers.some(h => h.toLowerCase() === 'item') && 
+            headers.some(h => h.toLowerCase().includes('especifica'))) {
+          labelColumn = headers.find(h => h.toLowerCase() === 'item') || '';
+          valueColumn = headers.find(h => h.toLowerCase().includes('especifica')) || '';
+        }
+        // Formato 2: "Especificação" + "Valor" (standard format)
+        else if (headers.some(h => h.toLowerCase().includes('especifica')) && 
+                 headers.some(h => h.toLowerCase().includes('valor'))) {
+          labelColumn = headers.find(h => h.toLowerCase().includes('especifica')) || '';
+          valueColumn = headers.find(h => h.toLowerCase().includes('valor')) || '';
+        }
+        // Formato 3: Usar primeira e segunda coluna
+        else if (headers.length >= 2) {
+          labelColumn = headers[0];
+          valueColumn = headers[1];
+        }
+
+        console.log('CSV Import - Headers:', headers, 'Label column:', labelColumn, 'Value column:', valueColumn);
 
         parsed.data.forEach((row) => {
-          let label = '';
-          let value = '';
-
-          // Buscar label
-          for (const field of labelFields) {
-            if (row[field]?.trim()) {
-              label = row[field].trim();
-              break;
-            }
-          }
-
-          // Se não encontrou, tentar primeira coluna
-          if (!label) {
-            const keys = Object.keys(row);
-            if (keys.length > 0 && row[keys[0]]?.trim()) {
-              label = row[keys[0]].trim();
-            }
-          }
-
-          // Buscar value
-          for (const field of valueFields) {
-            if (row[field]?.trim()) {
-              value = row[field].trim();
-              break;
-            }
-          }
-
-          // Se não encontrou, tentar segunda coluna
-          if (!value) {
-            const keys = Object.keys(row);
-            if (keys.length > 1 && row[keys[1]]?.trim()) {
-              value = row[keys[1]].trim();
-            }
-          }
+          const label = row[labelColumn]?.trim() || '';
+          const value = row[valueColumn]?.trim() || '';
 
           if (label && value) {
             importedSpecs.push({ label, value });
