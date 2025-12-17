@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Package, Star, DollarSign, Eye, EyeOff, RefreshCw, RotateCcw, Edit, Trash2, Plus, Building2, VideoIcon, Download, FileDown, CheckCircle, Brain } from "lucide-react";
+import { Search, Package, Star, DollarSign, Eye, EyeOff, RefreshCw, RotateCcw, Edit, Trash2, Plus, Building2, VideoIcon, Download, FileDown, CheckCircle, Brain, Clock, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useProductSync } from "@/hooks/useProductSync";
@@ -131,10 +131,81 @@ export function RepositoryPanel({
   const [exportingData, setExportingData] = useState(false);
   const [showUnapproved, setShowUnapproved] = useState(false);
   const [openCategories, setOpenCategories] = useState<Set<string>>(new Set());
+  const [kbCacheInfo, setKbCacheInfo] = useState<{ updated_at: string; products_count: number; expires_at: string } | null>(null);
+  const [refreshingCache, setRefreshingCache] = useState(false);
   const { toast } = useToast();
   const { migrateExistingOffers, syncOffersToRepository } = useProductSync();
   const { getLandingPage } = useLandingPages();
   const { refreshAllCategories } = useCategoryContext();
+
+  // Load KB cache status
+  const loadKBCacheStatus = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('knowledge_base_cache')
+        .select('updated_at, products_count, expires_at')
+        .eq('format', 'rag')
+        .single();
+
+      if (!error && data) {
+        setKbCacheInfo({
+          updated_at: data.updated_at,
+          products_count: data.products_count || 0,
+          expires_at: data.expires_at
+        });
+      }
+    } catch (error) {
+      console.error('Error loading KB cache status:', error);
+    }
+  };
+
+  // Refresh KB cache manually
+  const handleRefreshKBCache = async () => {
+    setRefreshingCache(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('refresh-knowledge-base');
+      
+      if (error) throw error;
+
+      await loadKBCacheStatus();
+      
+      toast({
+        title: "✅ Cache Atualizado",
+        description: `Knowledge Base atualizada com ${data?.products_count || 0} produtos.`,
+      });
+    } catch (error: any) {
+      console.error('Error refreshing KB cache:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao atualizar cache da Knowledge Base.",
+        variant: "destructive"
+      });
+    } finally {
+      setRefreshingCache(false);
+    }
+  };
+
+  // Check if cache is expired (> 3 hours)
+  const isCacheExpired = () => {
+    if (!kbCacheInfo?.updated_at) return true;
+    const updatedAt = new Date(kbCacheInfo.updated_at);
+    const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000);
+    return updatedAt < threeHoursAgo;
+  };
+
+  // Format time ago
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    
+    if (diffMins < 1) return 'agora';
+    if (diffMins < 60) return `há ${diffMins}min`;
+    if (diffHours < 24) return `há ${diffHours}h`;
+    return date.toLocaleDateString('pt-BR');
+  };
 
 
   // Function to load company profile data
@@ -164,7 +235,8 @@ export function RepositoryPanel({
     try {
       await Promise.all([
         loadProducts(),
-        loadCompanyProfile()
+        loadCompanyProfile(),
+        loadKBCacheStatus()
       ]);
       toast({
         title: "Sucesso",
@@ -929,25 +1001,55 @@ export function RepositoryPanel({
                     )}
                   </Button>
 
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={handleExportForLLM}
-                    disabled={exportingData}
-                    className="gap-2 bg-purple-600 hover:bg-purple-700"
-                  >
-                    {exportingData ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
-                        Exportando...
-                      </>
-                    ) : (
-                      <>
-                        <Brain className="h-4 w-4" />
-                        Exportar para LLMs
-                      </>
-                    )}
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={handleExportForLLM}
+                      disabled={exportingData}
+                      className="gap-2 bg-purple-600 hover:bg-purple-700"
+                    >
+                      {exportingData ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+                          Exportando...
+                        </>
+                      ) : (
+                        <>
+                          <Brain className="h-4 w-4" />
+                          Exportar para LLMs
+                        </>
+                      )}
+                    </Button>
+                    
+                    {/* Cache Status Indicator */}
+                    <div className="flex items-center gap-1.5 text-xs">
+                      {kbCacheInfo ? (
+                        <>
+                          {isCacheExpired() ? (
+                            <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+                          ) : (
+                            <Clock className="h-3.5 w-3.5 text-green-500" />
+                          )}
+                          <span className={isCacheExpired() ? 'text-amber-600' : 'text-muted-foreground'}>
+                            {formatTimeAgo(kbCacheInfo.updated_at)}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-muted-foreground">Sem cache</span>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleRefreshKBCache}
+                        disabled={refreshingCache}
+                        className="h-6 w-6 p-0"
+                        title="Atualizar cache KB"
+                      >
+                        <RefreshCw className={`h-3.5 w-3.5 ${refreshingCache ? 'animate-spin' : ''}`} />
+                      </Button>
+                    </div>
+                  </div>
                   
                   <Button
                     onClick={handleAddProduct}
