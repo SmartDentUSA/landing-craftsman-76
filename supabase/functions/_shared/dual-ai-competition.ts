@@ -202,6 +202,10 @@ function evaluateEngagement(content: string, type: string): number {
   return Math.min(100, score);
 }
 
+/**
+ * Single AI generation (optimized for resource efficiency)
+ * Uses only Lovable AI to avoid WORKER_LIMIT errors
+ */
 export async function compareAndSelectBest(
   systemPrompt: string,
   userPrompt: string,
@@ -212,51 +216,42 @@ export async function compareAndSelectBest(
     contentType: 'blog' | 'social' | 'product' | 'tiktok';
   }
 ): Promise<CompetitionResult> {
-  console.log('🏁 Starting Dual-AI Competition...');
+  console.log('🤖 Generating with Lovable AI (single model)...');
 
-  const [lovableContent, deepseekContent] = await Promise.all([
-    generateWithLovableAI(systemPrompt, userPrompt).catch(err => {
-      console.error('❌ Lovable AI failed:', err);
-      return '';
-    }),
-    generateWithDeepSeek(systemPrompt, userPrompt).catch(err => {
-      console.error('❌ DeepSeek failed:', err);
-      return '';
-    })
-  ]);
+  try {
+    const content = await generateWithLovableAI(systemPrompt, userPrompt);
+    
+    if (!content) {
+      throw new Error('Empty response from AI');
+    }
 
-  if (!lovableContent && !deepseekContent) {
-    throw new Error('Both AIs failed to generate content');
+    const evaluation = evaluateContent(content, criteria);
+    console.log(`✅ Generated successfully (score: ${evaluation.score.toFixed(1)})`);
+
+    return { 
+      content, 
+      winner: 'lovable', 
+      score: evaluation.score,
+      lovableScore: evaluation.score
+    };
+  } catch (lovableError) {
+    console.error('❌ Lovable AI failed, trying DeepSeek as fallback:', lovableError);
+    
+    // Fallback to DeepSeek only if Lovable fails
+    const content = await generateWithDeepSeek(systemPrompt, userPrompt);
+    
+    if (!content) {
+      throw new Error('Both AIs failed to generate content');
+    }
+
+    const evaluation = evaluateContent(content, criteria);
+    console.log(`✅ Fallback to DeepSeek (score: ${evaluation.score.toFixed(1)})`);
+
+    return { 
+      content, 
+      winner: 'deepseek', 
+      score: evaluation.score,
+      deepseekScore: evaluation.score
+    };
   }
-
-  if (!lovableContent) {
-    console.log('⚠️ Lovable AI failed - using DeepSeek');
-    return { content: deepseekContent, winner: 'deepseek', score: 0 };
-  }
-
-  if (!deepseekContent) {
-    console.log('⚠️ DeepSeek failed - using Lovable AI');
-    return { content: lovableContent, winner: 'lovable', score: 0 };
-  }
-
-  const lovableEval = evaluateContent(lovableContent, criteria);
-  const deepseekEval = evaluateContent(deepseekContent, criteria);
-
-  console.log('📊 Evaluation Results:');
-  console.log(`   Lovable AI: ${lovableEval.score.toFixed(1)} pts`, lovableEval.details);
-  console.log(`   DeepSeek: ${deepseekEval.score.toFixed(1)} pts`, deepseekEval.details);
-
-  const winner = lovableEval.score >= deepseekEval.score ? 'lovable' : 'deepseek';
-  const winningContent = winner === 'lovable' ? lovableContent : deepseekContent;
-  const winningScore = winner === 'lovable' ? lovableEval.score : deepseekEval.score;
-
-  console.log(`✅ Winner: ${winner.toUpperCase()} (${winningScore.toFixed(1)} pts)`);
-
-  return { 
-    content: winningContent, 
-    winner, 
-    score: winningScore,
-    lovableScore: lovableEval.score,
-    deepseekScore: deepseekEval.score
-  };
 }
