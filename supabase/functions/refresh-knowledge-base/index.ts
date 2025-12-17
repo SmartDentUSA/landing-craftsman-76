@@ -21,62 +21,72 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Fetch all KB data using the existing RPC function
-    console.log('📊 Fetching knowledge base data...');
-    const { data: kbData, error: kbError } = await supabase.rpc('get_complete_knowledge_base', {
-      p_include_company: true,
-      p_include_categories: true,
-      p_include_links: true,
-      p_include_products: true,
-      p_include_video_testimonials: true,
-      p_include_google_reviews: true,
-      p_include_kols: true,
-      p_include_spin_solutions: true,
-      p_include_blog_posts: true,
-      p_include_landing_pages: false,
-      p_approved_only: true,
-      p_limit: 500
-    });
+    // Fetch data directly from tables (faster than RPC)
+    console.log('📊 Fetching knowledge base data directly from tables...');
 
-    if (kbError) {
-      console.error('❌ Error fetching KB data:', kbError);
-      throw kbError;
-    }
-
-    // Fetch external videos
-    const { data: externalVideos } = await supabase
-      .from('video_testimonials')
+    // Fetch company profile
+    const { data: companyProfile } = await supabase
+      .from('company_profile')
       .select('*')
-      .eq('approved', true)
-      .order('display_order', { ascending: true });
+      .limit(1)
+      .single();
 
-    // Fetch technical documents from products
-    const { data: techDocs } = await supabase
+    // Fetch products (approved only, key fields for RAG)
+    const { data: products } = await supabase
       .from('products_repository')
-      .select('id, name, technical_documents, document_transcriptions')
+      .select(`
+        id, name, description, category, subcategory, price, promo_price, 
+        product_url, image_url, keywords, benefits, features, target_audience,
+        faq, technical_specifications, anti_hallucination_rules, brand
+      `)
       .eq('approved', true)
-      .not('technical_documents', 'is', null);
+      .order('name');
 
-    // Count products
-    const productsCount = kbData?.products?.length || 0;
+    // Fetch categories config
+    const { data: categoriesConfig } = await supabase
+      .from('categories_config')
+      .select('*')
+      .eq('is_active', true);
 
-    // Build the complete KB object optimized for RAG
-    const completeKB = {
-      ...kbData,
-      external_videos: externalVideos || [],
-      technical_documents: techDocs?.filter(p => 
-        (Array.isArray(p.technical_documents) && p.technical_documents.length > 0) ||
-        (Array.isArray(p.document_transcriptions) && p.document_transcriptions.length > 0)
-      ) || []
+    // Fetch external links (top 100)
+    const { data: externalLinks } = await supabase
+      .from('external_links')
+      .select('id, name, url, category, subcategory, description')
+      .eq('approved', true)
+      .limit(100);
+
+    // Fetch SPIN solutions
+    const { data: spinSolutions } = await supabase
+      .from('spin_selling_solutions')
+      .select('id, title, pain_type, product_ids')
+      .eq('active', true);
+
+    // Fetch KOLs
+    const { data: kols } = await supabase
+      .from('key_opinion_leaders')
+      .select('id, full_name, specialty, mini_cv')
+      .eq('approved', true);
+
+    const productsCount = products?.length || 0;
+    console.log(`✅ Fetched: ${productsCount} products, ${categoriesConfig?.length || 0} categories`);
+
+    // Build KB data
+    const kbData = {
+      company_profile: companyProfile,
+      products: products || [],
+      categories_config: categoriesConfig || [],
+      external_links: externalLinks || [],
+      spin_solutions: spinSolutions || [],
+      kols: kols || []
     };
 
     // Format for RAG (token-optimized)
-    const ragData = formatForRAG(completeKB);
+    const ragData = formatForRAG(kbData);
 
     const now = new Date().toISOString();
     const expiresAt = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString(); // 3 hours
 
-    // Save RAG cache (optimized for LLMs, smaller payload)
+    // Save RAG cache
     console.log('💾 Saving RAG cache...');
     
     const { error: ragError } = await supabase
@@ -95,8 +105,30 @@ serve(async (req) => {
     }
     
     console.log('✅ RAG cache saved successfully');
+
+    // Save JSON cache (simplified version)
+    console.log('💾 Saving JSON cache...');
     
-    // Note: JSON format is too large for batch caching, will be generated on-demand by knowledge-base function
+    const { error: jsonError } = await supabase
+      .from('knowledge_base_cache')
+      .upsert({
+        format: 'json',
+        data: {
+          api_version: '1.0.0',
+          timestamp: now,
+          data: kbData
+        },
+        products_count: productsCount,
+        updated_at: now,
+        expires_at: expiresAt
+      }, { onConflict: 'format' });
+
+    if (jsonError) {
+      console.error('⚠️ Error saving JSON cache:', jsonError);
+      // Non-fatal, continue
+    } else {
+      console.log('✅ JSON cache saved successfully');
+    }
 
     const elapsed = Date.now() - startTime;
     console.log(`✅ [refresh-knowledge-base] Cache refreshed in ${elapsed}ms. Products: ${productsCount}`);
@@ -174,8 +206,7 @@ function formatForRAG(data: any): any {
 
   // Products (optimized)
   if (data.products && Array.isArray(data.products)) {
-    result.products = data.products.map((item: any) => {
-      const p = item.product || item;
+    result.products = data.products.map((p: any) => {
       return omitEmpty({
         id: p.id,
         name: p.name,
@@ -186,6 +217,7 @@ function formatForRAG(data: any): any {
         promo_price: p.promo_price,
         url: p.product_url,
         image: p.image_url,
+        brand: p.brand,
         keywords: p.keywords,
         benefits: p.benefits,
         features: p.features,
@@ -204,7 +236,7 @@ function formatForRAG(data: any): any {
 
   // Links/Keywords
   if (data.external_links) {
-    result.keywords_repository = data.external_links.slice(0, 100);
+    result.keywords_repository = data.external_links;
   }
 
   // SPIN Solutions
@@ -214,6 +246,15 @@ function formatForRAG(data: any): any {
       title: s.title,
       pain_type: s.pain_type,
       product_ids: s.product_ids
+    }));
+  }
+
+  // KOLs
+  if (data.kols) {
+    result.experts = data.kols.map((k: any) => omitEmpty({
+      name: k.full_name,
+      specialty: k.specialty,
+      cv: k.mini_cv
     }));
   }
 

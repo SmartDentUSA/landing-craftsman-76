@@ -1554,27 +1554,138 @@ serve(async (req) => {
       console.log('⚠️ Cache MISS or expired, fetching fresh data...');
     }
 
-    // Chamar SQL function
-    const { data, error } = await supabase.rpc('get_complete_knowledge_base', {
-      p_include_company: params.include_company,
-      p_include_categories: params.include_categories,
-      p_include_links: params.include_links,
-      p_include_products: params.include_products,
-      p_include_video_testimonials: params.include_video_testimonials,
-      p_include_google_reviews: params.include_google_reviews,
-      p_include_kols: params.include_kols,
-      p_include_spin_solutions: params.include_spin_solutions,
-      p_include_blog_posts: params.include_blog_posts,
-      p_include_landing_pages: params.include_landing_pages,
-      p_approved_only: params.approved_only,
-      p_category: params.category,
-      p_limit: params.limit,
-      p_offset: params.offset
-    });
+    // Fetch data directly from tables (more reliable than RPC, avoids timeouts)
+    console.log('📊 Fetching knowledge base data directly from tables...');
+    
+    const data: any = {};
 
-    if (error) {
-      console.error('Error fetching knowledge base:', error);
-      throw error;
+    // Company Profile
+    if (params.include_company) {
+      const { data: company } = await supabase
+        .from('company_profile')
+        .select('*')
+        .limit(1)
+        .single();
+      data.company_profile = company;
+    }
+
+    // Products
+    if (params.include_products) {
+      let query = supabase
+        .from('products_repository')
+        .select('*')
+        .order('name');
+      
+      if (params.approved_only) {
+        query = query.eq('approved', true);
+      }
+      if (params.category) {
+        query = query.eq('category', params.category);
+      }
+      if (params.limit) {
+        query = query.limit(params.limit);
+      }
+      if (params.offset) {
+        query = query.range(params.offset, params.offset + (params.limit || 50) - 1);
+      }
+      
+      const { data: products, error: productsError } = await query;
+      
+      if (productsError) {
+        console.error('Error fetching products:', productsError);
+        throw productsError;
+      }
+      
+      // Format products to match expected structure
+      data.products = (products || []).map((p: any) => ({ product: p }));
+    }
+
+    // Categories
+    if (params.include_categories) {
+      const { data: categories } = await supabase
+        .from('categories_config')
+        .select('*')
+        .eq('is_active', true);
+      data.categories_config = categories || [];
+    }
+
+    // External Links
+    if (params.include_links) {
+      let linksQuery = supabase
+        .from('external_links')
+        .select('*')
+        .limit(200);
+      
+      if (params.approved_only) {
+        linksQuery = linksQuery.eq('approved', true);
+      }
+      
+      const { data: links } = await linksQuery;
+      data.external_links = links || [];
+    }
+
+    // KOLs
+    if (params.include_kols) {
+      let kolsQuery = supabase
+        .from('key_opinion_leaders')
+        .select('*')
+        .order('display_order', { ascending: true });
+      
+      if (params.approved_only) {
+        kolsQuery = kolsQuery.eq('approved', true);
+      }
+      
+      const { data: kols } = await kolsQuery;
+      data.kols = kols || [];
+    }
+
+    // SPIN Solutions
+    if (params.include_spin_solutions) {
+      let spinQuery = supabase
+        .from('spin_selling_solutions')
+        .select('*');
+      
+      if (params.approved_only) {
+        spinQuery = spinQuery.eq('active', true);
+      }
+      
+      const { data: spin } = await spinQuery;
+      data.spin_solutions = spin || [];
+    }
+
+    // Blog Posts
+    if (params.include_blog_posts) {
+      const { data: blogs } = await supabase
+        .from('blog_posts')
+        .select('*')
+        .eq('status', 'published')
+        .limit(50);
+      data.blog_posts = blogs || [];
+    }
+
+    // Video Testimonials
+    if (params.include_video_testimonials) {
+      let videosQuery = supabase
+        .from('video_testimonials')
+        .select('*')
+        .order('display_order', { ascending: true });
+      
+      if (params.approved_only) {
+        videosQuery = videosQuery.eq('approved', true);
+      }
+      
+      const { data: videos } = await videosQuery;
+      data.video_testimonials = videos || [];
+    }
+
+    // Google Reviews
+    if (params.include_google_reviews) {
+      const { data: reviews } = await supabase
+        .from('raw_reviews')
+        .select('*')
+        .gte('rating', 4)
+        .limit(50);
+      data.google_reviews = reviews || [];
     }
 
     console.log('Knowledge base data fetched successfully');
