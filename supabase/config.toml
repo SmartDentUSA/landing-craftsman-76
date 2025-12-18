@@ -188,3 +188,9 @@ verify_jwt = true
 
 [functions.refresh-knowledge-base]
 verify_jwt = false
+
+[functions.generate-youtube-script]
+verify_jwt = false
+
+[functions.generate-instagram-reels-script]
+verify_jwt = false

@@ -1377,6 +1377,7 @@ export type Database = {
           images_gallery: Json | null
           individual_blog_content: Json | null
           instagram_copies: Json | null
+          instagram_reels_scripts: Json | null
           instagram_videos: Json | null
           keyword_ids: string[] | null
           keywords: Json | null
@@ -1441,6 +1442,7 @@ export type Database = {
           width: number | null
           workflow_stages: Json | null
           youtube_descriptions: Json | null
+          youtube_scripts: Json | null
           youtube_videos: Json | null
         }
         Insert: {
@@ -1492,6 +1494,7 @@ export type Database = {
           images_gallery?: Json | null
           individual_blog_content?: Json | null
           instagram_copies?: Json | null
+          instagram_reels_scripts?: Json | null
           instagram_videos?: Json | null
           keyword_ids?: string[] | null
           keywords?: Json | null
@@ -1556,6 +1559,7 @@ export type Database = {
           width?: number | null
           workflow_stages?: Json | null
           youtube_descriptions?: Json | null
+          youtube_scripts?: Json | null
           youtube_videos?: Json | null
         }
         Update: {
@@ -1607,6 +1611,7 @@ export type Database = {
           images_gallery?: Json | null
           individual_blog_content?: Json | null
           instagram_copies?: Json | null
+          instagram_reels_scripts?: Json | null
           instagram_videos?: Json | null
           keyword_ids?: string[] | null
           keywords?: Json | null
@@ -1671,6 +1676,7 @@ export type Database = {
           width?: number | null
           workflow_stages?: Json | null
           youtube_descriptions?: Json | null
+          youtube_scripts?: Json | null
           youtube_videos?: Json | null
         }
         Relationships: []
