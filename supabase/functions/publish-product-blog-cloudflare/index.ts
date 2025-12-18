@@ -3,6 +3,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { blake3 } from "https://esm.sh/hash-wasm@4.11.0";
 import { marked } from "https://esm.sh/marked@12.0.0";
 
+// ✅ NEW: HTML Generator V2 - Enterprise SaaS Design System
+import { generateProductBlogHTMLV2 } from '../_shared/product-blog-html-v2.ts';
+
 // Schema Helpers - Fase SEO Completa
 import { 
   generateVideoObjectSchemas, 
@@ -47,6 +50,9 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Flag to enable V2 template
+const USE_V2_TEMPLATE = true;
 
 interface PublishRequest {
   productId: string;
