@@ -45,6 +45,19 @@ const corsHeaders = {
 }
 
 // ============================================
+// ESCAPE HTML - Prevent XSS in dynamic content
+// ============================================
+function escapeHtml(str: string | undefined | null): string {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+// ============================================
 // NORMALIZE HTML ENCODING (FIX DOUBLE-ENCODED UTF-8)
 // ============================================
 function normalizeHTMLEncoding(html: string): string {
