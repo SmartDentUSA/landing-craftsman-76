@@ -7,6 +7,11 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Função para escapar caracteres especiais de regex
+const escapeRegex = (str: string): string => {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -61,7 +66,8 @@ serve(async (req) => {
       
       // +1 para cada palavra do nome do produto que aparece
       productNameWords.forEach(word => {
-        const occurrences = (textLower.match(new RegExp(word, 'g')) || []).length;
+        const escapedWord = escapeRegex(word);
+        const occurrences = (textLower.match(new RegExp(escapedWord, 'gi')) || []).length;
         score += occurrences;
       });
       
