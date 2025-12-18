@@ -146,6 +146,52 @@ export function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, '').trim();
 }
 
+// Normalize URL to prevent duplication (e.g., website_url + full URL)
+export function normalizeCanonicalUrl(
+  canonicalUrl?: string, 
+  productUrl?: string, 
+  websiteUrl?: string, 
+  slug?: string
+): string {
+  // Priority: canonical_url > product_url > constructed URL
+  if (canonicalUrl && canonicalUrl.startsWith('http')) {
+    return canonicalUrl;
+  }
+  if (productUrl && productUrl.startsWith('http')) {
+    return productUrl;
+  }
+  // Construct from website + slug
+  const baseUrl = (websiteUrl || '').replace(/\/$/, '');
+  return `${baseUrl}/${slug || ''}`;
+}
+
+// Normalize list items - split items with bullets, newlines, or pipes
+export function normalizeListItems(items: string[]): string[] {
+  if (!items || !Array.isArray(items)) return [];
+  const result: string[] = [];
+  items.forEach(item => {
+    if (!item) return;
+    // Split by common separators: bullets, newlines, pipes, semicolons
+    const subItems = item
+      .split(/[•\n|;]/)
+      .map(s => s.replace(/^[-–—]\s*/, '').trim())
+      .filter(s => s.length > 0 && s.length < 200);
+    result.push(...subItems);
+  });
+  return [...new Set(result)]; // Remove duplicates
+}
+
+// Detect video platform
+export function detectVideoPlatform(url: string): 'youtube' | 'instagram' | 'tiktok' | 'vimeo' | 'unknown' {
+  if (!url) return 'unknown';
+  const lowerUrl = url.toLowerCase();
+  if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) return 'youtube';
+  if (lowerUrl.includes('instagram.com')) return 'instagram';
+  if (lowerUrl.includes('tiktok.com')) return 'tiktok';
+  if (lowerUrl.includes('vimeo.com')) return 'vimeo';
+  return 'unknown';
+}
+
 export function getCurrentYear(): number {
   return new Date().getFullYear();
 }
@@ -342,11 +388,19 @@ export function generateArticleSchema(
   blogType: 'commercial' | 'technical',
   generatedAt: string
 ): string {
+  // Use normalized canonical URL to prevent URL duplication
+  const canonicalUrl = normalizeCanonicalUrl(
+    product.canonical_url,
+    product.product_url,
+    company.website_url,
+    product.slug
+  );
+
   const schema: any = {
     "@context": "https://schema.org",
     "@type": blogType === 'technical' ? "TechArticle" : "BlogPosting",
     "headline": product.name,
-    "description": product.sales_pitch || product.description,
+    "description": truncate(stripHtml(product.sales_pitch || product.description || ''), 160),
     "image": product.image_url,
     "datePublished": generatedAt,
     "dateModified": generatedAt,
@@ -360,7 +414,7 @@ export function generateArticleSchema(
     },
     "mainEntityOfPage": {
       "@type": "WebPage",
-      "@id": `${company.website_url}/${product.slug}`
+      "@id": canonicalUrl
     }
   };
 
@@ -432,24 +486,45 @@ export function generateHowToSchema(product: ProductTemplateData): string {
     delivery: 'Entrega ao Paciente'
   };
 
+  // Negative phrases that invalidate a HowTo step
+  const negativePatterns = [
+    /não\s+(participa|se\s+aplica|utiliza|requer|necessita)/i,
+    /não\s+é\s+(necessário|aplicável|utilizado)/i,
+    /sem\s+(necessidade|aplicação)/i,
+    /n\/a/i,
+    /não\s+disponível/i
+  ];
+
+  const isValidStep = (text: string): boolean => {
+    if (!text || text.length < 10) return false;
+    return !negativePatterns.some(pattern => pattern.test(text));
+  };
+
   Object.entries(product.workflow_stages).forEach(([stage, data]: [string, any]) => {
     if (data && typeof data === 'object') {
-      steps.push({
-        "@type": "HowToStep",
-        "name": stageLabels[stage] || stage,
-        "text": data.description || `Etapa de ${stageLabels[stage] || stage}`,
-        "position": steps.length + 1
-      });
+      const description = data.description || '';
+      const applicable = data.applicable !== false; // Default to true if not specified
+      
+      // Only include step if it's applicable AND has valid positive content
+      if (applicable && isValidStep(description)) {
+        steps.push({
+          "@type": "HowToStep",
+          "name": stageLabels[stage] || stage,
+          "text": description,
+          "position": steps.length + 1
+        });
+      }
     }
   });
 
-  if (!steps.length) return '';
+  // HowTo requires at least 2 valid steps to be meaningful
+  if (steps.length < 2) return '';
 
   const schema = {
     "@context": "https://schema.org",
     "@type": "HowTo",
-    "name": `Como utilizar ${product.name}`,
-    "description": product.description,
+    "name": `Fluxo de trabalho com ${product.name}`,
+    "description": truncate(stripHtml(product.description || ''), 160),
     "step": steps
   };
 
@@ -588,7 +663,7 @@ function renderFullTemplate(data: TemplateData, schemas: Record<string, string>)
           <h1 id="hero-title" class="hero-title">${escapeHtml(product.name)}</h1>
           
           ${product.sales_pitch 
-            ? `<p class="hero-subtitle">${escapeHtml(product.sales_pitch)}</p>` 
+            ? `<p class="hero-subtitle">${escapeHtml(truncate(stripHtml(product.sales_pitch), 320))}</p>` 
             : ''
           }
           
@@ -684,13 +759,24 @@ function renderFullTemplate(data: TemplateData, schemas: Record<string, string>)
       }
     })();
     
-    // FAQ Accordion
+    // FAQ Accordion with proper aria-expanded
     document.querySelectorAll('.faq-question').forEach(btn => {
       btn.addEventListener('click', () => {
         const item = btn.parentElement;
         const isOpen = item.classList.contains('open');
-        document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
-        if (!isOpen) item.classList.add('open');
+        
+        // Close all items and reset aria-expanded
+        document.querySelectorAll('.faq-item').forEach(i => {
+          i.classList.remove('open');
+          const qBtn = i.querySelector('.faq-question');
+          if (qBtn) qBtn.setAttribute('aria-expanded', 'false');
+        });
+        
+        // Open current item if it wasn't open
+        if (!isOpen) {
+          item.classList.add('open');
+          btn.setAttribute('aria-expanded', 'true');
+        }
       });
     });
   </script>
@@ -761,11 +847,15 @@ function renderBenefitsSection(benefits?: string[]): string {
 function renderApplicationsSection(applications?: string[]): string {
   if (!applications?.length) return '';
   
+  // Normalize list items to fix malformed bullet lists
+  const normalizedApps = normalizeListItems(applications);
+  if (!normalizedApps.length) return '';
+  
   return `
     <div class="applications-section">
       <h3>Aplicações clínicas</h3>
       <ul class="applications-list">
-        ${applications.map(a => `<li>${escapeHtml(a)}</li>`).join('')}
+        ${normalizedApps.map(a => `<li>${escapeHtml(a)}</li>`).join('')}
       </ul>
     </div>
   `;
@@ -774,11 +864,15 @@ function renderApplicationsSection(applications?: string[]): string {
 function renderTargetAudienceSection(audience?: string[]): string {
   if (!audience?.length) return '';
   
+  // Normalize list items to fix malformed bullet lists
+  const normalizedAudience = normalizeListItems(audience);
+  if (!normalizedAudience.length) return '';
+  
   return `
     <div class="target-section">
       <h3>Indicado para</h3>
       <ul class="target-list">
-        ${audience.map(t => `<li>${escapeHtml(t)}</li>`).join('')}
+        ${normalizedAudience.map(t => `<li>${escapeHtml(t)}</li>`).join('')}
       </ul>
     </div>
   `;
@@ -872,20 +966,85 @@ function renderVideosSection(videos?: Array<{ url: string; title?: string; thumb
         <h2 class="section-title">Vídeos</h2>
         <div class="videos-grid">
           ${videos.map(v => {
-            const videoId = extractYouTubeId(v.url);
-            const embedUrl = videoId ? `https://www.youtube.com/embed/${videoId}` : v.url;
-            const thumbnail = v.thumbnail || (videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : '');
+            const platform = detectVideoPlatform(v.url);
             
-            return `
-              <div class="video-card">
-                <div class="video-wrapper">
-                  <iframe 
-                    src="${escapeHtml(embedUrl)}" 
-                    title="${escapeHtml(v.title || 'Video')}"
-                    loading="lazy"
-                    allowfullscreen
-                  ></iframe>
+            // YouTube: use iframe with all required attributes
+            if (platform === 'youtube') {
+              const videoId = extractYouTubeId(v.url);
+              const embedUrl = videoId ? `https://www.youtube-nocookie.com/embed/${videoId}` : v.url;
+              const thumbnail = v.thumbnail || (videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : '');
+              
+              return `
+                <div class="video-card">
+                  <div class="video-wrapper">
+                    <iframe 
+                      src="${escapeHtml(embedUrl)}" 
+                      title="${escapeHtml(v.title || 'Video do YouTube')}"
+                      loading="lazy"
+                      frameborder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      referrerpolicy="strict-origin-when-cross-origin"
+                      allowfullscreen
+                    ></iframe>
+                  </div>
+                  ${v.title ? `<h3 class="video-title">${escapeHtml(v.title)}</h3>` : ''}
                 </div>
+              `;
+            }
+            
+            // Vimeo: use iframe with proper attributes
+            if (platform === 'vimeo') {
+              const vimeoMatch = v.url.match(/vimeo\.com\/(\d+)/);
+              const vimeoId = vimeoMatch ? vimeoMatch[1] : '';
+              const embedUrl = vimeoId ? `https://player.vimeo.com/video/${vimeoId}` : v.url;
+              
+              return `
+                <div class="video-card">
+                  <div class="video-wrapper">
+                    <iframe 
+                      src="${escapeHtml(embedUrl)}" 
+                      title="${escapeHtml(v.title || 'Video do Vimeo')}"
+                      loading="lazy"
+                      frameborder="0"
+                      allow="autoplay; fullscreen; picture-in-picture"
+                      allowfullscreen
+                    ></iframe>
+                  </div>
+                  ${v.title ? `<h3 class="video-title">${escapeHtml(v.title)}</h3>` : ''}
+                </div>
+              `;
+            }
+            
+            // Instagram/TikTok: use thumbnail + external link (no iframe)
+            if (platform === 'instagram' || platform === 'tiktok') {
+              const thumbnail = v.thumbnail || '';
+              const platformLabel = platform === 'instagram' ? 'Instagram' : 'TikTok';
+              
+              return `
+                <div class="video-card video-card-external">
+                  <a href="${escapeHtml(v.url)}" target="_blank" rel="noopener noreferrer" class="video-external-link">
+                    ${thumbnail 
+                      ? `<img src="${escapeHtml(thumbnail)}" alt="${escapeHtml(v.title || `Vídeo no ${platformLabel}`)}" class="video-thumbnail" loading="lazy">`
+                      : `<div class="video-placeholder">
+                          <span class="video-placeholder-icon">▶</span>
+                          <span class="video-placeholder-text">Ver no ${platformLabel}</span>
+                        </div>`
+                    }
+                  </a>
+                  ${v.title ? `<h3 class="video-title">${escapeHtml(v.title)}</h3>` : ''}
+                </div>
+              `;
+            }
+            
+            // Unknown: fallback to external link
+            return `
+              <div class="video-card video-card-external">
+                <a href="${escapeHtml(v.url)}" target="_blank" rel="noopener noreferrer" class="video-external-link">
+                  <div class="video-placeholder">
+                    <span class="video-placeholder-icon">▶</span>
+                    <span class="video-placeholder-text">Ver vídeo</span>
+                  </div>
+                </a>
                 ${v.title ? `<h3 class="video-title">${escapeHtml(v.title)}</h3>` : ''}
               </div>
             `;
@@ -1156,9 +1315,14 @@ a:hover {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: var(--color-bg);
+  background: rgba(255, 255, 255, 0.9); /* Fallback for browsers without backdrop-filter */
   border-bottom: 1px solid var(--color-border);
+  -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
+}
+
+[data-theme="dark"] .site-header {
+  background: rgba(15, 23, 42, 0.9); /* Dark mode fallback */
 }
 
 .header-content {
@@ -1419,6 +1583,10 @@ a:hover {
   gap: var(--space-2xl);
 }
 
+.main-content {
+  max-width: 70ch; /* Optimal reading width */
+}
+
 .main-content h2 {
   margin-bottom: var(--space-lg);
 }
@@ -1658,6 +1826,63 @@ a:hover {
   padding: var(--space-md);
   font-size: 1rem;
   margin: 0;
+}
+
+/* External video links (Instagram, TikTok) */
+.video-card-external .video-external-link {
+  display: block;
+  position: relative;
+  padding-bottom: 56.25%;
+  height: 0;
+  background: var(--color-bg-alt);
+  overflow: hidden;
+}
+
+.video-card-external .video-thumbnail {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform var(--transition-base);
+}
+
+.video-card-external .video-external-link:hover .video-thumbnail {
+  transform: scale(1.05);
+}
+
+.video-placeholder {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  color: var(--color-text-secondary);
+  transition: all var(--transition-base);
+}
+
+.video-placeholder-icon {
+  font-size: 3rem;
+  opacity: 0.7;
+}
+
+.video-placeholder-text {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.video-card-external .video-external-link:hover .video-placeholder {
+  color: var(--color-primary);
+}
+
+.video-card-external .video-external-link:hover .video-placeholder-icon {
+  opacity: 1;
 }
 
 /* CTA Section */
