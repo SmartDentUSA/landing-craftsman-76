@@ -16,6 +16,7 @@ import { ProductVideosList } from '@/components/ProductVideosList';
 import { ProductResourceCTAsList } from '@/components/ProductResourceCTAsList';
 import { RelatedLandingPagesList } from '@/components/RelatedLandingPagesList';
 import { useSEOHTMLGenerator } from '@/hooks/useSEOHTMLGenerator';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface Product {
   id: string;
@@ -62,6 +63,7 @@ export const ProductBlogGeneratorModal = ({
   const { toast } = useToast();
   const { getConfigurationByFunction } = usePromptsConfiguration();
   const { generateConsolidatedBlogHTML } = useSEOHTMLGenerator();
+  const queryClient = useQueryClient();
 
   // Sincronizar dados do produto quando props mudam
   useEffect(() => {
@@ -254,6 +256,10 @@ export const ProductBlogGeneratorModal = ({
         title: "Blog gerado com sucesso!",
         description: `Blog ${selectedType} criado para ${currentProduct.name}. Conteúdo disponível para visualização.`,
       });
+
+      // Invalidar cache para sincronizar com LPClonePanel
+      queryClient.invalidateQueries({ queryKey: ['products-with-blogs'] });
+      queryClient.invalidateQueries({ queryKey: ['blog-publications'] });
 
       // Notificar o componente pai para atualizar dados
       onBlogGenerated();
