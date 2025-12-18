@@ -149,7 +149,11 @@ export function InstagramCopyGenerator({ productId, productName, isOpen, onClose
 
       // Carregar scripts de reels audiovisuais
       if (data?.instagram_reels_scripts && Array.isArray(data.instagram_reels_scripts) && data.instagram_reels_scripts.length > 0) {
-        setReelsScripts(data.instagram_reels_scripts as unknown as ReelsScript[]);
+        // O formato salvo é: [{ generated_at, reels_scripts: [...] }]
+        const latestEntry = data.instagram_reels_scripts[0] as { reels_scripts?: ReelsScript[] };
+        if (latestEntry?.reels_scripts && Array.isArray(latestEntry.reels_scripts)) {
+          setReelsScripts(latestEntry.reels_scripts);
+        }
       }
     } catch (error) {
       console.error('Erro ao carregar copies:', error);
@@ -278,8 +282,8 @@ export function InstagramCopyGenerator({ productId, productName, isOpen, onClose
 
       if (error) throw error;
 
-      if (data?.content && Array.isArray(data.content)) {
-        setReelsScripts(data.content);
+      if (data?.content?.reels_scripts && Array.isArray(data.content.reels_scripts)) {
+        setReelsScripts(data.content.reels_scripts);
         toast({
           title: "Sucesso!",
           description: "Roteiros de Reels gerados com 4 variações!",
