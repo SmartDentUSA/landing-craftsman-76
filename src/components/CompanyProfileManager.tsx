@@ -20,6 +20,7 @@ import { InternationalPartnershipsManager } from "./InternationalPartnershipsMan
 import { NPSInsightsTab } from "./NPSInsightsTab";
 import { ImageUploader } from "@/components/ImageUploader";
 import { NavigationFooterTab } from "./NavigationFooterTab";
+import CompanyMilestonesManager from "./CompanyMilestonesManager";
 
 interface Video {
   url: string;
@@ -594,6 +595,10 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
               <TabsTrigger value="navigation" className="flex items-center gap-1 data-[state=active]:bg-background">
                 <Menu className="h-3 w-3" />
                 Navegação & Footer
+              </TabsTrigger>
+              <TabsTrigger value="milestones" className="flex items-center gap-1 data-[state=active]:bg-background">
+                <Clock className="h-3 w-3" />
+                📜 Marcos
               </TabsTrigger>
             </TabsList>
             <ScrollBar orientation="horizontal" />
@@ -1673,6 +1678,10 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
                 navigation_footer_config: config
               }))}
             />
+          </TabsContent>
+
+          <TabsContent value="milestones" className="space-y-4">
+            <CompanyMilestonesManager />
           </TabsContent>
         </Tabs>
 

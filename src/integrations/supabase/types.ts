@@ -305,6 +305,84 @@ export type Database = {
         }
         Relationships: []
       }
+      company_milestones: {
+        Row: {
+          certifications: Json | null
+          created_at: string | null
+          day: number | null
+          description: string | null
+          display_order: number | null
+          id: string
+          image_url: string | null
+          impact: string | null
+          is_published: boolean | null
+          key_people: Json | null
+          legacy: string | null
+          location: Json | null
+          market_context: string | null
+          month: number | null
+          products_involved: Json | null
+          slug: string
+          strategic_decision: string | null
+          technologies: Json | null
+          title: string
+          updated_at: string | null
+          user_id: string
+          video_url: string | null
+          year: number
+        }
+        Insert: {
+          certifications?: Json | null
+          created_at?: string | null
+          day?: number | null
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          image_url?: string | null
+          impact?: string | null
+          is_published?: boolean | null
+          key_people?: Json | null
+          legacy?: string | null
+          location?: Json | null
+          market_context?: string | null
+          month?: number | null
+          products_involved?: Json | null
+          slug: string
+          strategic_decision?: string | null
+          technologies?: Json | null
+          title: string
+          updated_at?: string | null
+          user_id: string
+          video_url?: string | null
+          year: number
+        }
+        Update: {
+          certifications?: Json | null
+          created_at?: string | null
+          day?: number | null
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          image_url?: string | null
+          impact?: string | null
+          is_published?: boolean | null
+          key_people?: Json | null
+          legacy?: string | null
+          location?: Json | null
+          market_context?: string | null
+          month?: number | null
+          products_involved?: Json | null
+          slug?: string
+          strategic_decision?: string | null
+          technologies?: Json | null
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+          video_url?: string | null
+          year?: number
+        }
+        Relationships: []
+      }
       company_profile: {
         Row: {
           address_number: string | null
