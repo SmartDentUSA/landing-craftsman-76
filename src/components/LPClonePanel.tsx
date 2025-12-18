@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -130,6 +130,31 @@ interface LibraryItem {
 
 export const LPClonePanel = () => {
   const queryClient = useQueryClient();
+  
+  // Realtime subscription para sincronização automática de blogs
+  useEffect(() => {
+    const channel = supabase
+      .channel('products-blog-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'products_repository',
+        },
+        (payload) => {
+          // Verificar se houve mudança no individual_blog_content
+          if (payload.new && (payload.new as any).individual_blog_content) {
+            queryClient.invalidateQueries({ queryKey: ['products-with-blogs'] });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
   
   const [originalHTML, setOriginalHTML] = useState('');
   const [name, setName] = useState('');
