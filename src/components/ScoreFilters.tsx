@@ -125,7 +125,7 @@ export function ScoreFilters({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas as Categorias</SelectItem>
-            {categories.map(category => (
+            {categories.filter(category => category && category.trim() !== '').map(category => (
               <SelectItem key={category} value={category}>
                 {category}
               </SelectItem>
