@@ -231,12 +231,13 @@ export function generateOrganizationSchema(company: CompanyTemplateData): string
   return JSON.stringify(schema, null, 2);
 }
 
-export function generateProductSchema(product: ProductTemplateData, company: CompanyTemplateData): string {
+export function generateProductSchema(product: ProductTemplateData, company: CompanyTemplateData, hasVisibleReviews = false): string {
   const schema: any = {
     "@context": "https://schema.org",
     "@type": "Product",
     "name": product.name,
-    "description": product.description,
+    // Truncate description to 300 chars for schema (full text in HTML)
+    "description": truncate(stripHtml(product.description || ''), 300),
     "brand": {
       "@type": "Brand",
       "name": product.brand || company.company_name
@@ -270,12 +271,15 @@ export function generateProductSchema(product: ProductTemplateData, company: Com
     };
   }
 
-  // Aggregate Rating
-  if (company.google_aggregate_rating) {
+  // Aggregate Rating - Only include if there are visible reviews to avoid Google penalties
+  // This requires hasVisibleReviews flag to be passed from the edge function
+  if (company.google_aggregate_rating && hasVisibleReviews) {
     schema.aggregateRating = {
       "@type": "AggregateRating",
       "ratingValue": company.google_aggregate_rating.ratingValue,
-      "reviewCount": company.google_aggregate_rating.reviewCount
+      "reviewCount": company.google_aggregate_rating.reviewCount,
+      "bestRating": 5,
+      "worstRating": 1
     };
   }
 
@@ -301,28 +305,54 @@ export function generateFAQSchema(faq: Array<{ question: string; answer: string 
   return JSON.stringify(schema, null, 2);
 }
 
+// Normalize URL for Schema.org - prevents double domain issues
+function normalizeSchemaUrl(baseUrl: string, path?: string, fullUrl?: string): string {
+  // If fullUrl is provided and starts with http, use it directly
+  if (fullUrl && fullUrl.startsWith('http')) {
+    return fullUrl;
+  }
+  // Clean base URL (remove trailing slashes)
+  const cleanBase = (baseUrl || '').replace(/\/+$/, '');
+  // Clean path (remove leading slashes)
+  const cleanPath = (path || '').replace(/^\/+/, '');
+  
+  if (!cleanBase) return `/${cleanPath}`;
+  if (!cleanPath) return cleanBase;
+  
+  return `${cleanBase}/${cleanPath}`;
+}
+
 export function generateBreadcrumbSchema(product: ProductTemplateData, company: CompanyTemplateData): string {
+  const baseUrl = (company.website_url || '').replace(/\/+$/, '');
+  
+  // Determine canonical product URL - prioritize canonical_url, then product_url if full URL
+  const productUrl = normalizeSchemaUrl(
+    baseUrl,
+    `blog/${product.slug || slugify(product.name)}`,
+    product.canonical_url || (product.product_url?.startsWith('http') ? product.product_url : undefined)
+  );
+
   const items = [
-    { name: "Home", url: company.website_url || '/' }
+    { name: "Home", url: baseUrl || '/' }
   ];
 
   if (product.category) {
     items.push({
       name: product.category,
-      url: `${company.website_url}/categoria/${slugify(product.category)}`
+      url: normalizeSchemaUrl(baseUrl, `categoria/${slugify(product.category)}`)
     });
   }
 
   if (product.subcategory) {
     items.push({
       name: product.subcategory,
-      url: `${company.website_url}/categoria/${slugify(product.category)}/${slugify(product.subcategory)}`
+      url: normalizeSchemaUrl(baseUrl, `categoria/${slugify(product.category)}/${slugify(product.subcategory)}`)
     });
   }
 
   items.push({
     name: product.name,
-    url: `${company.website_url}/${product.slug}`
+    url: productUrl
   });
 
   const schema = {
@@ -434,8 +464,10 @@ export function generateArticleSchema(
     };
   }
 
+  // Limit keywords to 20 for better SEO (too many keywords can be ignored)
   if (product.keywords?.length) {
-    schema.keywords = product.keywords.join(', ');
+    const limitedKeywords = product.keywords.slice(0, 20);
+    schema.keywords = limitedKeywords.join(', ');
   }
 
   return JSON.stringify(schema, null, 2);
@@ -535,10 +567,14 @@ export function generateHowToSchema(product: ProductTemplateData): string {
 export function renderProductBlogTemplate(data: TemplateData): string {
   const { product, company, author, blogType, generatedAt } = data;
 
+  // Determine if there are visible reviews (FAQ or other user-visible content)
+  // This is used to conditionally show AggregateRating in schema
+  const hasVisibleReviews = Boolean(product.faq?.length && product.faq.length >= 3);
+
   // Generate all schemas
   const schemas = {
     organization: generateOrganizationSchema(company),
-    product: generateProductSchema(product, company),
+    product: generateProductSchema(product, company, hasVisibleReviews),
     faq: product.faq?.length ? generateFAQSchema(product.faq) : '',
     breadcrumb: generateBreadcrumbSchema(product, company),
     localBusiness: generateLocalBusinessSchema(company),
@@ -630,8 +666,8 @@ function renderFullTemplate(data: TemplateData, schemas: Record<string, string>)
     <nav class="breadcrumb" aria-label="Breadcrumb">
       <div class="container">
         <ol class="breadcrumb-list">
-          <li><a href="${escapeHtml(company.website_url || '/')}">Home</a></li>
-          ${product.category ? `<li><a href="${escapeHtml(company.website_url)}/categoria/${slugify(product.category)}">${escapeHtml(product.category)}</a></li>` : ''}
+          <li><a href="${escapeHtml((company.website_url || '').replace(/\/+$/, '') || '/')}">Home</a></li>
+          ${product.category ? `<li><a href="${escapeHtml((company.website_url || '').replace(/\/+$/, ''))}/categoria/${slugify(product.category)}">${escapeHtml(product.category)}</a></li>` : ''}
           <li aria-current="page">${escapeHtml(product.name)}</li>
         </ol>
       </div>
@@ -663,7 +699,7 @@ function renderFullTemplate(data: TemplateData, schemas: Record<string, string>)
           <h1 id="hero-title" class="hero-title">${escapeHtml(product.name)}</h1>
           
           ${product.sales_pitch 
-            ? `<p class="hero-subtitle">${escapeHtml(truncate(stripHtml(product.sales_pitch), 320))}</p>` 
+            ? `<p class="hero-subtitle">${escapeHtml(truncate(stripHtml(product.sales_pitch), 280))}</p>` 
             : ''
           }
           
@@ -1057,7 +1093,8 @@ function renderVideosSection(videos?: Array<{ url: string; title?: string; thumb
 
 function extractYouTubeId(url: string): string | null {
   if (!url) return null;
-  const match = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  // Support for: youtube.com/watch?v=, youtube.com/embed/, youtube.com/shorts/, youtu.be/
+  const match = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
   return match ? match[1] : null;
 }
 
