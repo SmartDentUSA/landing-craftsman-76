@@ -3,8 +3,14 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { blake3 } from "https://esm.sh/hash-wasm@4.11.0";
 import { marked } from "https://esm.sh/marked@12.0.0";
 
-// ✅ NEW: HTML Generator V2 - Enterprise SaaS Design System
-import { generateProductBlogHTMLV2 } from '../_shared/product-blog-html-v2.ts';
+// ✅ NEW: Mustache Template Engine - Enterprise SaaS Design System
+import { 
+  renderProductBlogTemplate,
+  type TemplateData,
+  type ProductTemplateData,
+  type CompanyTemplateData,
+  type AuthorTemplateData
+} from '../_shared/mustache-template-engine.ts';
 
 // Schema Helpers - Fase SEO Completa
 import { 
@@ -373,6 +379,81 @@ function getEEATCards(product: any, blogType: string): Array<{icon: string; titl
   
   // ✅ RETORNA APENAS DADOS REAIS - pode ser array vazio
   return cards;
+}
+
+// Helper para gerar slug a partir do nome
+function slugify(text: string): string {
+  if (!text) return '';
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+// Helper para extrair vídeos do produto para o template V2
+function extractProductVideosForTemplate(product: any): Array<{ url: string; title?: string; thumbnail?: string; duration?: string }> {
+  const videos: Array<{ url: string; title?: string; thumbnail?: string; duration?: string }> = [];
+  
+  // YouTube videos
+  if (Array.isArray(product.youtube_videos)) {
+    product.youtube_videos.forEach((v: any) => {
+      const url = typeof v === 'string' ? v : v.url;
+      if (url) {
+        videos.push({
+          url,
+          title: typeof v === 'object' ? v.title : undefined,
+          thumbnail: typeof v === 'object' ? v.thumbnail : undefined,
+          duration: typeof v === 'object' ? v.duration : undefined
+        });
+      }
+    });
+  }
+  
+  // Technical videos
+  if (Array.isArray(product.technical_videos)) {
+    product.technical_videos.forEach((v: any) => {
+      const url = typeof v === 'string' ? v : v.url;
+      if (url && !videos.some(existing => existing.url === url)) {
+        videos.push({
+          url,
+          title: typeof v === 'object' ? v.title : undefined,
+          thumbnail: typeof v === 'object' ? v.thumbnail : undefined,
+          duration: typeof v === 'object' ? v.duration : undefined
+        });
+      }
+    });
+  }
+  
+  return videos.slice(0, 6);
+}
+
+// Helper para extrair perfis sociais da empresa
+function extractSocialProfiles(companyProfile: any): string[] {
+  const profiles: string[] = [];
+  
+  if (companyProfile?.instagram_profile) {
+    profiles.push(companyProfile.instagram_profile.startsWith('http') 
+      ? companyProfile.instagram_profile 
+      : `https://instagram.com/${companyProfile.instagram_profile.replace('@', '')}`);
+  }
+  
+  if (companyProfile?.youtube_channel) {
+    profiles.push(companyProfile.youtube_channel.startsWith('http')
+      ? companyProfile.youtube_channel
+      : `https://youtube.com/${companyProfile.youtube_channel}`);
+  }
+  
+  if (companyProfile?.social_media_links) {
+    const links = companyProfile.social_media_links;
+    if (links.facebook) profiles.push(links.facebook);
+    if (links.linkedin) profiles.push(links.linkedin);
+    if (links.twitter) profiles.push(links.twitter);
+    if (links.tiktok) profiles.push(links.tiktok);
+  }
+  
+  return profiles;
 }
 
 // Helper para formatar duração de vídeo
@@ -2012,20 +2093,111 @@ serve(async (req) => {
       console.log(`[publish-product-blog] Authority data: not available`);
     }
 
-    // 5. Generate HTML with LP Clone header/footer + All Schema Helpers
-    const html = generateProductBlogHTML({
-      product,
-      blogType,
-      content,
-      faqs: faqs || [],
-      domain,
-      pagePath: finalPagePath,
-      companyProfile,
-      trackingPixels,
-      relatedProducts: relatedProducts || [],
-      authorityData,
-      videoTestimonials
-    });
+    // 5. Generate HTML - Use V2 Template Engine when enabled
+    let html: string;
+    
+    if (USE_V2_TEMPLATE) {
+      console.log(`[publish-product-blog] Using V2 Mustache Template Engine`);
+      
+      // Prepare template data
+      const templateData: TemplateData = {
+        product: {
+          id: product.id,
+          name: product.name,
+          slug: product.slug || slugify(product.name),
+          description: product.description || '',
+          sales_pitch: product.sales_pitch,
+          category: product.category,
+          subcategory: product.subcategory,
+          brand: product.brand,
+          image_url: product.image_url,
+          images_gallery: Array.isArray(product.images_gallery) 
+            ? product.images_gallery.map((img: any) => ({
+                url: typeof img === 'string' ? img : img.url,
+                alt: typeof img === 'object' ? img.alt : product.name,
+                is_main: typeof img === 'object' ? img.is_main : false
+              }))
+            : [],
+          price: product.price,
+          promo_price: product.promo_price,
+          currency: product.currency || 'BRL',
+          gtin: product.gtin,
+          mpn: product.mpn,
+          ean: product.ean,
+          availability: product.availability || 'in_stock',
+          features: Array.isArray(product.features) 
+            ? product.features.map((f: any) => typeof f === 'string' ? f : f.name || f.title || f.text).filter(Boolean)
+            : [],
+          benefits: Array.isArray(product.benefits)
+            ? product.benefits.map((b: any) => typeof b === 'string' ? b : b.text || b.title || b.name).filter(Boolean)
+            : [],
+          applications: Array.isArray(product.applications)
+            ? product.applications
+            : product.applications?.split?.(',').map((a: string) => a.trim()) || [],
+          target_audience: Array.isArray(product.target_audience)
+            ? product.target_audience.map((t: any) => typeof t === 'string' ? t : t.persona || t.name).filter(Boolean)
+            : [],
+          technical_specifications: Array.isArray(product.technical_specifications)
+            ? product.technical_specifications.map((s: any) => ({
+                key: s.label || s.key || s.name || '',
+                value: s.value || ''
+              })).filter((s: any) => s.key && s.value)
+            : [],
+          faq: faqs?.map(f => ({ question: f.question, answer: f.answer })) || [],
+          videos: extractProductVideosForTemplate(product),
+          warranty_info: product.warranty_info,
+          workflow_stages: product.workflow_stages,
+          keywords: Array.isArray(product.keywords) ? product.keywords : [],
+          canonical_url: `https://${domain}${finalPagePath}`,
+          product_url: product.product_url || companyProfile?.website_url
+        },
+        company: {
+          company_name: companyProfile?.company_name || 'Smart Dent',
+          company_description: companyProfile?.company_description,
+          company_logo_url: companyProfile?.company_logo_url,
+          website_url: companyProfile?.website_url || `https://${domain}`,
+          contact_email: companyProfile?.contact_email,
+          contact_phone: companyProfile?.contact_phone,
+          street_address: companyProfile?.street_address,
+          city: companyProfile?.city,
+          state: companyProfile?.state,
+          postal_code: companyProfile?.postal_code,
+          country: companyProfile?.country || 'Brasil',
+          latitude: companyProfile?.latitude,
+          longitude: companyProfile?.longitude,
+          social_profiles: extractSocialProfiles(companyProfile),
+          founded_year: companyProfile?.founded_year,
+          founder_name: companyProfile?.founder_name,
+          google_aggregate_rating: companyProfile?.google_aggregate_rating,
+          tracking_pixels: {
+            gtm_id: trackingPixels?.google_tag_manager?.enabled ? trackingPixels.google_tag_manager.container_id || undefined : undefined,
+            meta_pixel_id: trackingPixels?.meta_pixel?.enabled ? trackingPixels.meta_pixel.pixel_id || undefined : undefined,
+            tiktok_pixel_id: trackingPixels?.tiktok_pixel?.enabled ? trackingPixels.tiktok_pixel.pixel_id || undefined : undefined
+          },
+          seo_domains: companyProfile?.seo_domains
+        },
+        author: undefined, // TODO: Fetch author from KOL if needed
+        blogType,
+        generatedAt: new Date().toISOString()
+      };
+      
+      html = renderProductBlogTemplate(templateData);
+    } else {
+      // V1: Use legacy programmatic HTML generator
+      html = generateProductBlogHTML({
+        product,
+        blogType,
+        content,
+        faqs: faqs || [],
+        domain,
+        pagePath: finalPagePath,
+        companyProfile,
+        trackingPixels,
+        relatedProducts: relatedProducts || [],
+        authorityData,
+        videoTestimonials
+      });
+    }
 
     console.log(`[publish-product-blog] HTML generated: ${html.length} bytes`);
 
