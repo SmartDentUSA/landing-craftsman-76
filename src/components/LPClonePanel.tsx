@@ -1025,15 +1025,56 @@ export const LPClonePanel = () => {
                 </Button>
               )}
               
-              {/* Preview button */}
+              {/* Preview button - uses Edge Function to generate HTML */}
               {blog.content && (
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  onClick={() => {
-                    const blob = new Blob([blog.content], { type: 'text/html' });
-                    const url = URL.createObjectURL(blob);
-                    window.open(url, '_blank');
+                  onClick={async () => {
+                    // Open window first to avoid popup blocker
+                    const newWindow = window.open('about:blank', '_blank');
+                    if (!newWindow) {
+                      toast.error('Popup bloqueado. Habilite popups para este site.');
+                      return;
+                    }
+                    
+                    // Show loading state
+                    newWindow.document.write(`
+                      <html>
+                        <head><title>Gerando preview...</title></head>
+                        <body style="font-family: system-ui, sans-serif; padding: 2rem; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: #f5f5f5;">
+                          <div style="text-align: center;">
+                            <div style="width: 40px; height: 40px; border: 3px solid #e5e5e5; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1rem;"></div>
+                            <p style="color: #666;">Gerando preview do blog...</p>
+                          </div>
+                          <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+                        </body>
+                      </html>
+                    `);
+                    
+                    try {
+                      const response = await supabase.functions.invoke('preview-product-blog', {
+                        body: { productId: blog.productId, blogType: blog.blogType }
+                      });
+                      
+                      if (response.error) throw response.error;
+                      
+                      // Replace content with generated HTML
+                      newWindow.document.open();
+                      newWindow.document.write(response.data);
+                      newWindow.document.close();
+                    } catch (e: any) {
+                      newWindow.document.open();
+                      newWindow.document.write(`
+                        <html>
+                          <body style="font-family: system-ui, sans-serif; padding: 2rem; color: #dc2626;">
+                            <h2>Erro ao gerar preview</h2>
+                            <p>${e.message || 'Erro desconhecido'}</p>
+                          </body>
+                        </html>
+                      `);
+                      newWindow.document.close();
+                    }
                   }}
                   title="Preview"
                 >

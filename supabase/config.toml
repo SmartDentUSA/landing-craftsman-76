@@ -194,3 +194,6 @@ verify_jwt = false
 
 [functions.generate-instagram-reels-script]
 verify_jwt = false
+
+[functions.preview-product-blog]
+verify_jwt = false
