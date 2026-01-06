@@ -39,7 +39,7 @@ export function KOLSection({ selectedKolId, onKolChange }: KOLSectionProps) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">Sem autor</SelectItem>
-              {kols.map((kol) => (
+              {kols.filter(kol => kol.id && kol.id.trim() !== '').map((kol) => (
                 <SelectItem key={kol.id} value={kol.id}>
                   {kol.full_name} {kol.specialty && `- ${kol.specialty}`}
                 </SelectItem>

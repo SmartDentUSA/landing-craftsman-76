@@ -562,7 +562,7 @@ export function DualBlogGeneratorWithKOL({ landingPageId, landingPageData, selec
               </SelectTrigger>
               <SelectContent className="bg-background border shadow-md z-50">
                 <SelectItem value="none">Sem autor</SelectItem>
-                {kols.map((kol) => (
+                {kols.filter(kol => kol.id && kol.id.trim() !== '').map((kol) => (
                   <SelectItem key={kol.id} value={kol.id}>
                     <div className="flex items-center space-x-2">
                       <Avatar className="h-6 w-6">
