@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import { FileText, Settings, Sparkles, Clock, Link, ExternalLink, Edit, Save, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +18,8 @@ import { ProductResourceCTAsList } from '@/components/ProductResourceCTAsList';
 import { RelatedLandingPagesList } from '@/components/RelatedLandingPagesList';
 import { useSEOHTMLGenerator } from '@/hooks/useSEOHTMLGenerator';
 import { useQueryClient } from '@tanstack/react-query';
+import { useBlogGenerationProgress } from '@/hooks/useBlogGenerationProgress';
+import { GENERATION_STEPS } from '@/types/blog-generation-progress';
 
 interface Product {
   id: string;
@@ -64,6 +67,15 @@ export const ProductBlogGeneratorModal = ({
   const { getConfigurationByFunction } = usePromptsConfiguration();
   const { generateConsolidatedBlogHTML } = useSEOHTMLGenerator();
   const queryClient = useQueryClient();
+  const cleanupRef = useRef<(() => void) | null>(null);
+  
+  // Hook de progresso em tempo real
+  const { 
+    currentStep, 
+    startListening, 
+    reset: resetProgress,
+    cleanup: cleanupProgress
+  } = useBlogGenerationProgress(currentProduct.id);
 
   // Sincronizar dados do produto quando props mudam
   useEffect(() => {
@@ -207,6 +219,11 @@ export const ProductBlogGeneratorModal = ({
     if (!currentProduct.id) return;
 
     setIsGenerating(true);
+    resetProgress();
+    
+    // Iniciar escuta do canal de progresso
+    cleanupRef.current = startListening();
+    
     try {
       const response = await supabase.functions.invoke('generate-product-blog', {
         body: {
@@ -274,6 +291,13 @@ export const ProductBlogGeneratorModal = ({
       });
     } finally {
       setIsGenerating(false);
+      // Cleanup após 3 segundos para mostrar o estado "complete"
+      setTimeout(() => {
+        if (cleanupRef.current) {
+          cleanupRef.current();
+          cleanupRef.current = null;
+        }
+      }, 3000);
     }
   };
 
@@ -452,6 +476,60 @@ export const ProductBlogGeneratorModal = ({
                       </div>
                     </div>
                     
+                    {/* Indicador de Progresso em Tempo Real */}
+                    {isGenerating && currentStep && (
+                      <Card className="mb-4 p-4 bg-primary/5 border-primary/20">
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-3">
+                            <span className="text-2xl">
+                              {GENERATION_STEPS[currentStep.step]?.icon || '⏳'}
+                            </span>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium">
+                                {currentStep.message}
+                              </p>
+                              {currentStep.details?.faqCount !== undefined && (
+                                <p className="text-xs text-muted-foreground">
+                                  {currentStep.details.faqCount} FAQs geradas
+                                </p>
+                              )}
+                              {currentStep.details?.linksCount !== undefined && (
+                                <p className="text-xs text-muted-foreground">
+                                  {currentStep.details.linksCount} links aplicados
+                                </p>
+                              )}
+                            </div>
+                            <Badge variant="outline">
+                              {GENERATION_STEPS[currentStep.step]?.progress || 0}%
+                            </Badge>
+                          </div>
+                          <Progress 
+                            value={GENERATION_STEPS[currentStep.step]?.progress || 0} 
+                            className="h-2"
+                          />
+                          
+                          {/* Timeline das etapas */}
+                          <div className="flex justify-between text-xs text-muted-foreground mt-2">
+                            <span className={currentStep.step === 'loading-product' || currentStep.step === 'loading-company' ? 'text-primary font-medium' : ''}>
+                              📦 Dados
+                            </span>
+                            <span className={currentStep.step === 'generating-content' ? 'text-primary font-medium' : ''}>
+                              🤖 IA
+                            </span>
+                            <span className={currentStep.step === 'generating-faqs' ? 'text-primary font-medium' : ''}>
+                              ❓ FAQs
+                            </span>
+                            <span className={currentStep.step === 'applying-links' ? 'text-primary font-medium' : ''}>
+                              🔗 Links
+                            </span>
+                            <span className={currentStep.step === 'saving' || currentStep.step === 'complete' ? 'text-primary font-medium' : ''}>
+                              ✅ Pronto
+                            </span>
+                          </div>
+                        </div>
+                      </Card>
+                    )}
+                    
                     <Button 
                       onClick={handleGenerateBlog}
                       disabled={isGenerating}
@@ -624,6 +702,60 @@ export const ProductBlogGeneratorModal = ({
                         {useIntelligentLinks ? 'Ativado' : 'Desativado'}
                       </div>
                     </div>
+                    
+                    {/* Indicador de Progresso em Tempo Real */}
+                    {isGenerating && currentStep && (
+                      <Card className="mb-4 p-4 bg-primary/5 border-primary/20">
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-3">
+                            <span className="text-2xl">
+                              {GENERATION_STEPS[currentStep.step]?.icon || '⏳'}
+                            </span>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium">
+                                {currentStep.message}
+                              </p>
+                              {currentStep.details?.faqCount !== undefined && (
+                                <p className="text-xs text-muted-foreground">
+                                  {currentStep.details.faqCount} FAQs geradas
+                                </p>
+                              )}
+                              {currentStep.details?.linksCount !== undefined && (
+                                <p className="text-xs text-muted-foreground">
+                                  {currentStep.details.linksCount} links aplicados
+                                </p>
+                              )}
+                            </div>
+                            <Badge variant="outline">
+                              {GENERATION_STEPS[currentStep.step]?.progress || 0}%
+                            </Badge>
+                          </div>
+                          <Progress 
+                            value={GENERATION_STEPS[currentStep.step]?.progress || 0} 
+                            className="h-2"
+                          />
+                          
+                          {/* Timeline das etapas */}
+                          <div className="flex justify-between text-xs text-muted-foreground mt-2">
+                            <span className={currentStep.step === 'loading-product' || currentStep.step === 'loading-company' ? 'text-primary font-medium' : ''}>
+                              📦 Dados
+                            </span>
+                            <span className={currentStep.step === 'generating-content' ? 'text-primary font-medium' : ''}>
+                              🤖 IA
+                            </span>
+                            <span className={currentStep.step === 'generating-faqs' ? 'text-primary font-medium' : ''}>
+                              ❓ FAQs
+                            </span>
+                            <span className={currentStep.step === 'applying-links' ? 'text-primary font-medium' : ''}>
+                              🔗 Links
+                            </span>
+                            <span className={currentStep.step === 'saving' || currentStep.step === 'complete' ? 'text-primary font-medium' : ''}>
+                              ✅ Pronto
+                            </span>
+                          </div>
+                        </div>
+                      </Card>
+                    )}
                     
                     <Button 
                       onClick={handleGenerateBlog}

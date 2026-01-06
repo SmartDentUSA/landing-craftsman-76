@@ -7,6 +7,29 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Helper para broadcast de progresso em tempo real
+async function broadcastProgress(
+  supabase: any,
+  productId: string,
+  step: string,
+  message: string,
+  progress: number,
+  details?: Record<string, any>
+) {
+  try {
+    const channelName = `blog-generation-${productId}`;
+    const channel = supabase.channel(channelName);
+    await channel.send({
+      type: 'broadcast',
+      event: 'progress',
+      payload: { step, message, progress, details }
+    });
+    console.log(`📡 Broadcast: ${step} - ${message}`);
+  } catch (e) {
+    console.log('Broadcast failed (non-critical):', e);
+  }
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -33,6 +56,10 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // 📡 Broadcast: Iniciando
+    await broadcastProgress(supabase, productId, 'loading-product', 
+      'Carregando dados do produto...', 10);
+
     console.log(`📦 Fetching product data for ID: ${productId}`);
     
     // Buscar dados do produto
@@ -43,10 +70,16 @@ serve(async (req) => {
       .single();
 
     if (productError || !product) {
+      await broadcastProgress(supabase, productId, 'error', 
+        `Produto não encontrado: ${productError?.message}`, 0);
       throw new Error(`Produto não encontrado: ${productError?.message}`);
     }
 
     console.log(`✅ Product found: ${product.name}`);
+
+    // 📡 Broadcast: Produto carregado
+    await broadcastProgress(supabase, productId, 'loading-company', 
+      `Produto "${product.name}" carregado. Buscando perfil da empresa...`, 20);
 
     // Buscar perfil da empresa para contexto adicional
     const { data: companyProfile } = await supabase
@@ -55,6 +88,10 @@ serve(async (req) => {
       .limit(1)
       .single();
 
+    // 📡 Broadcast: Gerando conteúdo
+    await broadcastProgress(supabase, productId, 'generating-content', 
+      `Gerando conteúdo ${blogType === 'commercial' ? 'comercial' : 'técnico'} com IA DeepSeek...`, 40);
+
     // Gerar blog + FAQs com IA (prompt combinado)
     const blogResult = await generateProductBlog(deepSeekApiKey, product, companyProfile, blogType);
     
@@ -62,9 +99,18 @@ serve(async (req) => {
     let finalBlogContent = blogResult.content;
     
     console.log(`✅ Blog generated with ${blogResult.faqs?.length || 0} FAQs`);
+
+    // 📡 Broadcast: FAQs geradas
+    await broadcastProgress(supabase, productId, 'generating-faqs', 
+      `Conteúdo gerado! ${blogResult.faqs?.length || 0} FAQs criadas.`, 60,
+      { faqCount: blogResult.faqs?.length || 0 });
     
     // Aplicar links inteligentes apenas se habilitado
     if (useIntelligentLinks) {
+      // 📡 Broadcast: Aplicando links
+      await broadcastProgress(supabase, productId, 'applying-links', 
+        'Aplicando links inteligentes ao conteúdo...', 80);
+      
       console.log('🔗 Generating intelligent links...');
       intelligentLinks = await generateIntelligentLinks(supabase, product, blogResult.content, blogType);
       finalBlogContent = await processContentWithIntelligentLinks(blogResult.content, intelligentLinks);
@@ -115,16 +161,30 @@ serve(async (req) => {
 
     console.log(`✅ ${blogType} blog saved with version history: ${blogType === 'commercial' ? updatedCommercialHistory.length : updatedTechnicalHistory.length} versions`);
 
+    // 📡 Broadcast: Salvando
+    await broadcastProgress(supabase, productId, 'saving', 
+      'Salvando blog no banco de dados...', 95);
+
     const { error: updateError } = await supabase
       .from('products_repository')
       .update({ individual_blog_content: updatedBlogContent })
       .eq('id', productId);
 
     if (updateError) {
+      await broadcastProgress(supabase, productId, 'error', 
+        `Erro ao salvar: ${updateError.message}`, 0);
       throw new Error(`Erro ao salvar blog: ${updateError.message}`);
     }
 
     console.log(`✅ Blog ${blogType} generated and saved for product: ${product.name}`);
+
+    // 📡 Broadcast: Completo
+    await broadcastProgress(supabase, productId, 'complete', 
+      'Blog gerado com sucesso!', 100, {
+        contentLength: finalBlogContent.length,
+        linksCount: Object.keys(intelligentLinks).length,
+        faqCount: blogResult.faqs?.length || 0
+      });
 
     return new Response(JSON.stringify({
       success: true,
@@ -140,6 +200,21 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('❌ Error in generate-product-blog:', error);
+    
+    // Tentar broadcast de erro (pode falhar se supabase não foi inicializado)
+    try {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL');
+      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+      if (supabaseUrl && supabaseKey) {
+        const supabase = createClient(supabaseUrl, supabaseKey);
+        // Extrair productId do request se possível
+        await broadcastProgress(supabase, 'unknown', 'error', 
+          error instanceof Error ? error.message : 'Erro interno', 0);
+      }
+    } catch (e) {
+      // Ignorar erro de broadcast
+    }
+    
     return new Response(JSON.stringify({ 
       error: error instanceof Error ? error.message : 'Erro interno do servidor'
     }), {
