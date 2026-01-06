@@ -68,6 +68,7 @@ export interface CompanyTemplateData {
     tiktok_pixel_id?: string;
   };
   seo_domains?: Array<{ domain: string; name: string }>;
+  opening_hours?: string; // Ex: "Mo-Fr 08:00-18:00"
 }
 
 export interface AuthorTemplateData {
@@ -271,17 +272,9 @@ export function generateProductSchema(product: ProductTemplateData, company: Com
     };
   }
 
-  // Aggregate Rating - Only include if there are visible reviews to avoid Google penalties
-  // This requires hasVisibleReviews flag to be passed from the edge function
-  if (company.google_aggregate_rating && hasVisibleReviews) {
-    schema.aggregateRating = {
-      "@type": "AggregateRating",
-      "ratingValue": company.google_aggregate_rating.ratingValue,
-      "reviewCount": company.google_aggregate_rating.reviewCount,
-      "bestRating": 5,
-      "worstRating": 1
-    };
-  }
+  // Aggregate Rating removed from Product schema - kept only in LocalBusiness
+  // This prevents Google penalties when there are no visible reviews on the page
+  // The LocalBusiness schema already includes aggregateRating when available
 
   return JSON.stringify(schema, null, 2);
 }
@@ -307,18 +300,24 @@ export function generateFAQSchema(faq: Array<{ question: string; answer: string 
 
 // Normalize URL for Schema.org - prevents double domain issues
 function normalizeSchemaUrl(baseUrl: string, path?: string, fullUrl?: string): string {
-  // If fullUrl is provided and starts with http, use it directly
-  if (fullUrl && fullUrl.startsWith('http')) {
+  // If fullUrl is provided AND is a complete valid URL, use it directly
+  if (fullUrl && /^https?:\/\//.test(fullUrl)) {
     return fullUrl;
   }
-  // Clean base URL (remove trailing slashes)
+  
+  // Clean base URL - remove ALL trailing slashes
   const cleanBase = (baseUrl || '').replace(/\/+$/, '');
-  // Clean path (remove leading slashes)
+  
+  // Clean path - remove ALL leading slashes
   const cleanPath = (path || '').replace(/^\/+/, '');
   
-  if (!cleanBase) return `/${cleanPath}`;
+  // If no base, return path with leading slash
+  if (!cleanBase) return cleanPath ? `/${cleanPath}` : '/';
+  
+  // If no path, return just base
   if (!cleanPath) return cleanBase;
   
+  // Concatenate with ONE single slash
   return `${cleanBase}/${cleanPath}`;
 }
 
@@ -408,6 +407,11 @@ export function generateLocalBusinessSchema(company: CompanyTemplateData): strin
     };
   }
 
+  // Add opening hours if available
+  if (company.opening_hours) {
+    schema.openingHours = company.opening_hours;
+  }
+
   return JSON.stringify(schema, null, 2);
 }
 
@@ -464,10 +468,16 @@ export function generateArticleSchema(
     };
   }
 
-  // Limit keywords to 20 for better SEO (too many keywords can be ignored)
+  // Limit keywords to 20 for better SEO (too many keywords can be ignored by Google)
   if (product.keywords?.length) {
-    const limitedKeywords = product.keywords.slice(0, 20);
-    schema.keywords = limitedKeywords.join(', ');
+    // Split comma-separated keywords and flatten, then limit to 20
+    const allKeywords = product.keywords
+      .flatMap(k => k.split(',').map(s => s.trim()))
+      .filter(k => k.length > 0 && k.length < 100)
+      .slice(0, 20);
+    if (allKeywords.length > 0) {
+      schema.keywords = allKeywords.join(', ');
+    }
   }
 
   return JSON.stringify(schema, null, 2);
@@ -1007,7 +1017,10 @@ function renderVideosSection(videos?: Array<{ url: string; title?: string; thumb
             // YouTube: use iframe with all required attributes
             if (platform === 'youtube') {
               const videoId = extractYouTubeId(v.url);
-              const embedUrl = videoId ? `https://www.youtube-nocookie.com/embed/${videoId}` : v.url;
+              // ALWAYS use embed format - fallback converts shorts URL to embed if no videoId extracted
+              const embedUrl = videoId 
+                ? `https://www.youtube-nocookie.com/embed/${videoId}` 
+                : v.url.replace(/youtube\.com\/shorts\//, 'youtube-nocookie.com/embed/').replace(/youtube\.com\/watch\?v=/, 'youtube-nocookie.com/embed/');
               const thumbnail = v.thumbnail || (videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : '');
               
               return `
@@ -1093,9 +1106,24 @@ function renderVideosSection(videos?: Array<{ url: string; title?: string; thumb
 
 function extractYouTubeId(url: string): string | null {
   if (!url) return null;
-  // Support for: youtube.com/watch?v=, youtube.com/embed/, youtube.com/shorts/, youtu.be/
-  const match = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-  return match ? match[1] : null;
+  
+  const cleanUrl = url.trim();
+  
+  // More robust patterns for YouTube - order matters (most specific first)
+  const patterns = [
+    /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+    /youtu\.be\/([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/v\/([a-zA-Z0-9_-]{11})/
+  ];
+  
+  for (const pattern of patterns) {
+    const match = cleanUrl.match(pattern);
+    if (match) return match[1];
+  }
+  
+  return null;
 }
 
 function getTrackingScripts(pixels?: CompanyTemplateData['tracking_pixels']): { head: string; bodyStart: string } {
