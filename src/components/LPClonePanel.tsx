@@ -260,7 +260,7 @@ export const LPClonePanel = () => {
   });
   
   // Fetch products with blog content
-  const { data: productsWithBlogs } = useQuery({
+  const { data: productsWithBlogs, isLoading: loadingBlogs, refetch: refetchBlogs } = useQuery({
     queryKey: ['products-with-blogs'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -1153,9 +1153,25 @@ export const LPClonePanel = () => {
           <TabsTrigger value="transform">
             {editingLPId ? '✏️ Editando' : 'Transformar'}
           </TabsTrigger>
-          <TabsTrigger value="library">
+          <TabsTrigger value="library" className="gap-2">
             Biblioteca ({libraryItems.length})
           </TabsTrigger>
+          {activeTab === 'library' && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => {
+                refetchBlogs();
+                queryClient.invalidateQueries({ queryKey: ['cloned-landing-pages'] });
+                queryClient.invalidateQueries({ queryKey: ['blog-publications'] });
+                toast.info('Atualizando biblioteca...');
+              }}
+              disabled={loadingBlogs || loadingLPs}
+              className="ml-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${loadingBlogs || loadingLPs ? 'animate-spin' : ''}`} />
+            </Button>
+          )}
         </TabsList>
         
         {editingLPId && (
