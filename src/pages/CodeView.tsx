@@ -1,12 +1,12 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Copy, Download, ExternalLink, ArrowLeft, Code2 } from "lucide-react";
+import { Copy, Download, ExternalLink, ArrowLeft, Code2, Loader2 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { generateHTML } from "@/lib/template-engine";
+import { useEnhancedTemplateEngine } from "@/hooks/useEnhancedTemplateEngine";
 import { TopNavigation } from "@/components/TopNavigation";
 
 const CodeView = () => {
@@ -14,23 +14,12 @@ const CodeView = () => {
   const location = useLocation();
   const { toast } = useToast();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { generateEnhancedHTML, isLoading } = useEnhancedTemplateEngine();
   
   // Get data from route state or use default data
   const { data, landingName = "Landing Page", html, editorId, embedConfig } = location.state || {};
   
-  const [generatedHTML, setGeneratedHTML] = useState(() => {
-    // If HTML is passed directly, use it
-    if (html) {
-      return html;
-    }
-    
-    // If data is passed, generate HTML from it
-    if (data) {
-      return generateHTML(data);
-    }
-    
-    // Default example HTML if no data
-    return `<!DOCTYPE html>
+  const DEFAULT_HTML = `<!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
@@ -44,7 +33,36 @@ const CodeView = () => {
     <a href="/dashboard">Ir para o Dashboard</a>
 </body>
 </html>`;
-  });
+
+  const [generatedHTML, setGeneratedHTML] = useState(html || DEFAULT_HTML);
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  // ✅ Usar useEnhancedTemplateEngine para integrar dados do company_profile
+  useEffect(() => {
+    const generateHTML = async () => {
+      // Se HTML foi passado diretamente, usar ele
+      if (html) {
+        setGeneratedHTML(html);
+        return;
+      }
+      
+      // Se dados foram passados, gerar HTML com integração do company_profile
+      if (data) {
+        setIsGenerating(true);
+        try {
+          const enhancedHTML = await generateEnhancedHTML(data);
+          setGeneratedHTML(enhancedHTML);
+        } catch (error) {
+          console.error('Erro ao gerar HTML aprimorado:', error);
+          setGeneratedHTML(DEFAULT_HTML);
+        } finally {
+          setIsGenerating(false);
+        }
+      }
+    };
+
+    generateHTML();
+  }, [data, html, generateEnhancedHTML]);
 
   const handleCopyCode = async () => {
     try {
@@ -112,7 +130,14 @@ const CodeView = () => {
                 Código Gerado
               </h1>
               <div className="flex items-center gap-2 mt-1">
-                <Badge variant="success">HTML Pronto</Badge>
+                {isGenerating || isLoading ? (
+                  <Badge variant="outline" className="flex items-center gap-1">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Gerando...
+                  </Badge>
+                ) : (
+                  <Badge variant="success">HTML Pronto</Badge>
+                )}
                 <span className="text-sm text-muted-foreground">
                   {lineCount} linhas • Template: Smart Dent Base v1
                 </span>
@@ -121,15 +146,15 @@ const CodeView = () => {
           </div>
           
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={handlePreviewInNewTab}>
+            <Button variant="outline" onClick={handlePreviewInNewTab} disabled={isGenerating || isLoading}>
               <ExternalLink className="h-4 w-4 mr-2" />
               Abrir Preview
             </Button>
-            <Button variant="outline" onClick={handleDownloadHTML}>
+            <Button variant="outline" onClick={handleDownloadHTML} disabled={isGenerating || isLoading}>
               <Download className="h-4 w-4 mr-2" />
               Baixar HTML
             </Button>
-            <Button onClick={handleCopyCode} className="gradient-primary shadow-primary">
+            <Button onClick={handleCopyCode} className="gradient-primary shadow-primary" disabled={isGenerating || isLoading}>
               <Copy className="h-4 w-4 mr-2" />
               Copiar Código
             </Button>
