@@ -22,6 +22,7 @@ import {
   generateVideoTestimonialSchemas,
   generateVideoGallerySchema,
   generateSameAsSchema,
+  generateReviewsSchema,  // ✅ CORREÇÃO: Import para gerar reviews individuais
   type AuthorityData,
   type VideoTestimonial
 } from "../_shared/authority-data-helper.ts";
@@ -1496,6 +1497,15 @@ function generateProductSchema(product: any): string {
         }
       })
     }));
+  }
+
+  // ✅ CORREÇÃO: Adicionar Reviews individuais ao Product Schema (Rich Snippets Google)
+  if (currentAuthorityData && currentAuthorityData.reviews && currentAuthorityData.reviews.length > 0) {
+    const reviewsSchema = generateReviewsSchema(currentAuthorityData.reviews, 5);
+    if (reviewsSchema.length > 0) {
+      productSchema.review = reviewsSchema;
+      console.log(`✅ [E-commerce] ${reviewsSchema.length} reviews individuais adicionadas ao Product Schema`);
+    }
   }
 
   return JSON.stringify(schema, null, 2);

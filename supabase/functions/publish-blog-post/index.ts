@@ -24,6 +24,7 @@ import {
   generateVideoTestimonialSchemas,
   generateVideoGallerySchema,
   generateSameAsSchema,
+  generateReviewsSchema,  // ✅ CORREÇÃO: Import para gerar reviews individuais
   type AuthorityData,
   type VideoTestimonial
 } from "../_shared/authority-data-helper.ts";
@@ -775,6 +776,10 @@ async function generateSchemaLD(blogPost: any, productData: any = null) {
         "bestRating": currentAggregateRating.bestRating,
         "worstRating": currentAggregateRating.worstRating
       },
+      // ✅ CORREÇÃO: Reviews individuais para Rich Snippets (campos obrigatórios name, ratingValue)
+      ...(currentAuthorityData && currentAuthorityData.reviews && currentAuthorityData.reviews.length > 0 && {
+        "review": generateReviewsSchema(currentAuthorityData.reviews, 5)
+      }),
       "keywords": productData.keywords?.join(', ') || undefined,
       "additionalProperty": [
         ...(productData.features || []).map((feature: any) => ({

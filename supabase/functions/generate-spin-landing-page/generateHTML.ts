@@ -28,7 +28,8 @@ import {
   generateCompanyVideoSchemas,
   generateVideoTestimonialSchemas,
   generateVideoGallerySchema,
-  generateSameAsSchema
+  generateSameAsSchema,
+  generateReviewsSchema  // ✅ CORREÇÃO: Import para gerar reviews individuais
 } from '../_shared/authority-data-helper.ts';
 // ✅ CORREÇÃO: Import AggregateRatingData para tipagem
 import { type AggregateRatingData } from '../_shared/aggregate-rating-helper.ts';
@@ -55,7 +56,8 @@ function generateSPINSchemas(
   successCases: any[],
   canonicalUrl: string,
   authorKOL?: PersonSchemaData | null,
-  aggregateRating?: AggregateRatingData | null
+  aggregateRating?: AggregateRatingData | null,
+  authorityData?: AuthorityData | null  // ✅ CORREÇÃO: Novo parâmetro para reviews
 ): any[] {
   const schemas: any[] = [];
 
@@ -241,10 +243,18 @@ products.forEach(product => {
     productSchema.aggregateRating = {
       '@type': 'AggregateRating',
       ratingValue: aggregateRating?.ratingValue || '5.0',
-      reviewCount: aggregateRating?.reviewCount || 150,
+      reviewCount: aggregateRating?.reviewCount || 698,  // ✅ CORRIGIDO: 698 avaliações
       bestRating: 5,
       worstRating: 1
     };
+
+    // ✅ CORREÇÃO: Adicionar Reviews individuais ao Product Schema (Rich Snippets Google)
+    if (authorityData && authorityData.reviews && authorityData.reviews.length > 0) {
+      const reviewsSchema = generateReviewsSchema(authorityData.reviews, 5);
+      if (reviewsSchema.length > 0) {
+        productSchema.review = reviewsSchema;
+      }
+    }
 
     if (product.gtin) productSchema.gtin = product.gtin;
     if (product.mpn) productSchema.mpn = product.mpn;
@@ -742,7 +752,8 @@ export function generateLandingPageHTML(
     successCases,
     canonicalUrl,
     authorKOL, // ✅ FASE 3: Passar KOL para Person Schema
-    aggregateRating // ✅ CORREÇÃO: Passar aggregateRating para Product schemas
+    aggregateRating, // ✅ CORREÇÃO: Passar aggregateRating para Product schemas
+    authorityData  // ✅ CORREÇÃO: Passar authorityData para reviews individuais
   );
 
   // 🔗 INTEGRAÇÃO SISTEMA B: Adicionar VideoObject e DigitalDocument schemas

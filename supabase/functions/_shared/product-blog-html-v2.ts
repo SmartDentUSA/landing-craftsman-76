@@ -406,12 +406,21 @@ function generateSchemaGraph(options: {
     };
   }
   
-  // Add aggregate rating if exists
+  // Add aggregate rating if exists - ✅ CORREÇÃO: Fallback com 698 reviews
   if (product.rating_value && product.rating_count) {
     productSchema.aggregateRating = {
       "@type": "AggregateRating",
       "ratingValue": product.rating_value,
       "reviewCount": product.rating_count,
+      "bestRating": "5",
+      "worstRating": "1"
+    };
+  } else {
+    // ✅ CORREÇÃO: Garantir AggregateRating padrão com 698 reviews
+    productSchema.aggregateRating = {
+      "@type": "AggregateRating",
+      "ratingValue": "5.0",
+      "reviewCount": 698,
       "bestRating": "5",
       "worstRating": "1"
     };
