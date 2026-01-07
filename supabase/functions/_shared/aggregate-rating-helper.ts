@@ -14,7 +14,7 @@ export interface AggregateRatingData {
 // Valores padrão baseados nos dados REAIS do Google Smart Dent
 const DEFAULT_RATING: AggregateRatingData = {
   ratingValue: "5.0",
-  reviewCount: 150,
+  reviewCount: 698,  // ✅ CORRIGIDO: 698 avaliações reais do Google
   bestRating: 5,
   worstRating: 1
 };

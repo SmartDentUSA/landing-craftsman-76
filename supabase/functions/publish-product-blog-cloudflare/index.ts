@@ -32,6 +32,7 @@ import {
   generateCompanyVideoSchemas,
   generateVideoTestimonialSchemas,
   generateVideoGallerySchema,
+  generateReviewsSchema,  // ✅ CORREÇÃO: Import para gerar reviews individuais
   type AuthorityData,
   type VideoTestimonial
 } from '../_shared/authority-data-helper.ts';
@@ -780,6 +781,18 @@ function generateProductBlogHTML(options: {
         "@type": "Brand",
         "name": product.brand || companyName
       },
+      // ✅ CORREÇÃO: AggregateRating com reviewCount correto (698)
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "5.0",
+        "reviewCount": 698,
+        "bestRating": 5,
+        "worstRating": 1
+      },
+      // ✅ CORREÇÃO: Reviews individuais para Rich Snippets (campos obrigatórios name, ratingValue)
+      ...(authorityData && authorityData.reviews && authorityData.reviews.length > 0 && {
+        "review": generateReviewsSchema(authorityData.reviews, 5)
+      }),
       "offers": {
         "@type": "Offer",
         "availability": "https://schema.org/InStock",
