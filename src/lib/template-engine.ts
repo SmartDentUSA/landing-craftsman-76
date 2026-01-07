@@ -3664,17 +3664,26 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
         debugInfo: `gridSpan=${gridSpan}, gridRowSpan=${gridRowSpan}, scale=${solution.containerScale || 1}, size=${sizeClass}` // 🆕 ATUALIZADO
       };
     }),
-    footer: {
-      ...data.footer,
-      locations: (data.footer?.locations || []).map((location: any) => ({
-        ...location,
-        flagIcon: location.country === 'Brazil' ? '🇧🇷' : location.country === 'USA' ? '🇺🇸' : ''
-      })),
-      social: (data.footer?.social || []).map((social: any) => ({
-        ...social,
-        iconSvg: SOCIAL_ICONS[social.platform] || SOCIAL_ICONS.website
-      }))
-    }
+    // 🔧 FALLBACK: Footer com dados do company_profile quando não preenchido no Editor
+    footer: (() => {
+      const footerLocations = data.footer?.locations || [];
+      const footerSocial = data.footer?.social || [];
+      
+      return {
+        ...data.footer,
+        locations: footerLocations.map((location: any) => ({
+          ...location,
+          flagIcon: location.country === 'Brazil' ? '🇧🇷' : location.country === 'USA' ? '🇺🇸' : ''
+        })),
+        social: footerSocial.map((social: any) => ({
+          ...social,
+          iconSvg: SOCIAL_ICONS[social.platform] || SOCIAL_ICONS.website
+        })),
+        // Flags para template condicional
+        has_locations: footerLocations.length > 0,
+        has_social: footerSocial.length > 0
+      };
+    })()
   };
 
   // Debug: verificar containerScale and gridSpan values
@@ -4781,6 +4790,90 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
   // 🔧 INTEGRAÇÃO: Aplicar dados da empresa nos meta tags e footer
   if (companyProfile) {
     const companyMeta = buildSEOMetaFromCompany(companyProfile, processedData.ai_keywords?.primary || []);
+    
+    // ✅ FALLBACK LOGO: Usar logo da empresa se não definido no Editor
+    if (!processedData.logo_url || processedData.logo_url === '' || processedData.logo_url.includes('placeholder')) {
+      if (companyProfile.company_logo_url) {
+        processedData.logo_url = companyProfile.company_logo_url;
+        console.log('🔧 [FALLBACK] Logo preenchido do company_profile:', companyProfile.company_logo_url);
+      }
+    }
+    
+    // ✅ FALLBACK FOOTER LOCATIONS: Usar endereço da empresa se não definido
+    if (!processedData.footer?.has_locations) {
+      const companyAddress = [
+        companyProfile.street_address,
+        companyProfile.address_number,
+        companyProfile.city,
+        companyProfile.state,
+        companyProfile.postal_code
+      ].filter(Boolean).join(', ');
+      
+      if (companyAddress) {
+        processedData.footer = {
+          ...processedData.footer,
+          locations: [{
+            title: companyProfile.company_name || 'Matriz',
+            address: companyAddress,
+            flagIcon: companyProfile.country === 'USA' ? '🇺🇸' : '🇧🇷'
+          }],
+          has_locations: true
+        };
+        console.log('🔧 [FALLBACK] Footer locations preenchido do company_profile');
+      }
+    }
+    
+    // ✅ FALLBACK FOOTER SOCIAL: Usar redes sociais da empresa se não definido
+    if (!processedData.footer?.has_social) {
+      const socialLinks: Array<{platform: string; href: string; iconSvg: string}> = [];
+      
+      // Instagram
+      if (companyProfile.instagram_profile) {
+        const instagramUrl = companyProfile.instagram_profile.startsWith('http') 
+          ? companyProfile.instagram_profile 
+          : `https://instagram.com/${companyProfile.instagram_profile.replace('@', '')}`;
+        socialLinks.push({
+          platform: 'instagram',
+          href: instagramUrl,
+          iconSvg: SOCIAL_ICONS.instagram
+        });
+      }
+      
+      // YouTube
+      if (companyProfile.youtube_channel) {
+        socialLinks.push({
+          platform: 'youtube',
+          href: companyProfile.youtube_channel,
+          iconSvg: SOCIAL_ICONS.youtube
+        });
+      }
+      
+      // Social media links from company_profile
+      const companyLinks = companyProfile.social_media_links as Array<{platform: string; url: string; href?: string}> | undefined;
+      if (companyLinks && Array.isArray(companyLinks)) {
+        companyLinks.forEach((link: {platform: string; url: string; href?: string}) => {
+          if (link.platform && (link.url || link.href)) {
+            const existingPlatform = socialLinks.find(s => s.platform === link.platform.toLowerCase());
+            if (!existingPlatform) {
+              socialLinks.push({
+                platform: link.platform.toLowerCase(),
+                href: link.url || link.href || '',
+                iconSvg: SOCIAL_ICONS[link.platform.toLowerCase()] || SOCIAL_ICONS.website
+              });
+            }
+          }
+        });
+      }
+      
+      if (socialLinks.length > 0) {
+        processedData.footer = {
+          ...processedData.footer,
+          social: socialLinks,
+          has_social: true
+        };
+        console.log('🔧 [FALLBACK] Footer social preenchido do company_profile:', socialLinks.length, 'links');
+      }
+    }
     
     // Integrar company_name em og:site_name
     if (!processedData.og_site_name && companyProfile.company_name) {
