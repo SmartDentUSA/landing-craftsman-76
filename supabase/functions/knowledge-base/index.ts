@@ -21,6 +21,7 @@ interface KnowledgeBaseParams {
   include_blog_posts?: boolean;
   include_landing_pages?: boolean;
   include_external_videos?: boolean;
+  include_milestones?: boolean; // ✅ NOVO: Marcos Históricos
   approved_only?: boolean;
   category?: string;
   limit?: number;
@@ -301,6 +302,61 @@ function formatForAITraining(data: any): string {
       text += `\n### ASSETS VISUAIS\n`;
       if (cp.company_logo_url) text += `**Logo URL:** ${cp.company_logo_url}\n`;
       if (cp.company_logo_supabase_path) text += `**Logo Supabase Path:** ${cp.company_logo_supabase_path}\n`;
+      text += `\n`;
+    }
+    
+    // ✅ AVALIAÇÃO GOOGLE OFICIAL (Rating 5.0, 698 reviews)
+    if (cp.google_aggregate_rating) {
+      text += `\n### AVALIAÇÃO GOOGLE OFICIAL\n`;
+      text += `**Rating:** ${cp.google_aggregate_rating.ratingValue || '5.0'}⭐\n`;
+      text += `**Total de Reviews:** ${cp.google_aggregate_rating.reviewCount || 698}\n`;
+      if (cp.google_aggregate_rating.bestRating) text += `**Melhor Nota:** ${cp.google_aggregate_rating.bestRating}\n`;
+      text += `\n`;
+    }
+    
+    // ✅ GEOLOCALIZAÇÃO (Coordenadas para Schema.org)
+    if (cp.latitude && cp.longitude) {
+      text += `**Coordenadas GPS:** ${cp.latitude}, ${cp.longitude}\n`;
+    }
+    
+    // ✅ FUNDADOR
+    if (cp.founder_name) {
+      text += `\n### FUNDADOR\n`;
+      text += `**Nome:** ${cp.founder_name}\n`;
+      if (cp.founder_title) text += `**Cargo:** ${cp.founder_title}\n`;
+      if (cp.founder_linkedin) text += `**LinkedIn:** ${cp.founder_linkedin}\n`;
+      text += `\n`;
+    }
+    
+    // ✅ HORÁRIO DE FUNCIONAMENTO
+    if (cp.opening_hours && Array.isArray(cp.opening_hours) && cp.opening_hours.length > 0) {
+      text += `\n### HORÁRIO DE FUNCIONAMENTO\n`;
+      cp.opening_hours.forEach((oh: any) => {
+        const days = Array.isArray(oh.dayOfWeek) ? oh.dayOfWeek.join(', ') : oh.dayOfWeek;
+        text += `- ${days}: ${oh.opens} - ${oh.closes}\n`;
+      });
+      text += `\n`;
+    }
+    
+    // ✅ ÁREAS DE ATUAÇÃO
+    if (cp.areas_served && Array.isArray(cp.areas_served) && cp.areas_served.length > 0) {
+      text += `**Áreas de Atuação:** `;
+      text += cp.areas_served.map((area: any) => typeof area === 'string' ? area : area.name).join(', ');
+      text += `\n\n`;
+    }
+    
+    // ✅ FAIXA DE PREÇO
+    if (cp.price_range) {
+      text += `**Faixa de Preço:** ${cp.price_range}\n`;
+    }
+    
+    // ✅ DADOS JURÍDICOS E CORPORATIVOS
+    if (cp.legal_name || cp.tax_id || cp.duns_number) {
+      text += `\n### DADOS JURÍDICOS E CORPORATIVOS\n`;
+      if (cp.legal_name) text += `**Razão Social:** ${cp.legal_name}\n`;
+      if (cp.tax_id) text += `**CNPJ:** ${cp.tax_id}\n`;
+      if (cp.duns_number) text += `**DUNS Number:** ${cp.duns_number}\n`;
+      if (cp.number_of_employees) text += `**Número de Funcionários:** ${cp.number_of_employees}\n`;
       text += `\n`;
     }
     
@@ -1207,6 +1263,57 @@ function formatForAITraining(data: any): string {
     }
   }
   
+  // ✅ MARCOS HISTÓRICOS DA EMPRESA
+  if (data.company_milestones && Array.isArray(data.company_milestones) && data.company_milestones.length > 0) {
+    text += `## 📜 MARCOS HISTÓRICOS DA EMPRESA (${data.company_milestones.length})\n\n`;
+    
+    data.company_milestones.forEach((m: any) => {
+      // Formatar data
+      const dateStr = m.month && m.day 
+        ? `${m.day}/${m.month}/${m.year}` 
+        : m.month 
+          ? `${m.month}/${m.year}` 
+          : `${m.year}`;
+      
+      text += `### ${dateStr} - ${m.title}\n`;
+      if (m.description) text += `${m.description}\n\n`;
+      
+      if (m.market_context) text += `**Contexto de Mercado:** ${m.market_context}\n`;
+      if (m.strategic_decision) text += `**Decisão Estratégica:** ${m.strategic_decision}\n`;
+      if (m.impact) text += `**Impacto:** ${m.impact}\n`;
+      if (m.legacy) text += `**Legado:** ${m.legacy}\n`;
+      
+      // Localização
+      if (m.location?.city || m.location?.state) {
+        text += `**Local:** ${m.location.city || ''}${m.location.city && m.location.state ? ', ' : ''}${m.location.state || ''} - ${m.location.country || 'Brasil'}\n`;
+      }
+      
+      // Pessoas-chave
+      if (m.key_people && Array.isArray(m.key_people) && m.key_people.length > 0) {
+        text += `**Pessoas-chave:** `;
+        text += m.key_people.map((p: any) => `${p.name}${p.role ? ` (${p.role})` : ''}`).join(', ');
+        text += `\n`;
+      }
+      
+      // Produtos envolvidos
+      if (m.products_involved && Array.isArray(m.products_involved) && m.products_involved.length > 0) {
+        text += `**Produtos Envolvidos:** ${m.products_involved.join(', ')}\n`;
+      }
+      
+      // Tecnologias
+      if (m.technologies && Array.isArray(m.technologies) && m.technologies.length > 0) {
+        text += `**Tecnologias:** ${m.technologies.join(', ')}\n`;
+      }
+      
+      // Certificações
+      if (m.certifications && Array.isArray(m.certifications) && m.certifications.length > 0) {
+        text += `**Certificações:** ${m.certifications.join(', ')}\n`;
+      }
+      
+      text += `\n---\n\n`;
+    });
+  }
+
   return text;
 }
 
@@ -1305,22 +1412,102 @@ function formatForRAG(data: any): any {
     });
   }) || [];
   
-  // Process company profile with optimizations
-  const company = data.company_profile ? omitEmpty({
-    name: data.company_profile.company_name,
-    description: stripHtml(data.company_profile.company_description),
-    sector: data.company_profile.business_sector,
-    mission: data.company_profile.mission_statement,
-    vision: data.company_profile.vision_statement,
-    values: data.company_profile.brand_values,
-    differentiators: data.company_profile.differentiators,
-    target_audience: data.company_profile.target_audience,
-    website: data.company_profile.website_url,
-    contact_email: data.company_profile.contact_email,
-    contact_phone: data.company_profile.contact_phone,
-    location: data.company_profile.location,
-    city: data.company_profile.city,
-    state: data.company_profile.state
+  // Process company profile with optimizations - EXPANDED WITH ALL FIELDS
+  const cp = data.company_profile;
+  const company = cp ? omitEmpty({
+    name: cp.company_name,
+    description: stripHtml(cp.company_description),
+    sector: cp.business_sector,
+    mission: cp.mission_statement,
+    vision: cp.vision_statement,
+    values: cp.brand_values,
+    differentiators: cp.differentiators,
+    target_audience: cp.target_audience,
+    website: cp.website_url,
+    contact_email: cp.contact_email,
+    contact_phone: cp.contact_phone,
+    location: cp.location,
+    city: cp.city,
+    state: cp.state,
+    country: cp.country,
+    postal_code: cp.postal_code,
+    street_address: cp.street_address,
+    address_number: cp.address_number,
+    founded_year: cp.founded_year,
+    team_size: cp.team_size,
+    
+    // ✅ GOOGLE AGGREGATE RATING
+    google_rating: cp.google_aggregate_rating ? {
+      rating: cp.google_aggregate_rating.ratingValue || "5.0",
+      reviews: cp.google_aggregate_rating.reviewCount || 698,
+      best: cp.google_aggregate_rating.bestRating || 5
+    } : undefined,
+    
+    // ✅ COORDENADAS
+    coordinates: (cp.latitude && cp.longitude) ? {
+      lat: cp.latitude,
+      lng: cp.longitude
+    } : undefined,
+    
+    // ✅ FUNDADOR
+    founder: cp.founder_name ? {
+      name: cp.founder_name,
+      title: cp.founder_title,
+      linkedin: cp.founder_linkedin
+    } : undefined,
+    
+    // ✅ HORÁRIO DE FUNCIONAMENTO
+    opening_hours: cp.opening_hours,
+    
+    // ✅ FAIXA DE PREÇO
+    price_range: cp.price_range,
+    
+    // ✅ ÁREAS DE ATUAÇÃO
+    areas_served: cp.areas_served,
+    
+    // ✅ DADOS JURÍDICOS
+    legal: (cp.legal_name || cp.tax_id || cp.duns_number) ? {
+      legal_name: cp.legal_name,
+      tax_id: cp.tax_id,
+      duns_number: cp.duns_number,
+      employees: cp.number_of_employees
+    } : undefined,
+    
+    // ✅ NPS METRICS
+    nps_metrics: cp.nps_metrics,
+    
+    // ✅ SEO FIELDS
+    seo: (cp.seo_market_positioning || cp.seo_competitive_advantages) ? {
+      market_positioning: cp.seo_market_positioning,
+      competitive_advantages: cp.seo_competitive_advantages,
+      technical_expertise: cp.seo_technical_expertise,
+      service_areas: cp.seo_service_areas,
+      context_keywords: cp.seo_context_keywords,
+      domains: cp.seo_domains
+    } : undefined,
+    
+    // ✅ SOCIAL MEDIA
+    social: {
+      links: cp.social_media_links,
+      hashtags: cp.social_media_hashtags,
+      handles: cp.social_media_handles,
+      youtube_channel: cp.youtube_channel,
+      youtube_tags: cp.youtube_tags,
+      instagram_profile: cp.instagram_profile
+    },
+    
+    // ✅ MARCOS HISTÓRICOS
+    milestones: data.company_milestones?.map((m: any) => omitEmpty({
+      year: m.year,
+      month: m.month,
+      title: m.title,
+      description: m.description,
+      impact: m.impact,
+      legacy: m.legacy,
+      products: m.products_involved,
+      technologies: m.technologies,
+      certifications: m.certifications
+    }))
   }) : undefined;
   
   // Process categories with anti-hallucination rules
@@ -1387,7 +1574,7 @@ function formatForSystemB(data: any): any {
   
   return {
     format: "system_b",
-    version: "2.0.0",
+    version: "2.1.0", // ✅ Version bump
     timestamp: new Date().toISOString(),
     company: {
       ...cp,
@@ -1411,7 +1598,30 @@ function formatForSystemB(data: any): any {
         meta_pixel_id: cp?.tracking_pixels?.meta_pixel_id || null,
         tiktok_pixel_id: cp?.tracking_pixels?.tiktok_pixel_id || null,
         google_analytics_id: cp?.tracking_pixels?.google_analytics_id || null,
-      }
+      },
+      // ✅ GOOGLE AGGREGATE RATING
+      google_rating: cp?.google_aggregate_rating,
+      // ✅ COORDENADAS
+      coordinates: (cp?.latitude && cp?.longitude) ? { lat: cp.latitude, lng: cp.longitude } : null,
+      // ✅ FUNDADOR
+      founder: cp?.founder_name ? {
+        name: cp.founder_name,
+        title: cp.founder_title,
+        linkedin: cp.founder_linkedin
+      } : null,
+      // ✅ HORÁRIOS E FAIXA DE PREÇO
+      opening_hours: cp?.opening_hours,
+      price_range: cp?.price_range,
+      areas_served: cp?.areas_served,
+      // ✅ DADOS JURÍDICOS
+      legal: {
+        legal_name: cp?.legal_name,
+        tax_id: cp?.tax_id,
+        duns_number: cp?.duns_number,
+        employees: cp?.number_of_employees
+      },
+      // ✅ MARCOS HISTÓRICOS
+      milestones: data.company_milestones || []
     },
     categories: data.categories_config,
     links: data.external_links,
@@ -1499,6 +1709,7 @@ serve(async (req) => {
       include_blog_posts: bodyParams.include_blog_posts ?? url.searchParams.get('include_blog_posts') === 'true',
       include_landing_pages: bodyParams.include_landing_pages ?? url.searchParams.get('include_landing_pages') !== 'false',
       include_external_videos: bodyParams.include_external_videos ?? url.searchParams.get('include_external_videos') === 'true',
+      include_milestones: bodyParams.include_milestones ?? url.searchParams.get('include_milestones') !== 'false', // ✅ NOVO
       approved_only: bodyParams.approved_only ?? url.searchParams.get('approved_only') !== 'false',
       category: bodyParams.category || url.searchParams.get('category') || undefined,
       limit: bodyParams.limit ?? parseInt(url.searchParams.get('limit') || '50'),
@@ -1567,6 +1778,24 @@ serve(async (req) => {
         .limit(1)
         .single();
       data.company_profile = company;
+    }
+
+    // ✅ Company Milestones (Marcos Históricos)
+    if (params.include_milestones !== false && params.include_company) {
+      console.log('📜 Fetching company milestones...');
+      const { data: milestones, error: milestonesError } = await supabase
+        .from('company_milestones')
+        .select('*')
+        .eq('is_published', true)
+        .order('year', { ascending: false })
+        .order('month', { ascending: false, nullsFirst: false });
+      
+      if (milestonesError) {
+        console.warn('⚠️ Error fetching milestones:', milestonesError.message);
+      } else {
+        data.company_milestones = milestones || [];
+        console.log(`✅ Fetched ${data.company_milestones.length} company milestones`);
+      }
     }
 
     // Products

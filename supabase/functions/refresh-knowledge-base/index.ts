@@ -67,8 +67,16 @@ serve(async (req) => {
       .select('id, full_name, specialty, mini_cv')
       .eq('approved', true);
 
+    // ✅ Fetch Company Milestones (Marcos Históricos)
+    const { data: companyMilestones } = await supabase
+      .from('company_milestones')
+      .select('*')
+      .eq('is_published', true)
+      .order('year', { ascending: false });
+
     const productsCount = products?.length || 0;
-    console.log(`✅ Fetched: ${productsCount} products, ${categoriesConfig?.length || 0} categories`);
+    const milestonesCount = companyMilestones?.length || 0;
+    console.log(`✅ Fetched: ${productsCount} products, ${categoriesConfig?.length || 0} categories, ${milestonesCount} milestones`);
 
     // Build KB data
     const kbData = {
@@ -77,7 +85,8 @@ serve(async (req) => {
       categories_config: categoriesConfig || [],
       external_links: externalLinks || [],
       spin_solutions: spinSolutions || [],
-      kols: kols || []
+      kols: kols || [],
+      company_milestones: companyMilestones || [] // ✅ NOVO
     };
 
     // Format for RAG (token-optimized)
@@ -184,7 +193,7 @@ function formatForRAG(data: any): any {
     }
   };
 
-  // Company Profile (simplified)
+  // Company Profile (simplified) - ✅ EXPANDED WITH ALL FIELDS
   if (data.company_profile) {
     const cp = data.company_profile;
     result.company = omitEmpty({
@@ -200,7 +209,39 @@ function formatForRAG(data: any): any {
         phone: cp.contact_phone
       },
       location: cp.city ? `${cp.city}, ${cp.state}` : cp.location,
-      social: cp.social_media_links
+      social: cp.social_media_links,
+      
+      // ✅ GOOGLE RATING
+      google_rating: cp.google_aggregate_rating ? {
+        rating: cp.google_aggregate_rating.ratingValue || "5.0",
+        reviews: cp.google_aggregate_rating.reviewCount || 698
+      } : undefined,
+      
+      // ✅ COORDENADAS
+      coordinates: (cp.latitude && cp.longitude) ? {
+        lat: cp.latitude,
+        lng: cp.longitude
+      } : undefined,
+      
+      // ✅ FUNDADOR
+      founder: cp.founder_name ? {
+        name: cp.founder_name,
+        title: cp.founder_title,
+        linkedin: cp.founder_linkedin
+      } : undefined,
+      
+      // ✅ HORÁRIO E PREÇO
+      opening_hours: cp.opening_hours,
+      price_range: cp.price_range,
+      areas_served: cp.areas_served,
+      
+      // ✅ DADOS JURÍDICOS
+      legal: (cp.legal_name || cp.tax_id) ? {
+        legal_name: cp.legal_name,
+        tax_id: cp.tax_id,
+        duns_number: cp.duns_number,
+        employees: cp.number_of_employees
+      } : undefined
     });
   }
 
@@ -255,6 +296,21 @@ function formatForRAG(data: any): any {
       name: k.full_name,
       specialty: k.specialty,
       cv: k.mini_cv
+    }));
+  }
+
+  // ✅ MARCOS HISTÓRICOS
+  if (data.company_milestones && Array.isArray(data.company_milestones) && data.company_milestones.length > 0) {
+    result.milestones = data.company_milestones.map((m: any) => omitEmpty({
+      year: m.year,
+      month: m.month,
+      title: m.title,
+      description: m.description,
+      impact: m.impact,
+      legacy: m.legacy,
+      products: m.products_involved,
+      technologies: m.technologies,
+      certifications: m.certifications
     }));
   }
 
