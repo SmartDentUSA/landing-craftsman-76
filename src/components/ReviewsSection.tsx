@@ -16,10 +16,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Star, Plus, Trash2, Edit, ExternalLink, Loader2, RefreshCw, CheckCircle2, Upload, ChevronDown, ChevronUp } from "lucide-react";
 import { CSVReviewUploader } from "@/components/CSVReviewUploader";
 import { useCompanyReviews } from "@/hooks/useCompanyReviews";
+import { useAuthReady } from "@/hooks/useAuthReady";
 import type { CompanyReviewsJSONB } from "@/types/reviews";
 
 export function ReviewsSection() {
   const { loading, syncing, loadCompanyReviews, saveCompanyReviews, syncGoogleReviews } = useCompanyReviews();
+  const { isAuthenticated, isReady } = useAuthReady();
   
   const [reviews, setReviews] = useState<CompanyReviewsJSONB>({
     manual_reviews: [],
@@ -38,9 +40,12 @@ export function ReviewsSection() {
   const [formRating, setFormRating] = useState(5);
   const [formText, setFormText] = useState("");
 
+  // Carregar reviews apenas quando autenticado
   useEffect(() => {
-    loadReviews();
-  }, []);
+    if (isReady && isAuthenticated) {
+      loadReviews();
+    }
+  }, [isReady, isAuthenticated]);
 
   const loadReviews = async () => {
     const data = await loadCompanyReviews();

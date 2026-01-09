@@ -21,25 +21,54 @@ const ProtectedRoute = ({ children, requiredRole = 'user' }: ProtectedRouteProps
   useEffect(() => {
     let mounted = true;
 
+    // Função com retry para verificar autenticação
+    const checkAuthWithRetry = async (attempts = 3): Promise<boolean> => {
+      for (let i = 0; i < attempts; i++) {
+        try {
+          const { data: { session }, error } = await supabase.auth.getSession();
+          
+          if (error) {
+            console.warn(`ProtectedRoute: Session error (attempt ${i + 1}/${attempts})`, error.message);
+          }
+
+          if (session?.user) {
+            return true;
+          }
+
+          // Esperar antes do próximo retry (aumentando o delay)
+          if (i < attempts - 1) {
+            const delay = 1000 * (i + 1); // 1s, 2s, 3s
+            console.log(`ProtectedRoute: Aguardando sessão (${delay}ms)...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+          }
+        } catch (err) {
+          console.error(`ProtectedRoute: Exception (attempt ${i + 1}/${attempts})`, err);
+        }
+      }
+      return false;
+    };
+
     const checkAuth = async () => {
       try {
-        // Get current session
-        const { data: { session }, error } = await supabase.auth.getSession();
+        // Usar retry para conexões instáveis
+        const hasSession = await checkAuthWithRetry(3);
         
         if (!mounted) return;
 
-        if (error) {
-          console.warn('Session error:', error);
-        }
-
-        if (!session?.user) {
-          if (!hasNavigated.current) {
+        if (!hasSession) {
+          // Verificar uma última vez antes de redirecionar
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session?.user && !hasNavigated.current) {
             hasNavigated.current = true;
-            console.log('No session found, redirecting to auth');
+            console.log('No session found after retries, redirecting to auth');
             navigate("/auth", { replace: true });
           }
           return;
         }
+
+        // Sessão encontrada, obter usuário
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) return;
 
         console.log('Session found for user:', session.user.email);
         setUser(session.user);
@@ -157,9 +186,14 @@ const ProtectedRoute = ({ children, requiredRole = 'user' }: ProtectedRouteProps
             <p className="text-muted-foreground mb-4">
               Não foi possível verificar sua autenticação. Verifique sua conexão e tente novamente.
             </p>
-            <Button onClick={() => window.location.reload()} className="w-full">
-              Tentar Novamente
-            </Button>
+            <div className="flex gap-2 justify-center">
+              <Button onClick={() => window.location.reload()}>
+                Tentar Novamente
+              </Button>
+              <Button variant="outline" onClick={() => navigate('/auth')}>
+                Ir para Login
+              </Button>
+            </div>
           </div>
         </div>
       </div>
