@@ -14,11 +14,13 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from "@/components/ui/label";
 import { Star, Download, Plus, Edit, Trash2, Calendar, MapPin, ChevronDown, ChevronUp } from "lucide-react";
 import { useCompanyReviews } from "@/hooks/useCompanyReviews";
+import { useAuthReady } from "@/hooks/useAuthReady";
 import { useToast } from "@/hooks/use-toast";
 import type { CompanyReviewsJSONB } from "@/types/reviews";
 
 export function CompanyReviewsManager() {
   const { loading, syncing, loadCompanyReviews, saveCompanyReviews, syncGoogleReviews } = useCompanyReviews();
+  const { isAuthenticated, isReady } = useAuthReady();
   const { toast } = useToast();
   
   const [reviewsData, setReviewsData] = useState<CompanyReviewsJSONB | null>(null);
@@ -35,10 +37,12 @@ export function CompanyReviewsManager() {
     review_date: new Date().toISOString().split('T')[0]
   });
 
-  // Load reviews on mount
+  // Carregar reviews apenas quando autenticado
   useEffect(() => {
-    loadReviews();
-  }, []);
+    if (isReady && isAuthenticated) {
+      loadReviews();
+    }
+  }, [isReady, isAuthenticated]);
 
   const loadReviews = async () => {
     const data = await loadCompanyReviews();

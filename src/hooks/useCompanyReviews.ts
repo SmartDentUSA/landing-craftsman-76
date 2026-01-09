@@ -15,13 +15,31 @@ export function useCompanyReviews() {
 
   /**
    * Carrega reviews da empresa do company_profile
+   * Com retry para aguardar sessão estar disponível
    */
   const loadCompanyReviews = async (): Promise<CompanyReviewsJSONB | null> => {
     try {
       setLoading(true);
       
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Usuário não autenticado");
+      // Tentar obter sessão com retry (3 tentativas, 500ms entre cada)
+      let user = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const { data: { session } } = await supabase.auth.getSession();
+        user = session?.user;
+        
+        if (user) break;
+        
+        if (attempt < 2) {
+          console.log(`useCompanyReviews: Aguardando sessão (tentativa ${attempt + 1}/3)...`);
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+      
+      // Se não tem usuário após retries, retorna null silenciosamente
+      if (!user) {
+        console.warn("useCompanyReviews: Sessão não disponível ainda");
+        return null;
+      }
 
       const { data, error } = await supabase
         .from("company_profile")
@@ -69,11 +87,14 @@ export function useCompanyReviews() {
       
     } catch (error: any) {
       console.error("Erro ao carregar company reviews:", error);
-      toast({
-        title: "Erro ao carregar reviews",
-        description: error.message,
-        variant: "destructive"
-      });
+      // Não mostrar toast para erros de autenticação inicial
+      if (error.message && !error.message.includes("não autenticado")) {
+        toast({
+          title: "Erro ao carregar reviews",
+          description: error.message,
+          variant: "destructive"
+        });
+      }
       return null;
     } finally {
       setLoading(false);
