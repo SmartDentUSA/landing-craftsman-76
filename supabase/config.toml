@@ -197,3 +197,6 @@ verify_jwt = false
 
 [functions.preview-product-blog]
 verify_jwt = false
+
+[functions.export-complete-handbook]
+verify_jwt = true
