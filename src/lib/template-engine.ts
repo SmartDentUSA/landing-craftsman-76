@@ -3922,6 +3922,31 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
     };
   }
   
+  // 🎥 Process Explanatory Video section
+  if (data.explanatory_video_section && 
+      (data.explanatory_video_section.visible_desktop || data.explanatory_video_section.visible_mobile) &&
+      data.explanatory_video_section.selected_video?.url) {
+    
+    const youtubeId = extractYouTubeID(data.explanatory_video_section.selected_video.url);
+    
+    if (youtubeId) {
+      processedData.explanatory_video_section = {
+        visible_desktop_explanatory_video: data.explanatory_video_section.visible_desktop,
+        visible_mobile_explanatory_video: data.explanatory_video_section.visible_mobile,
+        youtube_id: youtubeId,
+        video_title: data.explanatory_video_section.selected_video.title || '',
+        product_name: data.explanatory_video_section.selected_video.product_name || ''
+      };
+      
+      console.log('🎥 [TEMPLATE] Vídeo explicativo processado:', {
+        youtube_id: youtubeId,
+        title: data.explanatory_video_section.selected_video.title,
+        visible_desktop: data.explanatory_video_section.visible_desktop,
+        visible_mobile: data.explanatory_video_section.visible_mobile
+      });
+    }
+  }
+  
   // 🔧 Obter dados da empresa para uso em integrações SEO
   let companyProfile = null;
   if (data.company_profile) {
