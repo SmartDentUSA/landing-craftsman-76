@@ -367,7 +367,8 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             padding-bottom: 56.25%; /* 16:9 aspect ratio */
             height: 0;
             overflow: hidden;
-            max-width: 900px;
+            max-width: 1200px;
+            width: 100%;
             margin: 1.5rem auto 0;
             border-radius: 1rem;
             box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
