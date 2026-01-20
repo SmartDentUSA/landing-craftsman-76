@@ -1510,6 +1510,19 @@ function generateProductSchema(product: any): string {
     }
   }
 
+  // ✅ PONTO F: hasCredential para certificações do produto (ANVISA, ISO, FDA)
+  if (product.certifications && typeof product.certifications === 'string' && product.certifications.trim() !== '') {
+    const certsList = product.certifications.split(',').map((c: string) => c.trim()).filter(Boolean);
+    if (certsList.length > 0) {
+      productSchema.hasCredential = certsList.map((certName: string) => ({
+        "@type": "EducationalOccupationalCredential",
+        "name": certName,
+        "credentialCategory": "regulatory"
+      }));
+      console.log(`✅ [E-commerce] hasCredential adicionado com ${certsList.length} certificações: ${certsList.join(', ')}`);
+    }
+  }
+
   return JSON.stringify(schema, null, 2);
 }
 
