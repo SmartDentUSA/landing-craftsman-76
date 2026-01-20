@@ -37,6 +37,11 @@ export interface CompanyProfileData {
   company_logo_supabase_path?: string;
   youtube_company_footer?: string;
   
+  // ✅ NOVOS: Campos de redes sociais do fundador (E-E-A-T)
+  founder_linkedin?: string;
+  founder_instagram?: string;
+  founder_twitter?: string;
+  
   // ✅ CAMPOS E-E-A-T (Founder/Author)
   founder_name?: string;
   founder_title?: string;
@@ -52,6 +57,16 @@ export interface CompanyProfileData {
   seo_technical_expertise: string;
   seo_competitive_advantages: string;
   seo_domains?: Array<{ domain: string; primary?: boolean }>;
+  
+  // ✅ NOVO: Certificações da empresa para hasCredential Schema
+  certifications?: Array<{
+    name: string;           // "ISO 9001:2015", "ANVISA", "FDA 510(k)"
+    issuer: string;         // "ABNT", "ANVISA", "FDA"
+    credentialCategory?: string; // "quality" | "regulatory" | "environmental"
+    dateIssued?: string;    // ISO date
+    validUntil?: string;    // ISO date
+    url?: string;           // Link para certificado
+  }>;
   
   // ✅ NOVOS CAMPOS: Redes Sociais
   social_media_hashtags?: string[];

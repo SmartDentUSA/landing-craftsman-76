@@ -95,7 +95,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     {{#brand_values}}<meta name="brand-values" content="{{brand_values}}">{{/brand_values}}
     {{#partnerships}}<meta name="organization.partnerships" content="{{partnerships}}">{{/partnerships}}
     
-    <!-- SEO AI Keywords -->
+    <!-- SEO AI Keywords (deduplicadas) -->
     {{#ai_keywords}}
     {{#primary}}<meta name="keywords" content="{{.}}">{{/primary}}
     {{/ai_keywords}}
@@ -2283,7 +2283,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         <div class="container service-content">
             <div class="service-item">
                 <div class="service-image-container">
-                    <img src="{{advisory.image.src}}" alt="{{advisory.image.alt}}" class="service-image" style="transform: scale({{advisory.image.scale}})">
+                    <img src="{{advisory.image.src}}" alt="{{advisory.image.alt}}" class="service-image" loading="lazy" decoding="async" style="transform: scale({{advisory.image.scale}})">
                     <div class="service-text-overlay">
                         <h2>{{advisory.title}}</h2>
                         <p>{{advisory.paragraph}}</p>
@@ -2338,7 +2338,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                     {{/discount_percentage}}
                     {{#image}}
                     <div class="offer-image-container">
-                        <img src="{{image}}" alt="{{name}}" class="offer-image">
+                        <img src="{{image}}" alt="{{name}}" class="offer-image" loading="lazy" decoding="async">
                     </div>
                     {{/image}}
                     <div class="offer-content">
@@ -4166,6 +4166,29 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
     }
   }
   
+  // ✅ PONTO E: Deduplicação de keywords (evitar meta tags duplicadas)
+  const deduplicateKeywords = (keywords: string[]): string[] => {
+    const seen = new Set<string>();
+    return keywords.filter(keyword => {
+      const normalized = (keyword || '').toLowerCase().trim();
+      if (seen.has(normalized) || normalized === '') {
+        return false;
+      }
+      seen.add(normalized);
+      return true;
+    });
+  };
+  
+  // Aplicar deduplicação às keywords
+  if (processedData.ai_keywords?.primary) {
+    const originalCount = processedData.ai_keywords.primary.length;
+    processedData.ai_keywords.primary = deduplicateKeywords(processedData.ai_keywords.primary).slice(0, 20); // Máx 20 keywords únicas
+    const deduplicatedCount = processedData.ai_keywords.primary.length;
+    if (originalCount !== deduplicatedCount) {
+      console.log(`✅ [SEO] Keywords deduplicadas: ${originalCount} → ${deduplicatedCount}`);
+    }
+  }
+  
   // 📊 Log de debug: Seções incluídas no HTML final
   console.log('📊 [FINAL-HTML] Seções incluídas:', {
     banner: !!processedData.banner,
@@ -4319,7 +4342,7 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
       schemaGraph.push(organizationSchema);
       console.log('✅ [Schema Enterprise] Organization schema adicionado ao @graph');
       
-      // ✅ Person Schema (Autor/Fundador) para E-E-A-T
+      // ✅ Person Schema (Autor/Fundador) para E-E-A-T - EXPANDIDO
       if (companyProfile.founder_name) {
         const personSchema: Record<string, any> = {
           "@type": "Person",
@@ -4332,12 +4355,59 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
           }
         };
         
+        // ✅ PONTO C: Expandir sameAs com TODAS as redes sociais do fundador/empresa
+        const founderSameAs: string[] = [];
+        
+        // LinkedIn do fundador (prioridade)
         if (companyProfile.founder_linkedin) {
-          personSchema.sameAs = [companyProfile.founder_linkedin];
+          founderSameAs.push(companyProfile.founder_linkedin);
+        }
+        
+        // Instagram do fundador ou da empresa
+        if (companyProfile.founder_instagram) {
+          const igUrl = companyProfile.founder_instagram.startsWith('http') 
+            ? companyProfile.founder_instagram 
+            : `https://instagram.com/${companyProfile.founder_instagram.replace('@', '')}`;
+          if (!founderSameAs.includes(igUrl)) founderSameAs.push(igUrl);
+        } else if (companyProfile.instagram_profile) {
+          const igUrl = companyProfile.instagram_profile.startsWith('http') 
+            ? companyProfile.instagram_profile 
+            : `https://instagram.com/${companyProfile.instagram_profile.replace('@', '')}`;
+          if (!founderSameAs.includes(igUrl)) founderSameAs.push(igUrl);
+        }
+        
+        // Twitter/X do fundador
+        if (companyProfile.founder_twitter) {
+          const twitterUrl = companyProfile.founder_twitter.startsWith('http') 
+            ? companyProfile.founder_twitter 
+            : `https://twitter.com/${companyProfile.founder_twitter.replace('@', '')}`;
+          if (!founderSameAs.includes(twitterUrl)) founderSameAs.push(twitterUrl);
+        }
+        
+        // YouTube da empresa como referência
+        if (companyProfile.youtube_channel) {
+          const ytUrl = companyProfile.youtube_channel.startsWith('http')
+            ? companyProfile.youtube_channel
+            : `https://youtube.com/${companyProfile.youtube_channel}`;
+          if (!founderSameAs.includes(ytUrl)) founderSameAs.push(ytUrl);
+        }
+        
+        // Agregar links de social_media_links se existirem
+        if (companyProfile.social_media_links && Array.isArray(companyProfile.social_media_links)) {
+          companyProfile.social_media_links.forEach((link: any) => {
+            const url = link.url || link.href;
+            if (url && !founderSameAs.includes(url)) {
+              founderSameAs.push(url);
+            }
+          });
+        }
+        
+        if (founderSameAs.length > 0) {
+          personSchema.sameAs = founderSameAs;
         }
         
         schemaGraph.push(personSchema);
-        console.log('✅ [Schema Enterprise] Person (Founder) schema adicionado ao @graph');
+        console.log(`✅ [Schema Enterprise] Person (Founder) schema adicionado ao @graph com ${founderSameAs.length} sameAs links`);
       }
       
       // ✅ FASE 2: WebPage Schema com Speakable SEMPRE
@@ -4373,6 +4443,61 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
       };
       schemaGraph.push(webPageSchema);
       console.log('✅ [Schema Enterprise] WebPage + Speakable adicionado ao @graph');
+      
+      // ✅ PONTO D: Service Schema para consultoria/serviços da empresa
+      if (companyProfile.main_products_services) {
+        try {
+          const servicesArray = companyProfile.main_products_services.split(',').map((s: string) => s.trim()).filter(Boolean);
+          
+          servicesArray.slice(0, 4).forEach((serviceName: string, index: number) => {
+            schemaGraph.push({
+              "@type": "Service",
+              "@id": `${companyProfile.website_url}/#service-${index + 1}`,
+              "name": serviceName,
+              "description": `${serviceName} - serviço oferecido por ${companyProfile.company_name}`,
+              "provider": {
+                "@type": "Organization",
+                "@id": `${companyProfile.website_url}/#organization`
+              },
+              "areaServed": {
+                "@type": "Country",
+                "name": "Brasil"
+              },
+              "serviceType": companyProfile.business_sector || "Consultoria"
+            });
+          });
+          console.log(`✅ [Schema Enterprise] ${Math.min(servicesArray.length, 4)} Service schemas adicionados ao @graph`);
+        } catch (serviceErr) {
+          console.warn('⚠️ [Schema Enterprise] Erro ao gerar Service schemas:', serviceErr);
+        }
+      }
+      
+      // ✅ PONTO F: hasCredential para certificações da empresa (ANVISA, ISO, FDA)
+      if (companyProfile.certifications && Array.isArray(companyProfile.certifications) && companyProfile.certifications.length > 0) {
+        try {
+          const credentialsSchema = {
+            "@type": "Organization",
+            "@id": `${companyProfile.website_url}/#organization-credentials`,
+            "name": companyProfile.company_name,
+            "hasCredential": companyProfile.certifications.map((cert: any) => ({
+              "@type": "EducationalOccupationalCredential",
+              "name": cert.name,
+              "credentialCategory": cert.credentialCategory || "certification",
+              "recognizedBy": {
+                "@type": "Organization",
+                "name": cert.issuer
+              },
+              ...(cert.dateIssued && { "dateCreated": cert.dateIssued }),
+              ...(cert.validUntil && { "validUntil": cert.validUntil }),
+              ...(cert.url && { "url": cert.url })
+            }))
+          };
+          schemaGraph.push(credentialsSchema);
+          console.log(`✅ [Schema Enterprise] hasCredential adicionado com ${companyProfile.certifications.length} certificações`);
+        } catch (credErr) {
+          console.warn('⚠️ [Schema Enterprise] Erro ao gerar hasCredential:', credErr);
+        }
+      }
     } catch (error) {
       console.error('❌ [Schema Enterprise] Erro ao gerar Organization/WebPage:', error);
     }

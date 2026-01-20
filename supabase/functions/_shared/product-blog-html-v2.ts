@@ -1517,7 +1517,7 @@ ${JSON.stringify({ "@context": "https://schema.org", "@graph": schemas.map(s => 
             <div class="thumbs" role="listbox" aria-label="Galeria de imagens">
               ${galleryImages.map((img, i) => `
                 <button class="thumb ${i === 0 ? 'active' : ''}" onclick="changeImage('${escapeHtml(img)}', this)" role="option" aria-selected="${i === 0}">
-                  <img src="${escapeHtml(img)}" alt="Imagem ${i + 1} de ${product.name}" loading="lazy">
+                  <img src="${escapeHtml(img)}" alt="Imagem ${i + 1} de ${product.name}" loading="lazy" decoding="async">
                 </button>
               `).join('')}
             </div>
@@ -1717,7 +1717,7 @@ ${JSON.stringify({ "@context": "https://schema.org", "@graph": schemas.map(s => 
           ${videos.map(video => `
             <article class="video-card card">
               <div class="thumb16x9">
-                <img src="${escapeHtml(video.thumbnail || `https://img.youtube.com/vi/${video.url.includes('youtube') ? video.url.split('v=')[1]?.split('&')[0] || '' : ''}/maxresdefault.jpg`)}" alt="${escapeHtml(video.title)}" loading="lazy">
+                <img src="${escapeHtml(video.thumbnail || `https://img.youtube.com/vi/${video.url.includes('youtube') ? video.url.split('v=')[1]?.split('&')[0] || '' : ''}/maxresdefault.jpg`)}" alt="${escapeHtml(video.title)}" loading="lazy" decoding="async">
                 <a href="${escapeHtml(video.url)}" target="_blank" rel="noopener" class="play" aria-label="Assistir ${escapeHtml(video.title)}">
                   <span class="play-btn">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">

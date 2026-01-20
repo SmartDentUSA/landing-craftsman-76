@@ -2626,7 +2626,7 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
             <a href="${escapeHtml(video.url)}" target="_blank" rel="noopener noreferrer" class="video-link">
               <div class="video-thumbnail-wrapper">
                 ${video.thumbnail 
-                  ? `<img src="${escapeHtml(video.thumbnail)}" alt="${escapeHtml(video.title)}" loading="lazy" class="video-thumbnail">`
+                  ? `<img src="${escapeHtml(video.thumbnail)}" alt="${escapeHtml(video.title)}" loading="lazy" decoding="async" class="video-thumbnail">`
                   : `<div class="video-thumb-placeholder"><i class="fas fa-play-circle"></i></div>`
                 }
                 <div class="play-overlay">
@@ -2757,7 +2757,7 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
             <article class="publication-card">
               <div class="publication-image">
                 ${pub.image_url 
-                  ? `<img src="${escHtml(pub.image_url)}" alt="${escHtml(pub.title)}" loading="lazy">`
+                  ? `<img src="${escHtml(pub.image_url)}" alt="${escHtml(pub.title)}" loading="lazy" decoding="async">`
                   : `<div class="publication-placeholder"><i class="fas fa-file-alt"></i></div>`
                 }
                 <span class="publication-badge">${pub.category?.letter || '📄'} ${escHtml(pub.category?.name || 'Artigo')}</span>
@@ -2841,8 +2841,8 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
                   <p>"${escapeHtml(quote)}"</p>
                   <div class="profile-info">
                     ${clientPhoto?.src 
-                      ? `<img src="${escapeHtml(clientPhoto.src)}" alt="${escapeHtml(clientName)}" width="60" height="60" loading="lazy">` 
-                      : `<img src="https://via.placeholder.com/80/${escapeHtml(company?.primary_color?.replace('#', '') || '3E4B5E')}/FFFFFF?text=${escapeHtml(clientName?.charAt(0) || '?')}" alt="${escapeHtml(clientName)}" width="60" height="60" loading="lazy">`
+                      ? `<img src="${escapeHtml(clientPhoto.src)}" alt="${escapeHtml(clientName)}" width="60" height="60" loading="lazy" decoding="async">` 
+                      : `<img src="https://via.placeholder.com/80/${escapeHtml(company?.primary_color?.replace('#', '') || '3E4B5E')}/FFFFFF?text=${escapeHtml(clientName?.charAt(0) || '?')}" alt="${escapeHtml(clientName)}" width="60" height="60" loading="lazy" decoding="async">`
                     }
                     <div class="details">
                       <strong>${escapeHtml(clientName)}</strong>
