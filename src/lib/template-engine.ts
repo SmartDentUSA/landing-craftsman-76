@@ -95,10 +95,8 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     {{#brand_values}}<meta name="brand-values" content="{{brand_values}}">{{/brand_values}}
     {{#partnerships}}<meta name="organization.partnerships" content="{{partnerships}}">{{/partnerships}}
     
-    <!-- SEO AI Keywords (deduplicadas) -->
-    {{#ai_keywords}}
-    {{#primary}}<meta name="keywords" content="{{.}}">{{/primary}}
-    {{/ai_keywords}}
+    <!-- SEO AI Keywords (deduplicadas, max 20) -->
+    {{#keywords_meta_content}}<meta name="keywords" content="{{keywords_meta_content}}">{{/keywords_meta_content}}
     
     <!-- SEO Context Information -->
     {{#seo_hidden_content}}
@@ -5116,6 +5114,16 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
         primary: [...existingKeywords, ...companyMeta.additionalKeywords]
       };
     }
+    
+    // ✅ DEDUPLICAÇÃO FINAL: Garantir keywords únicas e criar string para meta tag
+    const allKeywords = processedData.ai_keywords?.primary || [];
+    const uniqueKeywords = deduplicateKeywords(allKeywords).slice(0, 20);
+    processedData.keywords_meta_content = uniqueKeywords.join(', ');
+    processedData.ai_keywords = {
+      ...processedData.ai_keywords,
+      primary: uniqueKeywords
+    };
+    console.log(`✅ [SEO] Keywords meta final: ${uniqueKeywords.length} keywords únicas`);
     
     // Enriquecer meta description com seo_market_positioning
     if (companyProfile.seo_market_positioning && processedData.seo_description) {
