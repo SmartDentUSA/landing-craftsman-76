@@ -813,6 +813,17 @@ export function generateLandingPageHTML(
     }
   }
 
+  // ✅ VALIDAÇÃO DE SCHEMAS OBRIGATÓRIOS
+  const schemaTypes = schemas.map((s: any) => s['@type']);
+  console.log(`✅ [SCHEMA] Total de schemas no @graph: ${schemas.length}`);
+  console.log(`✅ [SCHEMA] Tipos: ${schemaTypes.join(', ')}`);
+  
+  const requiredTypes = ['Organization', 'WebPage', 'Product'];
+  const missingTypes = requiredTypes.filter(t => !schemaTypes.includes(t));
+  if (missingTypes.length > 0) {
+    console.warn(`⚠️ [SCHEMA] Tipos obrigatórios faltantes: ${missingTypes.join(', ')}`);
+  }
+  
   // Consolidar schemas em @graph (Google recomenda)
   const consolidatedSchema = {
     '@context': 'https://schema.org',
@@ -1039,6 +1050,59 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
 
     .main-nav a:hover {
       color: var(--accent-tech);
+    }
+
+    /* ===== INTERNAL NAV (SPIN Page sections) ===== */
+    .internal-nav {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      margin-left: 1rem;
+    }
+
+    .internal-nav a {
+      color: var(--primary-dark);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 10px;
+      padding: 0.4rem 0.8rem;
+      border-radius: 999px;
+      background: rgba(62, 75, 94, 0.08);
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .internal-nav a:hover {
+      background: var(--accent-tech);
+      color: white;
+    }
+
+    @media screen and (max-width: 768px) {
+      .main-nav {
+        display: none;
+      }
+      .internal-nav {
+        display: flex;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+        padding: 0.3rem 0;
+        margin-left: 0;
+        flex: 1;
+        justify-content: flex-end;
+      }
+      .internal-nav::-webkit-scrollbar {
+        display: none;
+      }
+      .header {
+        flex-wrap: nowrap;
+        gap: 0.5rem;
+      }
+      .banner {
+        width: 120px;
+        flex-shrink: 0;
+      }
     }
 
     /* ===== HERO IMAGE - MODERN GLOSSY ===== */
@@ -2385,27 +2449,42 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
   <!-- Header com Logo e Menu -->
   <div class="container">
     <div class="header">
-      <img src="${escapeHtml(company?.company_logo_url || 'https://via.placeholder.com/150x50?text=Logo')}" alt="Logo ${escapeHtml(sanitizeCompanyName(company?.company_name))}" class="banner" width="180" height="60" loading="eager">
-      <nav class="main-nav">
+      <!-- Logo com fallback robusto -->
+      <a href="${escapeHtml(company?.website_url || '/')}" class="logo-link">
+        <img src="${escapeHtml(company?.company_logo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(sanitizeCompanyName(company?.company_name))}&size=180&background=3E4B5E&color=fff`)}" 
+             alt="Logo ${escapeHtml(sanitizeCompanyName(company?.company_name))}" 
+             class="banner" width="180" height="60" loading="eager"
+             onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(sanitizeCompanyName(company?.company_name))}&size=180&background=3E4B5E&color=fff'">
+      </a>
+      
+      <!-- Navegação Externa (site principal) -->
+      <nav class="main-nav" aria-label="Navegação principal">
         ${(() => {
           const navConfig = company?.navigation_footer_config;
           const menuItems = navConfig?.navigation_menu || [];
           
           if (menuItems && menuItems.length > 0) {
-            // Menu dinâmico do banco de dados
             return menuItems
               .sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
               .map((item: any) => `<a href="${escapeHtml(item.href)}"${item.openInNewTab ? ' target="_blank" rel="noopener"' : ''}>${escapeHtml(item.label)}</a>`)
               .join('');
           }
           
-          // Fallback hardcoded apenas se não houver configuração
           return `
             <a href="https://loja.smartdent.com.br/">Loja</a>
             <a href="https://parametros.smartdent.com.br/base-conhecimento">Blog</a>
             <a href="https://api.whatsapp.com/send/?phone=5516993831794" target="_blank" rel="noopener">Fale conosco</a>
           `;
         })()}
+      </nav>
+      
+      <!-- Navegação Interna (seções da página SPIN) -->
+      <nav class="internal-nav" aria-label="Navegação da página">
+        <a href="#main-content">Sobre</a>
+        <a href="#produtos">Produtos</a>
+        ${faqs?.length ? '<a href="#faq">FAQ</a>' : ''}
+        ${solution.selected_video_url ? '<a href="#video-demo">Vídeo</a>' : ''}
+        <a href="#cta">Contato</a>
       </nav>
     </div>
   </div>
@@ -2494,7 +2573,7 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
 
   ${solution.selected_video_url ? `
   <!-- ========== SEÇÃO DE VÍDEO DE DEMONSTRAÇÃO ========== -->
-  <div class="container section-padding" style="padding-top: 3rem; padding-bottom: 3rem;">
+  <div class="container section-padding" id="video-demo" style="padding-top: 3rem; padding-bottom: 3rem;">
     <section class="video-demo-section">
       <h2 class="section-title" data-editable="true" data-field="video_demo_title" style="font-size: 36px; font-weight: 800; text-align: center; margin-bottom: 2rem; color: var(--primary-dark);">
         ${escapeHtml(customText.video_demo_title || '🎬 Veja na prática')}
@@ -2509,7 +2588,7 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
 
   ${metricsArray.length > 0 ? `
   <!-- Seção de Métricas -->
-  <div class="container section-padding">
+  <div class="container section-padding" id="produtos">
     <section class="metrics-section">
       <h2 data-editable="true" data-field="metrics_title">${escapeHtml(finalMetricsTitle)}</h2>
       <p data-editable="true" data-field="metrics_subtitle">${enrichedMetricsSubtitle}</p>
@@ -2699,7 +2778,7 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
 
   ${faqs.length > 0 ? `
   <!-- Seção de FAQs (Acordeão) -->
-  <div class="container">
+  <div class="container" id="faq">
     <section class="faq">
       <h3 data-editable="true" data-field="faq_title">${escapeHtml(finalFaqTitle)}</h3>
       ${(() => {
@@ -2875,7 +2954,7 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
   </div>
 
   <!-- Call to Action -->
-  <div class="container">
+  <div class="container" id="cta">
     <section class="cta">
       <p data-editable="true" data-field="cta_text">${escapeHtml(finalCtaText)}</p>
       <button onclick="window.location.href='${escapeHtml(solution.custom_url?.url || mainProduct.product_url || '#')}'">
