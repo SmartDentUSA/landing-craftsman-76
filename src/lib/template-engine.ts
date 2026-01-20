@@ -209,11 +209,29 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         .header-menu-container {
             display: flex; align-items: center; justify-content: space-between;
             height: 64px; gap: 1rem;
+            max-width: 100%;
+            overflow: hidden;
         }
-        .logo-img { height: 40px; width: auto; }
-        .header-menu nav { display: flex; gap: 1rem; flex-wrap: wrap; }
+        .logo-img { height: 40px; width: auto; flex-shrink: 0; }
+        .header-menu nav { 
+            display: flex; 
+            gap: 0.5rem; 
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            flex: 1;
+            justify-content: flex-end;
+        }
+        .header-menu nav::-webkit-scrollbar { display: none; }
         .header-menu nav a {
-            padding: .5rem .75rem; border-radius: .5rem; color: #555; font-weight: 500;
+            padding: .4rem .6rem; 
+            border-radius: .5rem; 
+            color: #555; 
+            font-weight: 500;
+            white-space: nowrap;
+            font-size: 0.85rem;
+            flex-shrink: 0;
         }
         .header-menu nav a:hover { background: #f1f5f9; color: #111; }
 
