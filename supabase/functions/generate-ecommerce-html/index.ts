@@ -26,6 +26,10 @@ import {
   type AuthorityData,
   type VideoTestimonial
 } from "../_shared/authority-data-helper.ts";
+
+// ✅ SEO Fine-Tuning 10/10 - Shared Module
+import { deduplicateKeywords } from "../_shared/seo-fine-tuning.ts";
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -1584,16 +1588,14 @@ function buildSEOHead(product: any): string {
   const canonicalUrl = product.canonical_url || product.product_url || '';
   const imageUrl = product.image_url || (product.images_gallery?.[0] || '');
   
-  // ✅ FASE 2: Expandir keywords com search_intent e bot_trigger_words
-  const keywords = [
+  // ✅ FASE 2: Expandir keywords com search_intent e bot_trigger_words + Deduplicação
+  const rawKeywords = [
     ...(product.keywords || []),
     ...(product.market_keywords || []),
     ...(product.search_intent_keywords || []),
     ...(product.bot_trigger_words || [])
-  ]
-    .filter(Boolean)
-    .slice(0, 15)
-    .join(', ');
+  ].filter(Boolean);
+  const keywords = deduplicateKeywords(rawKeywords, 20).join(', ');
 
   // Extract AI topic from keywords and product name
   const aiTopicKeywords = [

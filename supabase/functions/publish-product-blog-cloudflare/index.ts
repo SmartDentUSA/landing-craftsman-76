@@ -845,7 +845,7 @@ function generateProductBlogHTML(options: {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escapeHtml(title)}</title>
   <meta name="description" content="${escapeHtml(description)}">
-  <meta name="keywords" content="${escapeHtml(keywords)}">
+  <meta name="keywords" content="${escapeHtml(deduplicateKeywords(keywordsArray, 20).join(', '))}">
   <meta name="author" content="${escapeHtml(companyName)}">
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="${escapeHtml(canonicalUrl)}">

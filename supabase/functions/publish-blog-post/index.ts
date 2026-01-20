@@ -29,6 +29,9 @@ import {
   type VideoTestimonial
 } from "../_shared/authority-data-helper.ts";
 
+// ✅ SEO Fine-Tuning 10/10 - Shared Module
+import { deduplicateKeywords } from "../_shared/seo-fine-tuning.ts";
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -617,7 +620,7 @@ function generateHTMLContent(blogPost: any, productData: any = null): string {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${blogPost.title}</title>
     <meta name="description" content="${blogPost.meta_description}">
-    <meta name="keywords" content="${(blogPost.keywords || []).join(', ')}">
+    <meta name="keywords" content="${deduplicateKeywords(blogPost.keywords || [], 20).join(', ')}">
     <meta name="author" content="E-Odonto">
     <meta name="robots" content="index, follow">
     

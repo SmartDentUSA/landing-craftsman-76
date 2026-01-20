@@ -830,7 +830,7 @@ export function generateLandingPageHTML(
   <!-- ═══════════════════════════════════════════════════════════ -->
   <title>${escapeHtml(seoTitle)}</title>
   <meta name="description" content="${escapeHtml(seoDescription)}">
-  <meta name="keywords" content="${escapeHtml(extractedKeywords.join(', '))}">
+  <meta name="keywords" content="${escapeHtml(deduplicateKeywords(extractedKeywords, 20).join(', '))}">
   <meta name="author" content="${escapeHtml(sanitizeCompanyName(company?.company_name))}">
   <!-- Keywords enriquecidas com benefits e features dos produtos -->
   

@@ -1940,7 +1940,7 @@ function injectSEO(
     <title>${title}</title>
     <meta name="description" content="${metaDescription}">
     <link rel="canonical" href="${canonical}">
-    <meta name="keywords" content="${keywords}">
+    <meta name="keywords" content="${deduplicateKeywords(keywords.split(',').map((k: string) => k.trim()), 20).join(', ')}">
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
     <meta name="author" content="${company}">
     <meta name="generator" content="Smart Dent LP Clone v3.0">
