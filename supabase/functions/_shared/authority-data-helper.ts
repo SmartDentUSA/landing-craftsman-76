@@ -492,11 +492,18 @@ export function generateCompanyVideoSchemas(
   maxVideos: number = 15
 ): any[] {
   const schemas: any[] = [];
+  
+  // ✅ Defensive: Ensure arrays exist before spreading
+  const youtubeVideos = Array.isArray(companyVideos?.youtube) ? companyVideos.youtube : [];
+  const technicalVideos = Array.isArray(companyVideos?.technical) ? companyVideos.technical : [];
+  const testimonialVideos = Array.isArray(companyVideos?.testimonial) ? companyVideos.testimonial : [];
+  const instagramVideos = Array.isArray(companyVideos?.instagram) ? companyVideos.instagram : [];
+  
   const allVideos: CompanyVideo[] = [
-    ...companyVideos.youtube,
-    ...companyVideos.technical,
-    ...companyVideos.testimonial,
-    ...companyVideos.instagram
+    ...youtubeVideos,
+    ...technicalVideos,
+    ...testimonialVideos,
+    ...instagramVideos
   ].slice(0, maxVideos);
   
   for (const video of allVideos) {
