@@ -567,16 +567,51 @@ export function generateVideoTestimonialSchemas(
 }
 
 // ✅ NOVO - Gerar ItemList de vídeos para Video Carousel
+// Aceita AuthorityData OU CompanyVideos como primeiro parâmetro
 export function generateVideoGallerySchema(
-  companyVideos: CompanyVideos,
-  testimonials: VideoTestimonial[],
-  companyName: string
+  authorityOrVideos: AuthorityData | CompanyVideos | null | undefined,
+  testimonials: VideoTestimonial[] = [],
+  options?: { galleryName?: string; maxVideos?: number } | string  // string for backwards compatibility (companyName)
 ): any | null {
   const items: any[] = [];
   let position = 1;
   
+  // Determinar companyName e limites
+  let companyName = 'Empresa';
+  let maxPerType = 5;
+  
+  if (typeof options === 'string') {
+    // Backwards compatibility: options é companyName
+    companyName = options;
+  } else if (options) {
+    companyName = options.galleryName?.replace('Video Library - ', '') || 'Empresa';
+    maxPerType = Math.floor((options.maxVideos || 25) / 4); // Dividir entre 4 tipos
+  }
+  
+  // ✅ DEFENSIVE: Extrair companyVideos de AuthorityData ou usar diretamente
+  let companyVideos: CompanyVideos | null = null;
+  
+  if (!authorityOrVideos) {
+    // Se nulo/undefined, retornar null (sem vídeos)
+    console.warn('⚠️ [VideoGallerySchema] authorityOrVideos é undefined');
+    companyVideos = null;
+  } else if ('companyVideos' in authorityOrVideos && authorityOrVideos.companyVideos) {
+    // É AuthorityData
+    companyVideos = authorityOrVideos.companyVideos;
+    companyName = (authorityOrVideos as AuthorityData).companyName || companyName;
+  } else if ('youtube' in authorityOrVideos || 'technical' in authorityOrVideos) {
+    // É CompanyVideos diretamente
+    companyVideos = authorityOrVideos as CompanyVideos;
+  }
+  
+  // ✅ DEFENSIVE: Garantir arrays existem
+  const youtubeVideos = Array.isArray(companyVideos?.youtube) ? companyVideos.youtube : [];
+  const technicalVideos = Array.isArray(companyVideos?.technical) ? companyVideos.technical : [];
+  const testimonialVideosCompany = Array.isArray(companyVideos?.testimonial) ? companyVideos.testimonial : [];
+  const instagramVideos = Array.isArray(companyVideos?.instagram) ? companyVideos.instagram : [];
+  
   // Adicionar vídeos do YouTube da empresa
-  for (const video of companyVideos.youtube.slice(0, 5)) {
+  for (const video of youtubeVideos.slice(0, maxPerType)) {
     if (!video.url) continue;
     const videoId = extractYouTubeId(video.url);
     if (!videoId) continue;
@@ -593,8 +628,27 @@ export function generateVideoGallerySchema(
     });
   }
   
-  // Adicionar depoimentos em vídeo
-  for (const testimonial of testimonials.slice(0, 5)) {
+  // Adicionar vídeos técnicos
+  for (const video of technicalVideos.slice(0, maxPerType)) {
+    if (!video.url) continue;
+    const videoId = extractYouTubeId(video.url);
+    if (!videoId) continue;
+    
+    items.push({
+      "@type": "ListItem",
+      "position": position++,
+      "item": {
+        "@type": "VideoObject",
+        "name": video.title || `Tutorial ${companyName}`,
+        "thumbnailUrl": video.thumbnail || getYouTubeThumbnail(videoId),
+        "contentUrl": video.url
+      }
+    });
+  }
+  
+  // Adicionar depoimentos em vídeo (do parâmetro testimonials)
+  const safeTestimonials = Array.isArray(testimonials) ? testimonials : [];
+  for (const testimonial of safeTestimonials.slice(0, maxPerType)) {
     if (!testimonial.youtube_url) continue;
     const videoId = extractYouTubeId(testimonial.youtube_url);
     if (!videoId) continue;
