@@ -31,6 +31,13 @@ import {
   type LocalBusinessData 
 } from './local-business-helper.ts';
 import { generateHowToSchema } from './howto-schema-helper.ts';
+// ✅ SEO Fine-Tuning 10/10 - Shared Module
+import { 
+  expandFounderSameAs,
+  generateServiceSchemas,
+  generateHasCredential,
+  deduplicateKeywords
+} from './seo-fine-tuning.ts';
 
 // ============================================
 // INTERFACES
@@ -325,7 +332,7 @@ function generateSchemaGraph(options: {
   const schemas: object[] = [];
   
   // 1. Organization
-  schemas.push({
+  const orgSchema: any = {
     "@type": "Organization",
     "name": companyName,
     "url": websiteUrl,
@@ -339,12 +346,17 @@ function generateSchemaGraph(options: {
       "contactType": "customer service",
       "availableLanguage": "Portuguese"
     } : undefined,
-    "sameAs": [
-      companyProfile?.instagram_profile,
-      companyProfile?.youtube_channel,
-      companyProfile?.founder_linkedin
-    ].filter(Boolean)
-  });
+    // ✅ SEO 10/10: sameAs EXPANDIDO via módulo compartilhado
+    "sameAs": expandFounderSameAs(companyProfile || {})
+  };
+  
+  // ✅ SEO 10/10: hasCredential para certificações
+  const credentials = generateHasCredential(companyProfile?.certifications);
+  if (credentials && credentials.length > 0) {
+    orgSchema.hasCredential = credentials;
+  }
+  
+  schemas.push(orgSchema);
   
   // 2. BlogPosting / Article
   schemas.push({
@@ -426,7 +438,23 @@ function generateSchemaGraph(options: {
     };
   }
   
+  // ✅ SEO 10/10: hasCredential para Product (certificações ANVISA, FDA, ISO)
+  const productCredentials = generateHasCredential(product?.certifications);
+  if (productCredentials && productCredentials.length > 0) {
+    productSchema.hasCredential = productCredentials;
+  }
+  
   schemas.push(productSchema);
+  
+  // ✅ SEO 10/10: Service Schemas para serviços de consultoria
+  const serviceSchemas = generateServiceSchemas(
+    companyProfile?.main_products_services,
+    companyProfile,
+    { websiteUrl, businessSector: companyProfile?.business_sector }
+  );
+  if (serviceSchemas.length > 0) {
+    schemas.push(...serviceSchemas);
+  }
   
   // 4. BreadcrumbList
   schemas.push({

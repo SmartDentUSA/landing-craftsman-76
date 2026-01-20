@@ -53,6 +53,14 @@ import {
   type ItemListProduct 
 } from '../_shared/itemlist-schema-helper.ts';
 
+// ✅ SEO Fine-Tuning 10/10 - Shared Module
+import { 
+  expandFounderSameAs,
+  generateServiceSchemas,
+  generateHasCredential,
+  deduplicateKeywords
+} from '../_shared/seo-fine-tuning.ts';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',

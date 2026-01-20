@@ -30,6 +30,14 @@ import {
   type AuthorityData,
   type VideoTestimonial
 } from "../_shared/authority-data-helper.ts";
+// ✅ SEO Fine-Tuning 10/10 - Shared Module
+import { 
+  expandFounderSameAs,
+  generateServiceSchemas,
+  generateHasCredential,
+  deduplicateKeywords,
+  aggregateFAQsFromProducts as seoAggregateFAQs
+} from "../_shared/seo-fine-tuning.ts";
 
 // ✅ FASE 9: Wrapper para manter compatibilidade
 function generateLandingPageBreadcrumbsForClone(
@@ -1732,7 +1740,8 @@ function injectSEO(
           "areaServed": "BR",
           "availableLanguage": "pt-BR"
         },
-        "sameAs": [instagram, youtube].filter(Boolean)
+        // ✅ SEO 10/10: sameAs EXPANDIDO via módulo compartilhado
+        "sameAs": expandFounderSameAs(companyData || {})
       },
       {
         "@type": "WebPage",
@@ -1821,7 +1830,8 @@ function injectSEO(
             "closes": "18:00"
           }
         ],
-        "sameAs": [instagram, youtube].filter(Boolean),
+        // ✅ SEO 10/10: sameAs EXPANDIDO via módulo compartilhado
+        "sameAs": expandFounderSameAs(companyData || {}),
         // ✅ FASE 10: Dados de Autoridade (E-E-A-T)
         ...(authorityData ? {
           "memberOf": authorityData.partnerships.slice(0, 10).map(p => ({
@@ -1891,6 +1901,27 @@ function injectSEO(
   if (videoSchemas.length > 0) {
     schemaGraph["@graph"].push(...videoSchemas);
     console.log(`🎥 [FASE 8] ${videoSchemas.length} VideoObject Schemas adicionados ao @graph`);
+  }
+  
+  // ✅ SEO 10/10: Service Schemas para serviços de consultoria
+  const serviceSchemas = generateServiceSchemas(
+    companyData?.main_products_services,
+    companyData,
+    { websiteUrl, businessSector: companyData?.business_sector }
+  );
+  if (serviceSchemas.length > 0) {
+    schemaGraph["@graph"].push(...serviceSchemas);
+    console.log(`🛠️ [SEO 10/10] ${serviceSchemas.length} Service Schemas adicionados ao @graph`);
+  }
+  
+  // ✅ SEO 10/10: hasCredential para Organization (certificações)
+  const orgSchemaIndex = schemaGraph["@graph"].findIndex((s: any) => s["@type"] === "Organization");
+  if (orgSchemaIndex >= 0 && companyData?.certifications) {
+    const credentials = generateHasCredential(companyData.certifications);
+    if (credentials && credentials.length > 0) {
+      schemaGraph["@graph"][orgSchemaIndex]["hasCredential"] = credentials;
+      console.log(`🏅 [SEO 10/10] ${credentials.length} hasCredential adicionados ao Organization Schema`);
+    }
   }
   
   // ✅ FASE 5: Gerar múltiplas og:image tags
