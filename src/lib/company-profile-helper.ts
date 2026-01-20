@@ -13,6 +13,10 @@ export interface CompanyProfileData {
   address_number?: string;
   postal_code?: string;
   
+  // ✅ CAMPOS GEO (para Local SEO)
+  latitude?: number;
+  longitude?: number;
+  
   contact_phone: string;
   contact_email: string;
   website_url: string;
@@ -32,6 +36,14 @@ export interface CompanyProfileData {
   company_logo_url?: string;
   company_logo_supabase_path?: string;
   youtube_company_footer?: string;
+  
+  // ✅ CAMPOS E-E-A-T (Founder/Author)
+  founder_name?: string;
+  founder_title?: string;
+  
+  // ✅ CAMPOS AI/Business (para AI Content Tags)
+  business_sector?: string;
+  main_products_services?: string;
   
   // ✅ CAMPOS SEO
   seo_context_keywords: string[];
@@ -162,6 +174,8 @@ export async function getCompanyProfileForSEO(): Promise<CompanyProfileData | nu
         street_address,
         address_number,
         postal_code,
+        latitude,
+        longitude,
         contact_phone,
         contact_email,
         website_url,
@@ -179,6 +193,10 @@ export async function getCompanyProfileForSEO(): Promise<CompanyProfileData | nu
         youtube_company_footer,
         instagram_profile,
         youtube_channel,
+        founder_name,
+        founder_title,
+        business_sector,
+        main_products_services,
         seo_context_keywords,
         seo_market_positioning,
         seo_service_areas,

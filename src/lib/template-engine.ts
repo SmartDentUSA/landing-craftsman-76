@@ -4937,50 +4937,76 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
     // ✅ FASE 5: Adicionar company_profile completo para footer estruturado
     processedData.company_profile = companyProfile;
     
-    // ✅ NOVOS CAMPOS: Author, AI, Geo, E-E-A-T
-    processedData.author = companyProfile.founder_name || companyProfile.company_name;
-    processedData.ai_content_type = 'landing-page';
-    processedData.ai_topic = companyProfile.business_sector || companyProfile.main_products_services || 'Odontologia Digital';
+    // ✅ NOVOS CAMPOS: Author, AI, Geo, E-E-A-T (com fallbacks robustos)
     
-    // Geo Tags
-    if (companyProfile.state) {
-      processedData.geo_region = `BR-${companyProfile.state}`;
-    }
-    if (companyProfile.city) {
-      processedData.geo_placename = companyProfile.city;
-    }
+    // Author - E-E-A-T (com fallback)
+    processedData.author = companyProfile.founder_name 
+      || companyProfile.company_name 
+      || 'Smart Dent';
+    
+    // AI Content Tags (para AI crawlers/SGE)
+    processedData.ai_content_type = 'landing-page';
+    processedData.ai_topic = companyProfile.business_sector 
+      || companyProfile.main_products_services 
+      || companyProfile.seo_technical_expertise?.substring(0, 100)
+      || 'Tecnologia em Odontologia Digital';
+    
+    // Geo Tags (Local SEO) - com fallbacks para São Carlos/SP
+    processedData.geo_region = companyProfile.state 
+      ? `BR-${companyProfile.state}` 
+      : 'BR-SP';
+    
+    processedData.geo_placename = companyProfile.city || 'São Carlos';
+    
+    // Geo Position/ICBM - coordenadas (fallback: São Carlos/SP)
     if (companyProfile.latitude && companyProfile.longitude) {
       processedData.geo_position = `${companyProfile.latitude};${companyProfile.longitude}`;
       processedData.icbm = `${companyProfile.latitude}, ${companyProfile.longitude}`;
+    } else {
+      // Fallback: coordenadas de São Carlos/SP
+      processedData.geo_position = '-22.0087;-47.8909';
+      processedData.icbm = '-22.0087, -47.8909';
     }
     
-    // E-E-A-T Authority Tags
-    processedData.expertise = companyProfile.seo_technical_expertise;
-    processedData.brand_values = companyProfile.brand_values;
+    // E-E-A-T Authority Tags (com fallbacks)
+    processedData.expertise = companyProfile.seo_technical_expertise 
+      || companyProfile.differentiators 
+      || 'Especialistas em tecnologia odontológica';
+    processedData.brand_values = companyProfile.brand_values 
+      || companyProfile.mission_statement 
+      || 'Qualidade e inovação';
     
     // Partnerships - extrair de institutional_links
     const partnerships = (companyProfile.institutional_links as any[])?.filter(
-      (link: any) => link.type === 'partnership' || link.type === 'international_partnership'
+      (link: any) => link.category === 'partnership' || link.category === 'international_partnership'
     );
     if (partnerships?.length > 0) {
-      processedData.partnerships = partnerships.map((p: any) => p.name).join(', ');
+      processedData.partnerships = partnerships.map((p: any) => p.label || p.name).join(', ');
+    } else {
+      processedData.partnerships = '';
     }
     
-    // Sitemap URL
+    // Sitemap URL - garantir geração
     if (processedData.canonical_url) {
       try {
         const canonicalOrigin = new URL(processedData.canonical_url).origin;
         processedData.sitemap_url = `${canonicalOrigin}/sitemap.xml`;
       } catch {
-        processedData.sitemap_url = '/sitemap.xml';
+        processedData.sitemap_url = 'https://smartdent.com.br/sitemap.xml';
       }
+    } else {
+      processedData.sitemap_url = 'https://smartdent.com.br/sitemap.xml';
     }
     
-    console.info('✅ Dados da empresa integrados ao HTML:', {
+    console.info('✅ Dados da empresa integrados ao HTML (SEO/Geo/AI/E-E-A-T):', {
       company_name: companyProfile.company_name,
-      seo_context_keywords: companyProfile.seo_context_keywords?.length || 0,
-      institutional_links: companyProfile.institutional_links?.length || 0,
-      new_meta_tags: ['author', 'ai_content_type', 'geo_region', 'expertise', 'sitemap_url']
+      author: processedData.author,
+      ai_topic: processedData.ai_topic,
+      geo_region: processedData.geo_region,
+      geo_placename: processedData.geo_placename,
+      geo_position: processedData.geo_position,
+      expertise: processedData.expertise?.substring(0, 50) + '...',
+      sitemap_url: processedData.sitemap_url
     });
   }
 
