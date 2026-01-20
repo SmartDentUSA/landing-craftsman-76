@@ -1349,7 +1349,8 @@ export function generateProductBlogHTMLV2(options: ProductBlogV2Options): string
   const description = product.seo_description_override || 
     `Conheça tudo sobre ${product.name}. ${blogType === 'commercial' ? 'Benefícios, aplicações e como usar.' : 'Especificações técnicas detalhadas e informações profissionais.'}`;
   
-  const keywordsArray = Array.isArray(product.keywords) ? product.keywords : [];
+  const rawKeywordsArray = Array.isArray(product.keywords) ? product.keywords : [];
+  const keywordsArray = deduplicateKeywords(rawKeywordsArray, 20);
   const keywords = keywordsArray.length > 0 ? keywordsArray.join(', ') : product.name;
 
   // Extract data
