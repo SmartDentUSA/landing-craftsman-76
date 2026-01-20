@@ -3,6 +3,14 @@
  * Enterprise SaaS Design System with Dark Mode and Schema.org
  */
 
+// ✅ SEO Fine-Tuning 10/10 - Shared Module
+import { 
+  expandFounderSameAs,
+  generateServiceSchemas,
+  generateHasCredential,
+  deduplicateKeywords
+} from './seo-fine-tuning.ts';
+
 // Simple Mustache-like template engine
 export interface TemplateData {
   product: ProductTemplateData;
@@ -213,8 +221,10 @@ export function generateOrganizationSchema(company: CompanyTemplateData): string
     "description": company.company_description
   };
 
-  if (company.social_profiles?.length) {
-    schema.sameAs = company.social_profiles;
+  // ✅ SEO 10/10: sameAs EXPANDIDO via módulo compartilhado
+  const sameAsLinks = expandFounderSameAs(company);
+  if (sameAsLinks.length > 0) {
+    schema.sameAs = sameAsLinks;
   }
 
   if (company.contact_email) {
@@ -228,6 +238,9 @@ export function generateOrganizationSchema(company: CompanyTemplateData): string
   if (company.founded_year) {
     schema.foundingDate = company.founded_year.toString();
   }
+  
+  // ✅ SEO 10/10: hasCredential (placeholder - uses company.certifications if available)
+  // Note: CompanyTemplateData doesn't have certifications field yet, but this is ready for future use
 
   return JSON.stringify(schema, null, 2);
 }

@@ -33,6 +33,14 @@ import {
 } from '../_shared/authority-data-helper.ts';
 // ✅ CORREÇÃO: Import AggregateRatingData para tipagem
 import { type AggregateRatingData } from '../_shared/aggregate-rating-helper.ts';
+// ✅ SEO Fine-Tuning 10/10 - Shared Module
+import { 
+  expandFounderSameAs,
+  generateServiceSchemas,
+  generateHasCredential,
+  deduplicateKeywords,
+  aggregateFAQsFromProducts as seoAggregateFAQs
+} from '../_shared/seo-fine-tuning.ts';
 
 // ═══════════════════════════════════════════════════════════
 // 🛡️ SANITIZAÇÃO DE NOME DA EMPRESA
@@ -135,39 +143,33 @@ function generateSPINSchemas(
       orgSchema.knowsAbout = knowsAboutItems.filter(Boolean);
     }
     
-    // ✅ NOVO: sameAs com redes sociais para SEO/GEO
-    const sameAsLinks: string[] = [];
-    
-    // social_media_links (array de objetos com url)
-    if (company.social_media_links && Array.isArray(company.social_media_links)) {
-      company.social_media_links.forEach((social: any) => {
-        if (social.url || social.href) {
-          sameAsLinks.push(social.url || social.href);
-        }
-      });
-    }
-    
-    // Instagram profile
-    if (company.instagram_profile) {
-      const igUrl = company.instagram_profile.startsWith('http') 
-        ? company.instagram_profile 
-        : `https://instagram.com/${company.instagram_profile.replace('@', '')}`;
-      if (!sameAsLinks.includes(igUrl)) sameAsLinks.push(igUrl);
-    }
-    
-    // YouTube channel
-    if (company.youtube_channel) {
-      const ytUrl = company.youtube_channel.startsWith('http')
-        ? company.youtube_channel
-        : `https://youtube.com/${company.youtube_channel}`;
-      if (!sameAsLinks.includes(ytUrl)) sameAsLinks.push(ytUrl);
-    }
+    // ✅ NOVO: sameAs EXPANDIDO com redes sociais para SEO/GEO (usando módulo compartilhado)
+    const sameAsLinks = expandFounderSameAs(company);
     
     if (sameAsLinks.length > 0) {
       orgSchema.sameAs = sameAsLinks;
     }
     
+    // ✅ SEO 10/10: hasCredential para certificações (ANVISA, ISO, FDA)
+    const credentials = generateHasCredential(company.certifications);
+    if (credentials && credentials.length > 0) {
+      orgSchema.hasCredential = credentials;
+      console.log(`🏅 [SCHEMA] Organization hasCredential: ${credentials.length} certificações`);
+    }
+    
     schemas.push(orgSchema);
+  }
+  
+  // ✅ SEO 10/10: Service Schemas para serviços de consultoria
+  const websiteUrl = company?.website_url || company?.website || canonicalUrl;
+  const serviceSchemas = generateServiceSchemas(
+    company?.main_products_services,
+    company,
+    { websiteUrl, businessSector: company?.business_sector }
+  );
+  if (serviceSchemas.length > 0) {
+    schemas.push(...serviceSchemas);
+    console.log(`🛠️ [SCHEMA] ${serviceSchemas.length} Service schemas adicionados`);
   }
 
   // 2. WebPage Schema + SpeakableSpecification (GEO/Voice SEO)
