@@ -2297,26 +2297,28 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     </section>
     {{/advisory.visible_any}}
 
-    <!-- FAQ -->
+    <!-- FAQ (só renderiza se tiver conteúdo) -->
     {{#faq_section.visible_any}}
-    <section class="faq-section {{faq_section.visibility_class}}">
+    {{#faq_section.has_content}}
+    <section class="faq-section {{faq_section.visibility_class}}" itemscope itemtype="https://schema.org/FAQPage">
         <div class="container">
             <h2>{{faq_title}}</h2>
             <div class="faq-accordion">
                 {{#faq}}
-                <div class="faq-item">
+                <div class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
                     <div class="faq-question">
-                        <span>{{question}}</span>
+                        <span itemprop="name">{{question}}</span>
                         <span class="faq-icon">&#x2304;</span>
                     </div>
-                    <div class="faq-answer">
-                        <p>{{answer}}</p>
+                    <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                        <p itemprop="text">{{answer}}</p>
                     </div>
                 </div>
                 {{/faq}}
             </div>
         </div>
     </section>
+    {{/faq_section.has_content}}
     {{/faq_section.visible_any}}
 
     <!-- Ofertas Section -->
@@ -3889,6 +3891,28 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
     };
   }
   
+  // ✅ NOVO: Agregar FAQs automaticamente de produtos vinculados se não houver FAQs próprias
+  if ((!data.faq || data.faq.length === 0) && data.selectedProductsForSEO && data.selectedProductsForSEO.length > 0) {
+    const aggregatedFaqs: Array<{question: string; answer: string}> = [];
+    
+    for (const product of data.selectedProductsForSEO) {
+      if (product.faq && Array.isArray(product.faq)) {
+        // Máximo 3 FAQs por produto para variedade
+        const productFaqs = product.faq.slice(0, 3).map((faq: any) => ({
+          question: faq.question,
+          answer: faq.answer?.replace(/<[^>]*>/g, '') || faq.answer // Strip HTML
+        }));
+        aggregatedFaqs.push(...productFaqs);
+      }
+    }
+    
+    // Limitar a 10 FAQs totais para não sobrecarregar
+    if (aggregatedFaqs.length > 0) {
+      data.faq = aggregatedFaqs.slice(0, 10);
+      console.log(`✅ [FAQ AUTO] ${data.faq.length} FAQs agregadas de ${data.selectedProductsForSEO.length} produtos vinculados`);
+    }
+  }
+
   // Process FAQ section
   if (data.faq_section && (data.faq_section.visible_desktop || data.faq_section.visible_mobile)) {
     // Determine visibility class
@@ -3899,10 +3923,14 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
       visibility_class = 'mobile-only';
     }
     
+    // ✅ Só mostrar seção FAQ se tiver FAQs
+    const hasFaqs = data.faq && data.faq.length > 0;
+    
     processedData.faq_section = {
       ...data.faq_section,
-      visible_any: true,
-      visibility_class: visibility_class
+      visible_any: hasFaqs, // Só visível se tiver FAQs
+      visibility_class: visibility_class,
+      has_content: hasFaqs
     };
   }
   
