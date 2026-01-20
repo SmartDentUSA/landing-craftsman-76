@@ -1448,7 +1448,9 @@ function generateProductSchema(product: any): string {
       ...(currentAuthorityData ? [generateVideoGallerySchema(currentAuthorityData, currentVideoTestimonials, { 
         galleryName: 'Video Library - ' + currentLocalBusinessData.company_name, 
         maxVideos: 20 
-      })] : [])
+      })] : []),
+      // ✅ NOVO: FAQPage Schema adicionado ao @graph para Rich Snippets
+      generateFAQSchemaForGraph(product)
     ].filter(Boolean) // Remove nulls
   };
   
@@ -1511,18 +1513,43 @@ function generateProductSchema(product: any): string {
   return JSON.stringify(schema, null, 2);
 }
 
-// ✅ FASE 6: Função refatorada para usar helper centralizado
+// ✅ FASE 6: Função refatorada para usar helper centralizado (requisitos relaxados)
 function generateFAQSchema(product: any): string | null {
   if (!product.faq || !Array.isArray(product.faq)) {
     return null;
   }
 
-  // Usa o helper centralizado com opções específicas para e-commerce
+  // Usa o helper centralizado com opções relaxadas para garantir geração
   return generateFAQPageSchemaString(product.faq as FAQItem[], {
-    minAnswerLength: 100,  // Apenas FAQs ricas (>100 chars)
-    minFaqCount: 5,        // Mínimo 5 FAQs para e-commerce
+    minAnswerLength: 30,   // ✅ Reduzido de 100 para 30 (respostas curtas são válidas)
+    minFaqCount: 2,        // ✅ Reduzido de 5 para 2 (Rich Snippets aparecem com 2+)
     stripHtml: true
   });
+}
+
+// ✅ NOVO: Gera FAQPage Schema como objeto para inclusão no @graph
+function generateFAQSchemaForGraph(product: any): any | null {
+  if (!product.faq || !Array.isArray(product.faq) || product.faq.length < 2) {
+    return null;
+  }
+
+  const validFaqs = product.faq
+    .filter((faq: any) => faq.question && faq.answer && faq.answer.length >= 30)
+    .slice(0, 15);
+
+  if (validFaqs.length < 2) return null;
+
+  return {
+    "@type": "FAQPage",
+    "mainEntity": validFaqs.map((faq: any) => ({
+      "@type": "Question",
+      "name": faq.question.trim(),
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": (faq.answer || '').replace(/<[^>]*>/g, '').trim()
+      }
+    }))
+  };
 }
 
 // Build SEO Head section with meta tags
