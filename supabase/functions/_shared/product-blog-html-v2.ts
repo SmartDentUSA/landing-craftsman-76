@@ -1386,6 +1386,24 @@ export function generateProductBlogHTMLV2(options: ProductBlogV2Options): string
   <meta name="ai-content-type" content="blog">
   <meta name="ai-topic" content="${escapeHtml(keywordsArray.slice(0, 3).join(', ') || product.name)}">
   
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- GEO TAGS (Localização para SEO Local) -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <meta name="geo.region" content="BR-${companyProfile?.state || 'SP'}">
+  <meta name="geo.placename" content="${escapeHtml(companyProfile?.city || 'São Carlos')}">
+  <meta name="geo.position" content="${companyProfile?.latitude && companyProfile?.longitude ? `${companyProfile.latitude};${companyProfile.longitude}` : '-22.0087;-47.8909'}">
+  <meta name="ICBM" content="${companyProfile?.latitude && companyProfile?.longitude ? `${companyProfile.latitude}, ${companyProfile.longitude}` : '-22.0087, -47.8909'}">
+  
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- E-E-A-T Author Tag -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <meta name="author" content="${escapeHtml(companyProfile?.founder_name || companyName)}">
+  
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- SITEMAP REFERENCE -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <link rel="sitemap" type="application/xml" href="${websiteUrl}/sitemap.xml">
+  
   <!-- Open Graph -->
   <meta property="og:type" content="article">
   <meta property="og:title" content="${escapeHtml(title)}">
