@@ -1582,6 +1582,19 @@ function buildSEOHead(product: any): string {
   <meta name="ai-content-type" content="product">
   <meta name="ai-topic" content="${aiTopic}">
   
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- GEO TAGS (Localização para SEO Local) -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <meta name="geo.region" content="BR-${currentLocalBusinessData?.state || 'SP'}">
+  <meta name="geo.placename" content="${currentLocalBusinessData?.city || 'São Carlos'}">
+  <meta name="geo.position" content="${currentLocalBusinessData?.latitude && currentLocalBusinessData?.longitude ? `${currentLocalBusinessData.latitude};${currentLocalBusinessData.longitude}` : '-22.0087;-47.8909'}">
+  <meta name="ICBM" content="${currentLocalBusinessData?.latitude && currentLocalBusinessData?.longitude ? `${currentLocalBusinessData.latitude}, ${currentLocalBusinessData.longitude}` : '-22.0087, -47.8909'}">
+  
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- SITEMAP REFERENCE -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <link rel="sitemap" type="application/xml" href="${canonicalUrl ? new URL(canonicalUrl).origin + '/sitemap.xml' : 'https://smartdent.com.br/sitemap.xml'}">
+  
   <!-- Open Graph -->
   <meta property="og:title" content="${title}">
   <meta property="og:description" content="${description}">

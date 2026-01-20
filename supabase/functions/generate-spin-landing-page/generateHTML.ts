@@ -838,6 +838,19 @@ export function generateLandingPageHTML(
   <meta name="ai-content-type" content="landingpage">
   <meta name="ai-topic" content="${escapeHtml(extractedKeywords.slice(0, 3).join(', ') || solution.title)}">
   
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- GEO TAGS (Localização para SEO Local) -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <meta name="geo.region" content="BR-${company?.state || 'SP'}">
+  <meta name="geo.placename" content="${escapeHtml(company?.city || 'São Carlos')}">
+  <meta name="geo.position" content="${company?.latitude && company?.longitude ? `${company.latitude};${company.longitude}` : '-22.0087;-47.8909'}">
+  <meta name="ICBM" content="${company?.latitude && company?.longitude ? `${company.latitude}, ${company.longitude}` : '-22.0087, -47.8909'}">
+  
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- SITEMAP REFERENCE -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <link rel="sitemap" type="application/xml" href="${escapeHtml(canonicalUrl.split('/').slice(0, 3).join('/'))}/sitemap.xml">
+  
   <!-- ✅ FASE 4.2: Metadados de Rastreabilidade -->
   ${solution.metadata?.artifact_chain?.pitch_version ? `<meta name="content-version" content="${solution.metadata.artifact_chain.pitch_version}">` : ''}
   ${solution.metadata?.quality_metrics?.data_quality_score ? `<meta name="content-quality" content="${solution.metadata.quality_metrics.data_quality_score}">` : ''}
