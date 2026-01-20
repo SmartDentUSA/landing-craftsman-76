@@ -3953,6 +3953,50 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
   if (data.company_profile) {
     companyProfile = data.company_profile;
   }
+
+  // ✅ CORREÇÃO: Se não veio do Editor, buscar do banco (garante meta tags SEO/Geo/AI/E-E-A-T no HTML final)
+  if (!companyProfile) {
+    try {
+      companyProfile = await getCompanyProfileForSEO();
+      if (companyProfile) {
+        processedData.company_profile = companyProfile;
+      }
+    } catch (error) {
+      console.warn('⚠️ Falha ao buscar company_profile para SEO:', error);
+    }
+  }
+
+  // ✅ Garantir meta tags críticas mesmo sem company_profile
+  if (!processedData.ai_content_type) processedData.ai_content_type = 'landing-page';
+  if (!processedData.ai_topic) processedData.ai_topic = processedData.seo_title || 'Tecnologia em Odontologia Digital';
+  if (!processedData.author) processedData.author = processedData.og_site_name || companyProfile?.company_name || 'Smart Dent';
+
+  if (!processedData.geo_region) processedData.geo_region = companyProfile?.state ? `BR-${companyProfile.state}` : 'BR-SP';
+  if (!processedData.geo_placename) processedData.geo_placename = companyProfile?.city || 'São Carlos';
+  if (!processedData.geo_position || !processedData.icbm) {
+    const lat = companyProfile?.latitude;
+    const lng = companyProfile?.longitude;
+    if (lat && lng) {
+      processedData.geo_position = `${lat};${lng}`;
+      processedData.icbm = `${lat}, ${lng}`;
+    } else {
+      processedData.geo_position = '-22.0087;-47.8909';
+      processedData.icbm = '-22.0087, -47.8909';
+    }
+  }
+
+  if (!processedData.expertise) processedData.expertise = companyProfile?.seo_technical_expertise || 'Especialistas em tecnologia odontológica';
+  if (!processedData.brand_values) processedData.brand_values = companyProfile?.brand_values || 'Qualidade e inovação';
+
+  if (!processedData.sitemap_url) {
+    if (processedData.canonical_url) {
+      try {
+        processedData.sitemap_url = `${new URL(processedData.canonical_url).origin}/sitemap.xml`;
+      } catch {
+        processedData.sitemap_url = '/sitemap.xml';
+      }
+    }
+  }
   
   // ========================================
   // 🚀 KNOWLEDGE FEED SECTION + SEO INTEGRATION (FASE 1 & 2)
