@@ -39,29 +39,35 @@ const CodeView = () => {
 
   // ✅ Usar useEnhancedTemplateEngine para integrar dados do company_profile
   useEffect(() => {
-    const generateHTML = async () => {
-      // Se HTML foi passado diretamente, usar ele
+    let cancelled = false;
+
+    const run = async () => {
+      // Se HTML foi passado diretamente, mostrar ele imediatamente (UX)
       if (html) {
         setGeneratedHTML(html);
-        return;
       }
-      
-      // Se dados foram passados, gerar HTML com integração do company_profile
+
+      // Se dados foram passados, SEMPRE regenerar com integração do company_profile
+      // (mesmo que exista html antigo no state)
       if (data) {
         setIsGenerating(true);
         try {
           const enhancedHTML = await generateEnhancedHTML(data);
-          setGeneratedHTML(enhancedHTML);
+          if (!cancelled) setGeneratedHTML(enhancedHTML);
         } catch (error) {
           console.error('Erro ao gerar HTML aprimorado:', error);
-          setGeneratedHTML(DEFAULT_HTML);
+          if (!cancelled) setGeneratedHTML(html || DEFAULT_HTML);
         } finally {
-          setIsGenerating(false);
+          if (!cancelled) setIsGenerating(false);
         }
       }
     };
 
-    generateHTML();
+    run();
+
+    return () => {
+      cancelled = true;
+    };
   }, [data, html, generateEnhancedHTML]);
 
   const handleCopyCode = async () => {
