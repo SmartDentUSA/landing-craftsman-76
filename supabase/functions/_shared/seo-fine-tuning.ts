@@ -358,3 +358,101 @@ export function enhanceSEO(
     deduplicatedKeywords
   };
 }
+
+// ============================================
+// G. Hreflang Multi-Language Support
+// ============================================
+export interface HreflangConfig {
+  defaultLang: string;
+  supportedLangs: string[];
+  langPaths: Record<string, string>;
+}
+
+export const DEFAULT_HREFLANG_CONFIG: HreflangConfig = {
+  defaultLang: 'pt-BR',
+  supportedLangs: ['pt-BR', 'en-US', 'es-ES'],
+  langPaths: {
+    'pt-BR': '',      // Raiz (sem prefixo)
+    'en-US': '/en',   // /en/slug
+    'es-ES': '/es',   // /es/slug
+    'pt-PT': '/pt'    // /pt/slug (reservado para futuro)
+  }
+};
+
+export interface HreflangTag {
+  lang: string;
+  url: string;
+}
+
+/**
+ * Gera array de tags hreflang para SEO internacional
+ * @param canonicalUrl URL canônica da página (pt-BR)
+ * @param config Configuração opcional de idiomas suportados
+ * @returns Array de objetos { lang, url }
+ */
+export function generateHreflangTags(
+  canonicalUrl: string,
+  config: Partial<HreflangConfig> = {}
+): HreflangTag[] {
+  if (!canonicalUrl) {
+    console.warn('⚠️ [SEO] generateHreflangTags: canonicalUrl vazia');
+    return [];
+  }
+
+  const finalConfig = { ...DEFAULT_HREFLANG_CONFIG, ...config };
+  const tags: HreflangTag[] = [];
+  
+  try {
+    // Parse canonical URL
+    const urlObj = new URL(canonicalUrl);
+    const baseDomain = `${urlObj.protocol}//${urlObj.host}`;
+    const pathname = urlObj.pathname;
+    
+    // Remove any existing language prefix from pathname
+    const cleanPath = pathname.replace(/^\/(en|es|pt)\//, '/');
+    
+    // Generate tag for each supported language
+    for (const lang of finalConfig.supportedLangs) {
+      const langPath = finalConfig.langPaths[lang] || '';
+      const langUrl = `${baseDomain}${langPath}${cleanPath}`;
+      tags.push({ lang, url: langUrl });
+    }
+    
+    // Add x-default pointing to default language (pt-BR)
+    const defaultPath = finalConfig.langPaths[finalConfig.defaultLang] || '';
+    tags.push({ 
+      lang: 'x-default', 
+      url: `${baseDomain}${defaultPath}${cleanPath}` 
+    });
+    
+    console.log(`🌐 [SEO] Generated ${tags.length} hreflang tags for ${canonicalUrl}`);
+  } catch (error) {
+    console.error('❌ [SEO] Erro ao gerar hreflang tags:', error);
+    // Fallback: retorna apenas pt-BR e x-default apontando para URL original
+    tags.push({ lang: 'pt-BR', url: canonicalUrl });
+    tags.push({ lang: 'x-default', url: canonicalUrl });
+  }
+  
+  return tags;
+}
+
+/**
+ * Gera HTML das tags hreflang para injeção no <head>
+ * @param canonicalUrl URL canônica da página
+ * @param config Configuração opcional de idiomas
+ * @returns String HTML com as tags <link rel="alternate">
+ */
+export function generateHreflangHTML(
+  canonicalUrl: string,
+  config?: Partial<HreflangConfig>
+): string {
+  const tags = generateHreflangTags(canonicalUrl, config);
+  
+  if (tags.length === 0) {
+    return '';
+  }
+  
+  return tags
+    .map(tag => `<link rel="alternate" hreflang="${tag.lang}" href="${tag.url}">`)
+    .join('\n  ');
+}

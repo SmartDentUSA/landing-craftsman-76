@@ -36,7 +36,8 @@ import {
   expandFounderSameAs,
   generateServiceSchemas,
   generateHasCredential,
-  deduplicateKeywords
+  deduplicateKeywords,
+  generateHreflangHTML
 } from './seo-fine-tuning.ts';
 
 // ============================================
@@ -1450,9 +1451,8 @@ export function generateProductBlogHTMLV2(options: ProductBlogV2Options): string
   <meta name="twitter:description" content="${escapeHtml(description)}">
   <meta name="twitter:image" content="${escapeHtml(galleryImages[0] || '')}">
   
-  <!-- Hreflang -->
-  <link rel="alternate" hreflang="pt-BR" href="${escapeHtml(canonicalUrl)}">
-  <link rel="alternate" hreflang="x-default" href="${escapeHtml(canonicalUrl)}">
+  <!-- Hreflang (Multi-idioma Internacional) -->
+  ${generateHreflangHTML(canonicalUrl)}
   
   <!-- Theme Color -->
   <meta name="theme-color" content="#1a365d" media="(prefers-color-scheme: light)">

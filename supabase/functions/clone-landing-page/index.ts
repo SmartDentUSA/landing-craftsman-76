@@ -36,7 +36,8 @@ import {
   generateServiceSchemas,
   generateHasCredential,
   deduplicateKeywords,
-  aggregateFAQsFromProducts as seoAggregateFAQs
+  aggregateFAQsFromProducts as seoAggregateFAQs,
+  generateHreflangHTML
 } from "../_shared/seo-fine-tuning.ts";
 
 // ✅ FASE 9: Wrapper para manter compatibilidade
@@ -1986,10 +1987,9 @@ function injectSEO(
     <meta name="ICBM" content="-23.5505, -46.6333">
     
     <!-- ═══════════════════════════════════════════════════════════ -->
-    <!-- HREFLANG (Multi-idioma/domínio) -->
+    <!-- HREFLANG (Multi-idioma Internacional) -->
     <!-- ═══════════════════════════════════════════════════════════ -->
-    <link rel="alternate" hreflang="pt-BR" href="${canonical}">
-    <link rel="alternate" hreflang="x-default" href="${canonical}">
+    ${generateHreflangHTML(canonical)}
     
     <!-- ═══════════════════════════════════════════════════════════ -->
     <!-- SITEMAP REFERENCE -->
