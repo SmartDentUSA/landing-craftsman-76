@@ -28,7 +28,7 @@ import {
 } from "../_shared/authority-data-helper.ts";
 
 // ✅ SEO Fine-Tuning 10/10 - Shared Module
-import { deduplicateKeywords } from "../_shared/seo-fine-tuning.ts";
+import { deduplicateKeywords, generateHreflangHTML } from "../_shared/seo-fine-tuning.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -1631,6 +1631,11 @@ function buildSEOHead(product: any): string {
   <meta name="geo.placename" content="${currentLocalBusinessData?.city || 'São Carlos'}">
   <meta name="geo.position" content="${currentLocalBusinessData?.latitude && currentLocalBusinessData?.longitude ? `${currentLocalBusinessData.latitude};${currentLocalBusinessData.longitude}` : '-22.0087;-47.8909'}">
   <meta name="ICBM" content="${currentLocalBusinessData?.latitude && currentLocalBusinessData?.longitude ? `${currentLocalBusinessData.latitude}, ${currentLocalBusinessData.longitude}` : '-22.0087, -47.8909'}">
+  
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- HREFLANG (Multi-idioma Internacional) -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  ${canonicalUrl ? generateHreflangHTML(canonicalUrl) : ''}
   
   <!-- ═══════════════════════════════════════════════════════════ -->
   <!-- SITEMAP REFERENCE -->

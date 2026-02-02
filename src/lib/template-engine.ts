@@ -47,14 +47,10 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     <!-- Sitemap Reference -->
     {{#sitemap_url}}<link rel="sitemap" type="application/xml" href="{{sitemap_url}}">{{/sitemap_url}}
     
-    <!-- Hreflang Tags -->
-    <link rel="alternate" hreflang="pt-br" href="{{canonical_url}}">
-    <link rel="alternate" hreflang="x-default" href="{{canonical_url}}">
-    {{#hreflang}}
-    {{#lang}}
+    <!-- Hreflang Tags (Multi-idioma Internacional) -->
+    {{#hreflang_tags}}
     <link rel="alternate" hreflang="{{lang}}" href="{{url}}">
-    {{/lang}}
-    {{/hreflang}}
+    {{/hreflang_tags}}
     
     <!-- Open Graph Tags -->
     {{#og_title}}<meta property="og:title" content="{{og_title}}">{{/og_title}}
@@ -5142,6 +5138,28 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
       primary: uniqueKeywords
     };
     console.log(`✅ [SEO] Keywords meta final: ${uniqueKeywords.length} keywords únicas`);
+    
+    // ✅ FASE G: Gerar hreflang_tags para SEO Internacional
+    if (processedData.canonical_url) {
+      try {
+        const urlObj = new URL(processedData.canonical_url);
+        const baseDomain = `${urlObj.protocol}//${urlObj.host}`;
+        const pathname = urlObj.pathname.replace(/^\/(en|es|pt)\//, '/');
+        
+        processedData.hreflang_tags = [
+          { lang: 'pt-BR', url: processedData.canonical_url },
+          { lang: 'en-US', url: `${baseDomain}/en${pathname}` },
+          { lang: 'es-ES', url: `${baseDomain}/es${pathname}` },
+          { lang: 'x-default', url: processedData.canonical_url }
+        ];
+        console.log(`🌐 [SEO] Hreflang tags geradas para ${processedData.canonical_url}`);
+      } catch (err) {
+        console.warn('⚠️ [SEO] Erro ao gerar hreflang_tags:', err);
+        processedData.hreflang_tags = [];
+      }
+    } else {
+      processedData.hreflang_tags = [];
+    }
     
     // Enriquecer meta description com seo_market_positioning
     if (companyProfile.seo_market_positioning && processedData.seo_description) {

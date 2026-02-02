@@ -39,7 +39,8 @@ import {
   generateServiceSchemas,
   generateHasCredential,
   deduplicateKeywords,
-  aggregateFAQsFromProducts as seoAggregateFAQs
+  aggregateFAQsFromProducts as seoAggregateFAQs,
+  generateHreflangHTML
 } from '../_shared/seo-fine-tuning.ts';
 
 // ═══════════════════════════════════════════════════════════
@@ -922,11 +923,9 @@ export function generateLandingPageHTML(
   ${authorityData ? generateAuthorityMetaTags(authorityData) : ''}
   
   <!-- ═══════════════════════════════════════════════════════════ -->
-  <!-- HREFLANG (Multi-domínio) -->
+  <!-- HREFLANG (Multi-idioma Internacional) -->
   <!-- ═══════════════════════════════════════════════════════════ -->
-  <link rel="alternate" hreflang="pt-BR" href="${escapeHtml(canonicalUrl)}">
-  <link rel="alternate" hreflang="x-default" href="${escapeHtml(canonicalUrl)}">
-  ${company?.usa_address ? `<link rel="alternate" hreflang="en-US" href="${escapeHtml(canonicalUrl.replace('.com.br', '.com'))}">` : ''}
+  ${generateHreflangHTML(canonicalUrl)}
   
   <!-- ═══════════════════════════════════════════════════════════ -->
   <!-- RESOURCE HINTS (Performance) -->
