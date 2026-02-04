@@ -51,11 +51,14 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Buscar dados do produto
+    console.log('🔍 Buscando produto:', productId);
     const { data: product, error: productError } = await supabase
       .from('products_repository')
-      .select('name, benefits, unique_selling_points, keywords, clinical_applications, target_audience')
+      .select('name, benefits, features, keywords, applications, target_audience')
       .eq('id', productId)
-      .single();
+      .maybeSingle();
+    
+    console.log('📦 Produto encontrado:', product ? product.name : 'null', 'Erro:', productError);
 
     if (productError || !product) {
       return new Response(
@@ -76,7 +79,7 @@ serve(async (req) => {
     
     // Preparar contexto do produto
     const benefits = Array.isArray(product.benefits) ? product.benefits.join(', ') : (product.benefits || '');
-    const usps = Array.isArray(product.unique_selling_points) ? product.unique_selling_points.join(', ') : (product.unique_selling_points || '');
+    const features = Array.isArray(product.features) ? product.features.join(', ') : (product.features || '');
     const keywords = Array.isArray(product.keywords) ? product.keywords.join(', ') : (product.keywords || '');
 
     const systemPrompt = `Você é um especialista em marketing digital para Instagram, especializado em criar carrosséis que convertem.
@@ -99,7 +102,7 @@ Retorne APENAS um JSON válido no formato especificado.`;
 
     const userPrompt = `PRODUTO: ${product.name}
 BENEFÍCIOS: ${benefits}
-DIFERENCIAIS: ${usps}
+DIFERENCIAIS: ${features}
 PALAVRAS-CHAVE: ${keywords}
 PÚBLICO-ALVO: ${product.target_audience || 'Profissionais da área'}
 
