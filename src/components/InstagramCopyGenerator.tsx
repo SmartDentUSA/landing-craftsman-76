@@ -6,10 +6,25 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Copy, Edit, Save, X, Zap, Code, ExternalLink, Film, Plus } from "lucide-react";
+import { Loader2, Copy, Edit, Save, X, Zap, Code, ExternalLink, Film, Plus, ChevronLeft, ChevronRight, Image, Sparkles } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+
+// === Tipos para Carrossel (7 Slides) ===
+interface CarouselSlide {
+  position: number;
+  title: string;
+  text: string;
+  image_suggestion: string;
+}
+
+interface FeedCarousel {
+  variation: number;
+  approach: string;
+  slides: CarouselSlide[];
+  generated_at?: string;
+}
 
 interface CopyVariation {
   [key: string]: any;
@@ -31,6 +46,8 @@ interface InstagramCopy {
   feed_link?: string;
   reels_copy?: string;
   reels_link?: string;
+  feed_carousels?: FeedCarousel[];
+  last_carousel_update?: string;
 }
 
 // === Tipos para Roteiro de Reels (Script Audiovisual) ===
@@ -101,6 +118,18 @@ export function InstagramCopyGenerator({ productId, productName, isOpen, onClose
   const [generatingReelsScript, setGeneratingReelsScript] = useState(false);
   const [editingReelsScriptVariation, setEditingReelsScriptVariation] = useState<number | null>(null);
 
+  // === Estados para Carrossel (7 Slides) ===
+  const [feedCarousels, setFeedCarousels] = useState<FeedCarousel[]>([
+    { variation: 1, approach: 'storytelling', slides: [] },
+    { variation: 2, approach: 'benefits', slides: [] },
+    { variation: 3, approach: 'problem_solution', slides: [] },
+    { variation: 4, approach: 'urgency', slides: [] }
+  ]);
+  const [generatingCarousel, setGeneratingCarousel] = useState<number | null>(null);
+  const [activeCarouselSlide, setActiveCarouselSlide] = useState<Record<number, number>>({
+    1: 1, 2: 1, 3: 1, 4: 1
+  });
+
   const { toast } = useToast();
 
   useEffect(() => {
@@ -154,6 +183,11 @@ export function InstagramCopyGenerator({ productId, productName, isOpen, onClose
         if (latestEntry?.reels_scripts && Array.isArray(latestEntry.reels_scripts)) {
           setReelsScripts(latestEntry.reels_scripts);
         }
+      }
+
+      // Carregar carrosséis salvos
+      if (instagramData?.feed_carousels && Array.isArray(instagramData.feed_carousels)) {
+        setFeedCarousels(instagramData.feed_carousels as FeedCarousel[]);
       }
     } catch (error) {
       console.error('Erro ao carregar copies:', error);
@@ -412,6 +446,167 @@ CENA ${i + 1}:
 
     navigator.clipboard.writeText(html);
     toast({ title: "HTML Copiado!", description: "Versão HTML do roteiro copiada." });
+  };
+
+  // === Funções para Carrossel (7 Slides) ===
+  const SLIDE_TITLES: Record<number, string> = {
+    1: 'Capa (Gancho)',
+    2: 'A Dor (Identificação)',
+    3: 'Virada de Chave',
+    4: 'Diferencial Técnico',
+    5: 'Vantagens Práticas',
+    6: 'Resultado Final',
+    7: 'CTA (Chamada para Ação)'
+  };
+
+  const generateCarouselFromFeed = async (variationNum: number) => {
+    const feedVariation = feedCopies.find(v => v.variation === variationNum);
+    if (!feedVariation?.copy) {
+      toast({ 
+        title: "Erro", 
+        description: "Gere primeiro o texto do Feed antes de criar o carrossel", 
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    setGeneratingCarousel(variationNum);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-instagram-carousel', {
+        body: {
+          productId,
+          feedCopy: feedVariation.copy,
+          approach: feedVariation.approach
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.slides) {
+        const updatedCarousels = [...feedCarousels];
+        const index = updatedCarousels.findIndex(c => c.variation === variationNum);
+        if (index !== -1) {
+          updatedCarousels[index] = {
+            ...updatedCarousels[index],
+            slides: data.slides,
+            generated_at: new Date().toISOString()
+          };
+          setFeedCarousels(updatedCarousels);
+          
+          // Salvar carrossel no banco
+          await saveCarouselToDatabase(updatedCarousels);
+        }
+        toast({ title: "Sucesso!", description: "Carrossel gerado com 7 slides!" });
+      }
+    } catch (error) {
+      console.error('Erro ao gerar carrossel:', error);
+      toast({ 
+        title: "Erro", 
+        description: "Não foi possível gerar o carrossel", 
+        variant: "destructive" 
+      });
+    } finally {
+      setGeneratingCarousel(null);
+    }
+  };
+
+  const saveCarouselToDatabase = async (carousels: FeedCarousel[]) => {
+    try {
+      const { data: existingData } = await supabase
+        .from('products_repository')
+        .select('instagram_copies')
+        .eq('id', productId)
+        .single();
+
+      const existingCopies = (existingData?.instagram_copies as any) || {};
+      
+      await supabase
+        .from('products_repository')
+        .update({
+          instagram_copies: {
+            ...existingCopies,
+            feed_carousels: carousels,
+            last_carousel_update: new Date().toISOString()
+          } as any
+        })
+        .eq('id', productId);
+    } catch (error) {
+      console.error('Erro ao salvar carrossel:', error);
+    }
+  };
+
+  const copyCarouselSlide = (slide: CarouselSlide) => {
+    const text = `SLIDE ${slide.position}: ${slide.title}
+
+📸 SUGESTÃO DE IMAGEM:
+${slide.image_suggestion}
+
+✍️ TEXTO:
+${slide.text}`;
+    navigator.clipboard.writeText(text);
+    toast({ title: "Copiado!", description: `Slide ${slide.position} copiado!` });
+  };
+
+  const copyAllCarouselSlides = (carousel: FeedCarousel) => {
+    const text = carousel.slides.map(s => 
+      `SLIDE ${s.position}: ${s.title}\n\n📸 SUGESTÃO DE IMAGEM:\n${s.image_suggestion}\n\n✍️ TEXTO:\n${s.text}`
+    ).join('\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n');
+    
+    const header = `CARROSSEL INSTAGRAM - ${getApproachLabel(carousel.approach).toUpperCase()}\n${productName}\n\n`;
+    navigator.clipboard.writeText(header + text);
+    toast({ title: "Copiado!", description: "Todos os 7 slides copiados!" });
+  };
+
+  const copyCarouselAsHTML = (carousel: FeedCarousel) => {
+    const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Carrossel Instagram - ${productName}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: linear-gradient(135deg, #405de6, #833ab4, #c13584, #e1306c); min-height: 100vh; }
+    .container { background: white; border-radius: 20px; padding: 24px; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
+    h1 { background: linear-gradient(135deg, #405de6, #c13584); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-top: 0; text-align: center; }
+    .approach { text-align: center; color: #666; margin-bottom: 24px; }
+    .slide { background: #f8f9fa; padding: 20px; border-radius: 16px; margin: 16px 0; border-left: 4px solid #c13584; }
+    .slide-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .slide-number { background: linear-gradient(135deg, #405de6, #c13584); color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+    .slide-title { font-weight: bold; color: #333; font-size: 16px; }
+    .image-suggestion { background: #e0f2fe; padding: 12px; border-radius: 8px; margin: 8px 0; }
+    .image-suggestion strong { color: #0369a1; }
+    .text-content { background: #fef3c7; padding: 12px; border-radius: 8px; }
+    .text-content strong { color: #b45309; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📸 Carrossel Instagram</h1>
+    <p class="approach">${getApproachLabel(carousel.approach)} - ${productName}</p>
+    ${carousel.slides.map(slide => `
+    <div class="slide">
+      <div class="slide-header">
+        <div class="slide-number">${slide.position}</div>
+        <span class="slide-title">${slide.title}</span>
+      </div>
+      <div class="image-suggestion">
+        <strong>📸 Sugestão de Imagem:</strong><br>
+        ${slide.image_suggestion}
+      </div>
+      <div class="text-content">
+        <strong>✍️ Texto:</strong><br>
+        ${slide.text}
+      </div>
+    </div>`).join('')}
+  </div>
+</body>
+</html>`;
+
+    navigator.clipboard.writeText(html);
+    toast({ title: "HTML Copiado!", description: "Versão HTML do carrossel copiada!" });
+  };
+
+  const getCarouselForVariation = (variationNum: number): FeedCarousel | undefined => {
+    return feedCarousels.find(c => c.variation === variationNum);
   };
 
   // === Funções existentes de salvar ===
@@ -755,6 +950,153 @@ CENA ${i + 1}:
                                 HTML
                               </Button>
                             </>
+                          )}
+                        </div>
+
+                        {/* === SEÇÃO CARROSSEL (7 Slides) === */}
+                        <div className="mt-6 pt-4 border-t border-border">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <Image className="h-4 w-4 text-primary" />
+                              <span className="font-medium text-sm">Carrossel (7 Slides)</span>
+                              {getCarouselForVariation(variation.variation)?.slides?.length === 7 && (
+                                <Badge variant="secondary" className="text-xs">Gerado</Badge>
+                              )}
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => generateCarouselFromFeed(variation.variation)}
+                              disabled={generatingCarousel === variation.variation || !variation.copy}
+                            >
+                              {generatingCarousel === variation.variation ? (
+                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                              ) : (
+                                <Sparkles className="h-4 w-4 mr-2" />
+                              )}
+                              Gerar IA
+                            </Button>
+                          </div>
+
+                          {/* Navegação de Slides */}
+                          {getCarouselForVariation(variation.variation)?.slides?.length === 7 && (
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-center gap-1">
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-8 w-8"
+                                  onClick={() => setActiveCarouselSlide(prev => ({
+                                    ...prev,
+                                    [variation.variation]: Math.max(1, (prev[variation.variation] || 1) - 1)
+                                  }))}
+                                  disabled={(activeCarouselSlide[variation.variation] || 1) === 1}
+                                >
+                                  <ChevronLeft className="h-4 w-4" />
+                                </Button>
+                                
+                                {[1, 2, 3, 4, 5, 6, 7].map(num => (
+                                  <Button
+                                    key={num}
+                                    size="sm"
+                                    variant={(activeCarouselSlide[variation.variation] || 1) === num ? "default" : "outline"}
+                                    className="h-8 w-8 p-0"
+                                    onClick={() => setActiveCarouselSlide(prev => ({
+                                      ...prev,
+                                      [variation.variation]: num
+                                    }))}
+                                  >
+                                    {num}
+                                  </Button>
+                                ))}
+                                
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-8 w-8"
+                                  onClick={() => setActiveCarouselSlide(prev => ({
+                                    ...prev,
+                                    [variation.variation]: Math.min(7, (prev[variation.variation] || 1) + 1)
+                                  }))}
+                                  disabled={(activeCarouselSlide[variation.variation] || 1) === 7}
+                                >
+                                  <ChevronRight className="h-4 w-4" />
+                                </Button>
+                              </div>
+
+                              {/* Conteúdo do Slide Ativo */}
+                              {(() => {
+                                const carousel = getCarouselForVariation(variation.variation);
+                                const activeSlideNum = activeCarouselSlide[variation.variation] || 1;
+                                const slide = carousel?.slides?.find(s => s.position === activeSlideNum);
+                                
+                                if (!slide) return null;
+                                
+                                return (
+                                  <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+                                    <div className="flex items-center gap-2">
+                                      <Badge variant="outline" className="font-mono">
+                                        Slide {slide.position}
+                                      </Badge>
+                                      <span className="font-medium text-sm">{slide.title}</span>
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                      <div className="space-y-1">
+                                        <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                                          <Image className="h-3 w-3" />
+                                          Sugestão de Imagem
+                                        </label>
+                                        <div className="bg-background rounded-md p-3 text-sm border min-h-[80px]">
+                                          {slide.image_suggestion}
+                                        </div>
+                                      </div>
+                                      
+                                      <div className="space-y-1">
+                                        <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                                          <Edit className="h-3 w-3" />
+                                          Texto do Slide
+                                        </label>
+                                        <div className="bg-background rounded-md p-3 text-sm border min-h-[80px] font-medium">
+                                          {slide.text}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    
+                                    <div className="flex justify-end gap-2">
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => copyCarouselSlide(slide)}
+                                      >
+                                        <Copy className="h-3 w-3 mr-1" />
+                                        Copiar Slide
+                                      </Button>
+                                    </div>
+                                  </div>
+                                );
+                              })()}
+
+                              {/* Botões de exportação do carrossel completo */}
+                              <div className="flex justify-end gap-2 pt-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => copyAllCarouselSlides(getCarouselForVariation(variation.variation)!)}
+                                >
+                                  <Copy className="h-4 w-4 mr-2" />
+                                  Copiar Todos
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => copyCarouselAsHTML(getCarouselForVariation(variation.variation)!)}
+                                >
+                                  <Code className="h-4 w-4 mr-2" />
+                                  HTML
+                                </Button>
+                              </div>
+                            </div>
                           )}
                         </div>
                       </TabsContent>

@@ -200,3 +200,6 @@ verify_jwt = false
 
 [functions.export-complete-handbook]
 verify_jwt = true
+
+[functions.generate-instagram-carousel]
+verify_jwt = false
