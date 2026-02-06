@@ -1,195 +1,191 @@
 
 
-# Plano: Corrigir Exportação do IA Playbook - Dados N/A
+# Plano: Corrigir Alucinacoes no Gerador YouTube
 
-## Problemas Identificados
+## Diagnostico
 
-Existem **4 problemas principais** que fazem com que dados apareçam como "N/A" no Playbook exportado, mesmo quando estão preenchidos no card do produto.
+A investigacao revelou **3 causas raiz** que permitem a IA inventar informacoes nos roteiros e descricoes de YouTube:
 
-### Problema 1: Tabela de Comparação com Concorrentes (Critico)
+### Causa 1: Clinical Brain DESATIVADO por padrao
 
-O componente `CompetitorComparisonTable` salva os dados de forma **dinamica**, onde as chaves do objeto sao os nomes das colunas definidas pelo usuario (ex: "Caracteristica", "Nossa Solucao", "Concorrente A").
+O frontend (`YouTubeDescriptionGenerator.tsx`, linha 173) chama a edge function **sem** enviar `use_clinical_brain: true`:
 
-Porem, a funcao de exportacao tenta ler chaves **fixas** como `comp.competitor_name`, `comp.competitor_price`, `comp.our_advantages` - que **nao existem** no objeto salvo.
-
-**JSON (linhas 1007-1017):**
 ```typescript
-// ERRADO - chaves fixas que nao existem
-competitor_name: comp.competitor_name || comp.name || comp[0] || '',
-competitor_price: comp.competitor_price || comp.price || comp[1] || null,
+// Chamada atual - SEM Clinical Brain
+body: { productId }
 ```
 
-**TXT (linhas 1241-1246):**
-```typescript
-// ERRADO - mesmas chaves fixas
-${comp.competitor_name || comp.name || comp[0] || 'Concorrente'}
+Isso faz com que o sistema use um `baseSystemPrompt` generico de apenas 1 linha (linha 106):
+```
+"Voce e um especialista senior em roteiros audiovisuais tecnicos para YouTube..."
 ```
 
-**Solucao:** Usar os `table_headers` para iterar dinamicamente sobre as colunas.
+O poderoso Master System Prompt (com regras anti-alucinacao, compatibilidade de produtos, workflow odontologico) **nunca e ativado** para YouTube.
 
----
+### Causa 2: Prompt de Descricao YouTube muito pobre
 
-### Problema 2: Casos de Sucesso (SPIN Selling)
+O prompt para descricoes YouTube (`generate-social-content`, linhas 673-697) recebe apenas 4 campos do produto:
+- Nome, Descricao, Categoria, Beneficios
 
-A exportacao busca `c.title` ou `c.name` (linha 1047), mas os dados sao salvos como `c.client_name`.
+Enquanto o prompt do Instagram (linhas 698+) recebe **8 campos** incluindo Keywords, Features, Target Audience, Preco e Bot Trigger Words. Essa falta de contexto forca a IA a "preencher lacunas" inventando dados.
 
-**De:**
-```typescript
-title: c.title || c.name || null,
+### Causa 3: System Prompt generico para descricoes
+
+O system prompt da funcao `generateWithDualAI` (linha 986-987) para YouTube e apenas:
+```
+"Voce e especialista em SEO para YouTube. Sempre retorne apenas JSON valido, sem markdown."
 ```
 
-**Para:**
-```typescript
-title: c.title || c.client_name || c.name || null,
-```
-
----
-
-### Problema 3: Citacoes Reais (SPIN Selling)
-
-A exportacao busca `q.quote` ou `q.text` e `q.author`, mas os dados reais usam `q.pain`, `q.desire`, `q.expected_result` e `q.client_name`.
-
-**De:**
-```typescript
-quote: q.quote || q.text || null,
-author: q.author || null,
-```
-
-**Para:**
-```typescript
-quote: q.quote || q.text || q.pain || q.desire || q.expected_result || null,
-author: q.author || q.client_name || null,
-role: q.role || q.specialty || null,
-```
-
----
-
-### Problema 4: Instagram Copies - Formato Desatualizado
-
-A exportacao espera `instagram_copies.copies[]` (formato antigo), mas o sistema atual salva como `feed_copies[]`, `reels_copies[]` e `story_copy`.
+Zero instrucoes sobre precisao factual, zero regras anti-alucinacao.
 
 ---
 
 ## Alteracoes Tecnicas
 
-### Arquivo: `supabase/functions/export-product-ai-playbook/index.ts`
+### Alteracao 1: Ativar Clinical Brain no YouTube Script
 
-#### Correcao 1: Competitor Comparison no JSON (linhas 1001-1024)
+**Arquivo:** `src/components/YouTubeDescriptionGenerator.tsx`
+**Linha:** 173
 
-Substituir o mapeamento fixo por iteracao dinamica dos headers:
-
+**De:**
 ```typescript
-competitor_comparison: {
-  enabled: (product as any).competitor_comparison?.enabled || false,
-  title: (product as any).competitor_comparison?.title || '',
-  subtitle: (product as any).competitor_comparison?.subtitle || '',
-  table_headers: (product as any).competitor_comparison?.table_headers || [],
-  comparisons: ((product as any).competitor_comparison?.table_data || []).map((comp: any) => {
-    const headers = (product as any).competitor_comparison?.table_headers || [];
-    const mappedRow: Record<string, any> = {};
-    
-    // Mapear cada header para seu valor real
-    headers.forEach((header: string) => {
-      mappedRow[header] = comp[header] || '';
-    });
-    
-    return mappedRow;
-  }),
-  summary: {
-    total_competitors: ((product as any).competitor_comparison?.table_data || []).length,
-    total_columns: ((product as any).competitor_comparison?.table_headers || []).length
-  }
-},
+body: { productId }
 ```
 
-#### Correcao 2: Competitor Comparison no TXT (linhas 1236-1247)
-
-Substituir por iteracao dinamica:
-
+**Para:**
 ```typescript
-## COMPARACAO COM CONCORRENTES
-${(product as any).competitor_comparison?.enabled && ... ? `
-Titulo: ${...}
-Subtitulo: ${...}
-
-Colunas: ${headers.join(' | ')}
-
-${table_data.map((comp, idx) => {
-  return `${idx + 1}. Registro:\n` + 
-    headers.map(header => `   - ${header}: ${comp[header] || 'N/A'}`).join('\n');
-}).join('\n\n')}
-` : 'Comparacao nao configurada'}
+body: { productId, use_clinical_brain: true }
 ```
 
-#### Correcao 3: Success Cases SPIN (linha 1046-1050)
+---
 
-Adicionar fallback para `client_name`:
+### Alteracao 2: Fortalecer o baseSystemPrompt do Roteiro
 
+**Arquivo:** `supabase/functions/generate-youtube-script/index.ts`
+**Linha:** 106
+
+**De:**
 ```typescript
-success_cases: (sol.success_cases || []).map((c: any) => ({
-  title: c.title || c.client_name || c.name || null,
-  description: c.description || c.testimonial || null,
-  result: c.result || c.outcome || null,
-  specialty: c.specialty || null,
-  location: c.location || null
-})),
+const baseSystemPrompt = 'Voce e um especialista senior em roteiros audiovisuais tecnicos para YouTube. Sempre retorne apenas JSON valido, sem markdown ou explicacoes adicionais.';
 ```
 
-#### Correcao 4: Real Quotes SPIN (linha 1051-1055)
-
-Adicionar fallbacks para campos reais:
-
+**Para:**
 ```typescript
-real_quotes: (sol.real_quotes || []).map((q: any) => ({
-  quote: q.quote || q.text || q.pain || q.desire || q.expected_result || null,
-  author: q.author || q.client_name || null,
-  role: q.role || q.specialty || null,
-  context: q.context || null
-})),
+const baseSystemPrompt = `Voce e um especialista senior em roteiros audiovisuais tecnicos para YouTube.
+
+REGRA ABSOLUTA - ZERO ALUCINACAO:
+- Use EXCLUSIVAMENTE as informacoes do produto fornecidas no prompt
+- JAMAIS invente dados tecnicos, especificacoes, certificacoes ou numeros
+- JAMAIS faca promessas clinicas, regulatorias ou de resultados nao documentados
+- JAMAIS mencione produtos, marcas ou materiais que nao estejam explicitamente nos dados
+- Se uma informacao nao foi fornecida, NAO a mencione no roteiro
+- Prefira ser generico a inventar: "material de alta qualidade" em vez de inventar uma especificacao
+- Todo claim tecnico DEVE estar presente nos dados do produto
+
+Sempre retorne APENAS JSON valido, sem markdown ou explicacoes adicionais.`;
 ```
 
-#### Correcao 5: Instagram Copies - Atualizar formato (linhas 584-598)
+---
 
-Incluir os novos formatos `feed_copies`, `reels_copies`, `story_copy` e `feed_carousels`:
+### Alteracao 3: Expandir o prompt de Descricao YouTube
 
+**Arquivo:** `supabase/functions/generate-social-content/index.ts`
+**Linhas:** 673-697
+
+**De:** (prompt com apenas 4 campos)
+
+**Para:**
 ```typescript
-instagram_copies: {
-  // Formato antigo (compatibilidade)
-  copies: (product.instagram_copies?.copies || []).map(...),
-  // Formato novo (4 variacoes)
-  feed_copies: product.instagram_copies?.feed_copies || [],
-  reels_copies: product.instagram_copies?.reels_copies || [],
-  story_copy: product.instagram_copies?.story_copy || null,
-  feed_carousels: product.instagram_copies?.feed_carousels || [],
-  total_copies: ...,
-  last_generated: ...
-},
+} else if (type === 'youtube') {
+    return `Voce e um especialista em criacao de conteudo para YouTube e SEO de videos.
+
+Gere uma descricao completa para video do YouTube baseada EXCLUSIVAMENTE nos dados fornecidos abaixo.
+
+Informacoes do Produto:
+- Nome: {product.name}
+- Descricao: {product.description}
+- Categoria: {product.category}
+- Beneficios: {product.benefits}
+- Caracteristicas: {product.features}
+- Aplicacoes: {product.applications}
+- Publico-alvo: {product.target_audience}
+- Keywords SEO: {product.keywords}
+
+Informacoes da Empresa:
+- Nome: {company.company_name}
+- Template de Rodape: {company.youtube_company_footer}
+
+REGRAS ANTI-ALUCINACAO (OBRIGATORIO):
+- Use APENAS dados presentes acima. NAO invente especificacoes, numeros ou beneficios
+- NAO faca promessas clinicas ou regulatorias nao documentadas
+- NAO mencione produtos ou marcas que nao estejam nos dados
+- Se um campo diz "Nao informado", NAO invente conteudo para ele
+- Tags devem ser baseadas nas keywords reais do produto
+
+CRITICO: Retorne APENAS um JSON valido, sem blocos de codigo markdown, sem texto adicional.
+
+Formato JSON esperado:
+{
+  "title_suggestion": "Titulo SEO baseado no nome real do produto",
+  "description": "Descricao factual com dados reais do produto",
+  "tags": ["tags", "baseadas", "nas", "keywords", "reais"]
+}
+
+IMPORTANTE: Nao use blocos de codigo markdown, retorne apenas o JSON puro.`;
 ```
 
-#### Correcao 6: TXT - Instagram com novo formato (linhas 1447-1465)
+---
 
-Atualizar a secao de Instagram no TXT para incluir feed_copies e carrosseis.
+### Alteracao 4: Adicionar substituicao de {product.features}
+
+**Arquivo:** `supabase/functions/generate-social-content/index.ts`
+**Apos linha 863** (depois de `processedPrompt.replace(/{product\.target_audience}/g, targetAudienceText)`)
+
+**Adicionar:**
+```typescript
+// Processar features/caracteristicas
+const featuresArray = Array.isArray(product.features) ? product.features : [];
+const featuresText = featuresArray.join(', ') || 'Nao informadas';
+processedPrompt = processedPrompt.replace(/{product\.features}/g, featuresText);
+```
+
+---
+
+### Alteracao 5: Fortalecer systemPrompt de descricoes
+
+**Arquivo:** `supabase/functions/generate-social-content/index.ts`
+**Linhas:** 986-987
+
+**De:**
+```typescript
+: type === 'youtube'
+? 'Voce e especialista em SEO para YouTube. Sempre retorne apenas JSON valido, sem markdown.'
+```
+
+**Para:**
+```typescript
+: type === 'youtube'
+? 'Voce e especialista em SEO para YouTube com foco em PRECISAO FACTUAL. Use EXCLUSIVAMENTE os dados do produto fornecidos. JAMAIS invente especificacoes, beneficios ou claims nao documentados. Sempre retorne apenas JSON valido, sem markdown.'
+```
 
 ---
 
 ## Resumo das Alteracoes
 
-| Arquivo | Linhas | Correcao |
-|---------|--------|----------|
-| `export-product-ai-playbook/index.ts` | 1001-1024 | Competitor Comparison JSON - dinamico |
-| `export-product-ai-playbook/index.ts` | 1236-1247 | Competitor Comparison TXT - dinamico |
-| `export-product-ai-playbook/index.ts` | 1046-1050 | Success Cases - fallback client_name |
-| `export-product-ai-playbook/index.ts` | 1051-1055 | Real Quotes - fallback campos reais |
-| `export-product-ai-playbook/index.ts` | 584-598 | Instagram Copies - formato atualizado |
-| `export-product-ai-playbook/index.ts` | 1447-1465 | Instagram TXT - formato atualizado |
+| Arquivo | Localizacao | Correcao |
+|---------|-------------|----------|
+| `YouTubeDescriptionGenerator.tsx` | Linha 173 | Ativar `use_clinical_brain: true` |
+| `generate-youtube-script/index.ts` | Linha 106 | Fortalecer baseSystemPrompt com regras anti-alucinacao |
+| `generate-social-content/index.ts` | Linhas 673-697 | Expandir prompt YouTube com 8 campos + regras |
+| `generate-social-content/index.ts` | Apos linha 863 | Adicionar substituicao de `{product.features}` |
+| `generate-social-content/index.ts` | Linhas 986-987 | Fortalecer systemPrompt com foco em precisao |
 
 ---
 
 ## Resultado Esperado
 
-- Tabela de Comparacao com Concorrentes exporta **todos os dados dinamicos** corretamente
-- Casos de Sucesso SPIN mostram **nome do cliente** em vez de N/A
-- Citacoes Reais SPIN mostram **conteudo real** (dor, desejo, resultado)
-- Instagram Copies inclui **4 variacoes de Feed**, **carrosseis** e **stories**
-- Zero campos N/A para dados que estao preenchidos no sistema
+- **Roteiros de Video**: Com Clinical Brain ativo, a IA recebera o MASTER_SYSTEM_PROMPT completo incluindo regras de compatibilidade, workflow odontologico, e campos anti-alucinacao do produto
+- **Descricoes YouTube**: Receberao contexto completo (8 campos em vez de 4) e instrucoes explicitas contra invencao de dados
+- **Ambos**: System prompts fortalecidos com regras de precisao factual em todas as camadas (system prompt + user prompt)
+- **Zero alucinacoes** para dados que existem no card do produto
 
