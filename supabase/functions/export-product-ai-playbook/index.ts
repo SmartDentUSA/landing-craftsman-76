@@ -582,6 +582,7 @@ function generateAIPlaybookJSON(product: ProductData & {
         last_generated: product.youtube_descriptions?.last_generated
       },
       instagram_copies: {
+        // Formato legado (compatibilidade)
         copies: (product.instagram_copies?.copies || []).map((copy: any) => ({
           copy: copy.copy,
           type: copy.type || 'carousel',
@@ -592,8 +593,44 @@ function generateAIPlaybookJSON(product: ProductData & {
           total_hashtags: (copy.hashtags || []).length,
           total_length: copy.copy?.length || 0
         })),
-        total_copies: product.instagram_copies?.copies?.length || 0,
-        last_generated: product.instagram_copies?.last_generated,
+        // Formato atual (4 variações)
+        feed_copies: ((product.instagram_copies as any)?.feed_copies || []).map((copy: any) => ({
+          variation: copy.variation,
+          approach: copy.approach || 'storytelling',
+          copy: copy.copy || '',
+          link: copy.link || null,
+          hashtags: copy.hashtags || [],
+          call_to_action: copy.call_to_action || null
+        })),
+        reels_copies: ((product.instagram_copies as any)?.reels_copies || []).map((copy: any) => ({
+          variation: copy.variation,
+          approach: copy.approach || 'educational',
+          copy: copy.copy || '',
+          link: copy.link || null,
+          hashtags: copy.hashtags || [],
+          call_to_action: copy.call_to_action || null
+        })),
+        story_copy: (product.instagram_copies as any)?.story_copy || null,
+        story_link: (product.instagram_copies as any)?.story_link || null,
+        feed_carousels: ((product.instagram_copies as any)?.feed_carousels || []).map((carousel: any) => ({
+          variation: carousel.variation,
+          approach: carousel.approach || 'storytelling',
+          slides: (carousel.slides || []).map((slide: any) => ({
+            position: slide.position,
+            title: slide.title || '',
+            text: slide.text || '',
+            image_suggestion: slide.image_suggestion || ''
+          })),
+          generated_at: carousel.generated_at || null
+        })),
+        total_copies: (
+          ((product.instagram_copies as any)?.feed_copies?.length || 0) +
+          ((product.instagram_copies as any)?.reels_copies?.length || 0) +
+          ((product.instagram_copies as any)?.story_copy ? 1 : 0) +
+          (product.instagram_copies?.copies?.length || 0)
+        ),
+        total_carousels: ((product.instagram_copies as any)?.feed_carousels?.length || 0),
+        last_generated: (product.instagram_copies as any)?.last_updated || product.instagram_copies?.last_generated,
         template_config: product.instagram_copies?.template_config || {}
       },
       tiktok_content: {
@@ -998,28 +1035,23 @@ function generateAIPlaybookJSON(product: ProductData & {
           (product as any).showcase && 'Vitrine'
         ].filter(Boolean)
       },
-      // ✅ NEW: Competitor Comparison (Fixed: access table_data array)
+      // ✅ NEW: Competitor Comparison (Dynamic headers iteration)
       competitor_comparison: {
         enabled: (product as any).competitor_comparison?.enabled || false,
         title: (product as any).competitor_comparison?.title || '',
         subtitle: (product as any).competitor_comparison?.subtitle || '',
         table_headers: (product as any).competitor_comparison?.table_headers || [],
-        comparisons: ((product as any).competitor_comparison?.table_data || []).map((comp: any) => ({
-          competitor_name: comp.competitor_name || comp.name || comp[0] || '',
-          competitor_price: comp.competitor_price || comp.price || comp[1] || null,
-          competitor_url: comp.competitor_url || comp.url || null,
-          our_advantages: comp.our_advantages || comp.advantages || [],
-          their_advantages: comp.their_advantages || comp.disadvantages || [],
-          price_difference: comp.competitor_price && product.price 
-            ? ((comp.competitor_price - product.price) / product.price * 100).toFixed(1) + '%'
-            : null,
-          notes: comp.notes || null
-        })),
+        comparisons: ((product as any).competitor_comparison?.table_data || []).map((comp: any) => {
+          const headers = (product as any).competitor_comparison?.table_headers || [];
+          const mappedRow: Record<string, any> = {};
+          headers.forEach((header: string) => {
+            mappedRow[header] = comp[header] || '';
+          });
+          return mappedRow;
+        }),
         summary: {
           total_competitors: ((product as any).competitor_comparison?.table_data || []).length,
-          has_price_advantage: ((product as any).competitor_comparison?.table_data || []).some((c: any) => 
-            c.competitor_price && product.price && c.competitor_price > product.price
-          )
+          total_columns: ((product as any).competitor_comparison?.table_headers || []).length
         }
       },
       // ✅ NEW: SPIN Selling Solutions (Sales Methodology)
@@ -1044,14 +1076,17 @@ function generateAIPlaybookJSON(product: ProductData & {
             answer: stripHTML(f.answer || '')
           })),
           success_cases: (sol.success_cases || []).map((c: any) => ({
-            title: c.title || c.name || null,
-            description: c.description || null,
-            result: c.result || null
+            title: c.title || c.client_name || c.name || null,
+            description: c.description || c.testimonial || null,
+            result: c.result || c.outcome || null,
+            specialty: c.specialty || null,
+            location: c.location || null
           })),
           real_quotes: (sol.real_quotes || []).map((q: any) => ({
-            quote: q.quote || q.text || null,
-            author: q.author || null,
-            role: q.role || null
+            quote: q.quote || q.text || q.pain || q.desire || q.expected_result || null,
+            author: q.author || q.client_name || null,
+            role: q.role || q.specialty || null,
+            context: q.context || null
           })),
           impact_metrics: sol.impact_metrics || null,
           competitor_comparison: sol.competitor_comparison || null,
@@ -1234,17 +1269,23 @@ ${product.variations?.length ? product.variations.map((v: any) =>
 - Vitrine: ${(product as any).showcase ? '✅ Sim' : '❌ Não'}
 
 ## 📊 COMPARAÇÃO COM CONCORRENTES
-${(product as any).competitor_comparison?.enabled && ((product as any).competitor_comparison?.table_data || []).length > 0 ? `
-Título: ${(product as any).competitor_comparison?.title || 'Comparativo'}
-Subtítulo: ${(product as any).competitor_comparison?.subtitle || ''}
+${(() => {
+  const cc = (product as any).competitor_comparison;
+  if (!cc?.enabled || !((cc?.table_data || []).length > 0)) return '❌ Comparação com concorrentes não configurada';
+  
+  const headers = cc.table_headers || [];
+  const tableData = cc.table_data || [];
+  
+  return `Título: ${cc.title || 'Comparativo'}
+Subtítulo: ${cc.subtitle || ''}
 
-${((product as any).competitor_comparison?.table_data || []).map((comp: any, idx: number) => `
-${idx + 1}. ${comp.competitor_name || comp.name || comp[0] || 'Concorrente'}
-   - Preço Concorrente: R$ ${comp.competitor_price || comp.price || comp[1] || 'N/A'}
-   - Nossas Vantagens: ${(comp.our_advantages || comp.advantages || []).join(', ') || 'N/A'}
-   - Vantagens Deles: ${(comp.their_advantages || comp.disadvantages || []).join(', ') || 'N/A'}
-   - URL: ${comp.competitor_url || comp.url || 'N/A'}
-`).join('\n')}` : '❌ Comparação com concorrentes não configurada'}
+Colunas: ${headers.join(' | ')}
+
+${tableData.map((comp: any, idx: number) => {
+  return `${idx + 1}. Registro:
+${headers.map((header: string) => `   - ${header}: ${comp[header] || 'N/A'}`).join('\n')}`;
+}).join('\n\n')}`;
+})()}
 
 ## 🎨 ATRIBUTOS DO PRODUTO
 - Cor: ${product.color || 'N/A'}
@@ -1445,24 +1486,82 @@ ${product.youtube_descriptions.descriptions.length > 2 ? `\n... e mais ${product
 ${product.youtube_descriptions?.last_generated ? `📅 Última geração: ${new Date(product.youtube_descriptions.last_generated).toLocaleString('pt-BR')}` : ''}
 
 ### 📸 Instagram Copies:
-${product.instagram_copies?.copies?.length ? `
-✅ ${product.instagram_copies.copies.length} copies gerados
-${product.instagram_copies.copies.slice(0, 2).map((copy: any, idx: number) => `
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Copy ${idx + 1} (${copy.type || 'carousel'}):
+${(() => {
+  const ic = product.instagram_copies as any;
+  const feedCopies = ic?.feed_copies || [];
+  const reelsCopies = ic?.reels_copies || [];
+  const storyCopy = ic?.story_copy || '';
+  const feedCarousels = ic?.feed_carousels || [];
+  const legacyCopies = ic?.copies || [];
+  const totalContent = feedCopies.length + reelsCopies.length + (storyCopy ? 1 : 0) + legacyCopies.length;
+  
+  if (totalContent === 0) return '❌ Copies pendentes';
+  
+  let output = `✅ ${totalContent} copies gerados\n`;
+  
+  // Feed Copies (4 variações)
+  if (feedCopies.length > 0) {
+    output += `\n📝 FEED COPIES (${feedCopies.length} variações):\n`;
+    feedCopies.forEach((copy: any, idx: number) => {
+      output += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Feed #${copy.variation || idx + 1} (${copy.approach || 'N/A'}):
 
-${copy.copy ? (copy.copy.substring(0, 200) + '...') : 'N/A'}
+${copy.copy ? (copy.copy.substring(0, 300) + (copy.copy.length > 300 ? '...' : '')) : 'N/A'}
 
-🏷️ Hashtags (${(copy.hashtags || []).length}):
-${(copy.hashtags || []).slice(0, 10).join(' ')}${(copy.hashtags || []).length > 10 ? ` +${(copy.hashtags || []).length - 10}` : ''}
+${copy.hashtags?.length ? `🏷️ Hashtags: ${copy.hashtags.join(' ')}` : ''}
+${copy.call_to_action ? `📢 CTA: ${copy.call_to_action}` : ''}
+${copy.link ? `🔗 Link: ${copy.link}` : ''}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    });
+  }
+  
+  // Reels Copies (4 variações)
+  if (reelsCopies.length > 0) {
+    output += `\n🎬 REELS COPIES (${reelsCopies.length} variações):\n`;
+    reelsCopies.forEach((copy: any, idx: number) => {
+      output += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Reels #${copy.variation || idx + 1} (${copy.approach || 'N/A'}):
 
-${copy.call_to_action || copy.cta ? `📢 CTA: ${copy.call_to_action || copy.cta}` : ''}
-${copy.external_link || copy.link ? `🔗 Link: ${copy.external_link || copy.link}` : ''}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-`).join('\n')}
-${product.instagram_copies.copies.length > 2 ? `\n... e mais ${product.instagram_copies.copies.length - 2} copies` : ''}
-` : '❌ Copies pendentes'}
-${product.instagram_copies?.last_generated ? `📅 Última geração: ${new Date(product.instagram_copies.last_generated).toLocaleString('pt-BR')}` : ''}
+${copy.copy ? (copy.copy.substring(0, 300) + (copy.copy.length > 300 ? '...' : '')) : 'N/A'}
+
+${copy.hashtags?.length ? `🏷️ Hashtags: ${copy.hashtags.join(' ')}` : ''}
+${copy.call_to_action ? `📢 CTA: ${copy.call_to_action}` : ''}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    });
+  }
+  
+  // Story Copy
+  if (storyCopy) {
+    output += `\n📱 STORY COPY:\n${storyCopy.substring(0, 300)}${storyCopy.length > 300 ? '...' : ''}\n`;
+  }
+  
+  // Feed Carousels (7 slides cada)
+  if (feedCarousels.length > 0) {
+    output += `\n🎠 CARROSSÉIS DE FEED (${feedCarousels.length} variações):\n`;
+    feedCarousels.forEach((carousel: any) => {
+      if (carousel.slides?.length) {
+        output += `\nCarrossel #${carousel.variation} (${carousel.approach || 'N/A'}) - ${carousel.slides.length} slides:\n`;
+        carousel.slides.forEach((slide: any) => {
+          output += `  Slide ${slide.position}: ${slide.title}\n    Texto: ${(slide.text || '').substring(0, 100)}${(slide.text || '').length > 100 ? '...' : ''}\n    Imagem: ${(slide.image_suggestion || '').substring(0, 80)}${(slide.image_suggestion || '').length > 80 ? '...' : ''}\n`;
+        });
+      }
+    });
+  }
+  
+  // Legacy copies (compatibilidade)
+  if (legacyCopies.length > 0 && feedCopies.length === 0) {
+    output += `\n📄 COPIES (formato legado - ${legacyCopies.length}):\n`;
+    legacyCopies.slice(0, 2).forEach((copy: any, idx: number) => {
+      output += `\nCopy ${idx + 1} (${copy.type || 'carousel'}):\n${copy.copy ? (copy.copy.substring(0, 200) + '...') : 'N/A'}\n`;
+    });
+    if (legacyCopies.length > 2) output += `\n... e mais ${legacyCopies.length - 2} copies`;
+  }
+  
+  const lastGen = ic?.last_updated || ic?.last_generated;
+  if (lastGen) output += `\n📅 Última geração: ${new Date(lastGen).toLocaleString('pt-BR')}`;
+  
+  return output;
+})()}
 
 ### 🎵 TikTok Content:
 ${product.tiktok_content?.copies?.length ? `
