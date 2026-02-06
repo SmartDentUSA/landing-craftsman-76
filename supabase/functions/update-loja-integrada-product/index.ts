@@ -151,6 +151,19 @@ serve(async (req) => {
     delete updatePayload.id;
     delete updatePayload.created_at;
     delete updatePayload.updated_at;
+
+    // 5. Sanitizar apelido (slug) - remover caracteres inválidos
+    if (updatePayload.apelido) {
+      updatePayload.apelido = updatePayload.apelido
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // remove acentos
+        .replace(/[™®©]/g, '')           // remove símbolos especiais
+        .replace(/[^a-zA-Z0-9_-]/g, '-') // substitui inválidos por hífen
+        .replace(/-+/g, '-')             // colapsa hífens múltiplos
+        .replace(/^-|-$/g, '')           // remove hífens nas bordas
+        .toLowerCase();
+      console.log('🔤 Slug sanitizado:', updatePayload.apelido);
+    }
     
     // ✅ DEBUG: Mostrar exatamente o que vai ser enviado
     console.log('📦 Campos principais do payload:', {
