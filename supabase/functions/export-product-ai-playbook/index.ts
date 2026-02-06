@@ -582,6 +582,7 @@ function generateAIPlaybookJSON(product: ProductData & {
         last_generated: product.youtube_descriptions?.last_generated
       },
       instagram_copies: {
+        // Formato legado (compatibilidade)
         copies: (product.instagram_copies?.copies || []).map((copy: any) => ({
           copy: copy.copy,
           type: copy.type || 'carousel',
@@ -592,8 +593,44 @@ function generateAIPlaybookJSON(product: ProductData & {
           total_hashtags: (copy.hashtags || []).length,
           total_length: copy.copy?.length || 0
         })),
-        total_copies: product.instagram_copies?.copies?.length || 0,
-        last_generated: product.instagram_copies?.last_generated,
+        // Formato atual (4 variações)
+        feed_copies: ((product.instagram_copies as any)?.feed_copies || []).map((copy: any) => ({
+          variation: copy.variation,
+          approach: copy.approach || 'storytelling',
+          copy: copy.copy || '',
+          link: copy.link || null,
+          hashtags: copy.hashtags || [],
+          call_to_action: copy.call_to_action || null
+        })),
+        reels_copies: ((product.instagram_copies as any)?.reels_copies || []).map((copy: any) => ({
+          variation: copy.variation,
+          approach: copy.approach || 'educational',
+          copy: copy.copy || '',
+          link: copy.link || null,
+          hashtags: copy.hashtags || [],
+          call_to_action: copy.call_to_action || null
+        })),
+        story_copy: (product.instagram_copies as any)?.story_copy || null,
+        story_link: (product.instagram_copies as any)?.story_link || null,
+        feed_carousels: ((product.instagram_copies as any)?.feed_carousels || []).map((carousel: any) => ({
+          variation: carousel.variation,
+          approach: carousel.approach || 'storytelling',
+          slides: (carousel.slides || []).map((slide: any) => ({
+            position: slide.position,
+            title: slide.title || '',
+            text: slide.text || '',
+            image_suggestion: slide.image_suggestion || ''
+          })),
+          generated_at: carousel.generated_at || null
+        })),
+        total_copies: (
+          ((product.instagram_copies as any)?.feed_copies?.length || 0) +
+          ((product.instagram_copies as any)?.reels_copies?.length || 0) +
+          ((product.instagram_copies as any)?.story_copy ? 1 : 0) +
+          (product.instagram_copies?.copies?.length || 0)
+        ),
+        total_carousels: ((product.instagram_copies as any)?.feed_carousels?.length || 0),
+        last_generated: (product.instagram_copies as any)?.last_updated || product.instagram_copies?.last_generated,
         template_config: product.instagram_copies?.template_config || {}
       },
       tiktok_content: {
