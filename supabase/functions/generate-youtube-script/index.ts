@@ -103,7 +103,18 @@ serve(async (req) => {
     // Gerar conteúdo com Dual-AI Competition
     const { compareAndSelectBest } = await import('../_shared/dual-ai-competition.ts');
     
-    const baseSystemPrompt = 'Você é um especialista sênior em roteiros audiovisuais técnicos para YouTube. Sempre retorne apenas JSON válido, sem markdown ou explicações adicionais.';
+    const baseSystemPrompt = `Você é um especialista sênior em roteiros audiovisuais técnicos para YouTube.
+
+REGRA ABSOLUTA - ZERO ALUCINAÇÃO:
+- Use EXCLUSIVAMENTE as informações do produto fornecidas no prompt
+- JAMAIS invente dados técnicos, especificações, certificações ou números
+- JAMAIS faça promessas clínicas, regulatórias ou de resultados não documentados
+- JAMAIS mencione produtos, marcas ou materiais que não estejam explicitamente nos dados
+- Se uma informação não foi fornecida, NÃO a mencione no roteiro
+- Prefira ser genérico a inventar: "material de alta qualidade" em vez de inventar uma especificação
+- Todo claim técnico DEVE estar presente nos dados do produto
+
+Sempre retorne APENAS JSON válido, sem markdown ou explicações adicionais.`;
     
     let finalSystemPrompt: string;
     let finalUserPrompt: string;
