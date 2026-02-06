@@ -1,312 +1,195 @@
 
-# Plano: Gerador de Carrossel Instagram (7 Slides)
 
-## Visão Geral
+# Plano: Corrigir Exportação do IA Playbook - Dados N/A
 
-Adicionar um novo recurso dentro do componente `InstagramCopyGenerator` que gera automaticamente sugestões de carrossel (7 slides) para Instagram, baseado nos textos de Feed já criados. Cada variação (Storytelling, Benefits, Problem/Solution, Urgency) terá seu próprio carrossel com estrutura padronizada.
+## Problemas Identificados
 
----
+Existem **4 problemas principais** que fazem com que dados apareçam como "N/A" no Playbook exportado, mesmo quando estão preenchidos no card do produto.
 
-## Estrutura do Carrossel
+### Problema 1: Tabela de Comparação com Concorrentes (Critico)
 
-Para cada variação do Feed, serão gerados 7 slides:
+O componente `CompetitorComparisonTable` salva os dados de forma **dinamica**, onde as chaves do objeto sao os nomes das colunas definidas pelo usuario (ex: "Caracteristica", "Nossa Solucao", "Concorrente A").
 
-| Slide | Conteúdo | Objetivo |
-|-------|----------|----------|
-| **1. Capa (Gancho)** | Título impactante + sugestão visual | Parar o scroll, despertar curiosidade |
-| **2. A Dor (Identificação)** | Problema do público + imagem sugestiva | Criar identificação emocional |
-| **3. Virada de Chave** | Momento "aha!" + visual de transição | Mostrar que existe solução |
-| **4. Diferencial Técnico** | Especificação técnica + visual do produto | Credibilidade e autoridade |
-| **5. Vantagens Práticas** | Benefícios práticos + visual de uso | Tangibilizar o valor |
-| **6. Resultado Final** | Transformação/resultado + before/after | Prova de valor |
-| **7. CTA (Chamada para Ação)** | Texto + visual com botão/link | Converter interesse em ação |
+Porem, a funcao de exportacao tenta ler chaves **fixas** como `comp.competitor_name`, `comp.competitor_price`, `comp.our_advantages` - que **nao existem** no objeto salvo.
 
----
-
-## Alterações Técnicas
-
-### Fase 1: Atualizar Tipos e Interfaces
-
-**Arquivo:** `src/components/InstagramCopyGenerator.tsx`
-
-Adicionar novas interfaces para o carrossel:
-
+**JSON (linhas 1007-1017):**
 ```typescript
-interface CarouselSlide {
-  position: number;
-  title: string;
-  text: string;
-  image_suggestion: string;
-}
+// ERRADO - chaves fixas que nao existem
+competitor_name: comp.competitor_name || comp.name || comp[0] || '',
+competitor_price: comp.competitor_price || comp.price || comp[1] || null,
+```
 
-interface FeedCarousel {
-  variation: number;
-  approach: string;
-  slides: CarouselSlide[];
-  generated_at?: string;
-}
+**TXT (linhas 1241-1246):**
+```typescript
+// ERRADO - mesmas chaves fixas
+${comp.competitor_name || comp.name || comp[0] || 'Concorrente'}
+```
+
+**Solucao:** Usar os `table_headers` para iterar dinamicamente sobre as colunas.
+
+---
+
+### Problema 2: Casos de Sucesso (SPIN Selling)
+
+A exportacao busca `c.title` ou `c.name` (linha 1047), mas os dados sao salvos como `c.client_name`.
+
+**De:**
+```typescript
+title: c.title || c.name || null,
+```
+
+**Para:**
+```typescript
+title: c.title || c.client_name || c.name || null,
 ```
 
 ---
 
-### Fase 2: Adicionar Estados para Carrossel
+### Problema 3: Citacoes Reais (SPIN Selling)
 
-**Arquivo:** `src/components/InstagramCopyGenerator.tsx`
+A exportacao busca `q.quote` ou `q.text` e `q.author`, mas os dados reais usam `q.pain`, `q.desire`, `q.expected_result` e `q.client_name`.
 
-Adicionar novos estados:
-
+**De:**
 ```typescript
-// === Estados para Carrossel ===
-const [feedCarousels, setFeedCarousels] = useState<FeedCarousel[]>([
-  { variation: 1, approach: 'storytelling', slides: [] },
-  { variation: 2, approach: 'benefits', slides: [] },
-  { variation: 3, approach: 'problem_solution', slides: [] },
-  { variation: 4, approach: 'urgency', slides: [] }
-]);
-const [generatingCarousel, setGeneratingCarousel] = useState<number | null>(null);
-const [activeCarouselSlide, setActiveCarouselSlide] = useState<Record<number, number>>({
-  1: 1, 2: 1, 3: 1, 4: 1
-});
+quote: q.quote || q.text || null,
+author: q.author || null,
+```
+
+**Para:**
+```typescript
+quote: q.quote || q.text || q.pain || q.desire || q.expected_result || null,
+author: q.author || q.client_name || null,
+role: q.role || q.specialty || null,
 ```
 
 ---
 
-### Fase 3: Criar Função de Geração de Carrossel
+### Problema 4: Instagram Copies - Formato Desatualizado
 
-**Arquivo:** `src/components/InstagramCopyGenerator.tsx`
+A exportacao espera `instagram_copies.copies[]` (formato antigo), mas o sistema atual salva como `feed_copies[]`, `reels_copies[]` e `story_copy`.
 
-Nova função que usa o texto do Feed para gerar carrossel:
+---
+
+## Alteracoes Tecnicas
+
+### Arquivo: `supabase/functions/export-product-ai-playbook/index.ts`
+
+#### Correcao 1: Competitor Comparison no JSON (linhas 1001-1024)
+
+Substituir o mapeamento fixo por iteracao dinamica dos headers:
 
 ```typescript
-const generateCarouselFromFeed = async (variationNum: number) => {
-  const feedVariation = feedCopies.find(v => v.variation === variationNum);
-  if (!feedVariation?.copy) {
-    toast({ title: "Erro", description: "Gere primeiro o texto do Feed", variant: "destructive" });
-    return;
-  }
-
-  setGeneratingCarousel(variationNum);
-  try {
-    const { data, error } = await supabase.functions.invoke('generate-instagram-carousel', {
-      body: {
-        productId,
-        feedCopy: feedVariation.copy,
-        approach: feedVariation.approach
-      }
+competitor_comparison: {
+  enabled: (product as any).competitor_comparison?.enabled || false,
+  title: (product as any).competitor_comparison?.title || '',
+  subtitle: (product as any).competitor_comparison?.subtitle || '',
+  table_headers: (product as any).competitor_comparison?.table_headers || [],
+  comparisons: ((product as any).competitor_comparison?.table_data || []).map((comp: any) => {
+    const headers = (product as any).competitor_comparison?.table_headers || [];
+    const mappedRow: Record<string, any> = {};
+    
+    // Mapear cada header para seu valor real
+    headers.forEach((header: string) => {
+      mappedRow[header] = comp[header] || '';
     });
-
-    if (error) throw error;
-
-    if (data?.slides) {
-      const updatedCarousels = [...feedCarousels];
-      const index = updatedCarousels.findIndex(c => c.variation === variationNum);
-      if (index !== -1) {
-        updatedCarousels[index] = {
-          ...updatedCarousels[index],
-          slides: data.slides,
-          generated_at: new Date().toISOString()
-        };
-        setFeedCarousels(updatedCarousels);
-      }
-      toast({ title: "Sucesso!", description: "Carrossel gerado com 7 slides!" });
-    }
-  } catch (error) {
-    toast({ title: "Erro", description: "Não foi possível gerar o carrossel", variant: "destructive" });
-  } finally {
-    setGeneratingCarousel(null);
+    
+    return mappedRow;
+  }),
+  summary: {
+    total_competitors: ((product as any).competitor_comparison?.table_data || []).length,
+    total_columns: ((product as any).competitor_comparison?.table_headers || []).length
   }
-};
+},
 ```
 
----
+#### Correcao 2: Competitor Comparison no TXT (linhas 1236-1247)
 
-### Fase 4: Adicionar UI do Carrossel
-
-**Arquivo:** `src/components/InstagramCopyGenerator.tsx`
-
-Adicionar abaixo dos botões "Editar", "Copiar", "HTML" de cada variação do Feed:
-
-```text
-Layout Visual:
-┌─────────────────────────────────────────────────────────┐
-│ [Botões existentes: Editar | Copiar | HTML]             │
-├─────────────────────────────────────────────────────────┤
-│ ┌─────────────────────────────────────────────────────┐ │
-│ │ 📸 Carrossel (7 Slides)              [🤖 Gerar IA]  │ │
-│ ├─────────────────────────────────────────────────────┤ │
-│ │ ◀ [1] [2] [3] [4] [5] [6] [7] ▶                     │ │
-│ ├─────────────────────────────────────────────────────┤ │
-│ │ Slide 1: Capa (Gancho)                              │ │
-│ │ ┌─────────────────┬─────────────────────────────┐   │ │
-│ │ │ 💡 Sugestão de  │ Texto:                      │   │ │
-│ │ │ Imagem:         │ "Você ainda está usando..." │   │ │
-│ │ │ "Foto de        │                             │   │ │
-│ │ │  profissional   │                             │   │ │
-│ │ │  frustrado..."  │                             │   │ │
-│ │ └─────────────────┴─────────────────────────────┘   │ │
-│ │                                [Copiar] [HTML]      │ │
-│ └─────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────┘
-```
-
----
-
-### Fase 5: Criar Edge Function para Geração
-
-**Arquivo Novo:** `supabase/functions/generate-instagram-carousel/index.ts`
-
-```text
-Edge Function que:
-1. Recebe: productId, feedCopy, approach
-2. Busca dados do produto (nome, benefícios, diferenciais, keywords)
-3. Usa IA (Lovable AI/Gemini) para gerar os 7 slides
-4. Retorna JSON estruturado com slides
-
-Prompt da IA incluirá:
-- Contexto do produto
-- Texto do Feed já gerado (para consistência)
-- Abordagem específica (storytelling, benefits, etc.)
-- Template de saída esperado (7 slides com título, texto, sugestão de imagem)
-```
-
----
-
-### Fase 6: Funções de Cópia e Exportação
-
-**Arquivo:** `src/components/InstagramCopyGenerator.tsx`
+Substituir por iteracao dinamica:
 
 ```typescript
-const copyCarouselSlide = (slide: CarouselSlide, productName: string) => {
-  const text = `SLIDE ${slide.position}: ${slide.title}
+## COMPARACAO COM CONCORRENTES
+${(product as any).competitor_comparison?.enabled && ... ? `
+Titulo: ${...}
+Subtitulo: ${...}
 
-📸 SUGESTÃO DE IMAGEM:
-${slide.image_suggestion}
+Colunas: ${headers.join(' | ')}
 
-✍️ TEXTO:
-${slide.text}`;
-  navigator.clipboard.writeText(text);
-  toast({ title: "Copiado!", description: `Slide ${slide.position} copiado` });
-};
-
-const copyAllCarouselSlides = (carousel: FeedCarousel, productName: string) => {
-  const text = carousel.slides.map(s => 
-    `SLIDE ${s.position}: ${s.title}\n📸 ${s.image_suggestion}\n✍️ ${s.text}`
-  ).join('\n\n---\n\n');
-  navigator.clipboard.writeText(text);
-  toast({ title: "Copiado!", description: "Todos os 7 slides copiados" });
-};
-
-const exportCarouselAsHTML = (carousel: FeedCarousel, productName: string) => {
-  // Gerar HTML formatado para visualização em navegador
-};
+${table_data.map((comp, idx) => {
+  return `${idx + 1}. Registro:\n` + 
+    headers.map(header => `   - ${header}: ${comp[header] || 'N/A'}`).join('\n');
+}).join('\n\n')}
+` : 'Comparacao nao configurada'}
 ```
 
----
+#### Correcao 3: Success Cases SPIN (linha 1046-1050)
 
-### Fase 7: Persistência dos Dados
-
-**Arquivo:** `src/components/InstagramCopyGenerator.tsx`
-
-Salvar carrosséis no campo `instagram_copies` existente:
+Adicionar fallback para `client_name`:
 
 ```typescript
-const saveCarousel = async (variationNum: number) => {
-  const { data: existingData } = await supabase
-    .from('products_repository')
-    .select('instagram_copies')
-    .eq('id', productId)
-    .single();
-
-  const existingCopies = existingData?.instagram_copies || {};
-  
-  await supabase
-    .from('products_repository')
-    .update({
-      instagram_copies: {
-        ...existingCopies,
-        feed_carousels: feedCarousels,
-        last_carousel_update: new Date().toISOString()
-      }
-    })
-    .eq('id', productId);
-};
+success_cases: (sol.success_cases || []).map((c: any) => ({
+  title: c.title || c.client_name || c.name || null,
+  description: c.description || c.testimonial || null,
+  result: c.result || c.outcome || null,
+  specialty: c.specialty || null,
+  location: c.location || null
+})),
 ```
 
----
+#### Correcao 4: Real Quotes SPIN (linha 1051-1055)
 
-## Prompt da IA para Geração
+Adicionar fallbacks para campos reais:
 
-```text
-Você é um especialista em marketing digital para Instagram.
-
-PRODUTO: {product_name}
-BENEFÍCIOS: {benefits}
-DIFERENCIAIS: {unique_selling_points}
-PALAVRAS-CHAVE: {keywords}
-
-ABORDAGEM: {approach} - {approach_description}
-
-COPY DO FEED ORIGINAL:
-{feed_copy}
-
----
-
-Gere um CARROSSEL de 7 slides para Instagram baseado na copy acima.
-Cada slide deve ter:
-1. Título curto (máx 30 caracteres)
-2. Texto para o slide (máx 150 caracteres)
-3. Sugestão detalhada de imagem
-
-ESTRUTURA OBRIGATÓRIA:
-- Slide 1: CAPA (Gancho) - Pare o scroll, desperte curiosidade
-- Slide 2: A DOR (Identificação) - Mostre que você entende o problema
-- Slide 3: VIRADA DE CHAVE - O momento "aha!"
-- Slide 4: DIFERENCIAL TÉCNICO - Credibilidade e especificações
-- Slide 5: VANTAGENS PRÁTICAS - Benefícios tangíveis
-- Slide 6: RESULTADO FINAL - Transformação/before-after
-- Slide 7: CTA - Chamada para ação clara
-
-Retorne APENAS JSON válido:
-{
-  "slides": [
-    {
-      "position": 1,
-      "title": "Capa (Gancho)",
-      "text": "Texto do slide...",
-      "image_suggestion": "Descrição detalhada da imagem sugerida..."
-    }
-    // ... 7 slides total
-  ]
-}
+```typescript
+real_quotes: (sol.real_quotes || []).map((q: any) => ({
+  quote: q.quote || q.text || q.pain || q.desire || q.expected_result || null,
+  author: q.author || q.client_name || null,
+  role: q.role || q.specialty || null,
+  context: q.context || null
+})),
 ```
 
+#### Correcao 5: Instagram Copies - Atualizar formato (linhas 584-598)
+
+Incluir os novos formatos `feed_copies`, `reels_copies`, `story_copy` e `feed_carousels`:
+
+```typescript
+instagram_copies: {
+  // Formato antigo (compatibilidade)
+  copies: (product.instagram_copies?.copies || []).map(...),
+  // Formato novo (4 variacoes)
+  feed_copies: product.instagram_copies?.feed_copies || [],
+  reels_copies: product.instagram_copies?.reels_copies || [],
+  story_copy: product.instagram_copies?.story_copy || null,
+  feed_carousels: product.instagram_copies?.feed_carousels || [],
+  total_copies: ...,
+  last_generated: ...
+},
+```
+
+#### Correcao 6: TXT - Instagram com novo formato (linhas 1447-1465)
+
+Atualizar a secao de Instagram no TXT para incluir feed_copies e carrosseis.
+
 ---
 
-## Resumo das Alterações
+## Resumo das Alteracoes
 
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/components/InstagramCopyGenerator.tsx` | Adicionar interfaces, estados, funções de geração, UI do carrossel |
-| `supabase/functions/generate-instagram-carousel/index.ts` | **NOVO** - Edge function para gerar carrossel via IA |
-
----
-
-## Fluxo de Uso
-
-1. Usuário gera as 4 variações de **Copy para Feed**
-2. Abaixo de cada variação (Storytelling, Benefits, etc.), aparece seção "📸 Carrossel (7 Slides)"
-3. Usuário clica em "🤖 Gerar IA" para criar carrossel baseado naquela copy
-4. IA gera os 7 slides com sugestões de imagem e texto
-5. Usuário navega pelos slides (1-7), copia individualmente ou exporta tudo
+| Arquivo | Linhas | Correcao |
+|---------|--------|----------|
+| `export-product-ai-playbook/index.ts` | 1001-1024 | Competitor Comparison JSON - dinamico |
+| `export-product-ai-playbook/index.ts` | 1236-1247 | Competitor Comparison TXT - dinamico |
+| `export-product-ai-playbook/index.ts` | 1046-1050 | Success Cases - fallback client_name |
+| `export-product-ai-playbook/index.ts` | 1051-1055 | Real Quotes - fallback campos reais |
+| `export-product-ai-playbook/index.ts` | 584-598 | Instagram Copies - formato atualizado |
+| `export-product-ai-playbook/index.ts` | 1447-1465 | Instagram TXT - formato atualizado |
 
 ---
 
-## Resultado Final
+## Resultado Esperado
 
-Para cada variação de Feed:
-- Storytelling → 7 slides de carrossel estilo narrativo
-- Benefits → 7 slides focados em benefícios
-- Problem/Solution → 7 slides estrutura problema→solução
-- Urgency → 7 slides com gatilhos de urgência
+- Tabela de Comparacao com Concorrentes exporta **todos os dados dinamicos** corretamente
+- Casos de Sucesso SPIN mostram **nome do cliente** em vez de N/A
+- Citacoes Reais SPIN mostram **conteudo real** (dor, desejo, resultado)
+- Instagram Copies inclui **4 variacoes de Feed**, **carrosseis** e **stories**
+- Zero campos N/A para dados que estao preenchidos no sistema
 
-Total: **28 slides** de carrossel por produto (4 variações × 7 slides)
