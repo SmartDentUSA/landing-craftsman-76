@@ -673,28 +673,39 @@ Retorne apenas o texto da mensagem formatada, sem explicações.`;
   } else if (type === 'youtube') {
     return `Você é um especialista em criação de conteúdo para YouTube e SEO de vídeos.
 
-Gere uma descrição completa para vídeo do YouTube que otimize o alcance e engajamento.
+Gere uma descrição completa para vídeo do YouTube baseada EXCLUSIVAMENTE nos dados fornecidos abaixo.
 
 Informações do Produto:
 - Nome: {product.name}
 - Descrição: {product.description}
 - Categoria: {product.category}
 - Benefícios: {product.benefits}
+- Características: {product.features}
+- Aplicações: {product.applications}
+- Público-alvo: {product.target_audience}
+- Keywords SEO: {product.keywords}
 
 Informações da Empresa:
+- Nome: {company.company_name}
 - Template de Rodapé: {company.youtube_company_footer}
 
-CRÍTICO: Retorne APENAS um JSON válido, sem blocos de código markdown, sem texto adicional.
-Use quebras de linha (\\n) que serão convertidas automaticamente para quebras reais na exibição.
+REGRAS ANTI-ALUCINAÇÃO (OBRIGATÓRIO):
+- Use APENAS dados presentes acima. NÃO invente especificações, números ou benefícios
+- NÃO faça promessas clínicas ou regulatórias não documentadas
+- NÃO mencione produtos ou marcas que não estejam nos dados
+- Se um campo diz "Não informado", NÃO invente conteúdo para ele
+- Tags devem ser baseadas nas keywords reais do produto
 
-Exemplo do formato JSON esperado:
+CRÍTICO: Retorne APENAS um JSON válido, sem blocos de código markdown, sem texto adicional.
+
+Formato JSON esperado:
 {
-  "title_suggestion": "Sugestão de título SEO otimizado",
-  "description": "Descrição completa formatada incluindo o template de rodapé com quebras de linha usando \\n",
-  "tags": ["tag1", "tag2", "tag3", "tag4", "tag5"]
+  "title_suggestion": "Título SEO baseado no nome real do produto",
+  "description": "Descrição factual com dados reais do produto",
+  "tags": ["tags", "baseadas", "nas", "keywords", "reais"]
 }
 
-IMPORTANTE: Não use blocos de código markdown (\`\`\`json), retorne apenas o JSON puro.`;
+IMPORTANTE: Não use blocos de código markdown, retorne apenas o JSON puro.`;
   } else if (type === 'instagram') {
     if (instagramType === 'reels') {
       return `Você é um especialista em marketing digital no Instagram especializado em conteúdo para Reels. Crie uma copy otimizada para vídeos Reels.
@@ -862,6 +873,15 @@ function processPromptVariables(prompt: string, product: any, company: any, exte
   const targetAudienceText = targetAudienceArray.join(', ') || 'Não informado';
   processedPrompt = processedPrompt.replace(/{product\.target_audience}/g, targetAudienceText);
 
+  // Processar features/características
+  const featuresArray = Array.isArray(product.features) ? product.features : [];
+  const featuresText = featuresArray.join(', ') || 'Não informadas';
+  processedPrompt = processedPrompt.replace(/{product\.features}/g, featuresText);
+
+  // Processar aplicações
+  const applicationsText = product.applications || 'Não informadas';
+  processedPrompt = processedPrompt.replace(/{product\.applications}/g, applicationsText);
+
   // Processar palavras gatilho BOT
   const botTriggerWordsArray = Array.isArray(product.bot_trigger_words) ? product.bot_trigger_words : [];
   const botTriggerWordsText = botTriggerWordsArray.length > 0 ? botTriggerWordsArray.join(', ') : '';
@@ -984,7 +1004,7 @@ async function generateWithDualAI(apiKey: string, prompt: string, type: 'whatsap
   const systemPrompt = type === 'whatsapp' 
     ? 'Você é especialista em WhatsApp marketing. Retorne mensagens persuasivas e naturais.'
     : type === 'youtube'
-    ? 'Você é especialista em SEO para YouTube. Sempre retorne apenas JSON válido, sem markdown.'
+    ? 'Você é especialista em SEO para YouTube com foco em PRECISÃO FACTUAL. Use EXCLUSIVAMENTE os dados do produto fornecidos. JAMAIS invente especificações, benefícios ou claims não documentados. Sempre retorne apenas JSON válido, sem markdown.'
     : 'Você é especialista em Instagram marketing. Sempre retorne apenas JSON válido, sem markdown.';
   
   console.log(`🏁 Dual-AI: Generating ${type} content...`);

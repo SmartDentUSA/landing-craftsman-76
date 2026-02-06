@@ -170,7 +170,7 @@ export const YouTubeDescriptionGenerator: React.FC<YouTubeDescriptionGeneratorPr
     setGeneratingScript(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-youtube-script', {
-        body: { productId }
+        body: { productId, use_clinical_brain: true }
       });
 
       if (error) throw error;
