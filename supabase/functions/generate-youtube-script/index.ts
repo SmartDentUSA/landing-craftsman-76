@@ -121,7 +121,7 @@ Sempre retorne APENAS JSON válido, sem markdown ou explicações adicionais.`;
 
     if (shouldUseClinicalBrain) {
       console.log('🧠 Clinical Brain ATIVO para YouTube Script');
-      finalSystemPrompt = buildMasterPrompt(finalPromptWithProtection, productContext);
+      finalSystemPrompt = await buildMasterPrompt(finalPromptWithProtection, productContext);
       finalUserPrompt = 'Gerar roteiros de vídeo para YouTube respeitando 100% o contexto técnico fornecido. Retorne APENAS JSON válido no formato especificado.';
     } else {
       console.log('📋 Usando prompt padrão (Clinical Brain desativado ou inválido)');
