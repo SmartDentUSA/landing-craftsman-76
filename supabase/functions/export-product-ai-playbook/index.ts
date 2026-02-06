@@ -1486,24 +1486,82 @@ ${product.youtube_descriptions.descriptions.length > 2 ? `\n... e mais ${product
 ${product.youtube_descriptions?.last_generated ? `📅 Última geração: ${new Date(product.youtube_descriptions.last_generated).toLocaleString('pt-BR')}` : ''}
 
 ### 📸 Instagram Copies:
-${product.instagram_copies?.copies?.length ? `
-✅ ${product.instagram_copies.copies.length} copies gerados
-${product.instagram_copies.copies.slice(0, 2).map((copy: any, idx: number) => `
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Copy ${idx + 1} (${copy.type || 'carousel'}):
+${(() => {
+  const ic = product.instagram_copies as any;
+  const feedCopies = ic?.feed_copies || [];
+  const reelsCopies = ic?.reels_copies || [];
+  const storyCopy = ic?.story_copy || '';
+  const feedCarousels = ic?.feed_carousels || [];
+  const legacyCopies = ic?.copies || [];
+  const totalContent = feedCopies.length + reelsCopies.length + (storyCopy ? 1 : 0) + legacyCopies.length;
+  
+  if (totalContent === 0) return '❌ Copies pendentes';
+  
+  let output = `✅ ${totalContent} copies gerados\n`;
+  
+  // Feed Copies (4 variações)
+  if (feedCopies.length > 0) {
+    output += `\n📝 FEED COPIES (${feedCopies.length} variações):\n`;
+    feedCopies.forEach((copy: any, idx: number) => {
+      output += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Feed #${copy.variation || idx + 1} (${copy.approach || 'N/A'}):
 
-${copy.copy ? (copy.copy.substring(0, 200) + '...') : 'N/A'}
+${copy.copy ? (copy.copy.substring(0, 300) + (copy.copy.length > 300 ? '...' : '')) : 'N/A'}
 
-🏷️ Hashtags (${(copy.hashtags || []).length}):
-${(copy.hashtags || []).slice(0, 10).join(' ')}${(copy.hashtags || []).length > 10 ? ` +${(copy.hashtags || []).length - 10}` : ''}
+${copy.hashtags?.length ? `🏷️ Hashtags: ${copy.hashtags.join(' ')}` : ''}
+${copy.call_to_action ? `📢 CTA: ${copy.call_to_action}` : ''}
+${copy.link ? `🔗 Link: ${copy.link}` : ''}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    });
+  }
+  
+  // Reels Copies (4 variações)
+  if (reelsCopies.length > 0) {
+    output += `\n🎬 REELS COPIES (${reelsCopies.length} variações):\n`;
+    reelsCopies.forEach((copy: any, idx: number) => {
+      output += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Reels #${copy.variation || idx + 1} (${copy.approach || 'N/A'}):
 
-${copy.call_to_action || copy.cta ? `📢 CTA: ${copy.call_to_action || copy.cta}` : ''}
-${copy.external_link || copy.link ? `🔗 Link: ${copy.external_link || copy.link}` : ''}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-`).join('\n')}
-${product.instagram_copies.copies.length > 2 ? `\n... e mais ${product.instagram_copies.copies.length - 2} copies` : ''}
-` : '❌ Copies pendentes'}
-${product.instagram_copies?.last_generated ? `📅 Última geração: ${new Date(product.instagram_copies.last_generated).toLocaleString('pt-BR')}` : ''}
+${copy.copy ? (copy.copy.substring(0, 300) + (copy.copy.length > 300 ? '...' : '')) : 'N/A'}
+
+${copy.hashtags?.length ? `🏷️ Hashtags: ${copy.hashtags.join(' ')}` : ''}
+${copy.call_to_action ? `📢 CTA: ${copy.call_to_action}` : ''}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    });
+  }
+  
+  // Story Copy
+  if (storyCopy) {
+    output += `\n📱 STORY COPY:\n${storyCopy.substring(0, 300)}${storyCopy.length > 300 ? '...' : ''}\n`;
+  }
+  
+  // Feed Carousels (7 slides cada)
+  if (feedCarousels.length > 0) {
+    output += `\n🎠 CARROSSÉIS DE FEED (${feedCarousels.length} variações):\n`;
+    feedCarousels.forEach((carousel: any) => {
+      if (carousel.slides?.length) {
+        output += `\nCarrossel #${carousel.variation} (${carousel.approach || 'N/A'}) - ${carousel.slides.length} slides:\n`;
+        carousel.slides.forEach((slide: any) => {
+          output += `  Slide ${slide.position}: ${slide.title}\n    Texto: ${(slide.text || '').substring(0, 100)}${(slide.text || '').length > 100 ? '...' : ''}\n    Imagem: ${(slide.image_suggestion || '').substring(0, 80)}${(slide.image_suggestion || '').length > 80 ? '...' : ''}\n`;
+        });
+      }
+    });
+  }
+  
+  // Legacy copies (compatibilidade)
+  if (legacyCopies.length > 0 && feedCopies.length === 0) {
+    output += `\n📄 COPIES (formato legado - ${legacyCopies.length}):\n`;
+    legacyCopies.slice(0, 2).forEach((copy: any, idx: number) => {
+      output += `\nCopy ${idx + 1} (${copy.type || 'carousel'}):\n${copy.copy ? (copy.copy.substring(0, 200) + '...') : 'N/A'}\n`;
+    });
+    if (legacyCopies.length > 2) output += `\n... e mais ${legacyCopies.length - 2} copies`;
+  }
+  
+  const lastGen = ic?.last_updated || ic?.last_generated;
+  if (lastGen) output += `\n📅 Última geração: ${new Date(lastGen).toLocaleString('pt-BR')}`;
+  
+  return output;
+})()}
 
 ### 🎵 TikTok Content:
 ${product.tiktok_content?.copies?.length ? `
