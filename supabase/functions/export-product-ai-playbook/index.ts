@@ -1039,14 +1039,17 @@ function generateAIPlaybookJSON(product: ProductData & {
             answer: stripHTML(f.answer || '')
           })),
           success_cases: (sol.success_cases || []).map((c: any) => ({
-            title: c.title || c.name || null,
-            description: c.description || null,
-            result: c.result || null
+            title: c.title || c.client_name || c.name || null,
+            description: c.description || c.testimonial || null,
+            result: c.result || c.outcome || null,
+            specialty: c.specialty || null,
+            location: c.location || null
           })),
           real_quotes: (sol.real_quotes || []).map((q: any) => ({
-            quote: q.quote || q.text || null,
-            author: q.author || null,
-            role: q.role || null
+            quote: q.quote || q.text || q.pain || q.desire || q.expected_result || null,
+            author: q.author || q.client_name || null,
+            role: q.role || q.specialty || null,
+            context: q.context || null
           })),
           impact_metrics: sol.impact_metrics || null,
           competitor_comparison: sol.competitor_comparison || null,
