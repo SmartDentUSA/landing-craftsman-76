@@ -1269,17 +1269,23 @@ ${product.variations?.length ? product.variations.map((v: any) =>
 - Vitrine: ${(product as any).showcase ? '✅ Sim' : '❌ Não'}
 
 ## 📊 COMPARAÇÃO COM CONCORRENTES
-${(product as any).competitor_comparison?.enabled && ((product as any).competitor_comparison?.table_data || []).length > 0 ? `
-Título: ${(product as any).competitor_comparison?.title || 'Comparativo'}
-Subtítulo: ${(product as any).competitor_comparison?.subtitle || ''}
+${(() => {
+  const cc = (product as any).competitor_comparison;
+  if (!cc?.enabled || !((cc?.table_data || []).length > 0)) return '❌ Comparação com concorrentes não configurada';
+  
+  const headers = cc.table_headers || [];
+  const tableData = cc.table_data || [];
+  
+  return `Título: ${cc.title || 'Comparativo'}
+Subtítulo: ${cc.subtitle || ''}
 
-${((product as any).competitor_comparison?.table_data || []).map((comp: any, idx: number) => `
-${idx + 1}. ${comp.competitor_name || comp.name || comp[0] || 'Concorrente'}
-   - Preço Concorrente: R$ ${comp.competitor_price || comp.price || comp[1] || 'N/A'}
-   - Nossas Vantagens: ${(comp.our_advantages || comp.advantages || []).join(', ') || 'N/A'}
-   - Vantagens Deles: ${(comp.their_advantages || comp.disadvantages || []).join(', ') || 'N/A'}
-   - URL: ${comp.competitor_url || comp.url || 'N/A'}
-`).join('\n')}` : '❌ Comparação com concorrentes não configurada'}
+Colunas: ${headers.join(' | ')}
+
+${tableData.map((comp: any, idx: number) => {
+  return `${idx + 1}. Registro:
+${headers.map((header: string) => `   - ${header}: ${comp[header] || 'N/A'}`).join('\n')}`;
+}).join('\n\n')}`;
+})()}
 
 ## 🎨 ATRIBUTOS DO PRODUTO
 - Cor: ${product.color || 'N/A'}
