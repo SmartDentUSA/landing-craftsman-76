@@ -998,28 +998,23 @@ function generateAIPlaybookJSON(product: ProductData & {
           (product as any).showcase && 'Vitrine'
         ].filter(Boolean)
       },
-      // ✅ NEW: Competitor Comparison (Fixed: access table_data array)
+      // ✅ NEW: Competitor Comparison (Dynamic headers iteration)
       competitor_comparison: {
         enabled: (product as any).competitor_comparison?.enabled || false,
         title: (product as any).competitor_comparison?.title || '',
         subtitle: (product as any).competitor_comparison?.subtitle || '',
         table_headers: (product as any).competitor_comparison?.table_headers || [],
-        comparisons: ((product as any).competitor_comparison?.table_data || []).map((comp: any) => ({
-          competitor_name: comp.competitor_name || comp.name || comp[0] || '',
-          competitor_price: comp.competitor_price || comp.price || comp[1] || null,
-          competitor_url: comp.competitor_url || comp.url || null,
-          our_advantages: comp.our_advantages || comp.advantages || [],
-          their_advantages: comp.their_advantages || comp.disadvantages || [],
-          price_difference: comp.competitor_price && product.price 
-            ? ((comp.competitor_price - product.price) / product.price * 100).toFixed(1) + '%'
-            : null,
-          notes: comp.notes || null
-        })),
+        comparisons: ((product as any).competitor_comparison?.table_data || []).map((comp: any) => {
+          const headers = (product as any).competitor_comparison?.table_headers || [];
+          const mappedRow: Record<string, any> = {};
+          headers.forEach((header: string) => {
+            mappedRow[header] = comp[header] || '';
+          });
+          return mappedRow;
+        }),
         summary: {
           total_competitors: ((product as any).competitor_comparison?.table_data || []).length,
-          has_price_advantage: ((product as any).competitor_comparison?.table_data || []).some((c: any) => 
-            c.competitor_price && product.price && c.competitor_price > product.price
-          )
+          total_columns: ((product as any).competitor_comparison?.table_headers || []).length
         }
       },
       // ✅ NEW: SPIN Selling Solutions (Sales Methodology)
