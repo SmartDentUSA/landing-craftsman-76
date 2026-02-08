@@ -7,6 +7,73 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+/**
+ * Post-processing: merge tables with identical or highly overlapping headers.
+ * This guarantees consolidation even if the AI returns fragmented tables.
+ */
+function consolidateTables(tables: any[]): any[] {
+  if (!Array.isArray(tables) || tables.length <= 1) return tables;
+
+  const normalizeHeader = (h: string) => h.trim().toLowerCase();
+
+  const getOverlapRatio = (headersA: string[], headersB: string[]): number => {
+    if (!headersA?.length || !headersB?.length) return 0;
+    const setA = new Set(headersA.map(normalizeHeader));
+    const setB = new Set(headersB.map(normalizeHeader));
+    let overlap = 0;
+    for (const h of setB) {
+      if (setA.has(h)) overlap++;
+    }
+    return overlap / Math.max(setA.size, setB.size);
+  };
+
+  const merged: any[] = [];
+  const used = new Set<number>();
+
+  for (let i = 0; i < tables.length; i++) {
+    if (used.has(i)) continue;
+
+    const base = { ...tables[i], rows: [...(tables[i].rows || [])] };
+    used.add(i);
+
+    for (let j = i + 1; j < tables.length; j++) {
+      if (used.has(j)) continue;
+
+      const overlap = getOverlapRatio(base.headers, tables[j].headers);
+      if (overlap >= 0.8) {
+        // Add separator row with the merged table's title
+        const separatorRow: Record<string, string> = {};
+        for (const h of base.headers) {
+          separatorRow[h] = '';
+        }
+        if (base.headers.length > 0) {
+          separatorRow[base.headers[0]] = `--- ${tables[j].title || 'Seção'} ---`;
+        }
+        base.rows.push(separatorRow);
+
+        // Append rows, mapping headers from the merged table to the base headers
+        for (const row of (tables[j].rows || [])) {
+          const mappedRow: Record<string, string> = {};
+          for (const h of base.headers) {
+            const normalizedH = normalizeHeader(h);
+            // Find matching key in the source row
+            const matchingKey = Object.keys(row).find(k => normalizeHeader(k) === normalizedH);
+            mappedRow[h] = matchingKey ? row[matchingKey] : (row[h] || '');
+          }
+          base.rows.push(mappedRow);
+        }
+
+        used.add(j);
+        console.log(`🔗 Tabelas consolidadas: "${base.title}" + "${tables[j].title}" (overlap: ${(overlap * 100).toFixed(0)}%)`);
+      }
+    }
+
+    merged.push(base);
+  }
+
+  return merged;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -67,7 +134,7 @@ serve(async (req) => {
     const SYSTEM_PROMPT = `Você é um assistente especialista em análise de documentos para criação de landing pages.
 Sua tarefa é:
 1. Transcrever fielmente o texto do PDF preservando hierarquia e formatação
-2. Identificar e extrair TODAS as tabelas presentes no documento, preservando cabeçalhos e dados EXATAMENTE como escritos
+2. Identificar e extrair tabelas presentes no documento, preservando cabeçalhos e dados EXATAMENTE como escritos
 3. Gerar sugestões inteligentes para preencher os campos de uma landing page
 
 REGRAS CRÍTICAS PARA TABELAS:
@@ -75,10 +142,30 @@ REGRAS CRÍTICAS PARA TABELAS:
 - Preserve valores de cada célula FIELMENTE (números, unidades, símbolos)
 - Cada linha da tabela deve ser um objeto com chaves iguais aos headers
 - Dê um título descritivo para cada tabela baseado no contexto do documento
-- REGRA DE CONSOLIDAÇÃO: Se o documento contiver seções em páginas diferentes que comparam os MESMOS itens/produtos/colunas (ex: mesmos scanners, mesmas marcas, mesmos modelos), consolide TODAS as linhas em UMA ÚNICA tabela. Use os nomes das colunas da primeira ocorrência como cabeçalho padrão
-- Sub-títulos de páginas diferentes (ex: "Software base", "Relatórios clínicos") devem virar linhas separadoras dentro da mesma tabela, NÃO tabelas separadas
-- Ao consolidar, adicione uma linha com o sub-título da seção como separador (ex: {"Característica": "--- Software ---", demais colunas vazias ""})
-- SOMENTE retorne tabelas REALMENTE separadas (que comparam itens DIFERENTES) como entradas distintas no array extracted_tables
+
+⚠️ REGRA OBRIGATÓRIA DE CONSOLIDAÇÃO DE TABELAS (PRIORIDADE MÁXIMA):
+Muitos PDFs contêm UMA ÚNICA tabela comparativa que se ESTENDE por várias páginas.
+Você DEVE identificar isso e retornar como UMA ÚNICA entrada no array extracted_tables.
+
+Como identificar tabela multi-página:
+- As colunas/headers são os MESMOS (ou muito similares) em páginas consecutivas
+- Os itens comparados são os MESMOS (ex: mesmos produtos, mesmos scanners, mesmas marcas)
+- Apenas as LINHAS/características mudam entre as páginas
+
+Quando detectar tabela multi-página:
+- CONSOLIDE todas as linhas em UMA ÚNICA tabela
+- Use os headers da PRIMEIRA ocorrência
+- Adicione linhas separadoras para cada seção/sub-título: {"PrimeiroHeader": "--- Nome da Seção ---", demais headers: ""}
+- O título da tabela consolidada deve refletir o tema geral (ex: "Comparativo de Scanners Intraorais")
+
+EXEMPLO: Um PDF com 3 páginas comparando 5 scanners (Medit i600, i700, i700W, BLZ Ino200, i900):
+- Página 1: Hardware (Conectividade, Velocidade, Peso)
+- Página 2: Software (Smart Scan, Workflows)
+- Página 3: IA e Preços
+→ Resultado: UMA tabela com ~30 linhas e separadores "--- Hardware ---", "--- Software ---", "--- IA e Preços ---"
+→ NÃO retorne 3 tabelas separadas!
+
+SOMENTE retorne tabelas como entradas SEPARADAS no array se elas compararem itens/colunas COMPLETAMENTE DIFERENTES.
 
 REGRAS PARA SUGESTÕES:
 - Baseie-se EXCLUSIVAMENTE no conteúdo do PDF
@@ -88,6 +175,10 @@ REGRAS PARA SUGESTÕES:
 - O seo_description deve ter no máximo 160 caracteres`;
 
     const USER_PROMPT = `Analise o seguinte documento PDF da landing page "${landingPageName}" e extraia os dados usando a função fornecida.
+
+IMPORTANTE: Este documento pode conter UMA tabela comparativa que se estende por várias páginas.
+Se as colunas/headers forem iguais ou muito similares em diferentes páginas, você DEVE consolidar tudo em UMA ÚNICA tabela no array extracted_tables.
+NÃO separe em múltiplas tabelas se os headers forem os mesmos.
 
 DOCUMENTO (texto extraído):
 ${clippedText}`;
@@ -109,7 +200,7 @@ ${clippedText}`;
             type: 'function',
             function: {
               name: 'extract_landing_page_data',
-              description: 'Extrai texto transcrito, tabelas e sugestões de campos para landing page a partir de um PDF',
+              description: 'Extrai texto transcrito, tabelas consolidadas e sugestões de campos para landing page a partir de um PDF',
               parameters: {
                 type: 'object',
                 properties: {
@@ -159,7 +250,7 @@ ${clippedText}`;
                       required: ['title', 'headers', 'rows'],
                       additionalProperties: false
                     },
-                    description: 'TODAS as tabelas encontradas no PDF'
+                    description: 'Tabelas JÁ CONSOLIDADAS do PDF. Se páginas diferentes comparam os MESMOS itens/colunas, retorne como UMA ÚNICA tabela com linhas separadoras para cada seção'
                   }
                 },
                 required: ['transcribed_text', 'suggestions', 'extracted_tables'],
@@ -200,6 +291,14 @@ ${clippedText}`;
     }
 
     const extractedData = JSON.parse(toolCall.function.arguments);
+
+    // Post-processing: force consolidation of tables with same headers
+    if (extractedData.extracted_tables?.length > 1) {
+      console.log(`⚠️ IA retornou ${extractedData.extracted_tables.length} tabelas. Executando post-processing de consolidação...`);
+      extractedData.extracted_tables = consolidateTables(extractedData.extracted_tables);
+      console.log(`✅ Após consolidação: ${extractedData.extracted_tables.length} tabela(s)`);
+    }
+
     console.log('📊 Dados extraídos:', {
       textLength: extractedData.transcribed_text?.length || 0,
       suggestionsKeys: Object.keys(extractedData.suggestions || {}),
