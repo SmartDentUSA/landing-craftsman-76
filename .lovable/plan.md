@@ -1,191 +1,212 @@
 
 
-# Plano: Corrigir Alucinacoes no Gerador YouTube
+# Plano: Importador de PDF com IA para Landing Pages (com Extração de Tabelas)
 
-## Diagnostico
+## Visão Geral
 
-A investigacao revelou **3 causas raiz** que permitem a IA inventar informacoes nos roteiros e descricoes de YouTube:
+Criar uma nova seção no editor de landing pages (aba **Conteúdo**, abaixo do **CTA Final**, antes do **Footer**) que permite:
 
-### Causa 1: Clinical Brain DESATIVADO por padrao
+1. Upload de um PDF com o conteúdo/propósito da landing page
+2. A IA transcreve fielmente o texto do PDF
+3. **Tabelas encontradas no PDF são extraídas e mapeadas diretamente para a seção "Informações Desktop > Mostrar Tabela"**, preservando cabeçalhos e dados exatamente como estão no PDF
+4. Preview da transcrição + preview da tabela extraída para aprovação do usuário
+5. Após aprovação, sugere preenchimento automático dos campos de texto da página
+6. Após salvar, botão "Gerar FAQ por IA" cria FAQs baseadas no conteúdo importado
 
-O frontend (`YouTubeDescriptionGenerator.tsx`, linha 173) chama a edge function **sem** enviar `use_clinical_brain: true`:
+## Fluxo do Usuário
 
-```typescript
-// Chamada atual - SEM Clinical Brain
-body: { productId }
+```text
+[Upload PDF] --> [Processando com IA...]
+                        |
+              [Preview da Transcrição]
+              [Preview da Tabela Extraída]  <-- NOVO
+                        |
+                 [Aprovar / Descartar]
+                        |
+              [Sugestões para campos de texto]
+              [Tabela populada automaticamente em Desktop Info]  <-- NOVO
+                        |
+                 [Aceitar Sugestões]
+                        |
+                 [Salvar] --> [Botão Gerar FAQ por IA]
 ```
 
-Isso faz com que o sistema use um `baseSystemPrompt` generico de apenas 1 linha (linha 106):
-```
-"Voce e um especialista senior em roteiros audiovisuais tecnicos para YouTube..."
-```
+## Arquivos a Criar
 
-O poderoso Master System Prompt (com regras anti-alucinacao, compatibilidade de produtos, workflow odontologico) **nunca e ativado** para YouTube.
+### 1. `src/components/editor/PDFContentImporter.tsx`
 
-### Causa 2: Prompt de Descricao YouTube muito pobre
+Componente React que gerencia todo o fluxo:
 
-O prompt para descricoes YouTube (`generate-social-content`, linhas 673-697) recebe apenas 4 campos do produto:
-- Nome, Descricao, Categoria, Beneficios
+**Estados:** `idle` | `uploading` | `preview` | `suggesting` | `suggestions_ready` | `applied`
 
-Enquanto o prompt do Instagram (linhas 698+) recebe **8 campos** incluindo Keywords, Features, Target Audience, Preco e Bot Trigger Words. Essa falta de contexto forca a IA a "preencher lacunas" inventando dados.
+**Interface visual:**
+- Zona de upload drag-and-drop (PDF, max 10MB)
+- Area de preview com scroll para texto transcrito
+- **Preview visual da tabela extraída** (usando os componentes Table/TableHeader/TableRow/TableCell existentes) para que o usuário veja exatamente como ficará
+- Botões "Aprovar Transcrição" e "Descartar"
+- Cards de sugestões com checkbox individual para cada campo
+- Botão "Gerar FAQ por IA" (aparece após conteúdo aplicado e salvo)
 
-### Causa 3: System Prompt generico para descricoes
+**Props do componente:**
+- `data` - Dados atuais da landing page
+- `onApplySuggestions(suggestions)` - Callback para aplicar nos campos de texto
+- `onApplyTable(table_title, table_headers, table_data)` - Callback para popular desktop_info com a tabela do PDF
+- `onFAQsGenerated(faqs)` - Callback para popular o array faq
+- `onTranscriptionSaved(text)` - Callback para guardar transcrição no estado
 
-O system prompt da funcao `generateWithDualAI` (linha 986-987) para YouTube e apenas:
-```
-"Voce e especialista em SEO para YouTube. Sempre retorne apenas JSON valido, sem markdown."
-```
+### 2. `supabase/functions/transcribe-landing-page-pdf/index.ts`
 
-Zero instrucoes sobre precisao factual, zero regras anti-alucinacao.
+Edge function que recebe o PDF e retorna:
 
----
+**Entrada:** FormData com arquivo PDF + nome da landing page
 
-## Alteracoes Tecnicas
+**Processamento:**
+1. Extrai texto com `pdfjs-serverless` (mesma lib já usada em `transcribe-product-document`)
+2. Envia para Lovable AI (Gemini 2.5 Flash) com **tool calling** para resposta estruturada
 
-### Alteracao 1: Ativar Clinical Brain no YouTube Script
+**Saída estruturada via tool calling:**
 
-**Arquivo:** `src/components/YouTubeDescriptionGenerator.tsx`
-**Linha:** 173
-
-**De:**
-```typescript
-body: { productId }
-```
-
-**Para:**
-```typescript
-body: { productId, use_clinical_brain: true }
-```
-
----
-
-### Alteracao 2: Fortalecer o baseSystemPrompt do Roteiro
-
-**Arquivo:** `supabase/functions/generate-youtube-script/index.ts`
-**Linha:** 106
-
-**De:**
-```typescript
-const baseSystemPrompt = 'Voce e um especialista senior em roteiros audiovisuais tecnicos para YouTube. Sempre retorne apenas JSON valido, sem markdown ou explicacoes adicionais.';
-```
-
-**Para:**
-```typescript
-const baseSystemPrompt = `Voce e um especialista senior em roteiros audiovisuais tecnicos para YouTube.
-
-REGRA ABSOLUTA - ZERO ALUCINACAO:
-- Use EXCLUSIVAMENTE as informacoes do produto fornecidas no prompt
-- JAMAIS invente dados tecnicos, especificacoes, certificacoes ou numeros
-- JAMAIS faca promessas clinicas, regulatorias ou de resultados nao documentados
-- JAMAIS mencione produtos, marcas ou materiais que nao estejam explicitamente nos dados
-- Se uma informacao nao foi fornecida, NAO a mencione no roteiro
-- Prefira ser generico a inventar: "material de alta qualidade" em vez de inventar uma especificacao
-- Todo claim tecnico DEVE estar presente nos dados do produto
-
-Sempre retorne APENAS JSON valido, sem markdown ou explicacoes adicionais.`;
-```
-
----
-
-### Alteracao 3: Expandir o prompt de Descricao YouTube
-
-**Arquivo:** `supabase/functions/generate-social-content/index.ts`
-**Linhas:** 673-697
-
-**De:** (prompt com apenas 4 campos)
-
-**Para:**
-```typescript
-} else if (type === 'youtube') {
-    return `Voce e um especialista em criacao de conteudo para YouTube e SEO de videos.
-
-Gere uma descricao completa para video do YouTube baseada EXCLUSIVAMENTE nos dados fornecidos abaixo.
-
-Informacoes do Produto:
-- Nome: {product.name}
-- Descricao: {product.description}
-- Categoria: {product.category}
-- Beneficios: {product.benefits}
-- Caracteristicas: {product.features}
-- Aplicacoes: {product.applications}
-- Publico-alvo: {product.target_audience}
-- Keywords SEO: {product.keywords}
-
-Informacoes da Empresa:
-- Nome: {company.company_name}
-- Template de Rodape: {company.youtube_company_footer}
-
-REGRAS ANTI-ALUCINACAO (OBRIGATORIO):
-- Use APENAS dados presentes acima. NAO invente especificacoes, numeros ou beneficios
-- NAO faca promessas clinicas ou regulatorias nao documentadas
-- NAO mencione produtos ou marcas que nao estejam nos dados
-- Se um campo diz "Nao informado", NAO invente conteudo para ele
-- Tags devem ser baseadas nas keywords reais do produto
-
-CRITICO: Retorne APENAS um JSON valido, sem blocos de codigo markdown, sem texto adicional.
-
-Formato JSON esperado:
+```text
 {
-  "title_suggestion": "Titulo SEO baseado no nome real do produto",
-  "description": "Descricao factual com dados reais do produto",
-  "tags": ["tags", "baseadas", "nas", "keywords", "reais"]
+  transcribed_text: string,          // Texto fiel do PDF
+  suggestions: {
+    seo_title: string,
+    seo_description: string,
+    banner_title: string,
+    banner_subtitle: string,
+    banner_badge_text: string,
+    solutions_title: string,
+    advisory_title: string,
+    advisory_paragraph: string,
+    cta_final_title: string,
+    cta_final_paragraph: string,
+    desktop_info_title: string,
+    desktop_info_text: string
+  },
+  extracted_tables: [                 // NOVO - Tabelas extraídas do PDF
+    {
+      title: string,                  // Título/contexto da tabela
+      headers: string[],              // Cabeçalhos das colunas
+      rows: Array<Record<string, string>>  // Dados das linhas, chaveados pelos headers
+    }
+  ]
 }
-
-IMPORTANTE: Nao use blocos de codigo markdown, retorne apenas o JSON puro.`;
 ```
 
----
+**Regras para extração de tabelas:**
+- A IA deve identificar TODAS as tabelas presentes no PDF
+- Preservar cabeçalhos exatamente como escritos no documento
+- Preservar dados de cada célula fielmente (números, unidades, textos)
+- Cada linha é um objeto com chaves iguais aos headers
+- Se múltiplas tabelas existirem, retornar array com todas (a primeira será usada por padrão)
 
-### Alteracao 4: Adicionar substituicao de {product.features}
+**Mapeamento direto para desktop_info:**
 
-**Arquivo:** `supabase/functions/generate-social-content/index.ts`
-**Apos linha 863** (depois de `processedPrompt.replace(/{product\.target_audience}/g, targetAudienceText)`)
+| Campo do PDF (IA)    | Campo desktop_info     |
+|----------------------|------------------------|
+| `extracted_tables[0].title`   | `table_title`    |
+| `extracted_tables[0].headers` | `table_headers`  |
+| `extracted_tables[0].rows`    | `table_data`     |
 
-**Adicionar:**
-```typescript
-// Processar features/caracteristicas
-const featuresArray = Array.isArray(product.features) ? product.features : [];
-const featuresText = featuresArray.join(', ') || 'Nao informadas';
-processedPrompt = processedPrompt.replace(/{product\.features}/g, featuresText);
+Quando o usuário aprovar, o sistema automaticamente:
+- Ativa `show_table: true` no desktop_info
+- Popula `table_title` com o título da tabela
+- Popula `table_headers` com os cabeçalhos extraídos
+- Popula `table_data` com as linhas, no formato `Array<{ [header]: valor }>`
+
+### 3. `supabase/functions/generate-landing-page-faqs/index.ts`
+
+Edge function para gerar FAQs após importação:
+
+**Entrada:** `transcribed_text`, `landing_page_name`, dados atuais
+
+**Saída:** Array de 8-12 FAQs `{ question, answer }` com respostas em HTML
+
+**Regras:** Usar EXCLUSIVAMENTE informações do texto transcrito, zero alucinações
+
+## Arquivos a Editar
+
+### 4. `src/pages/Editor.tsx`
+
+**Novo estado:**
+```text
+const [pdfTranscription, setPdfTranscription] = useState<string | null>(null);
 ```
 
----
-
-### Alteracao 5: Fortalecer systemPrompt de descricoes
-
-**Arquivo:** `supabase/functions/generate-social-content/index.ts`
-**Linhas:** 986-987
-
-**De:**
-```typescript
-: type === 'youtube'
-? 'Voce e especialista em SEO para YouTube. Sempre retorne apenas JSON valido, sem markdown.'
+**Nova seção no Accordion** (entre "CTA Final" e "Footer", ~linha 4971):
+```text
+AccordionItem value="pdf-content-importer"
+  - Título: "Importar Conteúdo (PDF)"
+  - Componente PDFContentImporter
 ```
 
-**Para:**
-```typescript
-: type === 'youtube'
-? 'Voce e especialista em SEO para YouTube com foco em PRECISAO FACTUAL. Use EXCLUSIVAMENTE os dados do produto fornecidos. JAMAIS invente especificacoes, beneficios ou claims nao documentados. Sempre retorne apenas JSON valido, sem markdown.'
+**Callback `onApplyTable`:**
+Quando chamado, atualiza o estado `data` com:
+```text
+desktop_info: {
+  ...data.desktop_info,
+  show_table: true,
+  table_title: title da tabela extraída,
+  table_headers: headers extraídos,
+  table_data: rows extraídos
+}
+```
+E aciona `saveDesktopInfo()` para persistir.
+
+**Callback `onApplySuggestions`:**
+Atualiza os 12 campos de texto da landing page com as sugestões aceitas pelo usuário.
+
+**Callback `onFAQsGenerated`:**
+Adiciona FAQs ao array existente e ativa a seção FAQ.
+
+### 5. `supabase/config.toml`
+
+Registrar as duas novas edge functions:
+```text
+[functions.transcribe-landing-page-pdf]
+verify_jwt = false
+
+[functions.generate-landing-page-faqs]
+verify_jwt = false
 ```
 
----
+## Detalhes Importantes sobre a Extração de Tabelas
 
-## Resumo das Alteracoes
+**Exemplo prático:**
 
-| Arquivo | Localizacao | Correcao |
-|---------|-------------|----------|
-| `YouTubeDescriptionGenerator.tsx` | Linha 173 | Ativar `use_clinical_brain: true` |
-| `generate-youtube-script/index.ts` | Linha 106 | Fortalecer baseSystemPrompt com regras anti-alucinacao |
-| `generate-social-content/index.ts` | Linhas 673-697 | Expandir prompt YouTube com 8 campos + regras |
-| `generate-social-content/index.ts` | Apos linha 863 | Adicionar substituicao de `{product.features}` |
-| `generate-social-content/index.ts` | Linhas 986-987 | Fortalecer systemPrompt com foco em precisao |
+Se o PDF contiver uma tabela como:
 
----
+```text
+Especificações Técnicas do NanoClean PoD
+| Propriedade       | Valor         | Padrão ISO  |
+| Resistência       | 150 MPa       | ISO 178     |
+| Módulo Flexural   | 6.2 GPa       | ISO 178     |
+| Absorção de Água  | 15.2 μg/mm³   | ISO 4049    |
+```
 
-## Resultado Esperado
+O sistema extrairá e populará:
+- `table_title`: "Especificações Técnicas do NanoClean PoD"
+- `table_headers`: ["Propriedade", "Valor", "Padrão ISO"]
+- `table_data`: [
+    {"Propriedade": "Resistência", "Valor": "150 MPa", "Padrão ISO": "ISO 178"},
+    {"Propriedade": "Módulo Flexural", "Valor": "6.2 GPa", "Padrão ISO": "ISO 178"},
+    {"Propriedade": "Absorção de Água", "Valor": "15.2 μg/mm³", "Padrão ISO": "ISO 4049"}
+  ]
 
-- **Roteiros de Video**: Com Clinical Brain ativo, a IA recebera o MASTER_SYSTEM_PROMPT completo incluindo regras de compatibilidade, workflow odontologico, e campos anti-alucinacao do produto
-- **Descricoes YouTube**: Receberao contexto completo (8 campos em vez de 4) e instrucoes explicitas contra invencao de dados
-- **Ambos**: System prompts fortalecidos com regras de precisao factual em todas as camadas (system prompt + user prompt)
-- **Zero alucinacoes** para dados que existem no card do produto
+O preview no componente mostrará esta tabela visualmente antes da aprovação.
+
+**Se houver múltiplas tabelas no PDF:**
+- O componente mostrará um seletor para o usuário escolher qual tabela usar
+- A tabela selecionada será mapeada para desktop_info
+- As demais poderão ser descartadas ou inseridas manualmente depois
+
+## Resumo de Arquivos
+
+| Arquivo | Ação | Descrição |
+|---------|------|-----------|
+| `src/components/editor/PDFContentImporter.tsx` | Criar | Componente de upload, preview (texto + tabela), sugestões e FAQ |
+| `supabase/functions/transcribe-landing-page-pdf/index.ts` | Criar | Transcrição + extração de tabelas + sugestões |
+| `supabase/functions/generate-landing-page-faqs/index.ts` | Criar | Geração de FAQs baseada no conteúdo |
+| `src/pages/Editor.tsx` | Editar | Adicionar seção, estados e callbacks (incluindo onApplyTable) |
+| `supabase/config.toml` | Editar | Registrar 2 novas edge functions |
 
