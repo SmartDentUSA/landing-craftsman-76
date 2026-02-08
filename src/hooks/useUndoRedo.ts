@@ -1,19 +1,21 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 
 /**
  * Hook para implementar funcionalidade Undo/Redo
  * Mantém histórico de até 50 versões do estado
+ * Usa useRef para currentIndex para evitar stale closures em chamadas sequenciais
  */
 export function useUndoRedo<T>(initialState: T) {
   const [history, setHistory] = useState<T[]>([initialState]);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const currentIndexRef = useRef(0);
   
   const current = history[currentIndex] ?? initialState;
   
   const set = useCallback((newState: T | ((prev: T) => T)) => {
     setHistory(prevHistory => {
-      // Garantir que temos um estado válido na posição atual
-      const currentState = prevHistory[currentIndex] ?? initialState;
+      const idx = currentIndexRef.current;
+      const currentState = prevHistory[idx] ?? initialState;
       
       // Calcular o novo estado
       const stateToAdd = typeof newState === 'function'
@@ -26,21 +28,24 @@ export function useUndoRedo<T>(initialState: T) {
         return prevHistory;
       }
       
-      const newIndex = currentIndex + 1;
+      const newIndex = idx + 1;
       const newHistory = prevHistory.slice(0, newIndex);
       newHistory.push(stateToAdd);
       
       // Limitar histórico a 50 versões
       if (newHistory.length > 50) {
         newHistory.shift();
-        setCurrentIndex(currentIndex); // Index não muda pois removemos do início
+        const adjustedIndex = newIndex - 1;
+        currentIndexRef.current = adjustedIndex;
+        setCurrentIndex(adjustedIndex);
       } else {
+        currentIndexRef.current = newIndex;
         setCurrentIndex(newIndex);
       }
       
       return newHistory;
     });
-  }, [currentIndex, initialState]);
+  }, [initialState]);
   
   // Função para substituir o estado atual sem adicionar ao histórico
   const setReplace = useCallback((newState: T) => {
@@ -50,23 +55,33 @@ export function useUndoRedo<T>(initialState: T) {
     }
     
     setHistory(prevHistory => {
+      const idx = currentIndexRef.current;
       const newHistory = [...prevHistory];
-      newHistory[currentIndex] = newState;
+      newHistory[idx] = newState;
       return newHistory;
     });
-  }, [currentIndex]);
+  }, []);
   
   const undo = useCallback(() => {
-    if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1);
+    const idx = currentIndexRef.current;
+    if (idx > 0) {
+      const newIndex = idx - 1;
+      currentIndexRef.current = newIndex;
+      setCurrentIndex(newIndex);
     }
-  }, [currentIndex]);
+  }, []);
   
   const redo = useCallback(() => {
-    if (currentIndex < history.length - 1) {
-      setCurrentIndex(currentIndex + 1);
-    }
-  }, [currentIndex, history]);
+    setHistory(prevHistory => {
+      const idx = currentIndexRef.current;
+      if (idx < prevHistory.length - 1) {
+        const newIndex = idx + 1;
+        currentIndexRef.current = newIndex;
+        setCurrentIndex(newIndex);
+      }
+      return prevHistory;
+    });
+  }, []);
   
   const canUndo = currentIndex > 0;
   const canRedo = currentIndex < history.length - 1;
@@ -74,6 +89,7 @@ export function useUndoRedo<T>(initialState: T) {
   const reset = useCallback(() => {
     setHistory([initialState]);
     setCurrentIndex(0);
+    currentIndexRef.current = 0;
   }, [initialState]);
   
   return { 

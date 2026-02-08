@@ -8,8 +8,23 @@ const corsHeaders = {
 };
 
 /**
+ * Convert positional row arrays to objects keyed by headers.
+ * Pads missing columns with empty string, trims extra columns.
+ */
+function rowsToObjects(headers: string[], rows: string[][]): Record<string, string>[] {
+  if (!headers?.length || !rows?.length) return [];
+
+  return rows.slice(0, 100).map(row => {
+    const obj: Record<string, string> = {};
+    for (let i = 0; i < headers.length; i++) {
+      obj[headers[i]] = (row && row[i]) ? String(row[i]) : '';
+    }
+    return obj;
+  });
+}
+
+/**
  * Post-processing: merge tables with identical or highly overlapping headers.
- * This guarantees consolidation even if the AI returns fragmented tables.
  */
 function consolidateTables(tables: any[]): any[] {
   if (!Array.isArray(tables) || tables.length <= 1) return tables;
@@ -41,7 +56,7 @@ function consolidateTables(tables: any[]): any[] {
 
       const overlap = getOverlapRatio(base.headers, tables[j].headers);
       if (overlap >= 0.8) {
-        // Add separator row with the merged table's title
+        // Add separator row
         const separatorRow: Record<string, string> = {};
         for (const h of base.headers) {
           separatorRow[h] = '';
@@ -51,12 +66,11 @@ function consolidateTables(tables: any[]): any[] {
         }
         base.rows.push(separatorRow);
 
-        // Append rows, mapping headers from the merged table to the base headers
+        // Append rows, mapping headers
         for (const row of (tables[j].rows || [])) {
           const mappedRow: Record<string, string> = {};
           for (const h of base.headers) {
             const normalizedH = normalizeHeader(h);
-            // Find matching key in the source row
             const matchingKey = Object.keys(row).find(k => normalizeHeader(k) === normalizedH);
             mappedRow[h] = matchingKey ? row[matchingKey] : (row[h] || '');
           }
@@ -134,14 +148,28 @@ serve(async (req) => {
     const SYSTEM_PROMPT = `Você é um assistente especialista em análise de documentos para criação de landing pages.
 Sua tarefa é:
 1. Transcrever fielmente o texto do PDF preservando hierarquia e formatação
-2. Identificar e extrair tabelas presentes no documento, preservando cabeçalhos e dados EXATAMENTE como escritos
+2. Identificar e extrair tabelas presentes no documento
 3. Gerar sugestões inteligentes para preencher os campos de uma landing page
 
 REGRAS CRÍTICAS PARA TABELAS:
 - Preserve cabeçalhos EXATAMENTE como escritos no documento (maiúsculas, acentos, unidades)
-- Preserve valores de cada célula FIELMENTE (números, unidades, símbolos)
-- Cada linha da tabela deve ser um objeto com chaves iguais aos headers
+- Cada linha da tabela deve ser um ARRAY DE STRINGS na MESMA ORDEM dos headers
+- Se a tabela tem 6 colunas, cada row DEVE ter exatamente 6 elementos
+- NÃO use objetos com chaves para representar linhas - use ARRAYS POSICIONAIS
 - Dê um título descritivo para cada tabela baseado no contexto do documento
+
+Exemplo correto:
+  headers: ["Característica", "Produto A", "Produto B"]
+  rows: [
+    ["Peso", "1.2 kg", "0.8 kg"],
+    ["Velocidade", "20 FPS", "30 FPS"]
+  ]
+
+Exemplo ERRADO (NÃO faça isso):
+  rows: [
+    {"Característica": "Peso", "Produto A": "1.2 kg"},
+    {"col1": "Velocidade", "col2": "20 FPS"}
+  ]
 
 ⚠️ REGRA OBRIGATÓRIA DE CONSOLIDAÇÃO DE TABELAS (PRIORIDADE MÁXIMA):
 Muitos PDFs contêm UMA ÚNICA tabela comparativa que se ESTENDE por várias páginas.
@@ -155,15 +183,8 @@ Como identificar tabela multi-página:
 Quando detectar tabela multi-página:
 - CONSOLIDE todas as linhas em UMA ÚNICA tabela
 - Use os headers da PRIMEIRA ocorrência
-- Adicione linhas separadoras para cada seção/sub-título: {"PrimeiroHeader": "--- Nome da Seção ---", demais headers: ""}
-- O título da tabela consolidada deve refletir o tema geral (ex: "Comparativo de Scanners Intraorais")
-
-EXEMPLO: Um PDF com 3 páginas comparando 5 scanners (Medit i600, i700, i700W, BLZ Ino200, i900):
-- Página 1: Hardware (Conectividade, Velocidade, Peso)
-- Página 2: Software (Smart Scan, Workflows)
-- Página 3: IA e Preços
-→ Resultado: UMA tabela com ~30 linhas e separadores "--- Hardware ---", "--- Software ---", "--- IA e Preços ---"
-→ NÃO retorne 3 tabelas separadas!
+- Adicione linhas separadoras para cada seção: ["--- Nome da Seção ---", "", "", ...] (string no primeiro elemento, strings vazias nos demais)
+- O título da tabela consolidada deve refletir o tema geral
 
 SOMENTE retorne tabelas como entradas SEPARADAS no array se elas compararem itens/colunas COMPLETAMENTE DIFERENTES.
 
@@ -179,6 +200,8 @@ REGRAS PARA SUGESTÕES:
 IMPORTANTE: Este documento pode conter UMA tabela comparativa que se estende por várias páginas.
 Se as colunas/headers forem iguais ou muito similares em diferentes páginas, você DEVE consolidar tudo em UMA ÚNICA tabela no array extracted_tables.
 NÃO separe em múltiplas tabelas se os headers forem os mesmos.
+
+LEMBRE-SE: Cada row é um ARRAY DE STRINGS (ex: ["valor1", "valor2", "valor3"]), NÃO um objeto.
 
 DOCUMENTO (texto extraído):
 ${clippedText}`;
@@ -241,16 +264,16 @@ ${clippedText}`;
                         rows: {
                           type: 'array',
                           items: {
-                            type: 'object',
-                            additionalProperties: { type: 'string' }
+                            type: 'array',
+                            items: { type: 'string' }
                           },
-                          description: 'Linhas da tabela, cada uma com chaves iguais aos headers'
+                          description: 'Linhas da tabela. Cada linha é um ARRAY de strings na MESMA ORDEM dos headers. Ex: ["valor1", "valor2", "valor3"]'
                         }
                       },
                       required: ['title', 'headers', 'rows'],
                       additionalProperties: false
                     },
-                    description: 'Tabelas JÁ CONSOLIDADAS do PDF. Se páginas diferentes comparam os MESMOS itens/colunas, retorne como UMA ÚNICA tabela com linhas separadoras para cada seção'
+                    description: 'Tabelas JÁ CONSOLIDADAS do PDF. Se páginas diferentes comparam os MESMOS itens/colunas, retorne como UMA ÚNICA tabela com linhas separadoras para cada seção. Cada row é um array de strings posicionais.'
                   }
                 },
                 required: ['transcribed_text', 'suggestions', 'extracted_tables'],
@@ -292,6 +315,45 @@ ${clippedText}`;
 
     const extractedData = JSON.parse(toolCall.function.arguments);
 
+    // Post-processing: convert positional arrays to objects keyed by headers
+    if (extractedData.extracted_tables?.length) {
+      for (const table of extractedData.extracted_tables) {
+        if (table.rows?.length && Array.isArray(table.rows[0])) {
+          // Rows are positional arrays — convert to objects
+          console.log(`🔄 Convertendo ${table.rows.length} rows posicionais para objetos (tabela: "${table.title}")`);
+          table.rows = rowsToObjects(table.headers, table.rows);
+        } else if (table.rows?.length && typeof table.rows[0] === 'object' && !Array.isArray(table.rows[0])) {
+          // AI returned objects anyway — validate keys match headers
+          console.log(`⚠️ AI retornou objetos em vez de arrays para "${table.title}". Remapeando...`);
+          const remapped = [];
+          for (const row of table.rows) {
+            const keys = Object.keys(row);
+            if (keys.length === 0) continue; // skip empty objects
+            const obj: Record<string, string> = {};
+            for (let i = 0; i < table.headers.length; i++) {
+              const header = table.headers[i];
+              // Try exact match first, then case-insensitive, then positional
+              if (row[header] !== undefined) {
+                obj[header] = String(row[header]);
+              } else {
+                const normalizedHeader = header.trim().toLowerCase();
+                const matchKey = keys.find(k => k.trim().toLowerCase() === normalizedHeader);
+                if (matchKey) {
+                  obj[header] = String(row[matchKey]);
+                } else if (keys[i] !== undefined) {
+                  obj[header] = String(row[keys[i]]);
+                } else {
+                  obj[header] = '';
+                }
+              }
+            }
+            remapped.push(obj);
+          }
+          table.rows = remapped;
+        }
+      }
+    }
+
     // Post-processing: force consolidation of tables with same headers
     if (extractedData.extracted_tables?.length > 1) {
       console.log(`⚠️ IA retornou ${extractedData.extracted_tables.length} tabelas. Executando post-processing de consolidação...`);
@@ -302,7 +364,9 @@ ${clippedText}`;
     console.log('📊 Dados extraídos:', {
       textLength: extractedData.transcribed_text?.length || 0,
       suggestionsKeys: Object.keys(extractedData.suggestions || {}),
-      tablesCount: extractedData.extracted_tables?.length || 0
+      tablesCount: extractedData.extracted_tables?.length || 0,
+      firstTableRows: extractedData.extracted_tables?.[0]?.rows?.length || 0,
+      firstRowSample: extractedData.extracted_tables?.[0]?.rows?.[0] || null
     });
 
     return new Response(

@@ -36,19 +36,54 @@ serve(async (req) => {
       ? transcribed_text.slice(0, MAX_CHARS) + '\n\n[Texto truncado]'
       : transcribed_text;
 
-    const SYSTEM_PROMPT = `Você é um especialista em criar FAQs (Perguntas Frequentes) para landing pages.
+    const SYSTEM_PROMPT = `Você é um especialista técnico no segmento do documento fornecido.
+Sua missão é criar FAQs de alta qualidade, técnicas e otimizadas para SEO e IA Search.
 
 REGRAS OBRIGATÓRIAS:
+
 1. Use EXCLUSIVAMENTE informações presentes no texto fornecido
 2. NÃO invente dados, números, certificações ou informações que não estão no documento
 3. Se uma informação não existe no texto, NÃO crie uma FAQ sobre ela
-4. As respostas devem ser em HTML com tags como <p>, <strong>, <ul>, <li>
-5. Crie entre 8 e 12 FAQs relevantes e úteis
-6. As perguntas devem ser naturais, como um cliente real perguntaria
-7. As respostas devem ser completas mas concisas
-8. Ordene da pergunta mais provável à menos provável`;
 
-    const USER_PROMPT = `Com base EXCLUSIVAMENTE no conteúdo abaixo sobre "${landing_page_name}", gere FAQs usando a função fornecida.
+4. ESTRUTURA de cada FAQ:
+   - Pergunta clara, objetiva, escrita como um profissional real perguntaria
+   - Resposta técnica, confiável e fácil de entender
+   - Respostas entre 40 e 80 palavras
+   - As respostas devem ser em HTML com tags como <p>, <strong>, <ul>, <li>
+
+5. COBERTURA TEMÁTICA OBRIGATÓRIA (quando o documento permitir):
+   - Diferenças de performance entre os itens/modelos comparados
+   - Qual item é mais indicado para iniciantes ou uso básico
+   - Qual oferece melhor custo-benefício
+   - Diferenças entre modelos/versões similares
+   - Destaques do modelo/item de alta performance
+   - Diferenciais em workflows avançados ou funcionalidades especiais
+   - Importância de recursos tecnológicos (IA, automação) na prática
+   - Impacto de especificações técnicas (velocidade, precisão) no uso real
+   - Custos de manutenção e consumíveis
+   - Qual escolher para casos/aplicações específicas
+
+6. LINGUAGEM:
+   - Técnica, profissional e neutra
+   - Sem termos promocionais ou adjetivos exagerados ("revolucionário", "incrível", "o melhor")
+   - Clareza máxima para humanos e motores de busca por IA
+
+7. SEO / IA SEARCH:
+   - Inclua naturalmente os nomes completos dos itens/produtos/modelos mencionados
+   - Não repita frases iguais entre FAQs
+   - Evite linguagem ambígua
+   - Use termos de busca que um profissional usaria
+
+8. Gere exatamente 10 FAQs
+9. Ordene da pergunta mais provável à menos provável`;
+
+    const USER_PROMPT = `Analise o conteúdo abaixo sobre "${landing_page_name}" e gere 10 FAQs especializadas usando a função fornecida.
+
+IMPORTANTE:
+- Identifique o segmento/nicho do documento e adapte a linguagem técnica
+- Se houver tabelas comparativas, crie FAQs que explorem as diferenças entre os itens comparados
+- Cada resposta deve ter entre 40 e 80 palavras, em HTML
+- NÃO invente informações que não estão no documento
 
 CONTEÚDO DO DOCUMENTO:
 ${clippedText}`;
@@ -70,7 +105,7 @@ ${clippedText}`;
             type: 'function',
             function: {
               name: 'generate_faqs',
-              description: 'Gera FAQs estruturadas baseadas no conteúdo do documento',
+              description: 'Gera 10 FAQs técnicas e especializadas baseadas no conteúdo do documento',
               parameters: {
                 type: 'object',
                 properties: {
@@ -79,13 +114,13 @@ ${clippedText}`;
                     items: {
                       type: 'object',
                       properties: {
-                        question: { type: 'string', description: 'Pergunta natural que um cliente faria' },
-                        answer: { type: 'string', description: 'Resposta em HTML com formatação rica (<p>, <strong>, <ul>, <li>)' }
+                        question: { type: 'string', description: 'Pergunta técnica e natural que um profissional faria' },
+                        answer: { type: 'string', description: 'Resposta em HTML (40-80 palavras) com formatação rica (<p>, <strong>, <ul>, <li>)' }
                       },
                       required: ['question', 'answer'],
                       additionalProperties: false
                     },
-                    description: 'Array de 8-12 FAQs'
+                    description: 'Array de exatamente 10 FAQs técnicas e especializadas'
                   }
                 },
                 required: ['faqs'],
