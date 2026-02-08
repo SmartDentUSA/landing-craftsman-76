@@ -1269,7 +1269,7 @@ const onApprove = (data: LandingPageData): LandingPageData => {
  * Evita re-renders desnecessários do iframe
  */
 
-const EditorContent = () => {
+const EditorPageContent = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { id } = useParams();
@@ -8077,7 +8077,7 @@ dataLayer = [{
 const Editor = () => {
   return (
     <ProtectedRoute requiredRole="admin">
-      <EditorContent />
+      <EditorPageContent />
     </ProtectedRoute>
   );
 };
