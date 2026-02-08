@@ -4,6 +4,7 @@ import { useSpinSolutionsByProducts } from "@/hooks/useSpinSolutionsByProducts";
 import { RotateCcw, RotateCw } from "lucide-react";
 import { BannerSection } from "@/components/editor/BannerSection";
 import { SolutionsSection } from "@/components/editor/SolutionsSection";
+import { PDFContentImporter } from "@/components/editor/PDFContentImporter";
 import { SEOSection } from "@/components/editor/SEOSection";
 import { KOLSection } from "@/components/editor/KOLSection";
 import { KnowledgeFeedSection } from "@/components/editor/KnowledgeFeedSection";
@@ -1360,6 +1361,7 @@ const EditorContent = () => {
   const [companyProfile, setCompanyProfile] = useState<any>(null);
   const [generatingBlog, setGeneratingBlog] = useState(false);
   const [isImportingFromRepo, setIsImportingFromRepo] = useState(false);
+  const [pdfTranscription, setPdfTranscription] = useState<string | null>(null);
   
   // Novo sistema centralizado de produtos
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
@@ -4966,6 +4968,81 @@ const EditorContent = () => {
                         </div>
                       </div>
                     </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* Importar Conteúdo (PDF) */}
+                <AccordionItem value="pdf-content-importer">
+                  <AccordionTrigger>
+                    <span className="flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      Importar Conteúdo (PDF)
+                    </span>
+                  </AccordionTrigger>
+                  <AccordionContent className="space-y-4">
+                    <PDFContentImporter
+                      data={data}
+                      landingPageName={data.name || 'Landing Page'}
+                      pdfTranscription={pdfTranscription}
+                      onTranscriptionSaved={(text) => setPdfTranscription(text || null)}
+                      onApplySuggestions={(suggestions) => {
+                        setData(prev => ({
+                          ...prev,
+                          seo_title: suggestions.seo_title || prev.seo_title,
+                          seo_description: suggestions.seo_description || prev.seo_description,
+                          banner: {
+                            ...prev.banner,
+                            title: suggestions.banner_title || prev.banner.title,
+                            subtitle: suggestions.banner_subtitle || prev.banner.subtitle,
+                            badge_text: suggestions.banner_badge_text || prev.banner.badge_text,
+                          },
+                          solutions_title: suggestions.solutions_title || prev.solutions_title,
+                          advisory: {
+                            ...prev.advisory,
+                            title: suggestions.advisory_title || prev.advisory.title,
+                            paragraph: suggestions.advisory_paragraph || prev.advisory.paragraph,
+                          },
+                          cta_final: {
+                            ...prev.cta_final,
+                            title: suggestions.cta_final_title || prev.cta_final.title,
+                            paragraph: suggestions.cta_final_paragraph || prev.cta_final.paragraph,
+                          },
+                          desktop_info: {
+                            ...prev.desktop_info,
+                            title: suggestions.desktop_info_title || prev.desktop_info.title,
+                            text: suggestions.desktop_info_text || prev.desktop_info.text,
+                          },
+                        }));
+                        dirtyRef.current = true;
+                      }}
+                      onApplyTable={(tableTitle, tableHeaders, tableData) => {
+                        const updatedData = {
+                          ...data,
+                          desktop_info: {
+                            ...data.desktop_info,
+                            show_table: true,
+                            table_title: tableTitle,
+                            table_headers: tableHeaders,
+                            table_data: tableData,
+                            visible_desktop: true,
+                          },
+                        };
+                        setData(updatedData);
+                        debouncedDesktopSave(updatedData);
+                      }}
+                      onFAQsGenerated={(faqs) => {
+                        setData(prev => ({
+                          ...prev,
+                          faq: [...(prev.faq || []), ...faqs],
+                          faq_section: {
+                            ...prev.faq_section,
+                            visible_desktop: true,
+                            visible_mobile: true,
+                          },
+                        }));
+                        dirtyRef.current = true;
+                      }}
+                    />
                   </AccordionContent>
                 </AccordionItem>
 
