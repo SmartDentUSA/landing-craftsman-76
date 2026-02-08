@@ -5016,19 +5016,18 @@ const EditorContent = () => {
                         dirtyRef.current = true;
                       }}
                       onApplyTable={(tableTitle, tableHeaders, tableData) => {
-                        const updatedData = {
-                          ...data,
+                        setData(prev => ({
+                          ...prev,
                           desktop_info: {
-                            ...data.desktop_info,
+                            ...prev.desktop_info,
                             show_table: true,
                             table_title: tableTitle,
                             table_headers: tableHeaders,
                             table_data: tableData,
                             visible_desktop: true,
                           },
-                        };
-                        setData(updatedData);
-                        debouncedDesktopSave(updatedData);
+                        }));
+                        dirtyRef.current = true;
                       }}
                       onFAQsGenerated={(faqs) => {
                         setData(prev => ({
