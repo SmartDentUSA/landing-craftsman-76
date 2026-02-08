@@ -74,8 +74,11 @@ REGRAS CRÍTICAS PARA TABELAS:
 - Preserve cabeçalhos EXATAMENTE como escritos no documento (maiúsculas, acentos, unidades)
 - Preserve valores de cada célula FIELMENTE (números, unidades, símbolos)
 - Cada linha da tabela deve ser um objeto com chaves iguais aos headers
-- Se houver múltiplas tabelas, retorne TODAS no array extracted_tables
 - Dê um título descritivo para cada tabela baseado no contexto do documento
+- REGRA DE CONSOLIDAÇÃO: Se o documento contiver seções em páginas diferentes que comparam os MESMOS itens/produtos/colunas (ex: mesmos scanners, mesmas marcas, mesmos modelos), consolide TODAS as linhas em UMA ÚNICA tabela. Use os nomes das colunas da primeira ocorrência como cabeçalho padrão
+- Sub-títulos de páginas diferentes (ex: "Software base", "Relatórios clínicos") devem virar linhas separadoras dentro da mesma tabela, NÃO tabelas separadas
+- Ao consolidar, adicione uma linha com o sub-título da seção como separador (ex: {"Característica": "--- Software ---", demais colunas vazias ""})
+- SOMENTE retorne tabelas REALMENTE separadas (que comparam itens DIFERENTES) como entradas distintas no array extracted_tables
 
 REGRAS PARA SUGESTÕES:
 - Baseie-se EXCLUSIVAMENTE no conteúdo do PDF
