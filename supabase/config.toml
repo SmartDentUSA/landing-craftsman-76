@@ -203,3 +203,9 @@ verify_jwt = true
 
 [functions.generate-instagram-carousel]
 verify_jwt = false
+
+[functions.transcribe-landing-page-pdf]
+verify_jwt = false
+
+[functions.generate-landing-page-faqs]
+verify_jwt = false
