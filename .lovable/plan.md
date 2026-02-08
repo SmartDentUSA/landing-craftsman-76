@@ -1,212 +1,140 @@
 
 
-# Plano: Importador de PDF com IA para Landing Pages (com Extração de Tabelas)
+# Plano: Corrigir PDF Importer - Textos nao aplicados + Tabelas duplicadas
 
-## Visão Geral
+## Diagnostico
 
-Criar uma nova seção no editor de landing pages (aba **Conteúdo**, abaixo do **CTA Final**, antes do **Footer**) que permite:
+Foram identificadas **2 causas raiz** distintas:
 
-1. Upload de um PDF com o conteúdo/propósito da landing page
-2. A IA transcreve fielmente o texto do PDF
-3. **Tabelas encontradas no PDF são extraídas e mapeadas diretamente para a seção "Informações Desktop > Mostrar Tabela"**, preservando cabeçalhos e dados exatamente como estão no PDF
-4. Preview da transcrição + preview da tabela extraída para aprovação do usuário
-5. Após aprovação, sugere preenchimento automático dos campos de texto da página
-6. Após salvar, botão "Gerar FAQ por IA" cria FAQs baseadas no conteúdo importado
+### Bug 1: Textos e tabela nao populados nos campos do editor
 
-## Fluxo do Usuário
+**Causa raiz: Race condition no `setData`**
+
+No `PDFContentImporter.tsx`, o metodo `handleApplySuggestions` (linha 168) chama duas callbacks em sequencia:
 
 ```text
-[Upload PDF] --> [Processando com IA...]
-                        |
-              [Preview da Transcrição]
-              [Preview da Tabela Extraída]  <-- NOVO
-                        |
-                 [Aprovar / Descartar]
-                        |
-              [Sugestões para campos de texto]
-              [Tabela populada automaticamente em Desktop Info]  <-- NOVO
-                        |
-                 [Aceitar Sugestões]
-                        |
-                 [Salvar] --> [Botão Gerar FAQ por IA]
+1. onApplySuggestions(toApply)   --> setData(prev => {...})   [forma funcional - OK]
+2. onApplyTable(title, headers, rows)  --> setData({...data...})  [usa "data" do closure - BUG]
 ```
 
-## Arquivos a Criar
-
-### 1. `src/components/editor/PDFContentImporter.tsx`
-
-Componente React que gerencia todo o fluxo:
-
-**Estados:** `idle` | `uploading` | `preview` | `suggesting` | `suggestions_ready` | `applied`
-
-**Interface visual:**
-- Zona de upload drag-and-drop (PDF, max 10MB)
-- Area de preview com scroll para texto transcrito
-- **Preview visual da tabela extraída** (usando os componentes Table/TableHeader/TableRow/TableCell existentes) para que o usuário veja exatamente como ficará
-- Botões "Aprovar Transcrição" e "Descartar"
-- Cards de sugestões com checkbox individual para cada campo
-- Botão "Gerar FAQ por IA" (aparece após conteúdo aplicado e salvo)
-
-**Props do componente:**
-- `data` - Dados atuais da landing page
-- `onApplySuggestions(suggestions)` - Callback para aplicar nos campos de texto
-- `onApplyTable(table_title, table_headers, table_data)` - Callback para popular desktop_info com a tabela do PDF
-- `onFAQsGenerated(faqs)` - Callback para popular o array faq
-- `onTranscriptionSaved(text)` - Callback para guardar transcrição no estado
-
-### 2. `supabase/functions/transcribe-landing-page-pdf/index.ts`
-
-Edge function que recebe o PDF e retorna:
-
-**Entrada:** FormData com arquivo PDF + nome da landing page
-
-**Processamento:**
-1. Extrai texto com `pdfjs-serverless` (mesma lib já usada em `transcribe-product-document`)
-2. Envia para Lovable AI (Gemini 2.5 Flash) com **tool calling** para resposta estruturada
-
-**Saída estruturada via tool calling:**
+O problema esta no `onApplyTable` dentro de `Editor.tsx` (linha 5018-5031):
 
 ```text
-{
-  transcribed_text: string,          // Texto fiel do PDF
-  suggestions: {
-    seo_title: string,
-    seo_description: string,
-    banner_title: string,
-    banner_subtitle: string,
-    banner_badge_text: string,
-    solutions_title: string,
-    advisory_title: string,
-    advisory_paragraph: string,
-    cta_final_title: string,
-    cta_final_paragraph: string,
-    desktop_info_title: string,
-    desktop_info_text: string
-  },
-  extracted_tables: [                 // NOVO - Tabelas extraídas do PDF
-    {
-      title: string,                  // Título/contexto da tabela
-      headers: string[],              // Cabeçalhos das colunas
-      rows: Array<Record<string, string>>  // Dados das linhas, chaveados pelos headers
-    }
-  ]
-}
+onApplyTable={(tableTitle, tableHeaders, tableData) => {
+  const updatedData = {
+    ...data,        // <-- USA "data" ANTIGO do closure!
+    desktop_info: { ... }
+  };
+  setData(updatedData);   // <-- SOBRESCREVE as sugestoes de texto!
+}}
 ```
 
-**Regras para extração de tabelas:**
-- A IA deve identificar TODAS as tabelas presentes no PDF
-- Preservar cabeçalhos exatamente como escritos no documento
-- Preservar dados de cada célula fielmente (números, unidades, textos)
-- Cada linha é um objeto com chaves iguais aos headers
-- Se múltiplas tabelas existirem, retornar array com todas (a primeira será usada por padrão)
+Quando `onApplyTable` executa, `data` ainda referencia o estado ANTERIOR (antes das sugestoes de texto serem aplicadas). Como `setData(updatedData)` nao usa a forma funcional (`prev =>`), ele sobrescreve o estado com os dados antigos + tabela, eliminando todas as sugestoes de texto que `onApplySuggestions` acabou de definir.
 
-**Mapeamento direto para desktop_info:**
+**Resultado:** Apenas a tabela seria aplicada (mas tambem nao persiste porque `debouncedDesktopSave` recebe dados stale), e os textos sao perdidos.
 
-| Campo do PDF (IA)    | Campo desktop_info     |
-|----------------------|------------------------|
-| `extracted_tables[0].title`   | `table_title`    |
-| `extracted_tables[0].headers` | `table_headers`  |
-| `extracted_tables[0].rows`    | `table_data`     |
+### Bug 2: IA retornou 3 tabelas quando o PDF tem apenas 1
 
-Quando o usuário aprovar, o sistema automaticamente:
-- Ativa `show_table: true` no desktop_info
-- Popula `table_title` com o título da tabela
-- Popula `table_headers` com os cabeçalhos extraídos
-- Popula `table_data` com as linhas, no formato `Array<{ [header]: valor }>`
+O PDF "Tabela Comparativa -- Scanners Intraorais" contem **UMA unica tabela comparativa** que se estende por 3 paginas:
 
-### 3. `supabase/functions/generate-landing-page-faqs/index.ts`
+- **Pagina 1:** Especificacoes de hardware (Conectividade, Velocidade, Peso...)
+- **Pagina 2:** Recursos de software (Smart Scan, Workflows, Linha de termino...)
+- **Pagina 3:** IA clinica e precos (Workflows clinicos, Preco ponteira, Preco cabo...)
 
-Edge function para gerar FAQs após importação:
+Todas as paginas comparam os **mesmos 5 scanners** (Medit i600, i700, i700 Wireless, BLZ Ino200, Medit i900). A IA interpretou cada pagina como uma tabela separada porque:
 
-**Entrada:** `transcribed_text`, `landing_page_name`, dados atuais
+1. O prompt diz "Se houver multiplas tabelas, retorne TODAS no array extracted_tables"
+2. Cada pagina tem um sub-titulo diferente ("Software base", "Relatorios clinicos inteligentes")
+3. Nao ha instrucao para consolidar tabelas que comparam os mesmos itens
 
-**Saída:** Array de 8-12 FAQs `{ question, answer }` com respostas em HTML
+---
 
-**Regras:** Usar EXCLUSIVAMENTE informações do texto transcrito, zero alucinações
+## Correcoes
 
-## Arquivos a Editar
+### Correcao 1: Eliminar race condition no Editor.tsx
 
-### 4. `src/pages/Editor.tsx`
+**Arquivo:** `src/pages/Editor.tsx` (linhas 5018-5031)
 
-**Novo estado:**
+Mudar `onApplyTable` para usar a forma funcional do `setData` (com `prev`), eliminando a dependencia do `data` stale do closure. Remover `debouncedDesktopSave` pois o usuario ira clicar "Salvar" para persistir tudo junto.
+
+**De:**
 ```text
-const [pdfTranscription, setPdfTranscription] = useState<string | null>(null);
+onApplyTable={(tableTitle, tableHeaders, tableData) => {
+  const updatedData = {
+    ...data,                    // <-- STALE!
+    desktop_info: {
+      ...data.desktop_info,     // <-- STALE!
+      show_table: true,
+      table_title: tableTitle,
+      table_headers: tableHeaders,
+      table_data: tableData,
+      visible_desktop: true,
+    },
+  };
+  setData(updatedData);
+  debouncedDesktopSave(updatedData);
+}}
 ```
 
-**Nova seção no Accordion** (entre "CTA Final" e "Footer", ~linha 4971):
+**Para:**
 ```text
-AccordionItem value="pdf-content-importer"
-  - Título: "Importar Conteúdo (PDF)"
-  - Componente PDFContentImporter
+onApplyTable={(tableTitle, tableHeaders, tableData) => {
+  setData(prev => ({
+    ...prev,
+    desktop_info: {
+      ...prev.desktop_info,
+      show_table: true,
+      table_title: tableTitle,
+      table_headers: tableHeaders,
+      table_data: tableData,
+      visible_desktop: true,
+    },
+  }));
+  dirtyRef.current = true;
+}}
 ```
 
-**Callback `onApplyTable`:**
-Quando chamado, atualiza o estado `data` com:
-```text
-desktop_info: {
-  ...data.desktop_info,
-  show_table: true,
-  table_title: title da tabela extraída,
-  table_headers: headers extraídos,
-  table_data: rows extraídos
-}
-```
-E aciona `saveDesktopInfo()` para persistir.
+### Correcao 2: Consolidar tabelas no prompt da IA
 
-**Callback `onApplySuggestions`:**
-Atualiza os 12 campos de texto da landing page com as sugestões aceitas pelo usuário.
+**Arquivo:** `supabase/functions/transcribe-landing-page-pdf/index.ts` (linhas 67-85)
 
-**Callback `onFAQsGenerated`:**
-Adiciona FAQs ao array existente e ativa a seção FAQ.
+Adicionar regra explicita no SYSTEM_PROMPT para consolidar tabelas que comparam os mesmos itens em paginas diferentes:
 
-### 5. `supabase/config.toml`
-
-Registrar as duas novas edge functions:
-```text
-[functions.transcribe-landing-page-pdf]
-verify_jwt = false
-
-[functions.generate-landing-page-faqs]
-verify_jwt = false
-```
-
-## Detalhes Importantes sobre a Extração de Tabelas
-
-**Exemplo prático:**
-
-Se o PDF contiver uma tabela como:
+**Adicionar ao SYSTEM_PROMPT (secao REGRAS CRITICAS PARA TABELAS):**
 
 ```text
-Especificações Técnicas do NanoClean PoD
-| Propriedade       | Valor         | Padrão ISO  |
-| Resistência       | 150 MPa       | ISO 178     |
-| Módulo Flexural   | 6.2 GPa       | ISO 178     |
-| Absorção de Água  | 15.2 μg/mm³   | ISO 4049    |
+- REGRA DE CONSOLIDACAO: Se o documento contiver secoes em paginas diferentes que
+  comparam os MESMOS itens/produtos/colunas (ex: mesmos scanners, mesmas marcas),
+  consolide TODAS as linhas em UMA UNICA tabela. Use os nomes das colunas da
+  primeira ocorrencia como cabecalho padrao
+- Sub-titulos de paginas diferentes (ex: "Software base", "Relatorios clinicos")
+  devem virar linhas separadoras ou categorias dentro da mesma tabela, NAO tabelas
+  separadas
+- Ao consolidar, adicione uma linha com o sub-titulo da secao como separador
+  (ex: {"Caracteristica": "--- Software ---", ...colunas vazias})
 ```
 
-O sistema extrairá e populará:
-- `table_title`: "Especificações Técnicas do NanoClean PoD"
-- `table_headers`: ["Propriedade", "Valor", "Padrão ISO"]
-- `table_data`: [
-    {"Propriedade": "Resistência", "Valor": "150 MPa", "Padrão ISO": "ISO 178"},
-    {"Propriedade": "Módulo Flexural", "Valor": "6.2 GPa", "Padrão ISO": "ISO 178"},
-    {"Propriedade": "Absorção de Água", "Valor": "15.2 μg/mm³", "Padrão ISO": "ISO 4049"}
-  ]
+### Correcao 3: Garantir persistencia apos aplicar sugestoes
 
-O preview no componente mostrará esta tabela visualmente antes da aprovação.
+**Arquivo:** `src/components/editor/PDFContentImporter.tsx` (linhas 168-190)
 
-**Se houver múltiplas tabelas no PDF:**
-- O componente mostrará um seletor para o usuário escolher qual tabela usar
-- A tabela selecionada será mapeada para desktop_info
-- As demais poderão ser descartadas ou inseridas manualmente depois
+Atualmente, `handleApplySuggestions` chama `onApplySuggestions` e `onApplyTable` em sequencia. Para garantir que as duas atualizacoes de estado sejam processadas corretamente, inverter a ordem (primeiro tabela com forma funcional, depois textos com forma funcional) e acionar o save manual.
+
+Na verdade, com a Correcao 1 ja aplicada (ambos usando `setData(prev => ...)`), a ordem nao importa pois o React batcha ambas as chamadas corretamente. Nao e necessaria alteracao aqui.
+
+---
 
 ## Resumo de Arquivos
 
-| Arquivo | Ação | Descrição |
-|---------|------|-----------|
-| `src/components/editor/PDFContentImporter.tsx` | Criar | Componente de upload, preview (texto + tabela), sugestões e FAQ |
-| `supabase/functions/transcribe-landing-page-pdf/index.ts` | Criar | Transcrição + extração de tabelas + sugestões |
-| `supabase/functions/generate-landing-page-faqs/index.ts` | Criar | Geração de FAQs baseada no conteúdo |
-| `src/pages/Editor.tsx` | Editar | Adicionar seção, estados e callbacks (incluindo onApplyTable) |
-| `supabase/config.toml` | Editar | Registrar 2 novas edge functions |
+| Arquivo | Linhas | Correcao |
+|---------|--------|----------|
+| `src/pages/Editor.tsx` | 5018-5031 | Usar `setData(prev => ...)` em vez de `setData({...data})` no onApplyTable |
+| `supabase/functions/transcribe-landing-page-pdf/index.ts` | 67-85 | Adicionar regras de consolidacao de tabelas ao prompt |
+
+## Resultado Esperado
+
+- **Textos**: Ao clicar "Aplicar Selecionados", todos os campos selecionados (SEO, Banner, Advisory, CTA, Desktop Info) serao populados corretamente no editor
+- **Tabela**: A tabela sera aplicada em "Informacoes Desktop > Mostrar Tabela" sem sobrescrever os textos
+- **PDF com 1 tabela em varias paginas**: A IA consolidara em uma unica tabela com todos os dados fielmente preservados
+- **Persistencia**: `dirtyRef.current = true` garante que o usuario veja que ha alteracoes pendentes para salvar
 
