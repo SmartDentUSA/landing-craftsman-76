@@ -4990,6 +4990,11 @@ const EditorContent = () => {
                           ...prev,
                           seo_title: suggestions.seo_title || prev.seo_title,
                           seo_description: suggestions.seo_description || prev.seo_description,
+                          seo: {
+                            ...prev.seo,
+                            seo_title: suggestions.seo_title || prev.seo?.seo_title,
+                            seo_description: suggestions.seo_description || prev.seo?.seo_description,
+                          },
                           banner: {
                             ...prev.banner,
                             title: suggestions.banner_title || prev.banner.title,
