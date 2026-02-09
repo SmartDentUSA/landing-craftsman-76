@@ -5021,17 +5021,21 @@ const EditorPageContent = () => {
                         dirtyRef.current = true;
                       }}
                       onApplyTable={(tableTitle, tableHeaders, tableData) => {
-                        setData(prev => ({
-                          ...prev,
+                        const updatedData = {
+                          ...data,
                           desktop_info: {
-                            ...prev.desktop_info,
+                            title: data.desktop_info?.title || '',
+                            text: data.desktop_info?.text || '',
+                            visible_mobile: data.desktop_info?.visible_mobile || false,
                             show_table: true,
                             table_title: tableTitle,
                             table_headers: tableHeaders,
                             table_data: tableData,
                             visible_desktop: true,
                           },
-                        }));
+                        };
+                        setData(updatedData);
+                        saveDesktopInfo(updatedData);
                         dirtyRef.current = true;
                       }}
                       onFAQsGenerated={(faqs) => {
