@@ -5021,22 +5021,31 @@ const EditorPageContent = () => {
                         dirtyRef.current = true;
                       }}
                       onApplyTable={(tableTitle, tableHeaders, tableData) => {
+                        const updatedDesktopInfo = {
+                          title: data.desktop_info?.title || '',
+                          text: data.desktop_info?.text || '',
+                          visible_mobile: data.desktop_info?.visible_mobile || false,
+                          show_table: true,
+                          table_title: tableTitle,
+                          table_headers: tableHeaders,
+                          table_data: tableData,
+                          visible_desktop: true,
+                        };
                         const updatedData = {
                           ...data,
-                          desktop_info: {
-                            title: data.desktop_info?.title || '',
-                            text: data.desktop_info?.text || '',
-                            visible_mobile: data.desktop_info?.visible_mobile || false,
-                            show_table: true,
-                            table_title: tableTitle,
-                            table_headers: tableHeaders,
-                            table_data: tableData,
-                            visible_desktop: true,
-                          },
+                          desktop_info: updatedDesktopInfo,
                         };
                         setData(updatedData);
-                        saveDesktopInfo(updatedData);
                         dirtyRef.current = true;
+
+                        // Save direto (sem debounce) para garantir persistência imediata
+                        if (id) {
+                          updateLandingPage(id, { data: { desktop_info: updatedDesktopInfo } })
+                            .then((ok) => {
+                              if (ok) console.log('✅ Tabela importada salva com sucesso');
+                              else console.warn('⚠️ Falha ao salvar tabela importada');
+                            });
+                        }
                       }}
                       onFAQsGenerated={(faqs) => {
                         setData(prev => ({
