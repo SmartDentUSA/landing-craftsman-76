@@ -588,7 +588,7 @@ Formato JSON obrigatório:
 - NÃO invente características ou benefícios
 - Mantenha-se fiel à abordagem ${approach}`;
   } else {
-    return `Você é um especialista em marketing digital no Instagram especializado em Reels.
+    return `Você é um estrategista de conteúdo para Instagram, especialista em Reels virais para o nicho de tecnologia odontológica.
 
 ${baseInfo}
 
@@ -596,31 +596,34 @@ ${baseInfo}
 ${approachGuides[approach]}
 
 Crie uma copy ÚNICA e ORIGINAL seguindo EXCLUSIVAMENTE a abordagem "${approach}".
-NÃO misture outras abordagens. Seja dinâmico e viral.
+Aplique a estrutura "Loop e Engajamento" abaixo com o ângulo da abordagem "${approach}".
 
-INSTRUÇÕES ESPECÍFICAS PARA REELS:
-1. Copy Principal: Máximo 2200 caracteres, linguagem energética
-2. Hook inicial: MUITO impactante, cause curiosidade imediata
-3. Linguagem: Casual, use gírias quando apropriado
-4. Timing: Pense na sincronização com as cenas do vídeo
-5. Interação: Incentive likes, shares, comentários e saves
-6. Hashtags: Foque em hashtags de Reels e tendências
-7. Call-to-Action OBRIGATÓRIO: Use palavra gatilho BOT
+📋 ESTRUTURA OBRIGATÓRIA DA RESPOSTA:
 
-TEMPLATES OBRIGATÓRIOS PARA A ÚLTIMA FRASE (escolha 1):
-- "💬 Comenta '{random_trigger_word}' que te mando tudo no direct! 🔥"
-- "💬 Duplo toque + comenta '{random_trigger_word}' para mais informações!"
-- "💬 Deixa '{random_trigger_word}' nos comentários que te explico tudo!"
+A) **Headline (O Gancho de 3 segundos)**: Comece com uma frase curta que gere curiosidade extrema ou identifique um erro comum (ex: "O erro que está travando sua clínica" ou "Impressão 3D sem ser engenheiro?").
 
-Se não houver palavras gatilho, use: "💬 Comenta 'QUERO' que te mando mais informações!"
+B) **O Conflito**: Exponha a frustração do dentista com o método antigo ou complexo em 2 frases rápidas.
+
+C) **A Solução (O "Clímax")**: Apresente o produto como o herói que simplifica a vida, usando **negrito** no nome dele.
+
+D) **Bullet Points de Desejo**: Liste 3 benefícios que poupam TEMPO ou DINHEIRO do dentista (use emojis 💸, ⏳, ✅).
+
+E) **A Chamada para Ação (CTA de Engajamento)**: Use uma estratégia de "Isca Digital". Peça para o usuário comentar uma palavra específica das PALAVRAS GATILHO BOT para receber algo. Isso é crucial para o algoritmo entender que o post é relevante.
+
+F) **Hashtags**: Sugira 5 hashtags estratégicas (sendo 2 amplas e 3 específicas do nicho).
+
+📐 DIRETRIZES DE ALGORITMO:
+- Sem paredes de texto: Máximo 2 frases por parágrafo
+- Linguagem: Use termos como "mudar o jogo", "próximo nível", "sem perrengue"
+- Tom: Dinâmico, viral, energético
 
 CRÍTICO: Retorne APENAS um JSON válido sem blocos de código markdown.
 
 Formato JSON obrigatório:
 {
-  "feed_copy": "Copy dinâmica para Reels seguindo a abordagem ${approach}",
-  "hashtags": ["#reels", "#viral"],
-  "call_to_action": "Frase final com palavra gatilho"
+  "feed_copy": "Copy completa para Reels seguindo a estrutura Loop e Engajamento com abordagem ${approach}. Inclua Headline > Conflito > Solução > Bullet Points > CTA tudo no texto.",
+  "hashtags": ["#hashtag_ampla1", "#hashtag_ampla2", "#hashtag_nicho1", "#hashtag_nicho2", "#hashtag_nicho3"],
+  "call_to_action": "Frase de CTA com palavra gatilho BOT (isca digital)"
 }
 
 ⚠️ INSTRUÇÕES ANTI-ALUCINAÇÃO:
@@ -708,7 +711,7 @@ Formato JSON esperado:
 IMPORTANTE: Não use blocos de código markdown, retorne apenas o JSON puro.`;
   } else if (type === 'instagram') {
     if (instagramType === 'reels') {
-      return `Você é um especialista em marketing digital no Instagram especializado em conteúdo para Reels. Crie uma copy otimizada para vídeos Reels.
+      return `Você é um estrategista de conteúdo para Instagram, especialista em Reels virais para o nicho de tecnologia odontológica.
 
 Informações do Produto:
 - Nome: {product.name}
@@ -725,32 +728,34 @@ Informações da Empresa:
 
 PALAVRAS GATILHO BOT: {product.bot_trigger_words}
 
-INSTRUÇÕES ESPECÍFICAS PARA REELS:
-1. Copy Principal: Máximo 2200 caracteres, mas mais dinâmica e energética
-2. Hook inicial: Muito impactante, cause curiosidade nos primeiros 3 segundos
-3. Linguagem: Mais casual, use gírias quando apropriado ao público
-4. Timing: Pense na sincronização com as cenas do vídeo
-5. Interação: Incentive likes, shares, comentários e saves
-6. Copy para Stories: Versão para republicar nos Stories
-7. Hashtags: Foque em hashtags de Reels e tendências
-8. Call-to-Action OBRIGATÓRIO: A última frase DEVE usar uma palavra gatilho BOT para incentivar interação
+📋 ESTRUTURA OBRIGATÓRIA DA RESPOSTA (Loop e Engajamento):
 
-TEMPLATES OBRIGATÓRIOS PARA A ÚLTIMA FRASE (escolha 1):
-- "💬 Comenta '{random_trigger_word}' que te mando tudo no direct! 🔥"
-- "💬 Duplo toque + comenta '{random_trigger_word}' para mais informações!"
-- "💬 Deixa '{random_trigger_word}' nos comentários que te explico tudo!"
+A) **Headline (O Gancho de 3 segundos)**: Comece com uma frase curta que gere curiosidade extrema ou identifique um erro comum (ex: "O erro que está travando sua clínica" ou "Impressão 3D sem ser engenheiro?").
 
-Se não houver palavras gatilho configuradas, use: "💬 Comenta 'QUERO' que te mando mais informações!"
+B) **O Conflito**: Exponha a frustração do dentista com o método antigo ou complexo em 2 frases rápidas.
+
+C) **A Solução (O "Clímax")**: Apresente o produto como o herói que simplifica a vida, usando **negrito** no nome dele.
+
+D) **Bullet Points de Desejo**: Liste 3 benefícios que poupam TEMPO ou DINHEIRO do dentista (use emojis 💸, ⏳, ✅).
+
+E) **A Chamada para Ação (CTA de Engajamento)**: Use uma estratégia de "Isca Digital". Peça para o usuário comentar uma palavra específica das PALAVRAS GATILHO BOT para receber algo. Isso é crucial para o algoritmo.
+
+F) **Hashtags**: Sugira 5 hashtags estratégicas (sendo 2 amplas e 3 específicas do nicho).
+
+📐 DIRETRIZES DE ALGORITMO:
+- Sem paredes de texto: Máximo 2 frases por parágrafo
+- Linguagem: Use termos como "mudar o jogo", "próximo nível", "sem perrengue"
+- Tom: Dinâmico, viral, energético
 
 CRÍTICO: Retorne APENAS um JSON válido, sem blocos de código markdown.
 IMPORTANTE: As hashtags DEVEM estar sempre entre aspas. Exemplo CORRETO: ["#reels", "#viral"]
 
 Formato JSON obrigatório:
 {
-  "feed_copy": "Copy dinâmica para Reels (DEVE terminar com frase usando palavra gatilho) \\n\\nLinguagem energética e casual",
+  "feed_copy": "Copy completa para Reels seguindo a estrutura Loop e Engajamento: Headline > Conflito > Solução > Bullet Points > CTA. Linguagem energética e casual.",
   "story_copy": "Versão para Stories - máximo 160 caracteres",
-  "hashtags": ["#reels", "#viral", "#trending"],
-  "call_to_action": "Frase de call-to-action para engajamento com palavra gatilho",
+  "hashtags": ["#hashtag_ampla1", "#hashtag_ampla2", "#hashtag_nicho1", "#hashtag_nicho2", "#hashtag_nicho3"],
+  "call_to_action": "Frase de CTA com palavra gatilho BOT (isca digital)",
   "post_type": "reels"
 }`;
     } else if (instagramType === 'carousel') {
