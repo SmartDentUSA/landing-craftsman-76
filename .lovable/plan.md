@@ -1,45 +1,56 @@
 
-# Plano: Corrigir persistencia dos dados da tabela importada do PDF
+# Plano: Corrigir dados da tabela "Comparativo Scanners Intraorais"
 
 ## Diagnostico
 
-A investigacao revelou que:
+A landing page "Comparativo Scanners intraorais" tem:
+- **6 headers corretos**: Caracteristica, Medit i600, Medit i700, Medit i700 Wireless, BLZ Ino200, Medit i900
+- **194 linhas vazias** (`{}`): resquicios de uma importacao anterior que ocorreu ANTES da correcao de persistencia (deploy anterior)
+- **Ultimo save no DB**: 11:57:08 — a importacao do PDF foi as 12:04:28, ou seja, o save nao chegou ao banco
 
-1. **A edge function funciona corretamente** - Os logs mostram 31 linhas convertidas com dados reais (ex: `"Caracteristica": "Categoria"`, `"Medit i600": "Intermediario"`)
-2. **O banco de dados tem 194 objetos vazios** (`map[]`) - Estes sao resquicios de uma importacao anterior (antes da correcao do schema)
-3. **O callback `onApplyTable` nao salva no banco** - Ele apenas atualiza o estado em memoria (`setData`) e marca `dirtyRef.current = true`, mas NAO chama `saveDesktopInfo()` para persistir
+A correcao anterior (adicionar `saveDesktopInfo` no `onApplyTable`) ja esta no codigo, porem o usuario importou o PDF antes do deploy da correcao. Alem disso, o `saveDesktopInfo` usa debounce de 1500ms e guardas de hidratacao que podem causar perda de dados em cenarios de navegacao rapida.
 
-Resultado: o usuario ve os dados corretos no preview do importador, clica "Aplicar", os dados entram em memoria, mas ao recarregar a pagina os dados antigos (194 linhas vazias) voltam do banco.
+## Correcoes
 
-## Correcao
+### 1. Tornar o save da importacao PDF mais robusto (`src/pages/Editor.tsx`, ~linhas 5023-5040)
 
-### Arquivo: `src/pages/Editor.tsx` (linhas 5023-5036)
+Substituir o `saveDesktopInfo(updatedData)` (debounced, com guardas) por uma chamada direta ao `updateLandingPage` no callback `onApplyTable`. Isso garante persistencia imediata sem depender de debounce ou guardas de hidratacao:
 
-Adicionar chamada a `saveDesktopInfo` apos `setData` no callback `onApplyTable`, seguindo o mesmo padrao usado em todas as outras interacoes do Desktop Info:
-
-```
+```typescript
 onApplyTable={(tableTitle, tableHeaders, tableData) => {
+  const updatedDesktopInfo = {
+    ...(data.desktop_info || {}),
+    show_table: true,
+    table_title: tableTitle,
+    table_headers: tableHeaders,
+    table_data: tableData,
+    visible_desktop: true,
+  };
   const updatedData = {
-    ...data,           // usa 'data' atual (nao prev)
-    desktop_info: {
-      ...(data.desktop_info || {}),
-      show_table: true,
-      table_title: tableTitle,
-      table_headers: tableHeaders,
-      table_data: tableData,
-      visible_desktop: true,
-    },
+    ...data,
+    desktop_info: updatedDesktopInfo,
   };
   setData(updatedData);
-  saveDesktopInfo(updatedData);   // <-- ADICIONAR: persiste no banco
   dirtyRef.current = true;
+
+  // Save direto (sem debounce) para garantir persistencia imediata
+  if (id) {
+    updateLandingPage(id, { data: { desktop_info: updatedDesktopInfo } })
+      .then((ok) => {
+        if (ok) console.log('Tabela importada salva com sucesso');
+        else console.warn('Falha ao salvar tabela importada');
+      });
+  }
 }}
 ```
 
-Nota: Usar `data` em vez de `setData(prev => ...)` aqui segue o padrao consistente de todas as outras chamadas `saveDesktopInfo` no arquivo (linhas 4152, 4181, 4200, 4216, 4235, 4253, etc.)
+### 2. Limpar dados obsoletos no banco
 
-### Impacto
+Os 194 objetos vazios precisam ser substituidos. Ao re-importar o PDF com a correcao acima, os 31 registros corretos substituirao automaticamente os 194 vazios via deepMerge (arrays nao-vazios substituem arrays existentes).
 
-- Os dados da tabela serao salvos automaticamente apos aplicar a importacao do PDF
-- Os 194 objetos vazios serao substituidos pelos 31 registros corretos
-- O padrao fica consistente com todos os outros pontos de edicao do Desktop Info
+## Impacto
+
+- A importacao de tabela do PDF tera persistencia imediata e garantida
+- Sem dependencia de debounce (1500ms) ou guardas de hidratacao
+- O usuario precisara re-importar o PDF uma vez para substituir os dados vazios
+- Nenhuma alteracao no frontend visual — apenas na logica de persistencia
