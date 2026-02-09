@@ -1,56 +1,81 @@
 
-# Plano: Corrigir dados da tabela "Comparativo Scanners Intraorais"
+
+# Plano: Persistir sugestoes do PDF (SEO, Banner, etc.)
 
 ## Diagnostico
 
-A landing page "Comparativo Scanners intraorais" tem:
-- **6 headers corretos**: Caracteristica, Medit i600, Medit i700, Medit i700 Wireless, BLZ Ino200, Medit i900
-- **194 linhas vazias** (`{}`): resquicios de uma importacao anterior que ocorreu ANTES da correcao de persistencia (deploy anterior)
-- **Ultimo save no DB**: 11:57:08 — a importacao do PDF foi as 12:04:28, ou seja, o save nao chegou ao banco
+O callback `onApplySuggestions` (Editor.tsx, linhas 4988-5022) atualiza o estado local com `setData` e marca `dirtyRef.current = true`, mas **nao persiste no banco de dados**. Isso e o mesmo problema que afetava a tabela: o debounce de 1500ms ou guardas de hidratacao podem impedir o save, e os campos ficam vazios ao recarregar.
 
-A correcao anterior (adicionar `saveDesktopInfo` no `onApplyTable`) ja esta no codigo, porem o usuario importou o PDF antes do deploy da correcao. Alem disso, o `saveDesktopInfo` usa debounce de 1500ms e guardas de hidratacao que podem causar perda de dados em cenarios de navegacao rapida.
+Campos afetados:
+- SEO: `seo_title`, `seo_description`
+- Banner: `title`, `subtitle`, `badge_text`
+- Solutions: `solutions_title`
+- Advisory: `title`, `paragraph`
+- CTA Final: `title`, `paragraph`
+- Desktop Info: `title`, `text`
 
-## Correcoes
+## Correcao
 
-### 1. Tornar o save da importacao PDF mais robusto (`src/pages/Editor.tsx`, ~linhas 5023-5040)
+### Arquivo: `src/pages/Editor.tsx` (linhas 4988-5022)
 
-Substituir o `saveDesktopInfo(updatedData)` (debounced, com guardas) por uma chamada direta ao `updateLandingPage` no callback `onApplyTable`. Isso garante persistencia imediata sem depender de debounce ou guardas de hidratacao:
+Adicionar uma chamada direta a `updateLandingPage` apos o `setData` no callback `onApplySuggestions`, seguindo o mesmo padrao ja aplicado no `onApplyTable`:
 
 ```typescript
-onApplyTable={(tableTitle, tableHeaders, tableData) => {
-  const updatedDesktopInfo = {
-    ...(data.desktop_info || {}),
-    show_table: true,
-    table_title: tableTitle,
-    table_headers: tableHeaders,
-    table_data: tableData,
-    visible_desktop: true,
-  };
+onApplySuggestions={(suggestions) => {
   const updatedData = {
     ...data,
-    desktop_info: updatedDesktopInfo,
+    seo_title: suggestions.seo_title || data.seo_title,
+    seo_description: suggestions.seo_description || data.seo_description,
+    seo: {
+      ...data.seo,
+      seo_title: suggestions.seo_title || data.seo?.seo_title,
+      seo_description: suggestions.seo_description || data.seo?.seo_description,
+    },
+    banner: {
+      ...data.banner,
+      title: suggestions.banner_title || data.banner.title,
+      subtitle: suggestions.banner_subtitle || data.banner.subtitle,
+      badge_text: suggestions.banner_badge_text || data.banner.badge_text,
+    },
+    solutions_title: suggestions.solutions_title || data.solutions_title,
+    advisory: {
+      ...data.advisory,
+      title: suggestions.advisory_title || data.advisory.title,
+      paragraph: suggestions.advisory_paragraph || data.advisory.paragraph,
+    },
+    cta_final: {
+      ...data.cta_final,
+      title: suggestions.cta_final_title || data.cta_final.title,
+      paragraph: suggestions.cta_final_paragraph || data.cta_final.paragraph,
+    },
+    desktop_info: {
+      ...data.desktop_info,
+      title: suggestions.desktop_info_title || data.desktop_info.title,
+      text: suggestions.desktop_info_text || data.desktop_info.text,
+    },
   };
   setData(updatedData);
   dirtyRef.current = true;
 
-  // Save direto (sem debounce) para garantir persistencia imediata
+  // Save direto para persistencia imediata
   if (id) {
-    updateLandingPage(id, { data: { desktop_info: updatedDesktopInfo } })
+    updateLandingPage(id, { data: updatedData })
       .then((ok) => {
-        if (ok) console.log('Tabela importada salva com sucesso');
-        else console.warn('Falha ao salvar tabela importada');
+        if (ok) console.log('Sugestoes do PDF salvas com sucesso');
+        else console.warn('Falha ao salvar sugestoes do PDF');
       });
   }
 }}
 ```
 
-### 2. Limpar dados obsoletos no banco
+Mudanca principal: trocar `setData(prev => ...)` por construir `updatedData` a partir de `data` (mesmo padrao do `onApplyTable`) e chamar `updateLandingPage` diretamente.
 
-Os 194 objetos vazios precisam ser substituidos. Ao re-importar o PDF com a correcao acima, os 31 registros corretos substituirao automaticamente os 194 vazios via deepMerge (arrays nao-vazios substituem arrays existentes).
+## Acao necessaria do usuario
+
+Apos a implementacao, **re-importar o PDF** para que os campos sejam preenchidos e persistidos corretamente.
 
 ## Impacto
 
-- A importacao de tabela do PDF tera persistencia imediata e garantida
-- Sem dependencia de debounce (1500ms) ou guardas de hidratacao
-- O usuario precisara re-importar o PDF uma vez para substituir os dados vazios
-- Nenhuma alteracao no frontend visual — apenas na logica de persistencia
+- Todos os campos sugeridos pela IA (SEO, Banner, Advisory, CTA, Desktop Info) serao salvos imediatamente no banco
+- Sem dependencia de debounce ou guardas de hidratacao
+- Nenhuma alteracao no frontend visual
