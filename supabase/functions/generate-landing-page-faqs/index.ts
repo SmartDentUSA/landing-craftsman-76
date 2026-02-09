@@ -53,19 +53,22 @@ REGRAS OBRIGATÓRIAS:
 
 5. COBERTURA TEMÁTICA OBRIGATÓRIA (quando o documento permitir):
    - Diferenças de performance entre os itens/modelos comparados
-   - Qual item é mais indicado para iniciantes ou uso básico
-   - Qual oferece melhor custo-benefício
+   - Custo-benefício de cada equipamento com base nas especificações do documento
+   - Qual objetivo profissional cada modelo atende melhor (volume de atendimento, precisão, mobilidade, etc.)
+   - Quais diferenciais técnicos cada modelo entrega segundo os dados do documento
    - Diferenças entre modelos/versões similares
-   - Destaques do modelo/item de alta performance
-   - Diferenciais em workflows avançados ou funcionalidades especiais
-   - Importância de recursos tecnológicos (IA, automação) na prática
-   - Impacto de especificações técnicas (velocidade, precisão) no uso real
-   - Custos de manutenção e consumíveis
-   - Qual escolher para casos/aplicações específicas
+   - Como especificações técnicas se traduzem em benefícios práticos para o profissional
+   - Impacto de recursos tecnológicos (IA, automação) na prática profissional
+   - Custos de manutenção e consumíveis de cada modelo
+   - Funcionalidades exclusivas ou compartilhadas entre os modelos
 
 6. LINGUAGEM:
    - Técnica, profissional e neutra
    - Sem termos promocionais ou adjetivos exagerados ("revolucionário", "incrível", "o melhor")
+   - NUNCA usar o termo "iniciantes" ou "uso básico" em nenhuma FAQ
+   - NUNCA recomendar um equipamento como superior a outro
+   - Descrever cada equipamento pelo que ele entrega como diferencial
+   - Focar no objetivo profissional que cada modelo atende
    - Clareza máxima para humanos e motores de busca por IA
 
 7. SEO / IA SEARCH:
