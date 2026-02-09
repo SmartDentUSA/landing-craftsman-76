@@ -1,47 +1,45 @@
 
+# Plano: Corrigir persistencia dos dados da tabela importada do PDF
 
-# Plano: Otimizar Copy de Reels com estrutura "Loop e Engajamento"
+## Diagnostico
 
-## O que muda
+A investigacao revelou que:
 
-A geracao de **Copy para Reels** (as 4 variacoes de texto) sera reformulada para seguir a estrutura "Loop e Engajamento" fornecida:
+1. **A edge function funciona corretamente** - Os logs mostram 31 linhas convertidas com dados reais (ex: `"Caracteristica": "Categoria"`, `"Medit i600": "Intermediario"`)
+2. **O banco de dados tem 194 objetos vazios** (`map[]`) - Estes sao resquicios de uma importacao anterior (antes da correcao do schema)
+3. **O callback `onApplyTable` nao salva no banco** - Ele apenas atualiza o estado em memoria (`setData`) e marca `dirtyRef.current = true`, mas NAO chama `saveDesktopInfo()` para persistir
 
-1. **Headline** (Gancho de 3 segundos)
-2. **Conflito** (Frustracao com metodo antigo)
-3. **Solucao** (Produto como heroi, nome em negrito)
-4. **Bullet Points de Desejo** (3 beneficios com emojis)
-5. **CTA de Engajamento** (Isca digital com palavra gatilho BOT)
-6. **5 Hashtags** (2 amplas + 3 especificas)
+Resultado: o usuario ve os dados corretos no preview do importador, clica "Aplicar", os dados entram em memoria, mas ao recarregar a pagina os dados antigos (194 linhas vazias) voltam do banco.
 
-Os **Roteiros de Reels audiovisuais** (com cenas, visual, dialogo) permanecem inalterados.
+## Correcao
 
-## Alteracoes
+### Arquivo: `src/pages/Editor.tsx` (linhas 5023-5036)
 
-### Arquivo: `supabase/functions/generate-social-content/index.ts`
+Adicionar chamada a `saveDesktopInfo` apos `setData` no callback `onApplyTable`, seguindo o mesmo padrao usado em todas as outras interacoes do Desktop Info:
 
-**Funcao `buildPromptWithApproach`** (bloco `else` para reels, linhas ~590-630):
+```
+onApplyTable={(tableTitle, tableHeaders, tableData) => {
+  const updatedData = {
+    ...data,           // usa 'data' atual (nao prev)
+    desktop_info: {
+      ...(data.desktop_info || {}),
+      show_table: true,
+      table_title: tableTitle,
+      table_headers: tableHeaders,
+      table_data: tableData,
+      visible_desktop: true,
+    },
+  };
+  setData(updatedData);
+  saveDesktopInfo(updatedData);   // <-- ADICIONAR: persiste no banco
+  dirtyRef.current = true;
+}}
+```
 
-Substituir o prompt generico de Reels pelo prompt especializado:
+Nota: Usar `data` em vez de `setData(prev => ...)` aqui segue o padrao consistente de todas as outras chamadas `saveDesktopInfo` no arquivo (linhas 4152, 4181, 4200, 4216, 4235, 4253, etc.)
 
-- Persona: Estrategista de conteudo para Instagram, especialista em Reels virais para tecnologia odontologica
-- Estrutura obrigatoria: Headline > Conflito > Solucao > Bullet Points > CTA > Hashtags
-- Diretrizes de algoritmo: Maximo 2 frases por paragrafo, termos como "mudar o jogo", "proximo nivel"
-- Cada uma das 4 abordagens (educational, trending, behind_scenes, demonstration) aplicara a estrutura com angulo diferente
-- O JSON de saida continua no mesmo formato (`feed_copy`, `hashtags`, `call_to_action`) para compatibilidade com o frontend
+### Impacto
 
-**Funcao `getDefaultPrompt`** (bloco reels, linhas ~710-755):
-
-Atualizar tambem o prompt padrao de reels (usado quando nao ha variacoes multiplas) com a mesma estrutura "Loop e Engajamento".
-
-### Resultado no frontend
-
-- As 4 variacoes de Copy Reels terao o formato otimizado (Headline > Conflito > Solucao > Bullets > CTA + Hashtags)
-- Os Roteiros de Reels (tab separada com cenas audiovisuais) continuam identicos
-- Nenhuma alteracao no componente `InstagramCopyGenerator.tsx` e necessaria pois o formato JSON de saida permanece o mesmo
-
-## Resumo
-
-| Arquivo | Alteracao |
-|---------|-----------|
-| `supabase/functions/generate-social-content/index.ts` | Atualizar prompts de Reels copy com estrutura "Loop e Engajamento" em `buildPromptWithApproach` e `getDefaultPrompt` |
-
+- Os dados da tabela serao salvos automaticamente apos aplicar a importacao do PDF
+- Os 194 objetos vazios serao substituidos pelos 31 registros corretos
+- O padrao fica consistente com todos os outros pontos de edicao do Desktop Info
