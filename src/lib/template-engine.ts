@@ -2323,7 +2323,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                         <span class="faq-icon">&#x2304;</span>
                     </div>
                     <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
-                        <p itemprop="text">{{answer}}</p>
+                        <div itemprop="text">{{{answer}}}</div>
                     </div>
                 </div>
                 {{/faq}}
