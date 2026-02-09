@@ -1,81 +1,72 @@
 
 
-# Plano: Persistir sugestoes do PDF (SEO, Banner, etc.)
+# Plano: Ajustar prompt de FAQs para foco em custo-beneficio e objetivo profissional
 
-## Diagnostico
+## Problema
 
-O callback `onApplySuggestions` (Editor.tsx, linhas 4988-5022) atualiza o estado local com `setData` e marca `dirtyRef.current = true`, mas **nao persiste no banco de dados**. Isso e o mesmo problema que afetava a tabela: o debounce de 1500ms ou guardas de hidratacao podem impedir o save, e os campos ficam vazios ao recarregar.
+O prompt atual do `generate-landing-page-faqs` contem diretrizes que mencionam "iniciantes" e geram conteudo subjetivo:
+- "Qual item e mais indicado para iniciantes ou uso basico" (linha indesejada)
+- "Qual oferece melhor custo-beneficio" (manter, mas reformular)
+- "Destaques do modelo/item de alta performance" (subjetivo)
 
-Campos afetados:
-- SEO: `seo_title`, `seo_description`
-- Banner: `title`, `subtitle`, `badge_text`
-- Solutions: `solutions_title`
-- Advisory: `title`, `paragraph`
-- CTA Final: `title`, `paragraph`
-- Desktop Info: `title`, `text`
+O usuario quer que as FAQs:
+1. **Nunca** usem o termo "iniciantes"
+2. Foquem em **custo-beneficio** e **objetivo de cada profissional**
+3. Baseiem-se no que cada produto **entrega como diferencial** segundo o documento
 
 ## Correcao
 
-### Arquivo: `src/pages/Editor.tsx` (linhas 4988-5022)
+### Arquivo: `supabase/functions/generate-landing-page-faqs/index.ts`
 
-Adicionar uma chamada direta a `updateLandingPage` apos o `setData` no callback `onApplySuggestions`, seguindo o mesmo padrao ja aplicado no `onApplyTable`:
+Reescrever a secao "COBERTURA TEMATICA OBRIGATORIA" do `SYSTEM_PROMPT`, substituindo:
 
-```typescript
-onApplySuggestions={(suggestions) => {
-  const updatedData = {
-    ...data,
-    seo_title: suggestions.seo_title || data.seo_title,
-    seo_description: suggestions.seo_description || data.seo_description,
-    seo: {
-      ...data.seo,
-      seo_title: suggestions.seo_title || data.seo?.seo_title,
-      seo_description: suggestions.seo_description || data.seo?.seo_description,
-    },
-    banner: {
-      ...data.banner,
-      title: suggestions.banner_title || data.banner.title,
-      subtitle: suggestions.banner_subtitle || data.banner.subtitle,
-      badge_text: suggestions.banner_badge_text || data.banner.badge_text,
-    },
-    solutions_title: suggestions.solutions_title || data.solutions_title,
-    advisory: {
-      ...data.advisory,
-      title: suggestions.advisory_title || data.advisory.title,
-      paragraph: suggestions.advisory_paragraph || data.advisory.paragraph,
-    },
-    cta_final: {
-      ...data.cta_final,
-      title: suggestions.cta_final_title || data.cta_final.title,
-      paragraph: suggestions.cta_final_paragraph || data.cta_final.paragraph,
-    },
-    desktop_info: {
-      ...data.desktop_info,
-      title: suggestions.desktop_info_title || data.desktop_info.title,
-      text: suggestions.desktop_info_text || data.desktop_info.text,
-    },
-  };
-  setData(updatedData);
-  dirtyRef.current = true;
+**Remover:**
+- "Qual item e mais indicado para iniciantes ou uso basico"
+- "Destaques do modelo/item de alta performance"
+- "Qual escolher para casos/aplicacoes especificos"
 
-  // Save direto para persistencia imediata
-  if (id) {
-    updateLandingPage(id, { data: updatedData })
-      .then((ok) => {
-        if (ok) console.log('Sugestoes do PDF salvas com sucesso');
-        else console.warn('Falha ao salvar sugestoes do PDF');
-      });
-  }
-}}
+**Substituir por:**
+- Qual o custo-beneficio de cada equipamento com base nas especificacoes do documento
+- Qual equipamento atende melhor cada objetivo profissional (ex: volume de atendimento, precisao, mobilidade)
+- Quais diferenciais tecnicos cada modelo entrega segundo os dados do documento
+- Como as especificacoes tecnicas de cada modelo se traduzem em beneficios praticos para o profissional
+
+**Adicionar proibicao explicita:**
+- NAO usar o termo "iniciantes" ou "uso basico" em nenhuma FAQ
+- NAO recomendar um equipamento como superior a outro
+- Descrever cada equipamento pelo que ele entrega, sem juizo de valor comparativo
+
+### Prompt atualizado (secao 5 - COBERTURA TEMATICA):
+
+```
+5. COBERTURA TEMATICA OBRIGATORIA (quando o documento permitir):
+   - Diferencas de performance entre os itens/modelos comparados
+   - Custo-beneficio de cada equipamento com base nas especificacoes do documento
+   - Qual objetivo profissional cada modelo atende melhor (volume, precisao, mobilidade, etc.)
+   - Quais diferenciais tecnicos cada modelo entrega segundo os dados
+   - Diferencas entre modelos/versoes similares
+   - Como especificacoes tecnicas se traduzem em beneficios praticos
+   - Impacto de recursos tecnologicos (IA, automacao) na pratica profissional
+   - Custos de manutencao e consumiveis de cada modelo
+   - Funcionalidades exclusivas ou compartilhadas entre os modelos
 ```
 
-Mudanca principal: trocar `setData(prev => ...)` por construir `updatedData` a partir de `data` (mesmo padrao do `onApplyTable`) e chamar `updateLandingPage` diretamente.
+**Adicionar na secao 6 (LINGUAGEM) as proibicoes:**
 
-## Acao necessaria do usuario
-
-Apos a implementacao, **re-importar o PDF** para que os campos sejam preenchidos e persistidos corretamente.
+```
+6. LINGUAGEM:
+   - Tecnica, profissional e neutra
+   - Sem termos promocionais ou adjetivos exagerados
+   - NUNCA usar o termo "iniciantes" ou "uso basico"
+   - NUNCA recomendar um equipamento como superior a outro
+   - Descrever cada equipamento pelo que ele entrega como diferencial
+   - Focar no objetivo profissional que cada modelo atende
+```
 
 ## Impacto
 
-- Todos os campos sugeridos pela IA (SEO, Banner, Advisory, CTA, Desktop Info) serao salvos imediatamente no banco
-- Sem dependencia de debounce ou guardas de hidratacao
-- Nenhuma alteracao no frontend visual
+- FAQs nunca mais usarao "iniciantes" ou "uso basico"
+- Cada FAQ focara no que o produto entrega e qual objetivo profissional atende
+- Tom neutro, descritivo e baseado em custo-beneficio real
+- Necessario re-importar o PDF apos deploy para gerar novas FAQs
+
