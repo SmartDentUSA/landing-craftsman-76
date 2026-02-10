@@ -66,7 +66,41 @@ export async function fetchAggregateRating(supabase: any): Promise<AggregateRati
       });
     }
 
-    // 2b. Buscar video_testimonials aprovados (implícito 5 estrelas)
+    // 2b. FALLBACK: Se approved_reviews não retornou nada, buscar diretamente de raw_reviews
+    if (ratings.length === 0) {
+      const googlePlaceId = companyProfile?.company_reviews?.google_place_id;
+      
+      // Tentar com place_id primeiro
+      if (googlePlaceId) {
+        const { data: rawByPlaceId } = await supabase
+          .from('raw_reviews')
+          .select('rating')
+          .eq('place_id', googlePlaceId)
+          .not('rating', 'is', null);
+        
+        if (rawByPlaceId && rawByPlaceId.length > 0) {
+          rawByPlaceId.forEach((r: any) => ratings.push(r.rating));
+          console.log(`✅ [AggregateRating] ${rawByPlaceId.length} ratings de raw_reviews (place_id=${googlePlaceId})`);
+        }
+      }
+
+      // Fallback final: todos os raw_reviews
+      if (ratings.length === 0) {
+        const { data: allRawReviews } = await supabase
+          .from('raw_reviews')
+          .select('rating')
+          .not('rating', 'is', null)
+          .order('extracted_at', { ascending: false })
+          .limit(50);
+        
+        if (allRawReviews && allRawReviews.length > 0) {
+          allRawReviews.forEach((r: any) => ratings.push(r.rating));
+          console.log(`✅ [AggregateRating] Fallback: ${allRawReviews.length} ratings de raw_reviews (sem filtro place_id)`);
+        }
+      }
+    }
+
+    // 2c. Buscar video_testimonials aprovados (implícito 5 estrelas)
     const { data: videoTestimonials, error: videosError } = await supabase
       .from('video_testimonials')
       .select('id')
@@ -78,7 +112,7 @@ export async function fetchAggregateRating(supabase: any): Promise<AggregateRati
       });
     }
 
-    // 2c. Buscar reviews manuais da company_profile
+    // 2d. Buscar reviews manuais da company_profile
     if (!companyError && companyProfile?.company_reviews?.manual_reviews) {
       const manualReviews = companyProfile.company_reviews.manual_reviews;
       if (Array.isArray(manualReviews)) {

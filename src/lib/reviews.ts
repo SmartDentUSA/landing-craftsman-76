@@ -138,29 +138,51 @@ export async function fetchAllReviewsForSchema(
     } else if (companyProfile?.company_reviews) {
       const companyReviews = companyProfile.company_reviews as any;
       
-      // ✅ NOVO: Buscar reviews do Google de raw_reviews usando google_place_id
+      // ✅ Buscar reviews do Google de raw_reviews (com fallback se place_id dessincronizado)
+      const pushGoogleReviews = (reviews: any[]) => {
+        reviews.forEach((review: any) => {
+          const sanitized = sanitizeReviewData({
+            author_name: review.author_name,
+            rating: review.rating,
+            review_text: review.review_text,
+            review_date: review.review_date
+          });
+          allReviews.push({
+            type: "google_approved",
+            ...sanitized,
+            profile_photo_url: review.profile_photo_url || undefined
+          });
+        });
+      };
+
+      let googleReviewsFound = false;
+
       if (companyReviews.google_place_id) {
         const { data: googleRawReviews, error: googleRawError } = await supabase
           .from("raw_reviews")
           .select("*")
           .eq("place_id", companyReviews.google_place_id);
 
-        if (googleRawError) {
-          console.error("Erro ao buscar Google reviews de raw_reviews:", googleRawError);
-        } else if (googleRawReviews) {
-          googleRawReviews.forEach((review: any) => {
-            const sanitized = sanitizeReviewData({
-              author_name: review.author_name,
-              rating: review.rating,
-              review_text: review.review_text,
-              review_date: review.review_date
-            });
-            
-            allReviews.push({
-              type: "google_approved",
-              ...sanitized
-            });
-          });
+        if (!googleRawError && googleRawReviews && googleRawReviews.length > 0) {
+          console.log(`✅ [Reviews] ${googleRawReviews.length} reviews encontrados com place_id=${companyReviews.google_place_id}`);
+          pushGoogleReviews(googleRawReviews);
+          googleReviewsFound = true;
+        } else {
+          console.warn(`⚠️ [Reviews] 0 reviews com place_id=${companyReviews.google_place_id}, usando fallback...`);
+        }
+      }
+
+      // FALLBACK: buscar todos os raw_reviews se place_id não retornou resultados
+      if (!googleReviewsFound) {
+        const { data: allRawReviews, error: fallbackError } = await supabase
+          .from("raw_reviews")
+          .select("*")
+          .order("extracted_at", { ascending: false })
+          .limit(50);
+
+        if (!fallbackError && allRawReviews && allRawReviews.length > 0) {
+          console.log(`✅ [Reviews] Fallback: ${allRawReviews.length} reviews encontrados em raw_reviews (sem filtro de place_id)`);
+          pushGoogleReviews(allRawReviews);
         }
       }
       

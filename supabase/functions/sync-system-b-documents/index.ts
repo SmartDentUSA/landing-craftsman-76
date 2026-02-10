@@ -412,11 +412,14 @@ Deno.serve(async (req) => {
         const currentReviews = currentProfile?.company_reviews || {};
         const manualReviews = currentReviews.manual_reviews || [];
 
+        const newPlaceId = reputacaoGoogle.place_id;
+        console.log(`🔑 [Sync] Atualizando google_place_id no company_profile: ${newPlaceId}`);
+        
         const { error: profileError } = await supabase
           .from('company_profile')
           .update({
             company_reviews: {
-              google_place_id: reputacaoGoogle.place_id,
+              google_place_id: newPlaceId,
               google_reviews_imported: true,
               last_google_sync: new Date().toISOString(),
               manual_reviews: manualReviews // Preservar avaliações manuais
@@ -426,7 +429,7 @@ Deno.serve(async (req) => {
 
         if (!profileError) {
           reputacaoAtualizada = true;
-          console.log('✅ Reputação do Google atualizada no company_profile');
+          console.log(`✅ Reputação do Google atualizada no company_profile (place_id=${newPlaceId})`);
         } else {
           console.error('❌ Erro ao atualizar reputação:', profileError.message);
         }
