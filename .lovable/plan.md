@@ -1,33 +1,72 @@
 
-# Plano: Corrigir renderizacao HTML nas respostas das FAQs
+# Plano: Corrigir visibilidade dos Google Reviews do Sistema B nas Landing Pages
 
-## Problema
+## Diagnostico
 
-Na linha 2326 de `src/lib/template-engine.ts`, o template usa `{{answer}}` (double-mustache) que **escapa HTML**, fazendo com que tags como `<p>`, `<strong>`, `<ul>` apareçam como texto visivel em vez de serem renderizadas como HTML.
+O Sistema B sincroniza reviews do Google para a tabela `raw_reviews` com `place_id = '14424783289422732200'`. Porem, o `company_profile.company_reviews.google_place_id` esta com valor `'generated_129209929'` (de uma importacao anterior diferente).
 
-Alem disso, a IA gera respostas ja envolvidas em tags `<p>`, e o template adiciona outra `<p>` por fora, criando `<p>` duplicado.
+Quando o template engine gera a landing page, chama `fetchAllReviewsForSchema()` em `src/lib/reviews.ts`, que busca reviews de `raw_reviews` filtrando por `place_id = google_place_id`. Como os IDs nao batem, retorna 0 reviews.
+
+Dados atuais:
+- `raw_reviews`: 30 reviews com `place_id = '14424783289422732200'`
+- `company_profile.google_place_id`: `'generated_129209929'`
+- Resultado: 0 reviews encontrados para schema/landing page
 
 ## Correcao
 
-### Arquivo: `src/lib/template-engine.ts` (linha 2326)
+### Arquivo 1: `src/lib/reviews.ts` (linhas 141-164)
 
-Substituir:
-```html
-<p itemprop="text">{{answer}}</p>
+Alterar a busca de Google reviews para usar fallback: se o `google_place_id` nao retornar resultados, buscar TODOS os reviews de `raw_reviews` (sem filtro de place_id):
+
+```typescript
+// Buscar reviews do Google de raw_reviews
+if (companyReviews.google_place_id) {
+  const { data: googleRawReviews, error: googleRawError } = await supabase
+    .from("raw_reviews")
+    .select("*")
+    .eq("place_id", companyReviews.google_place_id);
+
+  if (!googleRawError && googleRawReviews && googleRawReviews.length > 0) {
+    // Encontrou com place_id exato
+    googleRawReviews.forEach((review: any) => { /* push */ });
+  } else {
+    // FALLBACK: buscar todos os raw_reviews (place_id pode estar dessincronizado)
+    console.warn('Fallback: buscando todos os raw_reviews...');
+    const { data: allRawReviews } = await supabase
+      .from("raw_reviews")
+      .select("*")
+      .order("extracted_at", { ascending: false })
+      .limit(50);
+
+    if (allRawReviews) {
+      allRawReviews.forEach((review: any) => { /* push */ });
+    }
+  }
+} else {
+  // Sem google_place_id configurado - buscar todos
+  const { data: allRawReviews } = await supabase
+    .from("raw_reviews")
+    .select("*")
+    .order("extracted_at", { ascending: false })
+    .limit(50);
+
+  if (allRawReviews) {
+    allRawReviews.forEach((review: any) => { /* push */ });
+  }
+}
 ```
 
-Por:
-```html
-<div itemprop="text">{{{answer}}}</div>
-```
+### Arquivo 2: `supabase/functions/_shared/aggregate-rating-helper.ts`
 
-Mudancas:
-1. **Triple-mustache `{{{answer}}}`**: Renderiza HTML sem escapar
-2. **`<div>` em vez de `<p>`**: Evita `<p>` aninhado dentro de `<p>` (invalido em HTML), ja que a IA gera respostas com `<p>` interno
+Aplicar o mesmo fallback na edge function que calcula o AggregateRating. Atualmente busca `raw_reviews` via `approved_reviews` (join), mas se nao encontrar, deve buscar diretamente de `raw_reviews` sem filtro.
+
+### Arquivo 3: `supabase/functions/sync-system-b-documents/index.ts` (preventivo)
+
+Garantir que o `google_place_id` salvo no `company_profile` corresponda ao `place_id` usado no `raw_reviews`. Atualmente ja faz isso (linha 419), mas a sincronia anterior pode ter falhado. Adicionar log de confirmacao.
 
 ## Impacto
 
-- As respostas das FAQs serao renderizadas com formatacao rica (negrito, listas, paragrafos)
-- Sem tags HTML visiveis como texto
-- HTML semanticamente valido (sem `<p>` dentro de `<p>`)
-- Necessario re-exportar/re-gerar o codigo da landing page para ver a correcao
+- Os 30 reviews do Google importados do Sistema B passarao a aparecer no schema JSON-LD das landing pages
+- O AggregateRating refletira os dados reais (nota media e contagem)
+- Funciona mesmo que o `place_id` esteja dessincronizado entre tabelas
+- Necessario re-gerar o codigo da landing page para ver os reviews
