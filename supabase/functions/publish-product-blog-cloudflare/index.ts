@@ -53,6 +53,9 @@ import {
   type ItemListProduct 
 } from '../_shared/itemlist-schema-helper.ts';
 
+// ✅ MELHORIA 5: Import AggregateRating dinâmico
+import { fetchAggregateRating, type AggregateRatingData } from '../_shared/aggregate-rating-helper.ts';
+
 // ✅ SEO Fine-Tuning 10/10 - Shared Module
 import { 
   expandFounderSameAs,
@@ -776,6 +779,20 @@ function generateProductBlogHTML(options: {
         "@type": "WebPage",
         "@id": canonicalUrl
       },
+      // ✅ MELHORIA 4: mainEntity aponta para o Product
+      "mainEntity": {
+        "@type": "Product",
+        "name": product.name
+      },
+      // ✅ MELHORIA 1: about e mentions automáticos
+      "about": [
+        { "@type": "Thing", "name": product.category || "Odontologia Digital" },
+        { "@type": "Thing", "name": companyProfile?.business_sector || "Equipamentos Odontológicos" }
+      ],
+      "mentions": [
+        { "@type": "Product", "name": product.name },
+        { "@type": "Organization", "name": companyName, "@id": `${companyProfile?.website_url || ''}/#organization` }
+      ],
       "image": product.image_url,
       "keywords": keywords
     },
@@ -789,14 +806,14 @@ function generateProductBlogHTML(options: {
         "@type": "Brand",
         "name": product.brand || companyName
       },
-      // ✅ CORREÇÃO: AggregateRating com reviewCount correto (698)
-      "aggregateRating": {
+      // ✅ MELHORIA 5: AggregateRating DINÂMICO via aggregateRating helper
+      "aggregateRating": aggregateRating ? {
         "@type": "AggregateRating",
-        "ratingValue": "5.0",
-        "reviewCount": 698,
+        "ratingValue": aggregateRating.ratingValue || "5.0",
+        "reviewCount": aggregateRating.reviewCount || 0,
         "bestRating": 5,
         "worstRating": 1
-      },
+      } : undefined,
       // ✅ CORREÇÃO: Reviews individuais para Rich Snippets (campos obrigatórios name, ratingValue)
       ...(authorityData && authorityData.reviews && authorityData.reviews.length > 0 && {
         "review": generateReviewsSchema(authorityData.reviews, 5)
@@ -2099,11 +2116,13 @@ serve(async (req) => {
     
     console.log(`[publish-product-blog] Related products found: ${relatedProducts?.length || 0}`);
 
-    // 5.5. Fetch authority data for E-E-A-T and Video Testimonials
-    const [authorityData, videoTestimonials] = await Promise.all([
+    // 5.5. Fetch authority data for E-E-A-T and Video Testimonials + AggregateRating
+    const [authorityData, videoTestimonials, aggregateRating] = await Promise.all([
       fetchAuthorityData(supabase),
-      fetchVideoTestimonials(supabase, 20)
+      fetchVideoTestimonials(supabase, 20),
+      fetchAggregateRating(supabase)
     ]);
+    console.log(`✅ [Blog Cloudflare] AggregateRating dinâmico: ${aggregateRating.ratingValue} (${aggregateRating.reviewCount} reviews)`);
     
     if (authorityData) {
       const totalCompanyVideos = authorityData.companyVideos.youtube.length + 

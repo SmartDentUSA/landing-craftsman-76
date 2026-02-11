@@ -11,10 +11,10 @@ export interface AggregateRatingData {
   worstRating: number;  // 1
 }
 
-// Valores padrão baseados nos dados REAIS do Google Smart Dent
+// ✅ MELHORIA 5: Valores padrão DINÂMICOS - fallback mínimo, real é buscado do BD
 const DEFAULT_RATING: AggregateRatingData = {
   ratingValue: "5.0",
-  reviewCount: 698,  // ✅ CORRIGIDO: 698 avaliações reais do Google
+  reviewCount: 0,  // ✅ DINÂMICO: será preenchido por fetchAggregateRating()
   bestRating: 5,
   worstRating: 1
 };
@@ -84,18 +84,18 @@ export async function fetchAggregateRating(supabase: any): Promise<AggregateRati
         }
       }
 
-      // Fallback final: todos os raw_reviews
+      // Fallback final: TODOS os raw_reviews (contagem real dinâmica)
       if (ratings.length === 0) {
         const { data: allRawReviews } = await supabase
           .from('raw_reviews')
           .select('rating')
           .not('rating', 'is', null)
           .order('extracted_at', { ascending: false })
-          .limit(50);
+          .limit(1000);
         
         if (allRawReviews && allRawReviews.length > 0) {
           allRawReviews.forEach((r: any) => ratings.push(r.rating));
-          console.log(`✅ [AggregateRating] Fallback: ${allRawReviews.length} ratings de raw_reviews (sem filtro place_id)`);
+          console.log(`✅ [AggregateRating] Fallback dinâmico: ${allRawReviews.length} ratings de raw_reviews`);
         }
       }
     }
@@ -124,9 +124,18 @@ export async function fetchAggregateRating(supabase: any): Promise<AggregateRati
       }
     }
 
-    // Calcular média se tiver dados
+    // ✅ MELHORIA 5: Se sem ratings, buscar contagem total de raw_reviews como fallback
     if (ratings.length === 0) {
-      console.log('ℹ️ [AggregateRating] Sem ratings no banco, usando defaults do Google (5.0 / 150)');
+      const { count } = await supabase
+        .from('raw_reviews')
+        .select('id', { count: 'exact', head: true });
+      
+      if (count && count > 0) {
+        console.log(`ℹ️ [AggregateRating] Sem ratings numéricos, usando contagem total: ${count}`);
+        return { ratingValue: "5.0", reviewCount: count, bestRating: 5, worstRating: 1 };
+      }
+      
+      console.log('ℹ️ [AggregateRating] Sem ratings no banco, usando default mínimo');
       return DEFAULT_RATING;
     }
 

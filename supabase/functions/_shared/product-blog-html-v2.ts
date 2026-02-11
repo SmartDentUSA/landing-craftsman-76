@@ -56,6 +56,7 @@ export interface ProductBlogV2Options {
   relatedProducts?: any[];
   authorityData?: any;
   darkModeDefault?: boolean;
+  aggregateRatingData?: { ratingValue: string; reviewCount: number; bestRating: number; worstRating: number };
 }
 
 // ============================================
@@ -323,8 +324,9 @@ function generateSchemaGraph(options: {
   companyProfile: any;
   faqs: any[];
   domain: string;
+  aggregateRatingData?: { ratingValue: string; reviewCount: number; bestRating: number; worstRating: number };
 }): object[] {
-  const { product, blogType, title, description, canonicalUrl, companyProfile, faqs, domain } = options;
+  const { product, blogType, title, description, canonicalUrl, companyProfile, faqs, domain, aggregateRatingData } = options;
   
   const companyName = companyProfile?.company_name || 'Smart Dent';
   const websiteUrl = companyProfile?.website_url || `https://${domain}`;
@@ -359,7 +361,7 @@ function generateSchemaGraph(options: {
   
   schemas.push(orgSchema);
   
-  // 2. BlogPosting / Article
+  // 2. BlogPosting / Article - ✅ MELHORIA 1 & 4: about, mentions, mainEntity
   schemas.push({
     "@type": blogType === 'technical' ? 'TechArticle' : 'BlogPosting',
     "headline": title,
@@ -383,6 +385,21 @@ function generateSchemaGraph(options: {
       "@type": "WebPage",
       "@id": canonicalUrl
     },
+    // ✅ MELHORIA 4: mainEntity aponta para o Product principal
+    "mainEntity": {
+      "@type": "Product",
+      "name": product.name
+    },
+    // ✅ MELHORIA 1: about automático
+    "about": [
+      { "@type": "Thing", "name": product.category || "Odontologia Digital" },
+      { "@type": "Thing", "name": companyProfile?.business_sector || "Equipamentos Odontológicos" }
+    ],
+    // ✅ MELHORIA 1: mentions automático
+    "mentions": [
+      { "@type": "Product", "name": product.name },
+      { "@type": "Organization", "name": companyName, "@id": `${websiteUrl}/#organization` }
+    ],
     "image": product.image_url,
     "keywords": keywordsArray.join(', '),
     "articleSection": blogType === 'commercial' ? 'Guia de Produtos' : 'Especificações Técnicas',
@@ -428,12 +445,12 @@ function generateSchemaGraph(options: {
       "bestRating": "5",
       "worstRating": "1"
     };
-  } else {
-    // ✅ CORREÇÃO: Garantir AggregateRating padrão com 698 reviews
+  } else if (aggregateRatingData) {
+    // ✅ MELHORIA 5: AggregateRating DINÂMICO (não mais hardcoded)
     productSchema.aggregateRating = {
       "@type": "AggregateRating",
-      "ratingValue": "5.0",
-      "reviewCount": 698,
+      "ratingValue": aggregateRatingData.ratingValue || "5.0",
+      "reviewCount": aggregateRatingData.reviewCount || 0,
       "bestRating": "5",
       "worstRating": "1"
     };
@@ -1336,7 +1353,8 @@ export function generateProductBlogHTMLV2(options: ProductBlogV2Options): string
     pagePath, 
     companyProfile, 
     trackingPixels,
-    darkModeDefault = false
+    darkModeDefault = false,
+    aggregateRatingData
   } = options;
   
   const companyName = companyProfile?.company_name || 'Smart Dent';
@@ -1375,7 +1393,8 @@ export function generateProductBlogHTMLV2(options: ProductBlogV2Options): string
     canonicalUrl,
     companyProfile,
     faqs,
-    domain
+    domain,
+    aggregateRatingData
   });
   
   // Tracking scripts
