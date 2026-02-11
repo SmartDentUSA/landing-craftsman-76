@@ -871,7 +871,7 @@ export function generateLandingPageHTML(
   ${solution.metadata?.quality_metrics?.confidence_score ? `<meta name="content-confidence" content="${solution.metadata.quality_metrics.confidence_score}">` : ''}
   ${solution.metadata?.artifact_chain?.timestamp ? `<meta name="content-generated" content="${solution.metadata.artifact_chain.timestamp}">` : ''}
   <link rel="canonical" href="${escapeHtml(canonicalUrl)}">
-  <meta name="robots" content="${preview ? 'noindex, nofollow' : 'index, follow'}">
+  <meta name="robots" content="index, follow">
   
   <!-- ═══════════════════════════════════════════════════════════ -->
   <!-- OPEN GRAPH (Facebook, LinkedIn) -->
