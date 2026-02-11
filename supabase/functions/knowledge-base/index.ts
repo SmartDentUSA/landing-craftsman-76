@@ -309,7 +309,7 @@ function formatForAITraining(data: any): string {
     if (cp.google_aggregate_rating) {
       text += `\n### AVALIAÇÃO GOOGLE OFICIAL\n`;
       text += `**Rating:** ${cp.google_aggregate_rating.ratingValue || '5.0'}⭐\n`;
-      text += `**Total de Reviews:** ${cp.google_aggregate_rating.reviewCount || 698}\n`;
+      text += `**Total de Reviews:** ${cp.google_aggregate_rating.reviewCount || 30}\n`;
       if (cp.google_aggregate_rating.bestRating) text += `**Melhor Nota:** ${cp.google_aggregate_rating.bestRating}\n`;
       text += `\n`;
     }
@@ -1439,7 +1439,7 @@ function formatForRAG(data: any): any {
     // ✅ GOOGLE AGGREGATE RATING
     google_rating: cp.google_aggregate_rating ? {
       rating: cp.google_aggregate_rating.ratingValue || "5.0",
-      reviews: cp.google_aggregate_rating.reviewCount || 698,
+      reviews: cp.google_aggregate_rating.reviewCount || 30,
       best: cp.google_aggregate_rating.bestRating || 5
     } : undefined,
     
