@@ -2381,6 +2381,79 @@ function buildEcommerceHTML(
 
   html += `</section>`;
 
+  // ✅ AI-READINESS: Injetar JSON-LD com Product + WebPage + mainEntity/about/mentions
+  const companyName = company?.company_name || 'Smart Dent';
+  const companyUrl = company?.website_url || 'https://smartdent.com.br';
+  const productUrl = product.product_url || '#';
+  const ecommerceSchema = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebPage",
+        "name": product.name,
+        "description": (product.seo_description || product.description || '').substring(0, 160),
+        "url": productUrl,
+        "inLanguage": "pt-BR",
+        "mainEntity": { "@type": "Product", "@id": `${productUrl}/#product` },
+        "about": [
+          { "@type": "Thing", "name": company?.business_sector || "Odontologia Digital" },
+          ...(product.category ? [{ "@type": "Thing", "name": product.category }] : []),
+          ...(company?.seo_technical_expertise ? [{ "@type": "Thing", "name": company.seo_technical_expertise }] : [])
+        ],
+        "mentions": [
+          { "@type": "Product", "name": product.name, "@id": `${productUrl}/#product` },
+          { "@type": "Organization", "name": companyName, "@id": `${companyUrl}/#organization` }
+        ],
+        "speakable": {
+          "@type": "SpeakableSpecification",
+          "cssSelector": ["h1", "h2", "h3", "p:first-of-type"]
+        },
+        "publisher": { "@type": "Organization", "name": companyName, "@id": `${companyUrl}/#organization` }
+      },
+      {
+        "@type": "Product",
+        "@id": `${productUrl}/#product`,
+        "name": product.name,
+        "description": (product.seo_description || product.description || '').substring(0, 300),
+        "image": product.image_url,
+        "brand": { "@type": "Brand", "name": product.brand || companyName },
+        ...(product.category && { "category": product.category }),
+        "offers": {
+          "@type": "Offer",
+          "url": productUrl,
+          "priceCurrency": "BRL",
+          "availability": "https://schema.org/InStock",
+          "seller": { "@type": "Organization", "name": companyName }
+        }
+      },
+      {
+        "@type": "Organization",
+        "@id": `${companyUrl}/#organization`,
+        "name": companyName,
+        "url": companyUrl,
+        ...(company?.company_logo_url && { "logo": { "@type": "ImageObject", "url": company.company_logo_url } })
+      }
+    ]
+  };
+  
+  // Adicionar FAQPage se houver FAQs
+  if (product.faq && Array.isArray(product.faq) && product.faq.length >= 2) {
+    const validFaqs = product.faq.filter((f: any) => f.question?.length >= 10 && f.answer?.length >= 30);
+    if (validFaqs.length >= 2) {
+      ecommerceSchema["@graph"].push({
+        "@type": "FAQPage",
+        "mainEntity": validFaqs.slice(0, 10).map((f: any) => ({
+          "@type": "Question",
+          "name": f.question,
+          "acceptedAnswer": { "@type": "Answer", "text": f.answer }
+        }))
+      } as any);
+    }
+  }
+  
+  html += `\n<script type="application/ld+json">${JSON.stringify(ecommerceSchema)}</script>`;
+
   console.log('✅ SPIN Design System aplicado ao HTML final');
+  console.log('✅ [E-commerce] JSON-LD com WebPage + Product + mainEntity/about/mentions injetado');
   return html;
 }
