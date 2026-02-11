@@ -5028,9 +5028,13 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
   
   // ✅ FASE 5: schema_json_ld SEMPRE gerado (FORA das condições)
   if (schemaGraph.length > 0) {
+    // ✅ SAFETY NET: enrichSchemaWithAIContext garante about/mentions/mainEntity/speakable
+    const { enrichSchemaWithAIContext } = await import('@/services/seo/advancedSchemaEnhancer');
+    const enrichedGraph = enrichSchemaWithAIContext(schemaGraph, companyProfile, data.selectedProductsForSEO || []);
+    
     processedData.schema_json_ld = JSON.stringify({
       "@context": "https://schema.org",
-      "@graph": schemaGraph
+      "@graph": enrichedGraph
     });
     
     // Validação crítica: verificar presença de Organization

@@ -214,7 +214,7 @@ function formatForRAG(data: any): any {
       // ✅ GOOGLE RATING
       google_rating: cp.google_aggregate_rating ? {
         rating: cp.google_aggregate_rating.ratingValue || "5.0",
-        reviews: cp.google_aggregate_rating.reviewCount || 698
+        reviews: cp.google_aggregate_rating.reviewCount || 30
       } : undefined,
       
       // ✅ COORDENADAS

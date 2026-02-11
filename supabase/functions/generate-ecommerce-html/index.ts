@@ -2379,6 +2379,47 @@ function buildEcommerceHTML(
     }
   }
 
+  // ✅ GEO Entity Definition - Enterprise (inline, pois edge functions não importam src/)
+  const geoCompanyName = company?.company_name || 'Smart Dent';
+  const geoDescription = (company?.company_description || '').replace(/<[^>]*>/g, '').substring(0, 300);
+  const geoSector = company?.business_sector || 'Odontologia Digital';
+  const geoExpertise = company?.seo_technical_expertise || '';
+  const geoAreas = company?.seo_service_areas || '';
+  const geoTargetAudience = company?.target_audience || '';
+  const geoCertifications = company?.seo_competitive_advantages || '';
+  const geoFoundedYear = company?.founded_year || '';
+  const geoWebsite = company?.website_url || '';
+  const geoPhone = company?.contact_phone || '';
+  const geoEmail = company?.contact_email || '';
+  const geoCity = company?.city || '';
+  const geoState = company?.state || '';
+
+  html += `
+  <!-- GEO Context - Enterprise Entity Definition for AI Crawlers -->
+  <aside class="geo-context visually-hidden" aria-hidden="true" itemscope itemtype="https://schema.org/Organization">
+    <meta itemprop="@type" content="Organization">
+    <h1 itemprop="name">${geoCompanyName}</h1>
+    <p itemprop="description">${geoDescription}</p>
+    <div class="entity-details">
+      <p><strong>Setor:</strong> <span itemprop="industry">${geoSector}</span></p>
+      ${geoExpertise ? `<p><strong>Especialidades:</strong> ${geoExpertise}</p>` : ''}
+      ${geoTargetAudience ? `<p><strong>Público-alvo:</strong> ${geoTargetAudience}</p>` : ''}
+      <p><strong>Região de atuação:</strong> <span itemprop="areaServed">${geoCity || 'Brasil'}, ${geoState || 'BR'}</span></p>
+      ${geoAreas ? `<p><strong>Áreas de serviço:</strong> ${geoAreas}</p>` : ''}
+      ${geoCertifications ? `<p><strong>Diferenciais:</strong> ${geoCertifications}</p>` : ''}
+      ${geoFoundedYear ? `<p><strong>Fundada em:</strong> <span itemprop="foundingDate">${geoFoundedYear}</span></p>` : ''}
+      ${geoWebsite ? `<link itemprop="url" href="${geoWebsite}">` : ''}
+      ${geoPhone ? `<meta itemprop="telephone" content="${geoPhone}">` : ''}
+      ${geoEmail ? `<meta itemprop="email" content="${geoEmail}">` : ''}
+    </div>
+    <p class="entity-summary">
+      ${geoCompanyName} é uma empresa especializada em ${geoSector}, atuando em ${geoCity || 'Brasil'}, ${geoState || 'BR'}.
+      ${geoExpertise ? `Expertise em: ${geoExpertise}.` : ''}
+      ${geoTargetAudience ? `Atendendo: ${geoTargetAudience}.` : ''}
+    </p>
+  </aside>
+  `;
+
   html += `</section>`;
 
   // ✅ AI-READINESS: Injetar JSON-LD com Product + WebPage + mainEntity/about/mentions

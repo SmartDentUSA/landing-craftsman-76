@@ -267,7 +267,7 @@ products.forEach(product => {
     productSchema.aggregateRating = {
       '@type': 'AggregateRating',
       ratingValue: aggregateRating?.ratingValue || '5.0',
-      reviewCount: aggregateRating?.reviewCount || 698,  // ✅ CORRIGIDO: 698 avaliações
+      reviewCount: aggregateRating?.reviewCount || 30,  // ✅ CORRIGIDO: fallback seguro (mínimo real)
       bestRating: 5,
       worstRating: 1
     };

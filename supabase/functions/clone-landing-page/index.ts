@@ -801,6 +801,22 @@ function generateSEOFilename(
 }
 
 // ============================================
+// LAZY LOADING automático para imagens (Core Web Vitals)
+// ============================================
+function addLazyLoadingToImages(html: string): string {
+  let imgIndex = 0;
+  return html.replace(/<img\b([^>]*?)>/gi, (match, attrs) => {
+    if (attrs.includes('loading=')) return match; // já tem
+    imgIndex++;
+    if (imgIndex === 1) {
+      // Primeira imagem (hero/LCP) recebe eager + fetchpriority
+      return `<img${attrs} loading="eager" fetchpriority="high">`;
+    }
+    return `<img${attrs} loading="lazy" decoding="async">`;
+  });
+}
+
+// ============================================
 // REWRITE IMAGE ALT/TITLE ATTRIBUTES
 // ============================================
 function rewriteImageAttributes(
@@ -2407,14 +2423,27 @@ function insertSmartDentHeaderFooter(
   <!-- ═══════════════════════════════════════════════════════════ -->
   <!-- GEO CONTEXT (Invisível para usuários, visível para IAs/Crawlers) -->
   <!-- ═══════════════════════════════════════════════════════════ -->
-  <aside class="geo-context" aria-hidden="true">
-    <p itemscope itemtype="https://schema.org/Organization">
-      <span itemprop="name">${company}</span> é especialista em odontologia digital.
-      ${seoTechnicalExpertise ? `Expertise técnica: ${seoTechnicalExpertise}.` : ''}
-      ${seoServiceAreas ? `Áreas de atendimento: ${seoServiceAreas}.` : ''}
-      ${seoMarketPositioning ? `Posicionamento: ${seoMarketPositioning}.` : ''}
-      ${seoCompetitiveAdvantages ? `Diferenciais: ${seoCompetitiveAdvantages}.` : ''}
-      Localização: ${city || 'Brasil'}, ${state || 'BR'}.
+   <aside class="geo-context visually-hidden" aria-hidden="true" itemscope itemtype="https://schema.org/Organization">
+    <meta itemprop="@type" content="Organization">
+    <h1 itemprop="name">${company}</h1>
+    <p itemprop="description">${company} é especialista em odontologia digital.</p>
+    <div class="entity-details">
+      <p><strong>Setor:</strong> <span itemprop="industry">Odontologia Digital</span></p>
+      ${seoTechnicalExpertise ? `<p><strong>Especialidades:</strong> ${seoTechnicalExpertise}</p>` : ''}
+      ${companyProfile?.target_audience ? `<p><strong>Público-alvo:</strong> ${companyProfile.target_audience}</p>` : ''}
+      <p><strong>Região de atuação:</strong> <span itemprop="areaServed">${city || 'Brasil'}, ${state || 'BR'}</span></p>
+      ${seoServiceAreas ? `<p><strong>Áreas de serviço:</strong> ${seoServiceAreas}</p>` : ''}
+      ${seoMarketPositioning ? `<p><strong>Posicionamento:</strong> ${seoMarketPositioning}</p>` : ''}
+      ${seoCompetitiveAdvantages ? `<p><strong>Diferenciais/Certificações:</strong> ${seoCompetitiveAdvantages}</p>` : ''}
+      ${companyProfile?.founded_year ? `<p><strong>Fundada em:</strong> <span itemprop="foundingDate">${companyProfile.founded_year}</span></p>` : ''}
+      ${companyProfile?.website_url ? `<link itemprop="url" href="${companyProfile.website_url}">` : ''}
+      ${companyProfile?.contact_phone ? `<meta itemprop="telephone" content="${companyProfile.contact_phone}">` : ''}
+      ${companyProfile?.contact_email ? `<meta itemprop="email" content="${companyProfile.contact_email}">` : ''}
+    </div>
+    <p class="entity-summary">
+      ${company} é uma empresa especializada em Odontologia Digital, atuando em ${city || 'Brasil'}, ${state || 'BR'}.
+      ${seoTechnicalExpertise ? `Expertise em: ${seoTechnicalExpertise}.` : ''}
+      ${companyProfile?.target_audience ? `Atendendo: ${companyProfile.target_audience}.` : ''}
     </p>
   </aside>
   `;
@@ -2562,6 +2591,9 @@ async function processLandingPage(
   
   // Step 4.5: REWRITE IMAGE ALT/TITLE ATTRIBUTES (NEW in v2.1)
   processedHTML = rewriteImageAttributes(processedHTML, images, brand, product, companyName);
+  
+  // Step 4.6: LAZY LOADING automático para imagens (Core Web Vitals)
+  processedHTML = addLazyLoadingToImages(processedHTML);
   
   // ✅ FASE 3, 4, 6, 10: Buscar dados do produto, KOLs, Authority Data e Video Testimonials
   const [productData, kols, authorityData, videoTestimonials] = await Promise.all([
