@@ -17,10 +17,18 @@ export interface PersonSchemaData {
     name: string;
     url: string;
   };
+  // ✅ MELHORIA 2: Campos expandidos para Person schema completo
+  alumniOf?: string;
+  honorificPrefix?: string; // Dr., Prof., etc.
+  knowsAbout?: string[];
+  award?: string[];
+  nationality?: string;
+  worksFor?: { name: string; url?: string };
 }
 
 /**
  * Gera Person Schema (JSON-LD) para E-E-A-T
+ * ✅ MELHORIA 2: Person schema expandido com jobTitle, alumniOf, sameAs, knowsAbout, hasCredential
  * @param data Dados do KOL/Autor
  * @returns Schema JSON-LD do tipo Person
  */
@@ -39,6 +47,11 @@ export function generatePersonSchema(data: PersonSchemaData): any {
     "name": data.full_name
   };
 
+  // ✅ Prefixo honorífico (Dr., Prof.)
+  if (data.honorificPrefix) {
+    personSchema.honorificPrefix = data.honorificPrefix;
+  }
+
   // Adicionar campos opcionais se existirem
   if (data.mini_cv) {
     personSchema.description = data.mini_cv;
@@ -48,19 +61,61 @@ export function generatePersonSchema(data: PersonSchemaData): any {
     personSchema.image = data.photo_url;
   }
 
+  // ✅ MELHORIA 2: jobTitle obrigatório para E-E-A-T
   if (data.specialty) {
     personSchema.jobTitle = data.specialty;
+  }
+
+  // ✅ MELHORIA 2: alumniOf para credibilidade acadêmica
+  if (data.alumniOf) {
+    personSchema.alumniOf = {
+      "@type": "EducationalOrganization",
+      "name": data.alumniOf
+    };
+  }
+
+  // ✅ MELHORIA 2: knowsAbout para expertise semântica (SGE/GEO)
+  if (data.knowsAbout && data.knowsAbout.length > 0) {
+    personSchema.knowsAbout = data.knowsAbout.map(topic => ({
+      "@type": "Thing",
+      "name": topic
+    }));
+  } else if (data.specialty) {
+    // Auto-derivar knowsAbout da especialidade
+    personSchema.knowsAbout = [
+      { "@type": "Thing", "name": data.specialty },
+      { "@type": "Thing", "name": "Odontologia Digital" }
+    ];
+  }
+
+  // ✅ MELHORIA 2: award para prêmios e reconhecimentos
+  if (data.award && data.award.length > 0) {
+    personSchema.award = data.award;
+  }
+
+  // ✅ MELHORIA 2: nationality
+  if (data.nationality) {
+    personSchema.nationality = { "@type": "Country", "name": data.nationality };
   }
 
   if (sameAs.length > 0) {
     personSchema.sameAs = sameAs;
   }
 
+  // ✅ MELHORIA 2: affiliation E worksFor
   if (data.affiliation) {
     personSchema.affiliation = {
       "@type": "Organization",
       "name": data.affiliation.name,
       "url": data.affiliation.url
+    };
+  }
+
+  if (data.worksFor) {
+    personSchema.worksFor = {
+      "@type": "Organization",
+      "name": data.worksFor.name,
+      ...(data.worksFor.url && { "url": data.worksFor.url })
     };
   }
 

@@ -4533,11 +4533,11 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
             "description": product.description,
             "category": product.category,
             "keywords": [...(product.keywords || []), ...(product.market_keywords || [])].join(', '),
-            // ✅ CORREÇÃO: AggregateRating para cada produto (Rich Snippets Google)
+            // ✅ MELHORIA 5: AggregateRating DINÂMICO - usa reviews reais calculadas
             "aggregateRating": {
               "@type": "AggregateRating",
               "ratingValue": "5.0",
-              "reviewCount": 698,
+              "reviewCount": allReviews.length || 1,
               "bestRating": 5,
               "worstRating": 1
             },
@@ -4635,11 +4635,11 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
     
     const allReviews = [...manualReviews, ...googleReviews, ...videoTestimonialsAsReviews];
     
-    // Calcular rating agregado das reviews reais
+    // ✅ MELHORIA 5: AggregateRating DINÂMICO - inicia com reviews reais
     let aggregateRating = {
       "@type": "AggregateRating",
       "ratingValue": "5.0",
-      "reviewCount": "698",  // ✅ CORRIGIDO: 698 avaliações reais do Google
+      "reviewCount": "0",
       "bestRating": "5",
       "worstRating": "1"
     };

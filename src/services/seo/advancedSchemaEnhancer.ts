@@ -236,38 +236,94 @@ export function enrichSchemaWithAIContext(
     // ✅ CLONE para evitar mutação
     const clonedSchemas = structuredClone(existingSchemas);
     
-    // Encontrar WebPage schema
+    // Encontrar WebPage/Article/BlogPosting schema
     const webPageIndex = clonedSchemas.findIndex((s: any) => 
-      s['@type'] === 'WebPage' || s['@type'] === 'Article' || s['@type'] === 'BlogPosting'
+      s['@type'] === 'WebPage' || s['@type'] === 'Article' || s['@type'] === 'BlogPosting' || s['@type'] === 'TechArticle'
     );
     
     if (webPageIndex >= 0) {
       const webPage = clonedSchemas[webPageIndex] as any;
       
-      // Adicionar SpeakableSpecification se não existe
+      // ✅ MELHORIA 1: SpeakableSpecification
       if (!webPage.speakable) {
         webPage.speakable = generateSpeakableSpecification();
       }
       
-      // Adicionar about se não existe
+      // ✅ MELHORIA 1: about AUTOMÁTICO com contexto semântico expandido
       if (!webPage.about && companyProfile) {
-        webPage.about = {
+        const aboutItems: object[] = [{
           "@type": "Thing",
           "name": companyProfile.business_sector || companyProfile.industry || "Odontologia Digital",
           "description": companyProfile.company_description?.substring(0, 200)
-        };
+        }];
+        
+        // Adicionar expertise técnica como about adicional
+        if (companyProfile.seo_technical_expertise) {
+          aboutItems.push({
+            "@type": "Thing",
+            "name": companyProfile.seo_technical_expertise
+          });
+        }
+        
+        // Adicionar setor/nicho
+        if (companyProfile.main_products_services) {
+          aboutItems.push({
+            "@type": "Thing",
+            "name": companyProfile.main_products_services
+          });
+        }
+        
+        webPage.about = aboutItems.length === 1 ? aboutItems[0] : aboutItems;
       }
       
-      // Adicionar mentions baseado em produtos
-      if (!webPage.mentions && products.length > 0) {
-        webPage.mentions = products.slice(0, 5).map(p => ({
-          "@type": "Product",
-          "name": p.name,
-          "@id": p.product_url || p.url || `#product-${p.id}`
-        }));
+      // ✅ MELHORIA 1: mentions AUTOMÁTICO baseado em produtos + empresa
+      if (!webPage.mentions) {
+        const mentionItems: object[] = [];
+        
+        // Mencionar produtos
+        if (products.length > 0) {
+          mentionItems.push(...products.slice(0, 5).map(p => ({
+            "@type": "Product",
+            "name": p.name,
+            "@id": p.product_url || p.url || `#product-${p.id}`,
+            ...(p.brand && { "brand": { "@type": "Brand", "name": p.brand } }),
+            ...(p.category && { "category": p.category })
+          })));
+        }
+        
+        // Mencionar a empresa
+        if (companyProfile?.company_name) {
+          mentionItems.push({
+            "@type": "Organization",
+            "name": companyProfile.company_name,
+            "@id": companyProfile.website_url ? `${companyProfile.website_url}/#organization` : "#organization"
+          });
+        }
+        
+        if (mentionItems.length > 0) {
+          webPage.mentions = mentionItems;
+        }
       }
       
-      // ✅ Adicionar publisher com referência ao Organization
+      // ✅ MELHORIA 4: mainEntity - aponta para o Product ou Organization principal
+      if (!webPage.mainEntity) {
+        // Encontrar Product schema no @graph
+        const productSchema = clonedSchemas.find((s: any) => s['@type'] === 'Product');
+        
+        if (productSchema) {
+          webPage.mainEntity = {
+            "@type": "Product",
+            "@id": (productSchema as any)['@id'] || `#product-${(productSchema as any).name?.replace(/\s+/g, '-').toLowerCase() || 'main'}`
+          };
+        } else if (companyProfile?.website_url) {
+          webPage.mainEntity = {
+            "@type": "Organization",
+            "@id": `${companyProfile.website_url}/#organization`
+          };
+        }
+      }
+      
+      // ✅ publisher com referência ao Organization
       if (!webPage.publisher && companyProfile) {
         webPage.publisher = {
           "@type": "Organization",
@@ -281,7 +337,7 @@ export function enrichSchemaWithAIContext(
       }
     }
     
-    console.log('✅ [Schema Enhancer] Schemas enriquecidos com contexto IA');
+    console.log('✅ [Schema Enhancer] Schemas enriquecidos com contexto IA (about, mentions, mainEntity)');
     return clonedSchemas;
     
   } catch (error) {
