@@ -1443,8 +1443,8 @@ export const useSEOHTMLGenerator = () => {
   <!-- SEO Meta Tags -->
   <title>${sanitizeHTMLAttributes(truncateSEOTitle(finalTitle))}</title>
   <meta name="description" content="${safeDesc}">
-  <meta name="robots" content="${preview ? 'noindex, nofollow' : 'index, follow'}">
-  ${preview ? '' : `<link rel="canonical" href="${blogURL}">`}
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="${blogURL}">
   <link rel="alternate" href="${blogURL}" hreflang="pt-br">
   <link rel="alternate" href="${blogURL}" hreflang="x-default">
   

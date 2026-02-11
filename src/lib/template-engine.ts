@@ -3625,7 +3625,7 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
     twitter_image_url: data.seo?.twitter_image?.src || data.seo?.twitter_image_url || data.twitter_image_url || '',
     // Campos SEO essenciais
     canonical_url: data.seo?.canonical_url || data.canonical_url || '',
-    meta_robots: data.seo?.meta_robots || data.meta_robots || 'index, follow',
+    meta_robots: 'index, follow', // FORÇAR SEMPRE index, follow - nunca noindex
     hreflang: data.seo?.hreflang || data.hreflang || 'pt-BR',
     // Open Graph
     og_title: data.seo?.og_title || data.seo?.seo_title || data.name || '',

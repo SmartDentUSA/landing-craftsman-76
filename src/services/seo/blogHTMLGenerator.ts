@@ -458,13 +458,13 @@ export async function generateBlogHTML(options: BlogHTMLOptions): Promise<string
   const metaTags = buildMetaTags({
     title: finalTitle,
     description: validatedDescription,
-    canonicalUrl: preview ? '' : validatedCanonical, // Sem canonical em preview
+    canonicalUrl: validatedCanonical,
     domain: domain,
     ogImage: ogImage, // Fallback se não houver galeria
     ogType: 'article',
     twitterCard: 'summary_large_image',
     keywords: uniqueKeywords,
-    robots: preview ? 'noindex, nofollow' : 'index, follow', // PREVIEW MODE
+    robots: 'index, follow',
     imagesGallery: imagesGallery.length > 0 ? imagesGallery : undefined // ✅ FASE 5
   });
 
