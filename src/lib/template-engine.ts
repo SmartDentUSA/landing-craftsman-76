@@ -4847,17 +4847,62 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
       }
     };
 
-    // Adicionar contexto adicional ao schema de forma semântica
+    // ✅ AI-READINESS: about semântico expandido (setor + expertise + hidden content)
+    const aboutItems: any[] = [];
+    if (companyProfile?.business_sector) {
+      aboutItems.push({ "@type": "Thing", "name": companyProfile.business_sector });
+    }
+    if (companyProfile?.seo_technical_expertise) {
+      aboutItems.push({ "@type": "Thing", "name": companyProfile.seo_technical_expertise });
+    }
     if (data.seo?.seo_hidden_content && data.seo.seo_hidden_content.trim()) {
-      webPageSchema.about = {
-        "@type": "Thing",
-        "description": data.seo.seo_hidden_content.trim()
+      aboutItems.push({ "@type": "Thing", "description": data.seo.seo_hidden_content.trim() });
+    }
+    if (companyProfile?.main_products_services) {
+      aboutItems.push({ "@type": "Thing", "name": companyProfile.main_products_services });
+    }
+    if (aboutItems.length > 0) {
+      webPageSchema.about = aboutItems.length === 1 ? aboutItems[0] : aboutItems;
+    }
+
+    // ✅ AI-READINESS: mentions automático (produtos + Organization)
+    const mentionItems: any[] = [];
+    if (data.selectedProductsForSEO && data.selectedProductsForSEO.length > 0) {
+      mentionItems.push(...data.selectedProductsForSEO.slice(0, 5).map((p: any) => ({
+        "@type": "Product",
+        "name": p.name,
+        ...(p.brand && { "brand": { "@type": "Brand", "name": p.brand } }),
+        ...(p.category && { "category": p.category })
+      })));
+    }
+    if (companyProfile?.company_name) {
+      mentionItems.push({
+        "@type": "Organization",
+        "name": companyProfile.company_name,
+        "@id": companyProfile.website_url ? `${companyProfile.website_url}/#organization` : "#organization"
+      });
+    }
+    if (mentionItems.length > 0) {
+      webPageSchema.mentions = mentionItems;
+    }
+
+    // ✅ AI-READINESS: mainEntity aponta para Product principal ou Organization
+    const productSchema = schemaGraph.find((s: any) => s['@type'] === 'Product');
+    if (productSchema) {
+      webPageSchema.mainEntity = {
+        "@type": "Product",
+        "@id": (productSchema as any)['@id'] || `#product-${((productSchema as any).name || 'main').replace(/\s+/g, '-').toLowerCase()}`
       };
-      
-      // Adicionar palavras-chave contextuais se disponíveis
-      if (data.seo?.ai_keywords) {
-        webPageSchema.keywords = data.seo.ai_keywords;
-      }
+    } else if (companyProfile?.website_url) {
+      webPageSchema.mainEntity = {
+        "@type": "Organization",
+        "@id": `${companyProfile.website_url}/#organization`
+      };
+    }
+
+    // Adicionar palavras-chave contextuais se disponíveis
+    if (data.seo?.ai_keywords) {
+      webPageSchema.keywords = data.seo.ai_keywords;
     }
 
     // ✅ FASE 2: Adicionar SpeakableSpecification ao WebPage

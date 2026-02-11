@@ -1757,6 +1757,20 @@ function injectSEO(
           "@type": "SpeakableSpecification",
           "cssSelector": ["h1", "h2", ".hero-title", ".hero-subtitle", "p.lead"]
         },
+        // ✅ AI-READINESS: mainEntity, about, mentions
+        "mainEntity": {
+          "@type": "Product",
+          "@id": `${canonical}/#product`
+        },
+        "about": [
+          { "@type": "Thing", "name": companyData?.business_sector || "Odontologia Digital" },
+          ...(companyData?.seo_technical_expertise ? [{ "@type": "Thing", "name": companyData.seo_technical_expertise }] : []),
+          { "@type": "Thing", "name": `${product} ${brand}` }
+        ],
+        "mentions": [
+          { "@type": "Product", "name": `${product} ${brand}`, "@id": `${canonical}/#product` },
+          { "@type": "Organization", "name": company, "@id": `${websiteUrl}/#organization` }
+        ],
         "potentialAction": {
           "@type": "ReadAction",
           "target": [canonical]

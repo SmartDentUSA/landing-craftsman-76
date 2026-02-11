@@ -1478,7 +1478,29 @@ export const useSEOHTMLGenerator = () => {
     "name": "Blog ${domain === 'dentala' ? 'Dentala' : 'Eodonto'} - Odontologia Digital",
     "description": ${JSON.stringify(safeJsonDesc)},
     "url": "${blogURL}",
-    "inLanguage": "pt-BR"
+    "inLanguage": "pt-BR",
+    "mainEntity": {
+      "@type": "Organization",
+      "@id": "${companyProfile?.website_url || ''}/#organization",
+      "name": "${companyProfile?.company_name || domain}"
+    },
+    "about": [
+      { "@type": "Thing", "name": "${companyProfile?.business_sector || 'Odontologia Digital'}" },
+      ${companyProfile?.seo_technical_expertise ? `{ "@type": "Thing", "name": "${companyProfile.seo_technical_expertise}" },` : ''}
+      { "@type": "Thing", "name": "${companyProfile?.main_products_services || 'Equipamentos Odontológicos'}" }
+    ],
+    "mentions": [
+      { "@type": "Organization", "name": "${companyProfile?.company_name || domain}", "@id": "${companyProfile?.website_url || ''}/#organization" }
+    ],
+    "speakable": {
+      "@type": "SpeakableSpecification",
+      "cssSelector": ["h1", "h2", ".hero h1", "article h2", "article p:first-of-type"]
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "${companyProfile?.company_name || domain}",
+      "logo": ${companyProfile?.company_logo_url ? `{ "@type": "ImageObject", "url": "${companyProfile.company_logo_url}" }` : 'null'}
+    }
   }
   </script>
   

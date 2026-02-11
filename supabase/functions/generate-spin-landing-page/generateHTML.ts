@@ -199,7 +199,28 @@ function generateSPINSchemas(
       '@type': 'Product',
       name: products[0].name,
       brand: { '@type': 'Brand', name: products[0].brand || sanitizeCompanyName(company?.company_name) }
-    } : undefined
+    } : undefined,
+    
+    // ✅ AI-READINESS: about semântico (pain_type + setor)
+    about: [
+      ...(solution.pain_type ? [{ '@type': 'Thing', name: solution.pain_type }] : []),
+      { '@type': 'Thing', name: company?.business_sector || 'Odontologia Digital' },
+      ...(company?.seo_technical_expertise ? [{ '@type': 'Thing', name: company.seo_technical_expertise }] : [])
+    ],
+    
+    // ✅ AI-READINESS: mentions (produtos da solução + Organization)
+    mentions: [
+      ...products.slice(0, 5).map((p: any) => ({
+        '@type': 'Product',
+        name: p.name,
+        ...(p.brand && { brand: { '@type': 'Brand', name: p.brand } })
+      })),
+      ...(company?.company_name ? [{
+        '@type': 'Organization',
+        name: company.company_name,
+        '@id': `${company?.website_url || ''}/#organization`
+      }] : [])
+    ]
   });
 
   // ✅ FASE 7: ItemList Schema usando helper centralizado
