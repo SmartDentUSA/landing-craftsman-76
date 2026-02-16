@@ -209,3 +209,6 @@ verify_jwt = false
 
 [functions.generate-landing-page-faqs]
 verify_jwt = false
+
+[functions.generate-display-banners]
+verify_jwt = false

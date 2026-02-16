@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Download, AlertTriangle, CheckCircle, RefreshCw } from 'lucide-react';
+import { Download, AlertTriangle, CheckCircle, RefreshCw, Monitor } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { GoogleAdsCampaignConfig, ValidationWarning, AdPreview } from '@/types/google-ads';
@@ -17,6 +17,7 @@ import { VideoManager } from './VideoManager';
 import { AdPreviewCards } from './AdPreviewCards';
 import { UTMBuilder } from './UTMBuilder';
 import { WarningsPanel } from './WarningsPanel';
+import { DisplayBannerGenerator } from './DisplayBannerGenerator';
 import { VideoCollector } from '@/lib/google-ads/collectors/VideoCollector';
 import { SitelinksCollector } from '@/lib/google-ads/collectors/SitelinksCollector';
 import { useToast } from '@/hooks/use-toast';
@@ -39,6 +40,8 @@ interface Product {
   youtube_videos?: any[];
   instagram_videos?: any[];
   product_url?: string;
+  image_url?: string;
+  images_gallery?: Array<{ url: string; alt?: string }>;
 }
 
 interface GoogleAdsProductTabProps {
@@ -374,9 +377,10 @@ export const GoogleAdsProductTab = ({ product, onUpdate }: GoogleAdsProductTabPr
       <>
         {/* Configuration Tabs */}
           <Tabs defaultValue="general" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="general">Configurações</TabsTrigger>
               <TabsTrigger value="videos">Extensões de Vídeo</TabsTrigger>
+              <TabsTrigger value="display" className="gap-1"><Monitor className="h-3 w-3" />Display</TabsTrigger>
               <TabsTrigger value="preview">Preview</TabsTrigger>
               <TabsTrigger value="utm">UTM</TabsTrigger>
             </TabsList>
@@ -424,6 +428,10 @@ export const GoogleAdsProductTab = ({ product, onUpdate }: GoogleAdsProductTabPr
                 data={getProductData()}
                 landingPageId={product.id}
               />
+            </TabsContent>
+
+            <TabsContent value="display">
+              <DisplayBannerGenerator product={product} />
             </TabsContent>
 
             <TabsContent value="utm">
