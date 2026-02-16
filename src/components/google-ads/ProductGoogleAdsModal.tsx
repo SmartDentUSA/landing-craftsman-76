@@ -21,6 +21,8 @@ interface Product {
   youtube_videos?: any[];
   instagram_videos?: any[];
   product_url?: string;
+  image_url?: string;
+  images_gallery?: Array<{ url: string; alt?: string }>;
 }
 
 interface ProductGoogleAdsModalProps {

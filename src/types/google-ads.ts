@@ -121,3 +121,29 @@ export interface GoogleAdsCampaign {
   created_at: string;
   updated_at: string;
 }
+
+// Display Banner Types
+export type DisplayStyle = 'modern' | 'minimal' | 'bold' | 'clinical';
+
+export interface DisplayFormat {
+  width: number;
+  height: number;
+  name: string;
+  category: 'popular' | 'horizontal' | 'vertical' | 'mobile' | 'square';
+}
+
+export interface DisplayBanner {
+  format: DisplayFormat;
+  html: string;
+  sizeKB: number;
+}
+
+export interface DisplayBannerConfig {
+  formats: DisplayFormat[];
+  style: DisplayStyle;
+  primaryColor: string;
+  secondaryColor: string;
+  ctaText: string;
+  productImageUrl: string;
+  logoUrl?: string;
+}
