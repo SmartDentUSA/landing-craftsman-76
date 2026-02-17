@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { DisplayBanner, DisplayFormat, DisplayStyle } from '@/types/google-ads';
 import { DISPLAY_FORMATS, DISPLAY_STYLES, generateBannerHTML } from './display-templates';
 import { DisplayBannerPreview } from './DisplayBannerPreview';
+import JSZip from 'jszip';
 
 interface Product {
   id: string;
@@ -29,6 +30,8 @@ interface DisplayBannerGeneratorProps {
 export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps) {
   const { toast } = useToast();
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState('');
   const [banners, setBanners] = useState<DisplayBanner[]>([]);
   const [selectedFormats, setSelectedFormats] = useState<DisplayFormat[]>(
     DISPLAY_FORMATS.filter(f => ['popular', 'mobile'].includes(f.category))
@@ -145,18 +148,65 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
     }
   }, [product, selectedImage, selectedFormats, style, primaryColor, secondaryColor, ctaText, toast]);
 
-  const handleDownload = (banner: DisplayBanner) => {
-    const blob = new Blob([banner.html], { type: 'text/html;charset=utf-8' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `banner-${banner.format.width}x${banner.format.height}.html`;
-    link.click();
-    URL.revokeObjectURL(link.href);
+  const fetchImageBlob = async (url: string): Promise<Blob> => {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Failed to fetch image');
+    return res.blob();
   };
 
-  const handleDownloadAll = () => {
-    banners.forEach(b => handleDownload(b));
-    toast({ title: `${banners.length} arquivos baixados` });
+  const handleDownload = async (banner: DisplayBanner) => {
+    try {
+      setIsDownloading(true);
+      setDownloadProgress(`Preparando ${banner.format.width}x${banner.format.height}...`);
+      const imageBlob = await fetchImageBlob(selectedImage);
+      const zip = new JSZip();
+      zip.file('index.html', banner.html);
+      zip.file('product.jpg', imageBlob);
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(zipBlob);
+      link.download = `banner-${banner.format.width}x${banner.format.height}.zip`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } catch (err) {
+      console.error('Download error:', err);
+      toast({ title: 'Erro ao preparar ZIP', variant: 'destructive' });
+    } finally {
+      setIsDownloading(false);
+      setDownloadProgress('');
+    }
+  };
+
+  const handleDownloadAll = async () => {
+    try {
+      setIsDownloading(true);
+      setDownloadProgress('Baixando imagem do produto...');
+      const imageBlob = await fetchImageBlob(selectedImage);
+      const zip = new JSZip();
+      for (let i = 0; i < banners.length; i++) {
+        const b = banners[i];
+        setDownloadProgress(`Empacotando ${i + 1}/${banners.length}...`);
+        const folder = zip.folder(`${b.format.width}x${b.format.height}`);
+        if (folder) {
+          folder.file('index.html', b.html);
+          folder.file('product.jpg', imageBlob);
+        }
+      }
+      setDownloadProgress('Gerando ZIP final...');
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(zipBlob);
+      link.download = 'display-banners-all.zip';
+      link.click();
+      URL.revokeObjectURL(link.href);
+      toast({ title: `${banners.length} banners empacotados em ZIP` });
+    } catch (err) {
+      console.error('Download all error:', err);
+      toast({ title: 'Erro ao gerar ZIP', variant: 'destructive' });
+    } finally {
+      setIsDownloading(false);
+      setDownloadProgress('');
+    }
   };
 
   const categories = ['popular', 'horizontal', 'mobile', 'vertical', 'square'] as const;
@@ -307,8 +357,9 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm">Banners Gerados ({banners.length})</CardTitle>
-              <Button variant="outline" size="sm" className="gap-1 text-xs h-7" onClick={handleDownloadAll}>
-                <Download className="h-3 w-3" /> Baixar Todos
+              <Button variant="outline" size="sm" className="gap-1 text-xs h-7" onClick={handleDownloadAll} disabled={isDownloading}>
+                {isDownloading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />}
+                {isDownloading ? downloadProgress : 'Baixar Todos (ZIP)'}
               </Button>
             </div>
           </CardHeader>
