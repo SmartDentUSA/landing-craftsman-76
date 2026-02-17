@@ -1,40 +1,94 @@
 
 
-# Plano: Exportar Todos os Banners HTML5 de Uma Vez
+# Plano: Corrigir Export HTML5 para Google Ads (Imagens Locais + ZIP)
 
-## Problema Atual
+## Problema
 
-O botao "Baixar Todos" ja existe, mas dispara todos os downloads simultaneamente -- navegadores modernos bloqueiam downloads multiplos sem intervalo.
+O Google Ads **rejeita** banners HTML5 que referenciam imagens externas (`<img src="https://...">`). Todas as imagens devem estar **dentro do arquivo ZIP** e referenciadas com caminhos locais (`<img src="product.jpg">`).
 
 ## Solucao
 
-Alterar `handleDownloadAll` em `DisplayBannerGenerator.tsx` para:
-
-1. Adicionar atraso de 500ms entre cada download (padrao ja usado no projeto para evitar bloqueio do navegador)
-2. Mostrar progresso visual durante o download sequencial ("Baixando 3/16...")
-3. Desabilitar o botao durante o processo
-
-### Alteracao no arquivo: `src/components/google-ads/DisplayBannerGenerator.tsx`
-
-- Adicionar state `isDownloading` (boolean)
-- Reescrever `handleDownloadAll` para usar `async/await` com `setTimeout` de 500ms entre cada arquivo
-- Atualizar o botao "Baixar Todos" para mostrar progresso e ficar desabilitado durante download
-
-### Secao Tecnica
-
-Logica do download sequencial:
+Alterar o sistema de export para gerar **um ZIP por banner** (ou ZIP unico com todos), contendo:
 
 ```text
-handleDownloadAll:
-  isDownloading = true
-  for each banner (i):
-    handleDownload(banner)
-    if not last: await sleep(500ms)
-  isDownloading = false
-  toast("X arquivos baixados")
+banner-300x250/
+  index.html          <-- referencia "product.jpg" (local)
+  product.jpg          <-- imagem real baixada
+  logo.png             <-- (se houver)
 ```
 
-O botao mostra `<Loader2 spin />` + "Baixando X/Y..." enquanto `isDownloading = true`.
+## Alteracoes
 
-Apenas 1 arquivo modificado: `src/components/google-ads/DisplayBannerGenerator.tsx`.
+### 1. Instalar dependencia: `jszip`
+
+Biblioteca leve para criar arquivos ZIP no navegador.
+
+### 2. Alterar `src/components/google-ads/display-templates.ts`
+
+- A funcao `generateBannerHTML` passa a referenciar imagens com caminho local:
+  - `<img src="product.jpg">` em vez de `<img src="https://cdn.exemplo.com/foto.jpg">`
+  - `<img src="logo.png">` em vez de URL externa
+- Os parametros `productImageUrl` e `logoUrl` continuam sendo recebidos, mas sao usados apenas para nomear os arquivos no ZIP
+
+### 3. Alterar `src/components/google-ads/DisplayBannerGenerator.tsx`
+
+- `handleDownload` passa a gerar um **ZIP** contendo:
+  1. Busca a imagem do produto via `fetch()` e converte para blob
+  2. Cria o ZIP com `index.html` + `product.jpg` (+ `logo.png` se aplicavel)
+  3. Faz download do `.zip`
+- `handleDownloadAll` gera um **ZIP unico** com subpastas por formato:
+  ```text
+  display-banners/
+    300x250/index.html + product.jpg
+    728x90/index.html + product.jpg
+    320x50/index.html + product.jpg
+    ...
+  ```
+- Adicionar state `isDownloading` com progresso visual
+
+### 4. Alterar `supabase/functions/generate-display-banners/index.ts`
+
+- O HTML gerado pela edge function tambem deve usar caminhos locais (`product.jpg`) em vez de URLs externas
+
+## Secao Tecnica
+
+### Logica do download individual
+
+```text
+async handleDownload(banner):
+  1. fetch(selectedImage) -> imageBlob
+  2. zip = new JSZip()
+  3. zip.file("product.jpg", imageBlob)
+  4. html = banner.html  // ja com src="product.jpg"
+  5. zip.file("index.html", html)
+  6. zipBlob = await zip.generateAsync({type: "blob"})
+  7. download como "banner-300x250.zip"
+```
+
+### Logica do download todos
+
+```text
+async handleDownloadAll():
+  1. fetch(selectedImage) -> imageBlob (uma vez so)
+  2. zip = new JSZip()
+  3. for each banner:
+     folder = zip.folder("300x250")
+     folder.file("index.html", banner.html)
+     folder.file("product.jpg", imageBlob)
+  4. download como "display-banners-all.zip"
+```
+
+### Template HTML alterado (trecho chave)
+
+Antes: `<img src="${productImageUrl}">`
+Depois: `<img src="product.jpg">`
+
+### Arquivos modificados
+
+| Arquivo | Alteracao |
+|---------|-----------|
+| `src/components/google-ads/display-templates.ts` | Imagens locais ("product.jpg") no HTML |
+| `src/components/google-ads/DisplayBannerGenerator.tsx` | Download como ZIP com imagem embutida |
+| `supabase/functions/generate-display-banners/index.ts` | Imagens locais no HTML gerado |
+| `package.json` | Adicionar `jszip` |
 
