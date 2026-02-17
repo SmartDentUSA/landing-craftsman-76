@@ -145,13 +145,13 @@ body { overflow:hidden; }
 </head>
 <body>
 <div class="banner" onclick="window.open('${finalUrl}','_blank')">
-  <img class="product-img" src="${productImageUrl}" alt="Produto">
+  <img class="product-img" src="product.jpg" alt="Produto">
   <div class="text-wrap">
     <div class="headline">${headline}</div>
     ${fontSizeP > 0 ? `<div class="description">${description}</div>` : ''}
     <button class="cta-btn">${ctaText}</button>
   </div>
-  ${logoUrl ? `<img class="logo" src="${logoUrl}" alt="Logo">` : ''}
+  ${logoUrl ? `<img class="logo" src="logo.png" alt="Logo">` : ''}
 </div>
 </body>
 </html>`;

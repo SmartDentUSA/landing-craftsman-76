@@ -221,7 +221,7 @@ function generateHTML(params: {
 .b>*{animation:fi .5s ease-out both}.b>*:nth-child(2){animation-delay:.15s}.b>*:nth-child(3){animation-delay:.3s}
 </style></head>
 <body><div class="b" onclick="window.open('${finalUrl}','_blank')">
-<img class="pi" src="${productImageUrl}" alt="Produto">
+<img class="pi" src="product.jpg" alt="Produto">
 <div class="tw"><div class="h">${headline}</div>${fontP>0?`<div class="d">${description}</div>`:''}<button class="c">${ctaText}</button></div>
 </div></body></html>`;
 }
