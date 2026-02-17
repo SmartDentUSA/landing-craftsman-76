@@ -40,6 +40,7 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
   const [primaryColor, setPrimaryColor] = useState('#2563eb');
   const [secondaryColor, setSecondaryColor] = useState('#7c3aed');
   const [ctaText, setCtaText] = useState('Saiba Mais');
+  const [finalUrl, setFinalUrl] = useState(product.product_url || '');
   const [selectedImage, setSelectedImage] = useState(product.image_url || '');
 
   const allImages = [
@@ -94,7 +95,7 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
           ctaText,
           style,
           formats: selectedFormats,
-          finalUrl: product.product_url || '#',
+          finalUrl: finalUrl || '#',
         }
       });
 
@@ -116,7 +117,7 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
             description: product.description?.substring(0, 80) || '',
             ctaText,
             productImageUrl: selectedImage,
-            finalUrl: product.product_url || '#',
+            finalUrl: finalUrl || '#',
           });
           return { format, html, sizeKB: new Blob([html]).size / 1024 };
         });
@@ -137,7 +138,7 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
           description: product.description?.substring(0, 80) || '',
           ctaText,
           productImageUrl: selectedImage,
-          finalUrl: product.product_url || '#',
+          finalUrl: finalUrl || '#',
         });
         return { format, html, sizeKB: new Blob([html]).size / 1024 };
       });
@@ -146,7 +147,7 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
     } finally {
       setIsGenerating(false);
     }
-  }, [product, selectedImage, selectedFormats, style, primaryColor, secondaryColor, ctaText, toast]);
+  }, [product, selectedImage, selectedFormats, style, primaryColor, secondaryColor, ctaText, finalUrl, toast]);
 
   const fetchImageBlob = async (url: string): Promise<Blob> => {
     const res = await fetch(url);
@@ -291,6 +292,13 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
             <div className="col-span-2">
               <Label className="text-xs">Texto do CTA</Label>
               <Input value={ctaText} onChange={e => setCtaText(e.target.value)} className="h-8 text-xs mt-1" placeholder="Saiba Mais" />
+            </div>
+          </div>
+          <div>
+            <Label className="text-xs">URL Final (Loja Integrada)</Label>
+            <div className="flex items-center gap-2 mt-1">
+              <Input value={finalUrl} onChange={e => setFinalUrl(e.target.value)} className="h-8 text-xs" placeholder="https://minhaloja.lojaintegrada.com.br/produto/..." />
+              {!finalUrl && <Badge variant="warning" className="text-[10px] whitespace-nowrap">URL não definida</Badge>}
             </div>
           </div>
         </CardContent>
