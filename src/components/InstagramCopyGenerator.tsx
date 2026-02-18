@@ -10,7 +10,7 @@ import { Loader2, Copy, Edit, Save, X, Zap, Code, ExternalLink, Film, Plus, Chev
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { StrategicCarouselPreview, generateSlideHTML } from "./StrategicCarouselPreview";
+import { StrategicCarouselPreview, generateSlidePNG } from "./StrategicCarouselPreview";
 import JSZip from "jszip";
 
 // === Tipos para Carrossel (7 Slides) ===
@@ -634,7 +634,7 @@ ${slide.text}`;
     return feedCarousels.find(c => c.variation === variationNum);
   };
 
-  // === Export ZIP — Carrossel Visual ===
+  // === Export ZIP — Carrossel Visual (PNGs 1080×1350px) ===
   const handleExportZip = async () => {
     setIsExportingZip(true);
     try {
@@ -658,9 +658,18 @@ ${slide.text}`;
         6: 'slide-6-cta',
       };
 
+      let corsWarning = false;
       for (let i = 1; i <= 6; i++) {
-        const html = generateSlideHTML(i, slideImageMap[i] || '', primaryColor, accentColor, productData);
-        zip.file(`${SLIDE_FILE_NAMES[i]}.html`, html);
+        try {
+          const pngBlob = await generateSlidePNG(i, slideImageMap[i] || '', primaryColor, accentColor, productData);
+          zip.file(`${SLIDE_FILE_NAMES[i]}.png`, pngBlob);
+        } catch (slideErr) {
+          console.warn(`Slide ${i} gerado sem imagem (CORS):`, slideErr);
+          corsWarning = true;
+          // Retry without image
+          const pngBlob = await generateSlidePNG(i, '', primaryColor, accentColor, productData);
+          zip.file(`${SLIDE_FILE_NAMES[i]}.png`, pngBlob);
+        }
       }
 
       const content = await zip.generateAsync({ type: 'blob' });
@@ -673,7 +682,11 @@ ${slide.text}`;
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      toast({ title: "ZIP gerado!", description: "6 slides HTML baixados com sucesso." });
+      if (corsWarning) {
+        toast({ title: "ZIP gerado com aviso", description: "Alguns slides foram exportados sem imagem por restrições de CORS. Os demais estão OK." });
+      } else {
+        toast({ title: "📦 ZIP gerado!", description: "6 PNGs de 1080×1350px baixados com sucesso." });
+      }
     } catch (error) {
       console.error('Erro ao gerar ZIP:', error);
       toast({ title: "Erro", description: "Não foi possível gerar o ZIP.", variant: "destructive" });
@@ -681,6 +694,7 @@ ${slide.text}`;
       setIsExportingZip(false);
     }
   };
+
 
   // === Funções existentes de salvar ===
   const saveFeedVariation = async (variationNum: number, copy: string, link?: string) => {
