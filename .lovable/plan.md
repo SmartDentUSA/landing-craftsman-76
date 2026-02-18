@@ -1,159 +1,68 @@
 
-# Slide 4 (💫 Experiência): Layout Igual ao Slide 3 — Imagem Full-Card + Overlay em 1/3
+# Slide 4 (💫 Experiência): Mover Texto para 75% da Largura do Card
 
-## Diagnóstico do Estado Atual
+## O que Muda
 
-O Slide 4 atualmente é dividido em **dois painéis 50/50** (flex row):
-- **Esquerda 50%**: imagem do produto
-- **Direita 50%**: fundo sólido `primaryColor` com label, keyword e benefit
+O usuário quer que o painel de texto fique posicionado a **75% da largura** do card — ou seja, começando em 3/4 do card (lado direito mais estreito), em vez dos atuais 25% (último quarto à direita).
 
-O usuário quer que o Slide 4 adote a **mesma linguagem visual do Slide 3**: imagem cobrindo todo o card, com o conteúdo textual sobre um painel que ocupa apenas ~42% (esquerda), similar ao overlay do Slide 3.
+**Interpretação**: o painel de texto ocupa os últimos **25% à direita**, mas o usuário quer mover o texto para que ocupe desde os **25% até o final** — mantendo a mesma largura, mas começando mais à direita. A instrução "75% a posição do texto" significa: o texto começa na posição horizontal de 75% do card.
 
-Olhando o Slide 3 como referência:
-- Fundo escuro `#0f0f14` no card inteiro
-- Imagem na esquerda em `width: 42%`
-- Gradiente de fade `linear-gradient(to right, transparent, #0f0f14)` na borda direita da imagem
-- Painel direito com `flex: 1`, fundo transparente (o fundo escuro do card aparece)
+## Estado Atual
 
-## Mudança Visual
+| Elemento | Valor Atual |
+|---|---|
+| JSX: painel de texto | `width: '25%'`, `right: 0` |
+| JSX: overlay direito | `right: 0`, `width: '28%'` |
+| Canvas: posição X dos textos | `rx4 = W * 0.76` |
+| Canvas: gradiente direito | inicia em `W * 0.72` |
 
-```text
-ANTES (Slide 4)                    DEPOIS (Slide 4)
-┌──────────┬──────────┐            ┌──────────────────────┐
-│          │          │            │   [imagem full-card] │
-│  imagem  │ cor sólida│           │                      │
-│  50%     │  50%     │            │ ┌────────┐           │
-│          │  label   │            │ │overlay │  label    │
-│          │  keyword │            │ │~30% W  │  keyword  │
-│          │  benefit │            │ │+fade   │  benefit  │
-└──────────┴──────────┘            └──────────────────────┘
-```
+## O que Mudar
+
+O painel já está ancorado em `right: 0` (lado direito), então a largura de `25%` já posiciona o texto nos últimos 25% do card. O `rx4 = W * 0.76` confirma que o texto começa em 76% da largura no canvas.
+
+Se o usuário quer "75% a posição", a mudança é **confirmar/fixar** a posição inicial em exatamente **75%** (`W * 0.75` no canvas e `right: 0, width: '25%'` no JSX — que já é 75% de início). Porém, olhando a imagem enviada, o texto está muito espremido à direita. O usuário provavelmente quer **ampliar o painel** para que ele ocupe **mais espaço**, iniciando em 25% e se estendendo até o fim (75% de largura), tornando o card mais legível.
+
+**Interpretação mais provável**: o painel de texto deve ter **largura de 75%** do card (não 25%), tornando-o muito mais espaçoso e visível, começando em 25% do card.
 
 ## Mudanças Técnicas
 
-### 1 — JSX do `Slide4Experience` (linhas 520–538)
+### JSX (preview do editor)
 
-Reestruturar de layout flex 50/50 para:
+**Arquivo**: `src/components/StrategicCarouselPreview.tsx`
 
-1. **Container**: `position: 'relative'`, `overflow: 'hidden'`, fundo escuro `#0f0f14`
-2. **Imagem full-bleed**: `position: absolute`, `top: 0, left: 0, width: 100%, height: 100%`, `objectFit: cover`
-3. **Overlay lateral esquerdo** (~33% da largura): `position: absolute, left: 0, top: 0, bottom: 0, width: '33%'`, background `rgba(0,0,0,0.45)` — mais transparente que o Slide 3 (que usa gradiente mais escuro)
-4. **Fade/gradiente de transição**: de `rgba(0,0,0,0.45)` para transparente, da borda direita do overlay para o centro, para não haver corte brusco
-5. **Número "4"**: mantido no canto superior esquerdo
-6. **Painel de conteúdo**: `position: absolute`, lado **direito** (58% da largura), centralizado verticalmente, com textos brancos sobre a imagem diretamente (sem fundo sólido), com textShadow leve para legibilidade
+1. **Painel de texto** (linha ~549-550):
+   - `width: '25%'` → `width: '75%'`
+   - Padding ajustado para o novo espaço
 
-```tsx
-// Nova estrutura JSX Slide4Experience:
-<div style={{ width: SLIDE_W, height: SLIDE_H, position: 'relative', overflow: 'hidden', background: '#0f0f14', fontFamily: '...' }}>
-  
-  {/* Imagem full-bleed */}
-  {image ? (
-    <img src={image} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
-  ) : (
-    <div style={{ position: 'absolute', inset: 0, background: '#1a1a2e' }} />
-  )}
+2. **Overlay direito** (linha ~537-540):
+   - `width: '28%'` → `width: '78%'` (acompanha o painel)
 
-  {/* Overlay lateral esquerdo — 1/3 do card, semi-transparente */}
-  <div style={{
-    position: 'absolute', top: 0, left: 0, bottom: 0, width: '42%',
-    background: 'linear-gradient(to right, rgba(15,15,20,0.75), transparent)'
-  }} />
+3. **Overlay esquerdo** (linha ~530-533):
+   - Mantido cobrindo `width: '33%'` como transição visual da imagem
 
-  {/* Número do slide */}
-  <div style={{ position: 'absolute', top: 60, left: 60, width: 70, height: 70, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-    <span style={{ color: '#fff', fontWeight: 900, fontSize: 30 }}>4</span>
-  </div>
+### Canvas Export
 
-  {/* Painel direito sobre a imagem — sem fundo sólido */}
-  <div style={{
-    position: 'absolute', top: 0, right: 0, bottom: 0, width: '58%',
-    display: 'flex', flexDirection: 'column', justifyContent: 'center',
-    padding: '80px 70px 80px 40px', gap: 20,
-    background: 'linear-gradient(to left, rgba(15,15,20,0.72), transparent)'
-  }}>
-    <p style={{ color: '#fff', opacity: 0.7, fontSize: labelFontSize, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 3 }}>{label}</p>
-    <h2 style={{ color: '#ffffff', fontSize: kwFontSize, fontWeight: 900, lineHeight: 1.1, wordBreak: 'break-word', textShadow: '0 2px 12px rgba(0,0,0,0.5)' }}>{keyword}</h2>
-    <p style={{ color: '#e0e0e0', opacity: 0.9, fontSize: benefitFontSize, lineHeight: 1.5, fontWeight: 400 }}>{benefit}</p>
-  </div>
-</div>
-```
+**Arquivo**: `src/components/StrategicCarouselPreview.tsx`
 
-### 2 — Canvas Export do Slide 4 (linhas 1076–1114)
+1. **Posição X dos textos** (linha ~1129):
+   - `rx4 = W * 0.76` → `rx4 = W * 0.26`
 
-Replicar a mesma estrutura no canvas:
+2. **Largura disponível para texto** (linha ~1130):
+   - `textW4 = W - rx4 - 50` → texto pode usar `W * 0.74 - 80` de largura
 
-1. **Imagem full-bleed**: `drawImageCover(ctx, img, 0, 0, W, H)` — cobrindo todo o canvas 1080×1350
-2. **Overlay lateral esquerdo**: gradiente linear horizontal de `rgba(15,15,20,0.75)` → `rgba(0,0,0,0)` nos primeiros ~42% da largura (`0` até `W*0.42`)
-3. **Overlay lateral direito**: gradiente de `rgba(15,15,20,0.72)` começando em `W*0.42` → `rgba(0,0,0,0)` no centro, para dar profundidade ao painel de texto
-4. **Textos**: posicionados no lado direito (`rx = W * 0.44`), centralizados verticalmente, brancos com textShadow simulado
+3. **Gradiente direito** (linha ~1120):
+   - `createLinearGradient(W * 0.72, 0, W, 0)` → `createLinearGradient(W * 0.22, 0, W, 0)` para cobrir os 75% onde ficam os textos
 
-```typescript
-// Canvas Slide 4 — nova lógica:
-if (img) {
-  drawImageCover(ctx, img, 0, 0, W, H);
-} else {
-  ctx.fillStyle = '#1a1a2e';
-  ctx.fillRect(0, 0, W, H);
-}
+4. **Font sizes** (linha ~1132+):
+   - Com mais espaço disponível, aumentar os breakpoints de tamanho de fonte para aproveitar a área maior (keyword: max 80px; benefit: max 36px)
 
-// Overlay esquerdo (fade out para direita)
-const gradLeft = ctx.createLinearGradient(0, 0, W * 0.45, 0);
-gradLeft.addColorStop(0, 'rgba(15,15,20,0.75)');
-gradLeft.addColorStop(1, 'rgba(0,0,0,0)');
-ctx.fillStyle = gradLeft;
-ctx.fillRect(0, 0, W, H);
-
-// Overlay direito (fade in da direita)
-const gradRight = ctx.createLinearGradient(W * 0.42, 0, W, 0);
-gradRight.addColorStop(0, 'rgba(0,0,0,0)');
-gradRight.addColorStop(1, 'rgba(15,15,20,0.72)');
-ctx.fillStyle = gradRight;
-ctx.fillRect(0, 0, W, H);
-
-// Badge "4"
-drawBadge(4, 60, 60, 'rgba(255,255,255,0.15)', '#ffffff');
-
-// Textos no lado direito — centralizados verticalmente
-const rx4 = W * 0.44;
-const textW4 = W - rx4 - 80;
-const kwFontSizeCanvas = keyword.length > 30 ? 44 : keyword.length > 20 ? 55 : keyword.length > 15 ? 65 : 90;
-
-// Calcular posição vertical centrada
-const labelH = 40 + 30;
-const kwLines = Math.ceil(/* medir */ 1);
-const kwH = kwLines * (kwFontSizeCanvas * 1.15) + 30;
-const benH = 200; // estimate
-const totalH = labelH + kwH + benH;
-let ry4 = (H - totalH) / 2;
-
-// Label
-ctx.font = '600 36px system-ui'; ctx.fillStyle = 'rgba(255,255,255,0.7)';
-ctx.fillText(label4.toUpperCase(), rx4, ry4);
-ry4 += labelH;
-
-// Keyword
-ctx.font = `900 ${kwFontSizeCanvas}px system-ui`; ctx.fillStyle = '#ffffff';
-ry4 = wrapText(ctx, keyword, rx4, ry4, textW4, kwFontSizeCanvas * 1.15) + 30;
-
-// Benefit
-ctx.font = '400 38px system-ui'; ctx.fillStyle = '#e0e0e0'; ctx.globalAlpha = 0.9;
-wrapText(ctx, benefit, rx4, ry4, textW4, 52);
-ctx.globalAlpha = 1;
-```
-
-## Resumo das Mudanças
-
-| Componente | Mudança |
-|---|---|
-| JSX `Slide4Experience` | Flex 50/50 → full-bleed + overlay lateral 1/3 |
-| Canvas Slide 4 (`drawCanvas`) | Half-fill sólida → imagem full + gradientes laterais |
-| Overlay JSX | `rgba(0,0,0,0.45)` fade — mais transparente que Slide 3 |
-| Textos | Migram de fundo sólido para sobre a imagem com textShadow |
+5. **Vertical centering** (linha ~1145+):
+   - Recalcular `totalH4` com os novos tamanhos de fonte
 
 ## Arquivo a Modificar
 
-| Arquivo | Linhas |
+| Arquivo | Seções |
 |---|---|
-| `src/components/StrategicCarouselPreview.tsx` | 520–538 (JSX Slide4) + 1076–1114 (Canvas Slide4) |
+| `src/components/StrategicCarouselPreview.tsx` | JSX linhas 537–573 (overlays + painel) + Canvas linhas 1119–1176 |
 
 Apenas **1 arquivo**, **2 seções cirúrgicas**.
