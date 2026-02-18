@@ -23,7 +23,7 @@ interface ProductData {
 // ========================= SlideTexts Types =========================
 export interface SlideTextsType {
   1: { hook: string; productName: string };
-  2: { category: string; productName: string; imageScale?: string };
+  2: { category: string; introLabel?: string; productName: string; imageScale?: string };
   3: { title: string };
   4: { label: string; keyword: string; benefit: string };
   5: { title: string; badge1: string; badge2: string; badge3: string };
@@ -67,6 +67,7 @@ const SLIDE_EDITOR_FIELDS: Record<number, Array<{ key: string; label: string; ty
   ],
   2: [
     { key: 'category', label: 'Categoria', type: 'input' },
+    { key: 'introLabel', label: 'Frase de introdução (ex: Apresentando)', type: 'input' },
     { key: 'productName', label: 'Nome do produto', type: 'input' },
     { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
   ],
@@ -319,11 +320,11 @@ function Slide1Hook({ image, primaryColor, productData, texts }: { image: string
     if (productData.salesPitch) {
       const sentences = productData.salesPitch.split(/[.!]/);
       const first = sentences[0]?.trim();
-      if (first && first.length >= 15 && first.length <= 90) return first;
+      if (first && first.length >= 15 && first.length <= 80) return first;
       const clause = first?.split(',')[0]?.trim();
-      if (clause && clause.length >= 20 && clause.length <= 90) return clause;
+      if (clause && clause.length >= 20 && clause.length <= 80) return clause;
       const truncated = (first || '').slice(0, 80).split(' ').slice(0, -1).join(' ');
-      if (truncated.length >= 20) return truncated + '...';
+      if (truncated.length >= 20) return truncated;
     }
     // Sem pitch: apenas o nome do produto
     return productData.name || '';
@@ -342,8 +343,9 @@ function Slide1Hook({ image, primaryColor, productData, texts }: { image: string
       <div style={{ position: 'absolute', top: 60, left: 60, width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <span style={{ color: textColor, fontWeight: 900, fontSize: 36 }}>1</span>
       </div>
-      <div style={{ position: 'absolute', top: '15%', left: 80, right: 80, textAlign: 'center' }}>
-        <p style={{ color: textColor, fontWeight: 400, fontSize: 58, lineHeight: 1.2, margin: 0, textShadow: '0 2px 20px rgba(0,0,0,0.3)' }}>{hook}</p>
+      <div style={{ position: 'absolute', top: '12%', left: 80, right: 80, textAlign: 'center', maxHeight: '30%', overflow: 'hidden' }}>
+        <p style={{ color: textColor, fontWeight: 400, fontSize: 52, lineHeight: 1.25, margin: 0, textShadow: '0 2px 20px rgba(0,0,0,0.3)' }}>{hook}</p>
+        <p style={{ color: textColor, fontWeight: 400, fontSize: 28, margin: '18px 0 0 0', opacity: 0.8, letterSpacing: 1 }}>👇 Deslize para conhecer</p>
       </div>
       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 200, background: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent)' }} />
       <div style={{ position: 'absolute', bottom: 60, left: 80, right: 80 }}>
@@ -354,9 +356,10 @@ function Slide1Hook({ image, primaryColor, productData, texts }: { image: string
 }
 
 // ==================== SLIDE 2 — SOLUÇÃO ====================
-function Slide2Solution({ image, primaryColor, accentColor, productData, texts }: { image: string; primaryColor: string; accentColor: string; productData: ProductData; texts?: { category?: string; productName?: string; imageScale?: string } }) {
+function Slide2Solution({ image, primaryColor, accentColor, productData, texts }: { image: string; primaryColor: string; accentColor: string; productData: ProductData; texts?: { category?: string; introLabel?: string; productName?: string; imageScale?: string } }) {
   const textOnPrimary = getLuminance(primaryColor) > 0.5 ? '#000000' : '#ffffff';
   const category = texts?.category !== undefined ? texts.category : (productData.category || '');
+  const introLabel = texts?.introLabel !== undefined ? texts.introLabel : 'Apresentando';
   const name = texts?.productName || productData.name;
   const imageScale = Number(texts?.imageScale) || 100;
 
@@ -392,6 +395,13 @@ function Slide2Solution({ image, primaryColor, accentColor, productData, texts }
         )}
       </div>
       <div style={{ textAlign: 'center' }}>
+        {introLabel && (
+          <div style={{ marginBottom: 12 }}>
+            <span style={{ fontSize: 32, fontWeight: 400, color: '#888', letterSpacing: 3, textTransform: 'uppercase' as const }}>
+              {introLabel}
+            </span>
+          </div>
+        )}
         <h2 style={{ margin: 0, fontSize: 68, fontWeight: 900, color: '#111', lineHeight: 1.1 }}>{name}</h2>
       </div>
     </div>
@@ -802,9 +812,11 @@ export async function generateSlidePNG(
       if (productData.salesPitch) {
         const sentences = productData.salesPitch.split(/[.!]/);
         const first = sentences[0]?.trim();
-        if (first && first.length >= 15 && first.length <= 90) return first;
+        if (first && first.length >= 15 && first.length <= 80) return first;
         const clause = first?.split(',')[0]?.trim();
-        if (clause && clause.length >= 20 && clause.length <= 90) return clause;
+        if (clause && clause.length >= 20 && clause.length <= 80) return clause;
+        const truncated = (first || '').slice(0, 80).split(' ').slice(0, -1).join(' ');
+        if (truncated.length >= 20) return truncated;
       }
       const shortFeature = (productData.features || []).find(f => f && f.length <= 35);
       if (shortFeature) return `Você já ouviu falar em ${shortFeature}?`;
@@ -833,14 +845,20 @@ export async function generateSlidePNG(
     ctx.fillStyle = grad2;
     ctx.fillRect(0, H - 300, W, 300);
     drawBadge(1, 60, 60, 'rgba(255,255,255,0.2)', textOnPrimary);
-    ctx.font = '400 58px system-ui, -apple-system, sans-serif';
+    ctx.font = '400 52px system-ui, -apple-system, sans-serif';
     ctx.fillStyle = textOnPrimary;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     ctx.shadowColor = 'rgba(0,0,0,0.3)';
     ctx.shadowBlur = 20;
-    wrapText(ctx, hookText, W / 2, H * 0.17, W - 160, 92, 'center');
+    wrapText(ctx, hookText, W / 2, H * 0.14, W - 160, 70, 'center');
     ctx.shadowBlur = 0;
+    ctx.font = '400 30px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = textOnPrimary;
+    ctx.globalAlpha = 0.75;
+    ctx.textBaseline = 'middle';
+    ctx.fillText('👇 Deslize para conhecer', W / 2, H * 0.46);
+    ctx.globalAlpha = 1;
     ctx.font = '600 44px system-ui, -apple-system, sans-serif';
     ctx.fillStyle = '#ffffff';
     ctx.textAlign = 'center';
@@ -850,6 +868,7 @@ export async function generateSlidePNG(
   } else if (slideNum === 2) {
     const productName = texts?.productName || productData.name;
     const category = texts?.category !== undefined ? texts.category : (productData.category || '');
+    const introLabel = texts?.introLabel || 'Apresentando';
 
     ctx.fillStyle = '#f8f8f8';
     ctx.fillRect(0, 0, W, H);
@@ -888,6 +907,14 @@ export async function generateSlidePNG(
       ctx.fillStyle = '#e0e0e0';
       roundRect((W - 500) / 2, yOffset + 40, 500, 500, 20);
       ctx.fill();
+    }
+    // introLabel ("Apresentando") above product name
+    if (introLabel) {
+      ctx.font = '400 32px system-ui, -apple-system, sans-serif';
+      ctx.fillStyle = '#888888';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText(introLabel.toUpperCase(), W / 2, H - 310);
     }
     // Product name with wrapText to avoid clipping
     ctx.font = '900 68px system-ui, -apple-system, sans-serif';
