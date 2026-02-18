@@ -23,7 +23,7 @@ interface ProductData {
 // ========================= SlideTexts Types =========================
 export interface SlideTextsType {
   1: { hook: string; productName: string };
-  2: { category: string; introLabel?: string; productName: string; imageScale?: string };
+  2: { category: string; introLabel?: string; productName: string; imageScale?: string; bgColor?: string };
   3: { title: string };
   4: { label: string; keyword: string; benefit: string };
   5: { title: string; badge1: string; badge2: string; badge3: string };
@@ -60,7 +60,7 @@ const SLIDE_W = 1080;
 const SLIDE_H = 1350;
 
 // ========================= Per-slide editor configs =========================
-const SLIDE_EDITOR_FIELDS: Record<number, Array<{ key: string; label: string; type: 'input' | 'textarea' | 'slider' }>> = {
+const SLIDE_EDITOR_FIELDS: Record<number, Array<{ key: string; label: string; type: 'input' | 'textarea' | 'slider' | 'color' }>> = {
   1: [
     { key: 'hook', label: 'Texto do Gancho', type: 'textarea' },
     { key: 'productName', label: 'Nome do produto', type: 'input' },
@@ -70,6 +70,7 @@ const SLIDE_EDITOR_FIELDS: Record<number, Array<{ key: string; label: string; ty
     { key: 'introLabel', label: 'Frase de introdução (ex: Apresentando)', type: 'input' },
     { key: 'productName', label: 'Nome do produto', type: 'input' },
     { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
+    { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
   ],
   3: [
     { key: 'title', label: 'Título da seção', type: 'input' },
@@ -188,6 +189,18 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
         </div>
       </div>
 
+      {/* Swipe hint — only on Slide 1 */}
+      {slideNum === 1 && (
+        <div className="flex items-center justify-center gap-1.5 py-1" style={{ maxWidth: containerW + 40 }}>
+          <span style={{ fontSize: 13, color: 'hsl(var(--muted-foreground))', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+            Arraste para o lado
+          </span>
+        </div>
+      )}
+
       {/* Action row: thumbnails + upload + edit */}
       <div className="flex items-center gap-1 flex-wrap justify-center" style={{ maxWidth: containerW + 40 }}>
         {productImages.map((img, idx) => (
@@ -245,7 +258,24 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
           {fields.map((field) => (
             <div key={field.key} className="space-y-1">
               <Label className="text-xs text-muted-foreground">{field.label}</Label>
-              {field.type === 'slider' ? (
+              {field.type === 'color' ? (
+                <div className="flex items-center gap-2 pt-1">
+                  <input
+                    type="color"
+                    value={slideTexts?.[field.key] || '#f8f8f8'}
+                    onChange={(e) => onSlideTextChange(field.key, e.target.value)}
+                    className="w-8 h-8 rounded border border-border cursor-pointer p-0.5 bg-background"
+                    title="Escolher cor"
+                  />
+                  <Input
+                    value={slideTexts?.[field.key] || '#f8f8f8'}
+                    onChange={(e) => onSlideTextChange(field.key, e.target.value)}
+                    className="text-xs h-7 font-mono flex-1"
+                    placeholder="#f8f8f8"
+                    maxLength={7}
+                  />
+                </div>
+              ) : field.type === 'slider' ? (
                 <div className="flex items-center gap-2 pt-1">
                   <input
                     type="range"
@@ -345,7 +375,6 @@ function Slide1Hook({ image, primaryColor, productData, texts }: { image: string
       </div>
       <div style={{ position: 'absolute', top: '12%', left: 80, right: 80, textAlign: 'center', maxHeight: '30%', overflow: 'hidden' }}>
         <p style={{ color: textColor, fontWeight: 400, fontSize: 52, lineHeight: 1.25, margin: 0, textShadow: '0 2px 20px rgba(0,0,0,0.3)' }}>{hook}</p>
-        <p style={{ color: textColor, fontWeight: 400, fontSize: 28, margin: '18px 0 0 0', opacity: 0.8, letterSpacing: 1 }}>👇 Deslize para conhecer</p>
       </div>
       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 200, background: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent)' }} />
       <div style={{ position: 'absolute', bottom: 60, left: 80, right: 80 }}>
@@ -356,15 +385,19 @@ function Slide1Hook({ image, primaryColor, productData, texts }: { image: string
 }
 
 // ==================== SLIDE 2 — SOLUÇÃO ====================
-function Slide2Solution({ image, primaryColor, accentColor, productData, texts }: { image: string; primaryColor: string; accentColor: string; productData: ProductData; texts?: { category?: string; introLabel?: string; productName?: string; imageScale?: string } }) {
+function Slide2Solution({ image, primaryColor, accentColor, productData, texts }: { image: string; primaryColor: string; accentColor: string; productData: ProductData; texts?: { category?: string; introLabel?: string; productName?: string; imageScale?: string; bgColor?: string } }) {
   const textOnPrimary = getLuminance(primaryColor) > 0.5 ? '#000000' : '#ffffff';
   const category = texts?.category !== undefined ? texts.category : (productData.category || '');
   const introLabel = texts?.introLabel !== undefined ? texts.introLabel : 'Apresentando';
   const name = texts?.productName || productData.name;
   const imageScale = Number(texts?.imageScale) || 100;
+  const bgColor = texts?.bgColor || '#f8f8f8';
+  const bgLuminance = getLuminance(bgColor.replace('#', '').length === 6 ? bgColor : '#f8f8f8');
+  const textColor = bgLuminance > 0.5 ? '#111111' : '#ffffff';
+  const subTextColor = bgLuminance > 0.5 ? '#888888' : 'rgba(255,255,255,0.7)';
 
   return (
-    <div style={{ width: SLIDE_W, height: SLIDE_H, background: '#f8f8f8', fontFamily: 'system-ui, -apple-system, sans-serif', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', padding: '80px 80px 100px' }}>
+    <div style={{ width: SLIDE_W, height: SLIDE_H, background: bgColor, fontFamily: 'system-ui, -apple-system, sans-serif', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', padding: '80px 80px 100px' }}>
       <div style={{ alignSelf: 'flex-start', width: 70, height: 70, borderRadius: '50%', background: primaryColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <span style={{ color: textOnPrimary, fontWeight: 900, fontSize: 30 }}>2</span>
       </div>
@@ -397,12 +430,12 @@ function Slide2Solution({ image, primaryColor, accentColor, productData, texts }
       <div style={{ textAlign: 'center' }}>
         {introLabel && (
           <div style={{ marginBottom: 12 }}>
-            <span style={{ fontSize: 32, fontWeight: 400, color: '#888', letterSpacing: 3, textTransform: 'uppercase' as const }}>
+            <span style={{ fontSize: 32, fontWeight: 400, color: subTextColor, letterSpacing: 3, textTransform: 'uppercase' as const }}>
               {introLabel}
             </span>
           </div>
         )}
-        <h2 style={{ margin: 0, fontSize: 68, fontWeight: 900, color: '#111', lineHeight: 1.1 }}>{name}</h2>
+        <h2 style={{ margin: 0, fontSize: 68, fontWeight: 900, color: textColor, lineHeight: 1.1 }}>{name}</h2>
       </div>
     </div>
   );
@@ -853,12 +886,6 @@ export async function generateSlidePNG(
     ctx.shadowBlur = 20;
     wrapText(ctx, hookText, W / 2, H * 0.14, W - 160, 70, 'center');
     ctx.shadowBlur = 0;
-    ctx.font = '400 30px system-ui, -apple-system, sans-serif';
-    ctx.fillStyle = textOnPrimary;
-    ctx.globalAlpha = 0.75;
-    ctx.textBaseline = 'middle';
-    ctx.fillText('👇 Deslize para conhecer', W / 2, H * 0.46);
-    ctx.globalAlpha = 1;
     ctx.font = '600 44px system-ui, -apple-system, sans-serif';
     ctx.fillStyle = '#ffffff';
     ctx.textAlign = 'center';
@@ -869,8 +896,12 @@ export async function generateSlidePNG(
     const productName = texts?.productName || productData.name;
     const category = texts?.category !== undefined ? texts.category : (productData.category || '');
     const introLabel = texts?.introLabel || 'Apresentando';
+    const bgColor2 = texts?.bgColor || '#f8f8f8';
+    const bg2Luminance = getLuminance(bgColor2.replace('#', '').length === 6 ? bgColor2 : '#f8f8f8');
+    const textColor2 = bg2Luminance > 0.5 ? '#111111' : '#ffffff';
+    const subTextColor2 = bg2Luminance > 0.5 ? '#888888' : 'rgba(255,255,255,0.7)';
 
-    ctx.fillStyle = '#f8f8f8';
+    ctx.fillStyle = bgColor2;
     ctx.fillRect(0, 0, W, H);
     drawBadge(2, 80, 80, primaryColor, textOnPrimary);
     let yOffset = 200;
@@ -911,14 +942,14 @@ export async function generateSlidePNG(
     // introLabel ("Apresentando") above product name
     if (introLabel) {
       ctx.font = '400 32px system-ui, -apple-system, sans-serif';
-      ctx.fillStyle = '#888888';
+      ctx.fillStyle = subTextColor2;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
       ctx.fillText(introLabel.toUpperCase(), W / 2, H - 310);
     }
     // Product name with wrapText to avoid clipping
     ctx.font = '900 68px system-ui, -apple-system, sans-serif';
-    ctx.fillStyle = '#111111';
+    ctx.fillStyle = textColor2;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     wrapText(ctx, productName, W / 2, H - 260, W - 160, 80, 'center');
