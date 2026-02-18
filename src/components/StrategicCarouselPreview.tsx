@@ -28,6 +28,8 @@ interface ProductData {
   applications?: string;
   faq?: FAQ[];
   ecommerceHtmlText?: string;
+  feedCopyBenefits?: string;        // Copy IA — variação Benefits do Feed
+  feedCopyProblemSolution?: string; // Copy IA — variação Problem/Solution do Feed
 }
 
 // ========================= SlideTexts Types =========================
@@ -486,6 +488,12 @@ function Slide3Technical({ image, primaryColor, productData, texts }: { image: s
   const textOnPrimary = getLuminance(primaryColor) > 0.5 ? '#000000' : '#ffffff';
   const title = texts?.title || 'Por que confiar?';
 
+  // PRIORIDADE 1: Feed Copy Benefits (texto rico gerado por IA)
+  const feedBenefits = productData.feedCopyBenefits;
+  const benefitsFontSize = feedBenefits
+    ? (feedBenefits.length > 400 ? 22 : feedBenefits.length > 250 ? 26 : feedBenefits.length > 150 ? 30 : 34)
+    : 36;
+
   return (
     <div style={{ width: SLIDE_W, height: SLIDE_H, background: '#0f0f14', fontFamily: 'system-ui, -apple-system, sans-serif', display: 'flex', position: 'relative', overflow: 'hidden' }}>
       <div style={{ position: 'absolute', top: 60, left: 60, width: 70, height: 70, borderRadius: '50%', background: primaryColor, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
@@ -500,22 +508,33 @@ function Slide3Technical({ image, primaryColor, productData, texts }: { image: s
         <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: 120, background: 'linear-gradient(to right, transparent, #0f0f14)' }} />
       </div>
       <div style={{ flex: 1, padding: '100px 60px 80px 40px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-        <h2 style={{ color: '#ffffff', fontSize: 52, fontWeight: 900, margin: '0 0 60px 0', lineHeight: 1.2 }}>{title}</h2>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 36 }}>
-          {displayItems.length > 0 ? displayItems.map((item, idx) => (
-            <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: 24 }}>
-              <div style={{ width: 56, height: 56, borderRadius: 12, background: primaryColor, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 28 }}>
-                {SLIDE3_UNICODE_ICONS[idx % SLIDE3_UNICODE_ICONS.length]}
+        <h2 style={{ color: '#ffffff', fontSize: 52, fontWeight: 900, margin: '0 0 40px 0', lineHeight: 1.2 }}>{title}</h2>
+        {/* Divider accent */}
+        <div style={{ width: 56, height: 3, background: primaryColor, borderRadius: 2, marginBottom: 36, flexShrink: 0 }} />
+
+        {feedBenefits ? (
+          // RICH TEXT: Feed Copy Benefits (IA)
+          <p style={{ color: '#d8d8d8', fontSize: benefitsFontSize, lineHeight: 1.6, margin: 0, fontWeight: 400, wordBreak: 'break-word' as const, whiteSpace: 'pre-line' as const }}>
+            {feedBenefits.slice(0, 500)}
+          </p>
+        ) : (
+          // FALLBACK: Lista de specs/features
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 36 }}>
+            {displayItems.length > 0 ? displayItems.map((item, idx) => (
+              <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: 24 }}>
+                <div style={{ width: 56, height: 56, borderRadius: 12, background: primaryColor, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 28 }}>
+                  {SLIDE3_UNICODE_ICONS[idx % SLIDE3_UNICODE_ICONS.length]}
+                </div>
+                <div>
+                  <p style={{ color: '#e0e0e0', fontWeight: 700, fontSize: 36, margin: 0, lineHeight: 1.2 }}>{item.label}</p>
+                  {item.value && <p style={{ color: '#aaa', fontSize: 30, margin: '6px 0 0 0', fontWeight: 400 }}>{item.value}</p>}
+                </div>
               </div>
-              <div>
-                <p style={{ color: '#e0e0e0', fontWeight: 700, fontSize: 36, margin: 0, lineHeight: 1.2 }}>{item.label}</p>
-                {item.value && <p style={{ color: '#aaa', fontSize: 30, margin: '6px 0 0 0', fontWeight: 400 }}>{item.value}</p>}
-              </div>
-            </div>
-          )) : (
-            <p style={{ color: '#aaa', fontSize: 36 }}>Adicione especificações técnicas ao produto para exibir aqui.</p>
-          )}
-        </div>
+            )) : (
+              <p style={{ color: '#aaa', fontSize: 36 }}>Adicione especificações técnicas ao produto para exibir aqui.</p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -542,6 +561,21 @@ function buildImpactNarrative(productData: ProductData): {
   let headline = '';
   let impactText = '';
   let proofBullets: string[] = [];
+
+  // PRIORIDADE 0: Feed Copy Problem/Solution (copy IA com estrutura dor → solução)
+  if (productData.feedCopyProblemSolution) {
+    const copy = productData.feedCopyProblemSolution;
+    const lines = copy.split('\n').map((l: string) => l.trim()).filter(Boolean);
+    headline = (lines[0]?.slice(0, 80) || name);
+    const body = lines.slice(1).join(' ').slice(0, 250);
+    const bulletLines = lines.filter((l: string) => /^[•\-💸⏳✅🔥⚡🎯]/.test(l)).slice(0, 3);
+    return {
+      headline,
+      impactText: body || copy.slice(0, 250),
+      proofBullets: bulletLines,
+      label: 'Problema & Solução',
+    };
+  }
 
   if (faqs.length > 0) {
     // Prioridade 1: FAQs — headline = 1ª pergunta, texto = 1ª resposta, bullets = próximas perguntas
