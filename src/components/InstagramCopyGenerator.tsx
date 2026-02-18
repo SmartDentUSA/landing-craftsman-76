@@ -78,6 +78,7 @@ interface InstagramCopyGeneratorProps {
   productFeatures?: string[];
   technicalSpecs?: Array<{ label: string; value: string }>;
   productSalesPitch?: string;
+  productDescription?: string;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -89,7 +90,7 @@ const REELS_SCRIPT_LABELS: Record<string, { label: string; description: string }
   demonstration: { label: '🎯 Demonstração', description: 'Mostra o produto em ação' }
 };
 
-export function InstagramCopyGenerator({ productId, productName, productPrice, productCategory, productImages = [], productUrl, productBenefits, productFeatures, technicalSpecs, productSalesPitch, isOpen, onClose }: InstagramCopyGeneratorProps) {
+export function InstagramCopyGenerator({ productId, productName, productPrice, productCategory, productImages = [], productUrl, productBenefits, productFeatures, technicalSpecs, productSalesPitch, productDescription, isOpen, onClose }: InstagramCopyGeneratorProps) {
   // === Estados existentes (Copies de texto) ===
   const [feedCopies, setFeedCopies] = useState<CopyVariation[]>([
     { variation: 1, approach: 'storytelling', copy: '', link: '' },
@@ -1953,16 +1954,17 @@ ${slide.text}`;
                       productImages={allProductImages}
                       primaryColor={primaryColor}
                       accentColor={accentColor}
-                      productData={{
-                        name: productName,
-                        price: productPrice,
-                        category: productCategory,
-                        benefits: productBenefits,
-                        features: productFeatures,
-                        technicalSpecs: technicalSpecs,
-                        productUrl: productUrl,
-                        salesPitch: productSalesPitch,
-                      }}
+                       productData={{
+                         name: productName,
+                         price: productPrice,
+                         category: productCategory,
+                         description: productDescription,
+                         benefits: productBenefits,
+                         features: productFeatures,
+                         technicalSpecs: technicalSpecs,
+                         productUrl: productUrl,
+                         salesPitch: productSalesPitch,
+                       }}
                       slideTexts={slideTexts}
                       onSlideTextChange={(slideNum, key, value) =>
                         setSlideTexts(prev => ({
