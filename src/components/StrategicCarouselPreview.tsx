@@ -524,7 +524,7 @@ function Slide4Experience({ image, primaryColor, productData, texts }: { image: 
           <span style={{ fontWeight: 900, fontSize: 30, color: '#111' }}>4</span>
         </div>
       </div>
-      <div style={{ width: '50%', background: primaryColor, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '80px 70px', overflow: 'visible' }}>
+      <div style={{ width: '50%', background: primaryColor, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '80px 70px', overflow: 'hidden' }}>
         <p style={{ color: textOnPrimary, opacity: 0.7, fontSize: 36, fontWeight: 600, margin: '0 0 20px 0', textTransform: 'uppercase' as const, letterSpacing: 4, flexShrink: 0 }}>{label}</p>
         <h2 style={{ color: textOnPrimary, fontSize: kwFontSize, fontWeight: 900, margin: '0 0 30px 0', lineHeight: 1.05, wordBreak: 'break-word' as const, flexShrink: 0 }}>{keyword}</h2>
         <p style={{ color: textOnPrimary, opacity: 0.9, fontSize: benefit.length > 60 ? 32 : 38, lineHeight: 1.5, margin: 0, fontWeight: 400, wordBreak: 'break-word' as const }}>{benefit}</p>
