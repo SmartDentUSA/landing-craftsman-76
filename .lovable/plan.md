@@ -1,98 +1,110 @@
 
-# Duas Mudanças no Carrossel Estratégico
+# Slide 4 (Experiência): Corrigir Texto Pequeno e Sincronizar Canvas
 
-## 1 — Slide 6 (🛒 CTA): Trocar "Comprar Agora" por "Saiba Mais"
+## Diagnóstico dos Problemas
 
-### Estado Atual
-O Slide 6 exibe o botão CTA com o texto padrão **"🛒 Comprar Agora"** em dois lugares:
-- **JSX** (linha 610): `const ctaButton = texts?.ctaButton || '🛒 Comprar Agora';`
-- **Canvas** (linha 1232): `const ctaBtn = texts?.ctaButton || '🛒 Comprar Agora';`
+### Problema 1 — Multiplicadores de redução no JSX (linhas 556–558)
+Os font sizes calculados dinamicamente são REDUZIDOS por fatores `* 0.75` e `* 0.7`:
 
-E o link secundário com **"🔗 Link na Bio"**:
-- **JSX** (linha 611): `const linkLabel = texts?.linkLabel || '🔗 Link na Bio';`
-- **Canvas** (linha 1233): `const linkLbl = texts?.linkLabel || '🔗 Link na Bio';`
+```tsx
+// Linha 556 — label:
+fontSize: labelFontSize * 0.75  // Reduz de 24–34px para 18–25px
 
-### O que Muda
-| Campo | Antes | Depois |
-|---|---|---|
-| Botão CTA (JSX + Canvas) | `'🛒 Comprar Agora'` | `'💡 Saiba Mais'` |
-| Link secundário (JSX + Canvas) | `'🔗 Link na Bio'` | `'🔗 Saiba Mais'` |
+// Linha 557 — keyword:
+fontSize: kwFontSize * 0.7       // Reduz de 44–90px para 30–63px
 
-Alteração cirúrgica em **4 strings de fallback** (2 no JSX, 2 no canvas).
-
----
-
-## 2 — Slide 4 (💫 Experiência): Usar Dados Mais Ricos do Produto
-
-### Problema Atual
-Com o painel agora ocupando 75% do card (muito espaço disponível), os dados que preenchem o slide são muito genéricos:
-
-```typescript
-// Atual — dados superficiais:
-const benefit = texts?.benefit || productData.benefits?.[2] || productData.benefits?.[1] || 'Resultados excepcionais em cada uso';
-const keyword = texts?.keyword || productData.features?.[0] || 'Excelência';
-const label = texts?.label || 'Experiência';
+// Linha 558 — benefit:
+fontSize: benefitFontSize * 0.7  // Reduz de 22–38px para 15–26px
 ```
 
-- `keyword` usa apenas `features[0]` — geralmente um item técnico curto
-- `benefit` usa `benefits[2]` ou `benefits[1]` — pode ser um benefício genérico
-- `label` é apenas "Experiência" — sem contexto do produto
+Esses multiplicadores foram herdados de quando o painel era 25% do card. Agora que o painel é 75%, não fazem sentido — as fontes calculadas já estão calibradas para o tamanho correto.
 
-### O que Muda
+**Solução**: Remover os multiplicadores e usar os font sizes diretamente.
 
-Aproveitar o espaço adicional com dados mais ricos e específicos do produto:
-
-```typescript
-// Novo — usa sales_pitch, description e dados estratégicos:
-const salesPitch = productData.sales_pitch || '';
-const description = productData.description || '';
-const name = productData.name || '';
-
-// Keyword: nome do produto ou feature principal com mais contexto
-const keyword = texts?.keyword 
-  || productData.features?.[0] 
-  || name 
-  || 'Excelência';
-
-// Label: contextualizar com a categoria ou "Experiência com [produto]"
-const label = texts?.label 
-  || (name ? `Experiência com ${name}` : 'Experiência')
-  || 'Experiência';
-
-// Benefit: sales_pitch é o campo mais rico — o diferencial real do produto
-// Se não tiver, usar description truncada, depois benefits
-const benefit = texts?.benefit 
-  || salesPitch 
-  || description.slice(0, 200) 
-  || productData.benefits?.[0] 
-  || productData.benefits?.[1] 
-  || 'Resultados excepcionais em cada uso';
-```
-
-### Por que `sales_pitch`?
-O `sales_pitch` é especificamente o campo onde o usuário descreve **o que o produto entrega de diferencial** — exatamente o que o slide Experiência deve comunicar. Já `description` serve como fallback rico se o pitch não existir.
-
-### Ajuste de Font Size para Benefit
-Com `sales_pitch` sendo potencialmente mais longo (pode ter 150-300 chars), os breakpoints de auto-sizing do `benefit` precisam de ajuste:
+### Problema 2 — Canvas não usa `salesPitch` (linha 1101)
+O JSX usa `salesPitch` como principal fonte de texto rico, mas o canvas ainda usa `benefits[1]` como fallback:
 
 ```typescript
-// Atual:
-const benefitFontSize = benefit.length > 120 ? 24 : benefit.length > 80 ? 28 : benefit.length > 60 ? 32 : 38;
+// Canvas linha 1101 — DESATUALIZADO:
+const benefit = texts?.benefit || benefits[1] || benefits[0] || 'Resultados excepcionais em cada uso';
 
-// Novo (mais espaço, textos maiores):
-const benefitFontSize = benefit.length > 200 ? 22 : benefit.length > 120 ? 26 : benefit.length > 80 ? 30 : benefit.length > 60 ? 34 : 38;
+// JSX linha 512 — CORRETO:
+const benefit = texts?.benefit || salesPitch || productData.benefits?.[0] || ...
 ```
 
-Isso garante que pitch mais longos ainda caibam de forma legível no painel de 75%.
+**Solução**: Sincronizar o canvas para usar `salesPitch` também.
 
----
+### Problema 3 — Label com `whiteSpace: 'nowrap'` e `textOverflow: 'ellipsis'` (linha 556)
+O label `"Experiência com [Nome do Produto]"` é cortado com `...` porque `whiteSpace: 'nowrap'` impede a quebra de linha.
 
-## Arquivos a Modificar
+**Solução**: Permitir quebra de linha no label.
+
+## Mudanças Técnicas
+
+### JSX — `Slide4Experience` (linhas 556–558)
+
+**Antes:**
+```tsx
+<p style={{ fontSize: labelFontSize * 0.75, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{label}</p>
+<h2 style={{ fontSize: kwFontSize * 0.7 }}>{keyword}</h2>
+<p style={{ fontSize: benefitFontSize * 0.7 }}>{benefit}</p>
+```
+
+**Depois** (remover multiplicadores + habilitar quebra de linha no label):
+```tsx
+<p style={{ fontSize: labelFontSize }}>{label}</p>
+<h2 style={{ fontSize: kwFontSize }}>{keyword}</h2>
+<p style={{ fontSize: benefitFontSize }}>{benefit}</p>
+```
+
+O painel de 75% tem espaço mais que suficiente para exibir os textos com os font sizes originalmente calculados.
+
+### Canvas — Slide 4 (linha 1095–1102)
+
+Sincronizar o `benefit` e `label` do canvas com a mesma lógica do JSX:
+
+**Antes (linha 1100–1102):**
+```typescript
+const keyword = texts?.keyword || features[0] || 'Excelência';
+const benefit = texts?.benefit || benefits[1] || benefits[0] || 'Resultados excepcionais em cada uso';
+const label4 = texts?.label || 'EXPERIÊNCIA';
+```
+
+**Depois:**
+```typescript
+const salesPitch4 = productData.salesPitch || '';
+const name4 = productData.name || '';
+const keyword = texts?.keyword || features[0] || name4 || 'Excelência';
+const benefit = texts?.benefit || salesPitch4 || benefits[0] || benefits[1] || 'Resultados excepcionais em cada uso';
+const label4 = texts?.label || (name4 ? `Experiência com ${name4}` : 'Experiência');
+```
+
+### Canvas — Ajuste de Font Size do Benefit (linha 1147)
+
+O benefit agora pode conter o `salesPitch` completo (150–300 chars). Ajustar o font size do canvas para acomodar textos mais longos:
+
+**Antes:**
+```typescript
+ctx.font = '400 36px system-ui';
+```
+
+**Depois (font size dinâmico baseado no comprimento):**
+```typescript
+const benFontSizeCanvas = benefit.length > 200 ? 28 : benefit.length > 120 ? 32 : 36;
+ctx.font = `400 ${benFontSizeCanvas}px system-ui, -apple-system, sans-serif`;
+// Linha height acompanha
+const benLineH4 = benFontSizeCanvas * 1.45;
+```
+
+E nas linhas 1155 e 1177, usar `benLineH4` em vez do valor fixo `52`.
+
+## Resumo das Mudanças
 
 | Arquivo | Linhas | Mudança |
 |---|---|---|
-| `src/components/StrategicCarouselPreview.tsx` | 510–518 | Dados do Slide 4 (JSX) |
-| `src/components/StrategicCarouselPreview.tsx` | 610–611 | Strings CTA do Slide 6 (JSX) |
-| `src/components/StrategicCarouselPreview.tsx` | 1232–1233 | Strings CTA do Slide 6 (Canvas) |
+| `src/components/StrategicCarouselPreview.tsx` | 556–558 | Remover `* 0.75` e `* 0.7`, remover `whiteSpace: 'nowrap'` do label |
+| `src/components/StrategicCarouselPreview.tsx` | 1100–1102 | Sincronizar dados (salesPitch + nome dinâmico) no canvas |
+| `src/components/StrategicCarouselPreview.tsx` | 1147–1155 | Font size dinâmico para benefit no canvas |
+| `src/components/StrategicCarouselPreview.tsx` | 1177 | Usar `benLineH4` em vez de `52` fixo |
 
-**1 arquivo, 3 seções pequenas.**
+**1 arquivo, 4 seções cirúrgicas.**
