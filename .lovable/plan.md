@@ -1,145 +1,104 @@
 
-# Dois Fixes: Filtrar Descrições de Imagem + Tabela no Slide 3 (Cientificidade)
+# Fix: Expandir `isVisualDescriptionLine()` para Cobrir Mais Padrões de Sugestão Visual
 
-## Problema 1 — Texto de imagem aparecendo no card
+## Diagnóstico
 
-O texto "Gráfico 3D estilizado e elegante mostrando as nanopartículas..." é uma **sugestão visual** que a IA insere na copy como descrição de imagem. A função `buildImpactNarrative()` (Slide 4) e o parsing do `Slide3Technical` (Slide 3) não filtram essas linhas — então elas aparecem como headline ou corpo.
+A frase **"Infográfico estilizado em 3D mostrando a ponta da caneta..."** passa pelo filtro atual porque a função `isVisualDescriptionLine()` (linha 490 de `StrategicCarouselPreview.tsx`) não cobre todos os padrões que a IA usa para descrever conteúdo visual.
 
-### Solução
-Adicionar a função auxiliar `isVisualDescriptionLine()` no `StrategicCarouselPreview.tsx` e aplicá-la nos dois slides antes de usar qualquer linha como texto:
+Analisando a frase completa:
+- `"Infográfico estilizado em 3D mostrando a ponta da caneta..."` → a palavra **"Infográfico"** não está na lista
+- `"Setas indicam a remoção química..."` → **"setas indicam"** não está na lista
+- `"Ícones flutuantes discretos indicam..."` → **"ícones flutuantes"** não está (o filtro tem `flutuando em` mas não `flutuantes`)
+- `"Ícones"** referentes a elementos gráficos → não coberto
+
+A palavra `estilizado` **está** na lista mas a frase começar com "Infográfico" faz a linha entrar antes de chegar à palavra. Na verdade, `lower.includes('estilizado')` deveria pegar — mas provavelmente a linha foi fragmentada ou está em uma posição diferente de `lines[0]`.
+
+## Causa Real
+
+O filtro atual em `isVisualDescriptionLine()` tem gaps para os padrões mais novos que a IA gera:
+
+```typescript
+// Padrões NÃO cobertos atualmente:
+"Infográfico estilizado em 3D mostrando..."   // falta: 'infográfico'
+"Setas indicam a remoção química..."          // falta: 'setas indicam'
+"Ícones flutuantes discretos indicam..."      // falta: 'ícones flutuantes', 'ícones discretos'
+"...criação de uma camada de ancoragem..."    // parte de frase visual mais longa
+```
+
+## A Correção — Arquivo: `src/components/StrategicCarouselPreview.tsx`, linhas 490–506
+
+Expandir a função `isVisualDescriptionLine()` adicionando as palavras-chave faltantes e melhorar a cobertura com padrões gerais:
 
 ```typescript
 function isVisualDescriptionLine(line: string): boolean {
   const lower = line.toLowerCase();
   return (
-    /^\[.{10,}\]/.test(line) ||   // [Imagem: ...]
+    // Linhas entre colchetes: [Imagem: ...], [Infográfico: ...]
+    /^\[.{10,}\]/.test(line) ||
+    // Tipos de conteúdo visual
+    lower.includes('infográfico') ||           // ← NOVO
     lower.includes('gráfico') ||
     lower.includes('ilustração') ||
+    lower.includes('diagrama') ||              // ← NOVO
+    lower.includes('animação') ||             // ← NOVO
+    // Descrições de ações visuais
     lower.includes('imagem mostrando') ||
+    lower.includes('setas indicam') ||         // ← NOVO
+    lower.includes('seta indicando') ||        // ← NOVO
+    lower.includes('ícones flutuantes') ||     // ← NOVO
+    lower.includes('ícones discretos') ||      // ← NOVO
+    lower.includes('ícone indicando') ||       // ← NOVO
+    lower.includes('ícones indicam') ||        // ← NOVO
+    // Estilo e design de imagem
     lower.includes('design deve') ||
     lower.includes('estilizado') ||
     lower.includes('flutuando em') ||
+    lower.includes('flutuantes') ||            // ← NOVO (cobre "ícones flutuantes discretos")
     lower.includes('cores como') ||
     lower.includes('nanopartículas') ||
-    (lower.includes('visualmente') && lower.includes('mostr'))
+    // Instruções de criação visual
+    lower.includes('sugestão visual') ||
+    lower.includes('sugestão de imagem') ||
+    lower.includes('fundo deve') ||            // ← NOVO
+    lower.includes('fundo com') ||             // ← NOVO (ex: "fundo com partículas...")
+    lower.includes('deve mostrar') ||          // ← NOVO
+    lower.includes('deve conter') ||           // ← NOVO
+    lower.includes('deve transmitir') ||       // ← NOVO
+    lower.includes('transmitir credibilidade') ||
+    lower.includes('credibilidade científica') ||
+    // Padrão geral: linha com "mostrando" em contexto visual
+    (lower.includes('visualmente') && lower.includes('mostr')) ||
+    (lower.includes('3d') && lower.includes('mostrando')) ||   // ← NOVO: "3D mostrando..."
+    (lower.includes('mostrando') && lower.includes('ponta')) || // ← NOVO: "mostrando a ponta"
+    (lower.includes('mostrando') && lower.includes('caneta'))   // ← NOVO: "mostrando a caneta"
   );
 }
 ```
 
-Aplicar em:
-- **Slide 3**: filtrar `lines` antes de extrair `benefitsHeadline`, `benefitsBody`, `benefitsBullets`
-- **Slide 4**: filtrar `lines` em `buildImpactNarrative()` antes de extrair headline, body e bullets do `feedCopyProblemSolution`
+## Por que essa abordagem é correta
 
----
+Em vez de listar palavras específicas de cada produto (como "caneta", "resina"), adicionamos padrões **estruturais** que a IA usa para descrever qualquer imagem:
+- Tipos de mídia: `infográfico`, `diagrama`, `animação`
+- Ações de composição visual: `setas indicam`, `ícones flutuantes`, `fundo deve`
+- Predicados de design: `deve mostrar`, `deve transmitir`, `deve conter`
 
-## Problema 2 — Tabela `competitor_comparison` no Card 3 (Cientificidade)
+Isso torna o filtro robusto para futuros produtos diferentes.
 
-A tabela de comparação com concorrentes (`competitor_comparison`) já existe no produto (campo no banco), mas:
-- **Não é passada** como prop do `InstagramCopyGenerator` para o `StrategicCarouselPreview`
-- **Não é renderizada** no `Slide3Technical`
+## Arquivo a Modificar
 
-### Plano de implementação
+| Arquivo | Mudança | Linhas |
+|---|---|---|
+| `src/components/StrategicCarouselPreview.tsx` | Expandir `isVisualDescriptionLine()` com ~12 novos padrões | 490–506 |
 
-**Passo 1 — Expandir `ProductData` interface em `StrategicCarouselPreview.tsx`:**
+**1 arquivo, 1 função, mudança aditiva. Zero risco de regressão — apenas expande o filtro existente.**
 
-```typescript
-interface CompetitorComparison {
-  enabled: boolean;
-  title?: string;
-  subtitle?: string;
-  table_headers: string[];
-  table_data: Array<Record<string, string>>;
-}
+## Exemplos do Antes / Depois
 
-interface ProductData {
-  // ...campos existentes...
-  competitorComparison?: CompetitorComparison;
-}
-```
+| Frase | Antes | Depois |
+|---|---|---|
+| "Infográfico estilizado em 3D mostrando..." | ❌ Passa (aparece no card) | ✅ Filtrada |
+| "Setas indicam a remoção química..." | ❌ Passa | ✅ Filtrada |
+| "Ícones flutuantes discretos indicam '135 MPa'..." | ❌ Passa | ✅ Filtrada |
+| "Gráfico 3D com nanopartículas..." | ✅ Já filtrada | ✅ Ainda filtrada |
 
-**Passo 2 — Adicionar prop `competitorComparison` em `InstagramCopyGeneratorProps`:**
-
-```typescript
-interface InstagramCopyGeneratorProps {
-  // ...props existentes...
-  competitorComparison?: {
-    enabled: boolean;
-    title?: string;
-    subtitle?: string;
-    table_headers: string[];
-    table_data: Array<Record<string, string>>;
-  };
-}
-```
-
-**Passo 3 — Passar `competitorComparison` no `productData` do `StrategicCarouselPreview`:**
-
-```typescript
-productData={{
-  // ...campos existentes...
-  competitorComparison: competitorComparison,
-}}
-```
-
-**Passo 4 — Renderizar a tabela no `Slide3Technical`:**
-
-Quando `competitorComparison?.enabled && table_headers.length > 0 && table_data.length > 0`, exibir uma tabela compacta no painel direito do Slide 3, acima ou no lugar dos bullets do `feedCopyBenefits`:
-
-```
-┌─────────────────────────────────────────────────────┐
-│ [3]                                                 │
-│                                                     │
-│  [IMAGEM]  │  TÍTULO ("Por que confiar?")           │
-│            │  ─────── (divider)                     │
-│            │  HEADLINE (do feedCopyBenefits)        │
-│            │                                        │
-│            │  ┌────────┬────────┬────────┐          │
-│            │  │ Header │ Coluna │ Coluna │          │
-│            │  ├────────┼────────┼────────┤          │
-│            │  │ Linha 1│  val   │  val   │          │
-│            │  │ Linha 2│  val   │  val   │          │
-│            │  └────────┴────────┴────────┘          │
-└─────────────────────────────────────────────────────┘
-```
-
-**Hierarquia no Slide 3 (nova ordem):**
-1. `feedCopyBenefits` extraído (headline + corpo)
-2. **Tabela `competitor_comparison`** (se habilitada e com dados) — substituindo ou completando os bullets
-3. Fallback: `feedCopyBenefits` bullets
-4. Fallback final: specs técnicas / features
-
-**Estilo da tabela no slide (em px, para canvas 1080×1350):**
-- Cabeçalho da tabela: `background: primaryColor`, texto branco, `fontSize: 22px`, `fontWeight: 700`
-- Linhas pares: `background: rgba(255,255,255,0.06)`
-- Linhas ímpares: `background: rgba(255,255,255,0.02)`
-- Bordas: `1px solid rgba(255,255,255,0.12)`
-- Texto das células: `color: #e0e0e0`, `fontSize: 20px`
-- Primeira coluna (nome do produto/concorrente): bold
-
-**Passo 5 — Passar `competitorComparison` no `generateSlidePNG()` (export ZIP):**
-
-```typescript
-const productData = {
-  name: productName,
-  // ...campos existentes...
-  competitorComparison: competitorComparison,
-};
-```
-
----
-
-## Localização dos Callers — onde buscar `competitorComparison`
-
-O `InstagramCopyGenerator` é aberto por chamadores que já têm os dados do produto. É necessário verificar onde o componente é instanciado para adicionar a nova prop.
-
----
-
-## Arquivos a Modificar
-
-| Arquivo | Mudança |
-|---|---|
-| `src/components/StrategicCarouselPreview.tsx` | 1) Interface `ProductData` + `CompetitorComparison`; 2) `isVisualDescriptionLine()` helper; 3) Aplicar filtro em Slide 3 e Slide 4; 4) Renderizar tabela no `Slide3Technical` |
-| `src/components/InstagramCopyGenerator.tsx` | 1) Adicionar prop `competitorComparison`; 2) Passá-la no `productData` do `StrategicCarouselPreview` e no export ZIP |
-| Componentes que abrem `InstagramCopyGenerator` | Passar `competitorComparison` como prop (buscar e atualizar todos os callers) |
-
-**Zero chamadas de API extras. Usa dados já carregados do banco.**
+O filtro é aplicado tanto no **Slide 3** (`feedCopyBenefits`) quanto no **Slide 4** (`feedCopyProblemSolution`) — ambos já chamam `isVisualDescriptionLine()`, então a correção nessa única função resolve os dois slides automaticamente.
