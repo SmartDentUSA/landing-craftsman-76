@@ -132,6 +132,13 @@ interface Product {
     [key: string]: any;
   };
   applications?: string;
+  competitor_comparison?: {
+    enabled: boolean;
+    title?: string;
+    subtitle?: string;
+    table_headers: string[];
+    table_data: Array<Record<string, string>>;
+  };
 }
 
 interface TechnicalSpec {
@@ -754,6 +761,7 @@ export function ModernProductCard({
         productApplications={product.applications}
         productFaq={product.faq}
         productEcommerceHtml={product.ecommerce_html?.html_content}
+        competitorComparison={product.competitor_comparison as any}
       />
 
       {/* Modal de Geração TikTok */}
