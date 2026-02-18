@@ -43,12 +43,12 @@ interface ProductData {
 
 // ========================= SlideTexts Types =========================
 export interface SlideTextsType {
-  1: { hook: string; productName: string };
+  1: { hook: string; productName: string; imageScale?: string; bgColor?: string };
   2: { category: string; introLabel?: string; productName: string; imageScale?: string; bgColor?: string };
-  3: { title: string };
-  4: { label: string; keyword: string; benefit: string };
-  5: { title: string; badge1: string; badge2: string; badge3: string };
-  6: { productName: string; ctaButton: string; linkLabel: string; footer: string };
+  3: { title: string; imageScale?: string; bgColor?: string };
+  4: { label: string; keyword: string; benefit: string; imageScale?: string; bgColor?: string };
+  5: { title: string; badge1: string; badge2: string; badge3: string; imageScale?: string; bgColor?: string };
+  6: { productName: string; ctaButton: string; linkLabel: string; footer: string; imageScale?: string; bgColor?: string };
 }
 
 interface StrategicCarouselPreviewProps {
@@ -85,6 +85,8 @@ const SLIDE_EDITOR_FIELDS: Record<number, Array<{ key: string; label: string; ty
   1: [
     { key: 'hook', label: 'Texto do Gancho', type: 'textarea' },
     { key: 'productName', label: 'Nome do produto', type: 'input' },
+    { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
+    { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
   ],
   2: [
     { key: 'category', label: 'Categoria', type: 'input' },
@@ -94,24 +96,32 @@ const SLIDE_EDITOR_FIELDS: Record<number, Array<{ key: string; label: string; ty
     { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
   ],
   3: [
-    { key: 'title', label: 'Título da seção', type: 'input' },
+    { key: 'title', label: 'Título da seção', type: 'textarea' },
+    { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
+    { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
   ],
   4: [
     { key: 'label', label: 'Label topo (ex: EXPERIÊNCIA)', type: 'input' },
     { key: 'keyword', label: 'Palavra-chave', type: 'input' },
     { key: 'benefit', label: 'Benefício', type: 'textarea' },
+    { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
+    { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
   ],
   5: [
-    { key: 'title', label: 'Título', type: 'input' },
-    { key: 'badge1', label: 'Badge 1', type: 'input' },
-    { key: 'badge2', label: 'Badge 2', type: 'input' },
-    { key: 'badge3', label: 'Badge 3', type: 'input' },
+    { key: 'title', label: 'Título', type: 'textarea' },
+    { key: 'badge1', label: 'Badge 1', type: 'textarea' },
+    { key: 'badge2', label: 'Badge 2', type: 'textarea' },
+    { key: 'badge3', label: 'Badge 3', type: 'textarea' },
+    { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
+    { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
   ],
   6: [
     { key: 'productName', label: 'Nome exibido', type: 'input' },
-    { key: 'ctaButton', label: 'Texto do botão CTA', type: 'input' },
+    { key: 'ctaButton', label: 'Texto do botão CTA', type: 'textarea' },
     { key: 'linkLabel', label: 'Label do link', type: 'input' },
-    { key: 'footer', label: 'Texto de rodapé', type: 'input' },
+    { key: 'footer', label: 'Texto de rodapé', type: 'textarea' },
+    { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
+    { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
   ],
 };
 
@@ -364,18 +374,15 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
 }
 
 // ==================== SLIDE 1 — HOOK / GANCHO ====================
-function Slide1Hook({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; productData: ProductData; texts?: { hook?: string; productName?: string } }) {
-  const textColor = getLuminance(primaryColor) > 0.5 ? '#000000' : '#ffffff';
+function Slide1Hook({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; productData: ProductData; texts?: { hook?: string; productName?: string; imageScale?: string; bgColor?: string } }) {
   const hook = texts?.hook || (() => {
     if (productData.salesPitch) {
       const pitch = productData.salesPitch.trim();
-      // Tenta encontrar uma frase completa entre 40-90 chars
       const sentences = pitch.split(/(?<=[.!?])\s+/);
       for (const sentence of sentences) {
         const s = sentence.trim();
         if (s.length >= 40 && s.length <= 90) return s;
       }
-      // Pega até 90 chars quebrando na palavra — não no meio de uma frase longa
       if (pitch.length <= 90) return pitch;
       const words = pitch.split(' ');
       let accumulated = '';
@@ -388,18 +395,24 @@ function Slide1Hook({ image, primaryColor, productData, texts }: { image: string
     return productData.name || '';
   })();
   const name = texts?.productName || productData.name;
+  const imageScale = Number(texts?.imageScale) || 100;
+  const bgColor = texts?.bgColor || '';
+  const hasCustomBg = bgColor && bgColor !== '#333333';
 
   return (
     <div style={{ width: SLIDE_W, height: SLIDE_H, position: 'relative', overflow: 'hidden', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-      {/* Imagem full-bleed cobrindo todo o card */}
+      {/* Background: custom color or image */}
+      {hasCustomBg ? (
+        <div style={{ position: 'absolute', inset: 0, background: bgColor }} />
+      ) : null}
       {image ? (
-        <img src={image} alt="produto" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
+        <img src={image} alt="produto" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', transform: `scale(${imageScale / 100})`, transformOrigin: 'center center' }} />
       ) : (
-        <div style={{ position: 'absolute', inset: 0, background: '#333' }} />
+        !hasCustomBg && <div style={{ position: 'absolute', inset: 0, background: '#333' }} />
       )}
 
       {/* Overlay escuro geral sutil para dar profundidade */}
-      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.28)' }} />
+      <div style={{ position: 'absolute', inset: 0, background: hasCustomBg ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.28)' }} />
 
       {/* Número do slide */}
       <div style={{ position: 'absolute', top: 60, left: 60, width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -551,7 +564,7 @@ function isVisualDescriptionLine(line: string): boolean {
 // ==================== SLIDE 3 — CIENTIFICIDADE ====================
 const SLIDE3_UNICODE_ICONS = ['⚡', '🛡', '⭐', '✅', '🔬'];
 
-function Slide3Technical({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; accentColor: string; productData: ProductData; texts?: { title?: string } }) {
+function Slide3Technical({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; accentColor: string; productData: ProductData; texts?: { title?: string; imageScale?: string; bgColor?: string } }) {
   const specs = productData.technicalSpecs?.slice(0, 5) || [];
   const features = productData.features?.slice(0, 5) || [];
   const items = specs.length > 0 ? specs.map(s => ({ label: s.label, value: s.value })) : features.map(f => ({ label: f, value: '' }));
@@ -580,18 +593,21 @@ function Slide3Technical({ image, primaryColor, productData, texts }: { image: s
   const cc = productData.competitorComparison;
   const hasCompetitorTable = cc?.enabled && cc.table_headers.length > 0 && cc.table_data.length > 0;
 
+  const imageScale3 = Number(texts?.imageScale) || 100;
+  const bgColor3 = texts?.bgColor || '#0f0f14';
+
   return (
-    <div style={{ width: SLIDE_W, height: SLIDE_H, background: '#0f0f14', fontFamily: 'system-ui, -apple-system, sans-serif', display: 'flex', position: 'relative', overflow: 'hidden' }}>
+    <div style={{ width: SLIDE_W, height: SLIDE_H, background: bgColor3, fontFamily: 'system-ui, -apple-system, sans-serif', display: 'flex', position: 'relative', overflow: 'hidden' }}>
       <div style={{ position: 'absolute', top: 60, left: 60, width: 70, height: 70, borderRadius: '50%', background: primaryColor, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
         <span style={{ color: textOnPrimary, fontWeight: 900, fontSize: 30 }}>3</span>
       </div>
       <div style={{ width: '42%', position: 'relative', overflow: 'hidden' }}>
         {image ? (
-          <img src={image} alt="produto" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
+          <img src={image} alt="produto" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', transform: `scale(${imageScale3 / 100})`, transformOrigin: 'center center' }} />
         ) : (
           <div style={{ width: '100%', height: '100%', background: '#1a1a2e' }} />
         )}
-        <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: 120, background: 'linear-gradient(to right, transparent, #0f0f14)' }} />
+        <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: 120, background: `linear-gradient(to right, transparent, ${bgColor3})` }} />
       </div>
       <div style={{ flex: 1, padding: '100px 60px 80px 40px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
         <h2 style={{ color: '#ffffff', fontSize: 52, fontWeight: 900, margin: '0 0 40px 0', lineHeight: 1.2 }}>{title}</h2>
@@ -829,7 +845,7 @@ function buildImpactNarrative(productData: ProductData): {
 }
 
 // ==================== SLIDE 4 — EXPERIÊNCIA ====================
-function Slide4Experience({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; productData: ProductData; texts?: { label?: string; keyword?: string; benefit?: string } }) {
+function Slide4Experience({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; productData: ProductData; texts?: { label?: string; keyword?: string; benefit?: string; imageScale?: string; bgColor?: string } }) {
   const { headline, impactText, proofBullets, label } = buildImpactNarrative(productData);
 
   // Respeitar edições manuais do usuário
@@ -842,19 +858,22 @@ function Slide4Experience({ image, primaryColor, productData, texts }: { image: 
   const kwFontSize = finalKeyword.length > 50 ? 38 : finalKeyword.length > 35 ? 46 : finalKeyword.length > 22 ? 56 : 68;
   const labelFontSize = 22;
   const impactFontSize = finalImpact.length > 180 ? 20 : finalImpact.length > 120 ? 22 : finalImpact.length > 70 ? 25 : 28;
+  const imageScale4 = Number(texts?.imageScale) || 100;
+  const bgColor4 = texts?.bgColor || '#0f0f14';
 
   return (
-    <div style={{ width: SLIDE_W, height: SLIDE_H, fontFamily: 'system-ui, -apple-system, sans-serif', position: 'relative', overflow: 'hidden', background: '#0f0f14', display: 'flex' }}>
+    <div style={{ width: SLIDE_W, height: SLIDE_H, fontFamily: 'system-ui, -apple-system, sans-serif', position: 'relative', overflow: 'hidden', background: bgColor4, display: 'flex' }}>
       {/* Imagem à esquerda — 42% */}
       <div style={{ width: '42%', flexShrink: 0, position: 'relative', overflow: 'hidden' }}>
         {image ? (
-          <img src={image} alt="produto em uso" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
+          <img src={image} alt="produto em uso" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', transform: `scale(${imageScale4 / 100})`, transformOrigin: 'center center' }} />
         ) : (
           <div style={{ width: '100%', height: '100%', background: '#1a1a2e' }} />
         )}
         {/* Feather borda direita */}
-        <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: 140, background: 'linear-gradient(to right, transparent, #0f0f14)' }} />
+        <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: 140, background: `linear-gradient(to right, transparent, ${bgColor4})` }} />
       </div>
+
 
       {/* Número do slide */}
       <div style={{ position: 'absolute', top: 60, left: 60, width: 70, height: 70, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -897,7 +916,7 @@ function Slide4Experience({ image, primaryColor, productData, texts }: { image: 
 
 
 // ==================== SLIDE 5 — SEGURANÇA ====================
-function Slide5Security({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; productData: ProductData; texts?: { title?: string; badge1?: string; badge2?: string; badge3?: string } }) {
+function Slide5Security({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; productData: ProductData; texts?: { title?: string; badge1?: string; badge2?: string; badge3?: string; imageScale?: string; bgColor?: string } }) {
   const features = productData.features || [];
   const benefits = productData.benefits || [];
   const title = texts?.title || 'Você pode confiar';
@@ -906,11 +925,14 @@ function Slide5Security({ image, primaryColor, productData, texts }: { image: st
     { icon: 'award', label: texts?.badge2 || features[2] || benefits[1] || '5 Anos de Casos' },
     { icon: 'check', label: texts?.badge3 || features[3] || benefits[2] || 'Qualidade Premium' },
   ];
+  const imageScale5 = Number(texts?.imageScale) || 100;
+  const bgColor5 = texts?.bgColor || '';
 
   return (
     <div style={{ width: SLIDE_W, height: SLIDE_H, position: 'relative', overflow: 'hidden', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+      {bgColor5 && <div style={{ position: 'absolute', inset: 0, background: bgColor5 }} />}
       {image ? (
-        <img src={image} alt="segurança" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(8px)', transform: 'scale(1.1)' }} />
+        <img src={image} alt="segurança" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(8px)', transform: `scale(${imageScale5 / 100 * 1.1})` }} />
       ) : (
         <div style={{ position: 'absolute', inset: 0, background: '#222' }} />
       )}
@@ -940,21 +962,23 @@ function Slide5Security({ image, primaryColor, productData, texts }: { image: st
 }
 
 // ==================== SLIDE 6 — CTA ====================
-function Slide6CTA({ image, primaryColor, accentColor, productData, texts }: { image: string; primaryColor: string; accentColor: string; productData: ProductData; texts?: { productName?: string; ctaButton?: string; linkLabel?: string; footer?: string } }) {
+function Slide6CTA({ image, primaryColor, accentColor, productData, texts }: { image: string; primaryColor: string; accentColor: string; productData: ProductData; texts?: { productName?: string; ctaButton?: string; linkLabel?: string; footer?: string; imageScale?: string; bgColor?: string } }) {
   const textOnPrimary = getLuminance(primaryColor) > 0.5 ? '#000000' : '#ffffff';
   const textOnAccent = getLuminance(accentColor) > 0.5 ? '#000000' : '#ffffff';
   const name = texts?.productName || productData.name;
   const ctaButton = texts?.ctaButton || '💡 Saiba Mais';
   const linkLabel = texts?.linkLabel || '🔗 Saiba Mais';
   const footer = texts?.footer || 'Direct para mais informações';
+  const imageScale6 = Number(texts?.imageScale) || 100;
+  const bgColor6 = texts?.bgColor || primaryColor;
 
   return (
-    <div style={{ width: SLIDE_W, height: SLIDE_H, background: primaryColor, fontFamily: 'system-ui, -apple-system, sans-serif', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 80, gap: 60, position: 'relative' }}>
+    <div style={{ width: SLIDE_W, height: SLIDE_H, background: bgColor6, fontFamily: 'system-ui, -apple-system, sans-serif', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 80, gap: 60, position: 'relative' }}>
       <div style={{ alignSelf: 'flex-start', width: 70, height: 70, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'absolute', top: 60, left: 60 }}>
         <span style={{ color: textOnPrimary, fontWeight: 900, fontSize: 30 }}>6</span>
       </div>
       <div style={{ width: 240, height: 240, borderRadius: 24, overflow: 'hidden', border: '4px solid rgba(255,255,255,0.8)', boxShadow: '0 20px 60px rgba(0,0,0,0.3)', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {image ? <img src={image} alt="produto" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ width: '100%', height: '100%', background: '#eee' }} />}
+        {image ? <img src={image} alt="produto" style={{ width: '100%', height: '100%', objectFit: 'cover', transform: `scale(${imageScale6 / 100})`, transformOrigin: 'center center' }} /> : <div style={{ width: '100%', height: '100%', background: '#eee' }} />}
       </div>
       <h2 style={{ color: textOnPrimary, fontSize: 68, fontWeight: 900, margin: 0, textAlign: 'center', lineHeight: 1.1 }}>{name}</h2>
       <div style={{ background: accentColor, color: textOnAccent, borderRadius: 24, padding: '36px 72px', fontSize: 52, fontWeight: 900, textAlign: 'center', boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}>
@@ -1238,16 +1262,30 @@ export async function generateSlidePNG(
       return `${productData.name}: a escolha que muda tudo`;
     })();
     const productName = texts?.productName || productData.name;
+    const imageScale1 = Number(texts?.imageScale) || 100;
+    const bgColor1 = texts?.bgColor || '';
+    const hasCustomBg1 = bgColor1 && bgColor1 !== '#333333';
 
+    // Background: custom color or image
+    if (hasCustomBg1) {
+      ctx.fillStyle = bgColor1;
+      ctx.fillRect(0, 0, W, H);
+    }
     // Imagem full-bleed cobrindo todo o canvas
     if (img) {
+      ctx.save();
+      const scaleF1 = imageScale1 / 100;
+      ctx.translate(W / 2, H / 2);
+      ctx.scale(scaleF1, scaleF1);
+      ctx.translate(-W / 2, -H / 2);
       drawImageCover(ctx, img, 0, 0, W, H);
-    } else {
+      ctx.restore();
+    } else if (!hasCustomBg1) {
       ctx.fillStyle = '#333333';
       ctx.fillRect(0, 0, W, H);
     }
     // Overlay escuro geral sutil
-    ctx.fillStyle = 'rgba(0,0,0,0.28)';
+    ctx.fillStyle = hasCustomBg1 ? 'rgba(0,0,0,0.10)' : 'rgba(0,0,0,0.28)';
     ctx.fillRect(0, 0, W, H);
     // Número do slide
     drawBadge(1, 60, 60, 'rgba(255,255,255,0.2)', '#ffffff');
@@ -1338,8 +1376,10 @@ export async function generateSlidePNG(
 
   } else if (slideNum === 3) {
     const title = texts?.title || 'Por que confiar?';
+    const imageScale3c = Number(texts?.imageScale) || 100;
+    const bgColor3c = texts?.bgColor || '#0f0f14';
 
-    ctx.fillStyle = '#0f0f14';
+    ctx.fillStyle = bgColor3c;
     ctx.fillRect(0, 0, W, H);
     const imgW = W * 0.42;
     if (img) {
@@ -1347,11 +1387,17 @@ export async function generateSlidePNG(
       ctx.beginPath();
       ctx.rect(0, 0, imgW, H);
       ctx.clip();
+      ctx.save();
+      const scaleF3 = imageScale3c / 100;
+      ctx.translate(imgW / 2, H / 2);
+      ctx.scale(scaleF3, scaleF3);
+      ctx.translate(-imgW / 2, -H / 2);
       drawImageCover(ctx, img, 0, 0, imgW, H);
+      ctx.restore();
       ctx.restore();
       const grad = ctx.createLinearGradient(imgW - 120, 0, imgW, 0);
       grad.addColorStop(0, 'rgba(15,15,20,0)');
-      grad.addColorStop(1, '#0f0f14');
+      grad.addColorStop(1, bgColor3c);
       ctx.fillStyle = grad;
       ctx.fillRect(imgW - 120, 0, 120, H);
     }
@@ -1458,8 +1504,9 @@ export async function generateSlidePNG(
     const kwFontSizeCanvas = keyword.length > 30 ? 52 : keyword.length > 20 ? 62 : keyword.length > 15 ? 70 : 78;
 
     // ---- Layout split 42/58 (igual ao Slide 3) ----
-    // Fundo escuro total
-    ctx.fillStyle = '#0f0f14';
+    const bgColor4c = texts?.bgColor || '#0f0f14';
+    const imageScale4c = Number(texts?.imageScale) || 100;
+    ctx.fillStyle = bgColor4c;
     ctx.fillRect(0, 0, W, H);
 
     // Imagem à esquerda (42%) com clip
@@ -1469,12 +1516,16 @@ export async function generateSlidePNG(
       ctx.beginPath();
       ctx.rect(0, 0, imgW4, H);
       ctx.clip();
+      ctx.save();
+      ctx.translate(imgW4 / 2, H / 2);
+      ctx.scale(imageScale4c / 100, imageScale4c / 100);
+      ctx.translate(-imgW4 / 2, -H / 2);
       drawImageCover(ctx, img, 0, 0, imgW4, H);
       ctx.restore();
-      // Feather na borda direita da imagem para fundir com o painel escuro
+      ctx.restore();
       const grad4 = ctx.createLinearGradient(imgW4 - 140, 0, imgW4, 0);
       grad4.addColorStop(0, 'rgba(15,15,20,0)');
-      grad4.addColorStop(1, '#0f0f14');
+      grad4.addColorStop(1, bgColor4c);
       ctx.fillStyle = grad4;
       ctx.fillRect(imgW4 - 140, 0, 140, H);
     }
@@ -1563,6 +1614,8 @@ export async function generateSlidePNG(
     const badge2 = texts?.badge2 || features[1] || benefits[0] || '5 Anos de Casos';
     const badge3 = texts?.badge3 || features[2] || benefits[1] || 'Qualidade Premium';
     const badges5 = [badge1, badge2, badge3];
+    const imageScale5c = Number(texts?.imageScale) || 100;
+    const bgColor5c = texts?.bgColor || '';
 
     if (img) {
       const offCanvas = document.createElement('canvas');
@@ -1570,8 +1623,12 @@ export async function generateSlidePNG(
       offCanvas.height = H;
       const offCtx = offCanvas.getContext('2d')!;
       offCtx.filter = 'blur(12px)';
-      offCtx.drawImage(img, -20, -20, W + 40, H + 40);
+      const scale5 = (imageScale5c / 100) * 1.1;
+      offCtx.drawImage(img, -20 * scale5, -20 * scale5, (W + 40) * scale5, (H + 40) * scale5);
       ctx.drawImage(offCanvas, 0, 0);
+    } else if (bgColor5c) {
+      ctx.fillStyle = bgColor5c;
+      ctx.fillRect(0, 0, W, H);
     } else {
       ctx.fillStyle = '#222222';
       ctx.fillRect(0, 0, W, H);
@@ -1631,8 +1688,10 @@ export async function generateSlidePNG(
     const ctaBtn = (rawCtaBtn && rawCtaBtn.length <= 60) ? rawCtaBtn : '💡 Saiba Mais';
     const linkLbl = texts?.linkLabel || '🔗 Saiba Mais';
     const ftr = texts?.footer || 'Direct para mais informações';
+    const imageScale6c = Number(texts?.imageScale) || 100;
+    const bgColor6c = texts?.bgColor || primaryColor;
 
-    ctx.fillStyle = primaryColor;
+    ctx.fillStyle = bgColor6c;
     ctx.fillRect(0, 0, W, H);
     drawBadge(6, 60, 60, 'rgba(255,255,255,0.2)', textOnPrimary);
     if (img) {
