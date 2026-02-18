@@ -149,6 +149,8 @@ export function InstagramCopyGenerator({ productId, productName, productPrice, p
   const [isExportingZip, setIsExportingZip] = useState(false);
   const [generatingVisualCarousel, setGeneratingVisualCarousel] = useState(false);
   const [slideTexts, setSlideTexts] = useState<Partial<SlideTextsType>>({});
+  const [fontFamily, setFontFamily] = useState<string>('system-ui, -apple-system, sans-serif');
+  const [fontSize, setFontSize] = useState<number>(100);
 
   function buildDefaultSlideTexts(): Partial<SlideTextsType> {
     const b = productBenefits || [];
@@ -677,16 +679,17 @@ ${slide.text}`;
         6: 'slide-6-cta',
       };
 
-      let corsWarning = false;
       for (let i = 1; i <= 6; i++) {
         try {
-          const pngBlob = await generateSlidePNG(i, slideImageMap[i] || '', primaryColor, accentColor, productData);
+          // CORS fix: convert image to safe data: URL before drawing on canvas
+          const safeDataUrl = await fetchAsDataUrl(slideImageMap[i] || '');
+          const textsForSlide = (slideTexts[i as keyof SlideTextsType] as Record<string, string>) || {};
+          const pngBlob = await generateSlidePNG(i, safeDataUrl, primaryColor, accentColor, productData, textsForSlide);
           zip.file(`${SLIDE_FILE_NAMES[i]}.png`, pngBlob);
         } catch (slideErr) {
-          console.warn(`Slide ${i} gerado sem imagem (CORS):`, slideErr);
-          corsWarning = true;
-          // Retry without image
-          const pngBlob = await generateSlidePNG(i, '', primaryColor, accentColor, productData);
+          console.warn(`Slide ${i} gerado sem imagem (fallback):`, slideErr);
+          const textsForSlide = (slideTexts[i as keyof SlideTextsType] as Record<string, string>) || {};
+          const pngBlob = await generateSlidePNG(i, '', primaryColor, accentColor, productData, textsForSlide);
           zip.file(`${SLIDE_FILE_NAMES[i]}.png`, pngBlob);
         }
       }
@@ -701,17 +704,51 @@ ${slide.text}`;
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      if (corsWarning) {
-        toast({ title: "ZIP gerado com aviso", description: "Alguns slides foram exportados sem imagem por restrições de CORS. Os demais estão OK." });
-      } else {
-        toast({ title: "📦 ZIP gerado!", description: "6 PNGs de 1080×1350px baixados com sucesso." });
-      }
+      toast({ title: "📦 ZIP gerado!", description: "6 PNGs de 1080×1350px baixados com sucesso." });
     } catch (error) {
       console.error('Erro ao gerar ZIP:', error);
       toast({ title: "Erro", description: "Não foi possível gerar o ZIP.", variant: "destructive" });
     } finally {
       setIsExportingZip(false);
     }
+  };
+
+  // === Gerar textos do Carrossel Visual com IA ===
+  const generateVisualCarouselTexts = async () => {
+    setGeneratingVisualCarousel(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-instagram-carousel', {
+        body: { productId, feedCopy: feedCopies[0]?.copy || '', approach: 'storytelling' }
+      });
+      if (error) throw error;
+      if (data?.slides && Array.isArray(data.slides)) {
+        const s = data.slides;
+        setSlideTexts(prev => ({
+          ...prev,
+          1: { ...(prev[1] as any), hook: s[0]?.text || (prev[1] as any)?.hook || '' },
+          3: { ...(prev[3] as any), title: s[2]?.title || (prev[3] as any)?.title || 'Por que confiar?' },
+          4: { ...(prev[4] as any), keyword: s[3]?.title || (prev[4] as any)?.keyword || 'Excelência', benefit: s[3]?.text || (prev[4] as any)?.benefit || '' },
+          6: { ...(prev[6] as any), ctaButton: s[6]?.text?.split('\n')[0] || (prev[6] as any)?.ctaButton || '🛒 Comprar Agora' },
+        }));
+        toast({ title: "✨ Textos gerados!", description: "Slides 1, 3, 4 e 6 atualizados com IA." });
+      }
+    } catch {
+      toast({ title: "Erro", description: "Não foi possível gerar textos com IA.", variant: "destructive" });
+    }
+    setGeneratingVisualCarousel(false);
+  };
+
+  // === Copy consolidada dos 6 slides ===
+  const buildCarouselCopy = (): string => {
+    const t = slideTexts as Partial<SlideTextsType>;
+    return [
+      `SLIDE 1 — HOOK\n${(t[1] as any)?.hook || ''}`,
+      `━━━━━━━━━━━━━━━━━━\nSLIDE 2 — APRESENTAÇÃO\nProduto: ${(t[2] as any)?.productName || productName}\n${(t[2] as any)?.category ? `Categoria: ${(t[2] as any).category}` : ''}`,
+      `━━━━━━━━━━━━━━━━━━\nSLIDE 3 — DIFERENCIAIS\n${(t[3] as any)?.title || 'Por que confiar?'}`,
+      `━━━━━━━━━━━━━━━━━━\nSLIDE 4 — EXPERIÊNCIA\n${(t[4] as any)?.keyword || ''}\n${(t[4] as any)?.benefit || ''}`,
+      `━━━━━━━━━━━━━━━━━━\nSLIDE 5 — SEGURANÇA\n${(t[5] as any)?.title || ''}\n✅ ${(t[5] as any)?.badge1 || ''}\n✅ ${(t[5] as any)?.badge2 || ''}\n✅ ${(t[5] as any)?.badge3 || ''}`,
+      `━━━━━━━━━━━━━━━━━━\nSLIDE 6 — CTA\n${(t[6] as any)?.ctaButton || ''}\n${(t[6] as any)?.linkLabel || ''}\n${(t[6] as any)?.footer || ''}`,
+    ].join('\n\n');
   };
 
 
@@ -1668,32 +1705,47 @@ ${slide.text}`;
               {/* === SEÇÃO CARROSSEL VISUAL (6 LAYOUTS ESTRATÉGICOS) === */}
               <Card>
                 <CardHeader>
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
                     <CardTitle className="flex items-center gap-2">
                       <Palette className="h-5 w-5" />
                       🎨 Carrossel Visual — 6 Layouts de Alta Conversão
                     </CardTitle>
-                    <Button
-                      onClick={handleExportZip}
-                      disabled={isExportingZip}
-                      size="sm"
-                      variant="outline"
-                    >
-                      {isExportingZip ? (
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      ) : (
-                        <Download className="h-4 w-4 mr-2" />
-                      )}
-                      📦 Baixar ZIP (6 Slides)
-                    </Button>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Button
+                        onClick={generateVisualCarouselTexts}
+                        disabled={generatingVisualCarousel}
+                        size="sm"
+                        variant="outline"
+                      >
+                        {generatingVisualCarousel ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : (
+                          <Sparkles className="h-4 w-4 mr-2" />
+                        )}
+                        🤖 Gerar com IA
+                      </Button>
+                      <Button
+                        onClick={handleExportZip}
+                        disabled={isExportingZip}
+                        size="sm"
+                        variant="outline"
+                      >
+                        {isExportingZip ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : (
+                          <Download className="h-4 w-4 mr-2" />
+                        )}
+                        📦 Baixar ZIP
+                      </Button>
+                    </div>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Preview visual em tempo real com as imagens reais do produto. Clique nas miniaturas abaixo de cada slide para trocar a foto.
+                    Preview visual em tempo real. Clique no ✏️ abaixo de cada slide para editar os textos. Use "🤖 Gerar com IA" para preencher automaticamente.
                   </p>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {/* Color pickers */}
-                  <div className="flex flex-wrap items-center gap-6 p-4 bg-muted/40 rounded-lg border">
+                  {/* Color pickers + font controls */}
+                  <div className="flex flex-wrap items-center gap-4 p-4 bg-muted/40 rounded-lg border">
                     <div className="flex items-center gap-3">
                       <label className="text-sm font-medium text-muted-foreground whitespace-nowrap">Cor Primária</label>
                       <input
@@ -1712,23 +1764,23 @@ ${slide.text}`;
                         value={accentColor}
                         onChange={(e) => setAccentColor(e.target.value)}
                         className="w-10 h-10 rounded cursor-pointer border border-border"
-                        title="Cor de destaque (botões, preço)"
+                        title="Cor de destaque (botões)"
                       />
                       <span className="text-xs text-muted-foreground font-mono">{accentColor}</span>
                     </div>
                     {productImages.length === 0 && (
                       <Badge variant="warning" className="text-xs">
-                        Nenhuma imagem de produto disponível — adicione imagens ao produto para preview
+                        Nenhuma imagem disponível
                       </Badge>
                     )}
                     {productImages.length > 0 && (
                       <Badge variant="secondary" className="text-xs">
-                        {productImages.length} {productImages.length === 1 ? 'imagem disponível' : 'imagens disponíveis'}
+                        {productImages.length} {productImages.length === 1 ? 'imagem' : 'imagens'}
                       </Badge>
                     )}
                   </div>
 
-                  {/* Slides grid */}
+                  {/* Slides grid with font/size controls rendered inside StrategicCarouselPreview */}
                   <div className="overflow-x-auto pb-2">
                     <StrategicCarouselPreview
                       slideImageMap={slideImageMap}
@@ -1747,11 +1799,50 @@ ${slide.text}`;
                         technicalSpecs: technicalSpecs,
                         productUrl: productUrl,
                       }}
+                      slideTexts={slideTexts}
+                      onSlideTextChange={(slideNum, key, value) =>
+                        setSlideTexts(prev => ({
+                          ...prev,
+                          [slideNum]: { ...(prev[slideNum as keyof SlideTextsType] as any), [key]: value }
+                        }))
+                      }
+                      fontFamily={fontFamily}
+                      fontSize={fontSize}
+                      onFontFamilyChange={setFontFamily}
+                      onFontSizeChange={setFontSize}
                     />
                   </div>
 
+                  {/* Copy consolidada */}
+                  <Card className="border border-border">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm flex items-center gap-2">
+                          <Copy className="h-4 w-4" />
+                          📋 Copy para Carrossel Visual
+                        </CardTitle>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            navigator.clipboard.writeText(buildCarouselCopy());
+                            toast({ title: "Copiado!", description: "Copy de todos os slides copiada." });
+                          }}
+                        >
+                          <Copy className="h-3 w-3 mr-1" />
+                          Copiar Tudo
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <pre className="text-xs whitespace-pre-wrap font-mono bg-muted/40 rounded p-3 max-h-64 overflow-y-auto leading-relaxed">
+                        {buildCarouselCopy()}
+                      </pre>
+                    </CardContent>
+                  </Card>
+
                   <p className="text-xs text-muted-foreground text-center">
-                    Baixe o ZIP → abra cada HTML no Chrome → Print (Ctrl+P) → Salvar como PDF ou screenshot em 1080×1350px
+                    Clique em ✏️ abaixo de cada slide para editar os textos • O ZIP exporta PNGs 1080×1350px prontos para Instagram
                   </p>
                 </CardContent>
               </Card>
