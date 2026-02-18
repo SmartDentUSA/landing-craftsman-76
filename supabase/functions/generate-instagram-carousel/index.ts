@@ -136,41 +136,67 @@ Retorne APENAS este JSON (sem markdown, sem explicações):
   ]
 }`;
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-3-flash-preview',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.7,
-      }),
-    });
+    // Retry with exponential backoff for rate limits
+    const MODELS = ['google/gemini-flash-1.5', 'openai/gpt-4o-mini', 'anthropic/claude-haiku'];
+    let aiData: any = null;
+    let lastError = '';
 
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: 'Rate limits exceeded, please try again later.' }),
-          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+    for (let attempt = 0; attempt <= 3; attempt++) {
+      const model = attempt === 0 ? 'google/gemini-3-flash-preview' : MODELS[attempt - 1] || MODELS[MODELS.length - 1];
+      
+      if (attempt > 0) {
+        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 8000);
+        console.log(`⏳ Retry attempt ${attempt} with model ${model}, waiting ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
+
+      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ],
+          temperature: 0.7,
+        }),
+      });
+
+      if (response.ok) {
+        aiData = await response.json();
+        console.log(`✅ AI response received on attempt ${attempt} with model ${model}`);
+        break;
+      }
+
+      const errorText = await response.text();
+      lastError = errorText;
+
       if (response.status === 402) {
         return new Response(
           JSON.stringify({ error: 'Payment required, please add funds to your Lovable AI workspace.' }),
           { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      const errorText = await response.text();
-      console.error('AI gateway error:', response.status, errorText);
-      throw new Error(`AI gateway error: ${response.status}`);
+
+      if (response.status === 429) {
+        console.warn(`⚠️ Rate limit on attempt ${attempt} (model: ${model}), retrying...`);
+        continue;
+      }
+
+      console.error(`AI gateway error on attempt ${attempt}:`, response.status, errorText);
+      if (attempt === 3) throw new Error(`AI gateway error: ${response.status}`);
     }
 
-    const aiData = await response.json();
+    if (!aiData) {
+      return new Response(
+        JSON.stringify({ error: 'Rate limits exceeded after multiple retries. Please try again in a few seconds.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     const content = aiData.choices?.[0]?.message?.content;
 
     if (!content) {
