@@ -212,12 +212,6 @@ function Slide2Solution({ image, primaryColor, accentColor, productData }: { ima
           {productData.name}
         </h2>
 
-        {/* Price */}
-        {priceFormatted && (
-          <div style={{ marginTop: 30, display: 'inline-block', background: accentColor, color: textOnAccent, borderRadius: 16, padding: '20px 60px', fontSize: 56, fontWeight: 900 }}>
-            {priceFormatted}
-          </div>
-        )}
       </div>
     </div>
   );
@@ -578,7 +572,7 @@ export function generateSlideHTML(slideNum: number, imageUrl: string, primaryCol
         ${imageUrl ? `<img src="${imageUrl}" style="max-width:70%;max-height:600px;object-fit:contain;filter:drop-shadow(0 30px 60px rgba(0,0,0,0.2));">` : '<div style="width:500px;height:500px;background:#e0e0e0;border-radius:20px;"></div>'}
         <div style="text-align:center;">
           <h2 style="margin:0;font-size:72px;font-weight:900;color:#111;line-height:1.1;">${productData.name}</h2>
-          ${priceFormatted ? `<div style="margin-top:30px;display:inline-block;background:${accentColor};color:${textOnAccent};border-radius:16px;padding:20px 60px;font-size:56px;font-weight:900;">${priceFormatted}</div>` : ''}
+          
         </div>
       </div>
     `,
