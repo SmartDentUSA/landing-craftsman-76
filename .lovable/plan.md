@@ -1,226 +1,132 @@
 
-# Slide 4 (Experiência): Síntese Inteligente de Impacto da Solução
+# Corrigir Divergência: Imagens Exportadas ≠ Preview do Sistema
 
-## O Problema Real
+## Diagnóstico Completo
 
-O Slide 4 atualmente exibe dados brutos do produto — apenas o `salesPitch` ou a `description` — sem nenhuma inteligência de síntese. O resultado é um texto genérico e desconectado da dor do cliente.
+Analisando os 6 slides exportados versus o código, há **3 categorias de problemas**:
 
-O que o usuário quer: o sistema deve **analisar todo o contexto do produto** (benefits, features, technicalSpecs, salesPitch, description, target_audience) e **sintetizar automaticamente** uma narrativa focada em:
+### Categoria 1 — Slide 4: Texto flutuante sobre imagem (principal problema)
+O canvas do Slide 4 renderiza tudo sobre a imagem full-bleed com overlay gradiente. O resultado:
+- Bullets sobrepostos à imagem ficam ilegíveis (texto sobre texto na foto)
+- "INFOGRÁFICO DETALHADO..." é um texto de prompt AI que está vazando de algum campo do produto para o campo `label` ou `keyword`
+- O layout full-bleed funciona bem no preview pequeno (escala 22%) mas falha no canvas 1080x1350px real
 
-1. A **dor** que o produto resolve (problema do cliente)
-2. O **impacto** concreto da solução na vida do cliente
-3. **Provas técnicas** que sustentam a afirmação (specs, features)
+**Solução**: O Slide 4 no canvas deve usar o **mesmo layout split 40%/60%** que o Slide 3 (imagem à esquerda, painel escuro à direita com texto), em vez de full-bleed com overlay. Isso garante legibilidade total e consistência com o preview.
 
----
+### Categoria 2 — Slide 6: "Link na Bio" persistindo no canvas
+O canvas linha 1337-1338 foi atualizado para "💡 Saiba Mais" e "🔗 Saiba Mais", mas o `generateSlideHTML()` na linha 1433 ainda tem `'🛒 Comprar Agora'` e `'🔗 Link na Bio'` hardcoded. Isso afeta o export HTML (não o PNG), mas deve ser corrigido por consistência.
 
-## Abordagem: Função de Síntese Inteligente no Frontend
-
-Sem latência de IA, criamos uma função `buildImpactNarrative()` que usa lógica de prioridade e combinação para construir um texto orientado a impacto com **todos os dados disponíveis**.
-
-### Estrutura do Slide 4 Redesenhado
-
-Em vez de um único texto longo, o slide passa a ter 3 camadas visuais:
-
-```
-[ RÓTULO CONTEXTUAL ] — ex: "Impacto Real"
-[ DIVIDER ACCENT ]
-[ HEADLINE: Benefício principal extraído ] — maior, impactante
-[ TEXTO DE IMPACTO: síntese da dor + resolução ] — 2–3 frases
-[ PROVAS TÉCNICAS: até 3 bullets com ícone ] — features ou specs chave
-```
-
----
-
-## Função `buildImpactNarrative()`
-
-A função analisa os dados nesta ordem de prioridade:
-
-**1. Headline (impacto principal)**
-- Prioridade: `benefits[0]` → `features[0]` → `name`
-- O primeiro benefício tende a ser o mais estratégico/impactante
-
-**2. Texto de impacto (narrativa da dor → resolução)**
-- Se `salesPitch` existe: usar integralmente (é o pitch de vendas)
-- Se não: combinar `description` + `benefits[1]` com conector `". "` para criar narrativa
-- Se só `benefits` existem: concatenar os 2 primeiros com ` — `
-- Limitar a 220 chars para garantir legibilidade
-
-**3. Bullets de prova técnica (até 3 itens)**
-- Pool: `technicalSpecs[0..2]` formatados como `"${label}: ${value}"` + `features` restantes + `benefits` restantes
-- Seleciona os 3 mais curtos/impactantes (evita bullets muito longos)
-- Exclui o que já aparece no headline
-
-**4. Label contextual**
-- `"Impacto Real"` como padrão fixo (mais impactante que "Experiência com [Nome]")
-- Ou `texts?.label` se o usuário editou manualmente
+### Categoria 3 — Slide 5: Badges com texto cortado
+O canvas usa `white-space: nowrap` (via `truncateToWidth`) para badges. Badges longos como "Volume de construção otimizado (144 × 81 × 150 mm) para peças dentárias" são truncados. A lógica JSX usa `wordBreak: 'break-word'` e funciona corretamente.
 
 ---
 
 ## Mudanças Técnicas
 
-### Arquivo: `src/components/StrategicCarouselPreview.tsx`
+### Fix 1 — Canvas Slide 4: Trocar full-bleed por layout split (linhas 1172–1279)
 
-**Seção 1 — `interface ProductData` (linha 12)**
+Em vez do layout atual (imagem + overlay gradiente + texto flutuante), o canvas do Slide 4 passa a usar o mesmo padrão do Slide 3:
 
-Adicionar `targetAudience` e `applications` ao interface:
-
-```typescript
-interface ProductData {
-  name: string;
-  price?: number;
-  category?: string;
-  description?: string;
-  benefits?: string[];
-  features?: string[];
-  technicalSpecs?: TechnicalSpec[];
-  productUrl?: string;
-  salesPitch?: string;
-  targetAudience?: string[];   // NOVO
-  applications?: string;       // NOVO
-}
 ```
-
-**Seção 2 — Nova função `buildImpactNarrative()` (inserir antes do `Slide4Experience`)**
-
-```typescript
-function buildImpactNarrative(productData: ProductData): {
-  headline: string;
-  impactText: string;
-  proofBullets: string[];
-  label: string;
-} {
-  const benefits = (productData.benefits as string[]) || [];
-  const features = (productData.features as string[]) || [];
-  const specs = productData.technicalSpecs || [];
-  const salesPitch = productData.salesPitch || '';
-  const description = productData.description || '';
-  const name = productData.name || '';
-
-  // 1. Headline — benefício mais impactante
-  const headline = benefits[0] || features[0] || name || 'Resultados que transformam';
-
-  // 2. Texto de impacto
-  let impactText = '';
-  if (salesPitch) {
-    impactText = salesPitch.slice(0, 220);
-  } else if (description && benefits[1]) {
-    impactText = `${description.slice(0, 140)}. ${benefits[1]}`;
-  } else if (description) {
-    impactText = description.slice(0, 220);
-  } else if (benefits.length >= 2) {
-    impactText = `${benefits[1]}${benefits[2] ? ` — ${benefits[2]}` : ''}`;
-  } else {
-    impactText = 'Solução desenvolvida para resultados reais e consistentes.';
-  }
-
-  // 3. Bullets de prova técnica (excluir o headline)
-  const specBullets = specs.slice(0, 3).map(s => `${s.label}: ${s.value}`);
-  const featureBullets = features.filter(f => f !== headline);
-  const benefitBullets = benefits.filter(b => b !== headline).slice(1);
-  
-  const allBullets = [...specBullets, ...featureBullets, ...benefitBullets]
-    .filter(Boolean)
-    .filter(b => b.length < 80) // evita bullets muito longos
-    .slice(0, 3);
-
-  return {
-    headline,
-    impactText,
-    proofBullets: allBullets,
-    label: 'Impacto Real',
-  };
-}
+|── 42% imagem com clip ──|── 58% painel #0f0f14 com textos ──|
 ```
-
-**Seção 3 — `Slide4Experience` JSX (linhas 509–588)**
-
-Substituir toda a lógica de dados por chamada à `buildImpactNarrative()`:
-
-```typescript
-function Slide4Experience({ image, primaryColor, productData, texts }) {
-  const { headline, impactText, proofBullets, label } = buildImpactNarrative(productData);
-
-  // Respeitar edições manuais do usuário
-  const finalLabel = texts?.label || label;
-  const finalKeyword = texts?.keyword || headline;
-  const finalImpact = texts?.benefit || impactText;
-  const finalBullets = proofBullets;
-
-  // Auto-sizing calibrado para conteúdo rico
-  const kwFontSize = finalKeyword.length > 50 ? 38 : finalKeyword.length > 35 ? 46 : finalKeyword.length > 22 ? 56 : 68;
-  const labelFontSize = 22;
-  const impactFontSize = finalImpact.length > 180 ? 20 : finalImpact.length > 120 ? 22 : finalImpact.length > 70 ? 25 : 28;
-
-  // JSX com estrutura: Label → Divider → Headline → Texto de Impacto → Bullets
-}
-```
-
-**Seção 4 — Canvas `drawCanvas` (linhas 1125–1240)**
-
-Sincronizar com a mesma `buildImpactNarrative()` para garantir que o PNG exportado espelhe o preview:
 
 ```typescript
 } else if (slideNum === 4) {
-  const { headline, impactText, proofBullets, label: defaultLabel } = buildImpactNarrative(productData);
-  
+  const { headline, impactText, proofBullets, label: narLabel } = buildImpactNarrative(productData);
   const keyword = texts?.keyword || headline;
   const mainText = texts?.benefit || impactText;
-  const label4 = texts?.label || defaultLabel;
+  const label4 = texts?.label || narLabel;
   const bulletPool4 = proofBullets;
-  // ... resto da lógica de renderização
+
+  // Fundo escuro
+  ctx.fillStyle = '#0f0f14';
+  ctx.fillRect(0, 0, W, H);
+
+  // Imagem à esquerda (42%) com clip
+  const imgW4 = Math.round(W * 0.42);
+  if (img) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, imgW4, H);
+    ctx.clip();
+    drawImageCover(ctx, img, 0, 0, imgW4, H);
+    ctx.restore();
+    // Gradiente de feather na borda direita da imagem
+    const grad4 = ctx.createLinearGradient(imgW4 - 120, 0, imgW4, 0);
+    grad4.addColorStop(0, 'rgba(15,15,20,0)');
+    grad4.addColorStop(1, '#0f0f14');
+    ctx.fillStyle = grad4;
+    ctx.fillRect(imgW4 - 120, 0, 120, H);
+  }
+
+  drawBadge(4, 60, 60, 'rgba(255,255,255,0.15)', '#ffffff');
+
+  // Painel de texto à direita
+  const rx4 = imgW4 + 40;
+  const textW4 = W - rx4 - 60;
+
+  // Font sizes dinâmicos
+  const kwFontSizeCanvas = keyword.length > 30 ? 52 : keyword.length > 20 ? 62 : 72;
+  const benFontSizeCanvas = mainText.length > 200 ? 28 : mainText.length > 120 ? 32 : 36;
+  const benLineH4 = benFontSizeCanvas * 1.5;
+  const kwLineH4 = kwFontSizeCanvas * 1.1;
+  const bulletFontSize4 = benFontSizeCanvas * 0.85;
+
+  // Calcular alturas para centramento vertical
+  // ... (mesma lógica existente, mas com rx4 = imgW4 + 40)
+
+  // Label, divider, keyword, mainText, bullets — mesma lógica existente
+  // Só muda o ponto de origem rx4 e a ausência de overlay
 }
 ```
 
-**Seção 5 — `InstagramCopyGenerator.tsx` (linha 1957–1966)**
+### Fix 2 — Canvas Slide 5: Permitir wrap nos badges (linhas 1309–1331)
 
-Passar `targetAudience` e `applications` para `productData`:
+Trocar `truncateToWidth` por `wrapText` para badges longos:
 
 ```typescript
-productData={{
-  name: productName,
-  price: productPrice,
-  category: productCategory,
-  description: productDescription,
-  benefits: productBenefits,
-  features: productFeatures,
-  technicalSpecs: technicalSpecs,
-  productUrl: productUrl,
-  salesPitch: productSalesPitch,
-  targetAudience: productTargetAudience,   // NOVO
-  applications: productApplications,        // NOVO
-}}
+// Antes (linha 1330):
+ctx.fillText(badge, 80 + 130, by + badgeBoxH / 2, maxBadgeTextW);
+
+// Depois — medir linhas corretamente:
+ctx.font = '700 40px system-ui, -apple-system, sans-serif';
+const words5 = badge.split(' ');
+// ... measureLines para calcular badgeLines antes de desenhar caixa
+// usar wrapText centrado verticalmente dentro da caixa
 ```
 
-E adicionar as novas props em `InstagramCopyGeneratorProps` e o parâmetro na função.
+A altura `badgeBoxH` já é calculada com base em `badgeLines`, mas o texto é renderizado com `fillText` em vez de `wrapText`. Basta substituir `fillText` por `wrapText` na linha correta.
 
-**Seção 6 — `ModernProductCard.tsx` (linha 735–752)**
-
-Passar `target_audience` e `applications` para o `InstagramCopyGenerator`:
+### Fix 3 — generateSlideHTML Slide 6: Atualizar strings legadas (linha 1433)
 
 ```typescript
-productTargetAudience={product.target_audience}
-productApplications={product.applications}
+// Linha 1433, trocar no slideBodies[6]:
+// '🛒 Comprar Agora'  →  '💡 Saiba Mais'
+// '🔗 Link na Bio'    →  '🔗 Saiba Mais'
 ```
 
 ---
 
-## Resultado Visual Esperado
+## Por que Slide 4 Split é a Solução Certa
 
-| Elemento | Antes | Depois |
-|---|---|---|
-| Label | "Experiência com [Nome]" | "Impacto Real" (direto e focado) |
-| Headline | `features[0]` curto | `benefits[0]` — o impacto mais estratégico |
-| Texto principal | `salesPitch` bruto ou `description` genérico | Síntese inteligente: dor → resolução |
-| Bullets | `features` + `benefits` genéricos | `technicalSpecs` + features curtas como provas técnicas |
+O layout full-bleed com overlay foi projetado para quando o produto tem foto de alta qualidade e ambiente. Na prática, muitos produtos têm fundo branco ou cinza — o overlay escuro sobre fundo branco cria um visual cinza desbotado, e os bullets ficam sobrepostos à imagem do produto.
+
+O split 42/58 resolve:
+- Texto sempre sobre fundo escuro sólido (#0f0f14) — 100% legível
+- Imagem do produto claramente visível à esquerda
+- Consistência visual com o Slide 3 (padrão estabelecido)
+- O JSX do preview também deve ser atualizado para usar split (remover full-bleed)
 
 ---
 
 ## Arquivos a Modificar
 
-| Arquivo | Seções |
-|---|---|
-| `src/components/StrategicCarouselPreview.tsx` | Interface + nova função + Slide4 JSX + Canvas |
-| `src/components/InstagramCopyGenerator.tsx` | Props + productData object |
-| `src/components/ModernProductCard.tsx` | Props passadas ao InstagramCopyGenerator |
+| Arquivo | Linhas | Mudança |
+|---|---|---|
+| `src/components/StrategicCarouselPreview.tsx` | 582–633 | Slide 4 JSX: trocar full-bleed por split 42/58 |
+| `src/components/StrategicCarouselPreview.tsx` | 1172–1279 | Canvas Slide 4: trocar full-bleed por split idêntico ao Slide 3 |
+| `src/components/StrategicCarouselPreview.tsx` | 1309–1331 | Canvas Slide 5: `fillText` → `wrapText` para badges |
+| `src/components/StrategicCarouselPreview.tsx` | 1433 | `generateSlideHTML` Slide 6: atualizar strings CTA |
 
-**3 arquivos, mudanças cirúrgicas.**
+**1 arquivo, 4 seções cirúrgicas.**
