@@ -38,6 +38,10 @@ interface StrategicCarouselPreviewProps {
   productData: ProductData;
   slideTexts?: Partial<SlideTextsType>;
   onSlideTextChange?: (slideNum: number, key: string, value: string) => void;
+  fontFamily?: string;
+  fontSize?: number; // escala percentual 60–150
+  onFontFamilyChange?: (v: string) => void;
+  onFontSizeChange?: (v: number) => void;
 }
 
 function getLuminance(hex: string): number {
@@ -354,10 +358,10 @@ function Slide4Experience({ image, primaryColor, productData, texts }: { image: 
           <span style={{ fontWeight: 900, fontSize: 30, color: '#111' }}>4</span>
         </div>
       </div>
-      <div style={{ width: '50%', background: primaryColor, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '80px 70px', overflow: 'hidden' }}>
-        <p style={{ color: textOnPrimary, opacity: 0.7, fontSize: 36, fontWeight: 600, margin: '0 0 20px 0', textTransform: 'uppercase' as const, letterSpacing: 4 }}>{label}</p>
-        <h2 style={{ color: textOnPrimary, fontSize: kwFontSize, fontWeight: 900, margin: '0 0 40px 0', lineHeight: 1.05, wordBreak: 'break-word' as const }}>{keyword}</h2>
-        <p style={{ color: textOnPrimary, opacity: 0.9, fontSize: 38, lineHeight: 1.5, margin: 0, fontWeight: 400 }}>{benefit}</p>
+      <div style={{ width: '50%', background: primaryColor, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '80px 70px', overflow: 'visible' }}>
+        <p style={{ color: textOnPrimary, opacity: 0.7, fontSize: 36, fontWeight: 600, margin: '0 0 20px 0', textTransform: 'uppercase' as const, letterSpacing: 4, flexShrink: 0 }}>{label}</p>
+        <h2 style={{ color: textOnPrimary, fontSize: kwFontSize, fontWeight: 900, margin: '0 0 30px 0', lineHeight: 1.05, wordBreak: 'break-word' as const, flexShrink: 0 }}>{keyword}</h2>
+        <p style={{ color: textOnPrimary, opacity: 0.9, fontSize: benefit.length > 60 ? 32 : 38, lineHeight: 1.5, margin: 0, fontWeight: 400, wordBreak: 'break-word' as const }}>{benefit}</p>
       </div>
     </div>
   );
@@ -389,7 +393,7 @@ function Slide5Security({ image, primaryColor, productData, texts }: { image: st
         <h2 style={{ color: '#ffffff', fontSize: 86, fontWeight: 900, margin: 0, textAlign: 'center', lineHeight: 1.1 }}>{title}</h2>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 28, width: '100%' }}>
           {badges.map((badge, idx) => (
-            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 36, background: 'rgba(255,255,255,0.12)', borderRadius: 20, padding: '28px 44px', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.2)', overflow: 'hidden' }}>
+            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 36, background: 'rgba(255,255,255,0.12)', borderRadius: 20, padding: '20px 44px', minHeight: 120, backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.2)' }}>
               <div style={{ width: 72, height: 72, borderRadius: '50%', background: primaryColor, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" width="36" height="36">
                   {badge.icon === 'shield' && <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>}
@@ -397,7 +401,7 @@ function Slide5Security({ image, primaryColor, productData, texts }: { image: st
                   {badge.icon === 'check' && <><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>}
                 </svg>
               </div>
-              <span style={{ color: '#ffffff', fontSize: 40, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{badge.label}</span>
+              <span style={{ color: '#ffffff', fontSize: 40, fontWeight: 700, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any, lineHeight: 1.3, wordBreak: 'break-word' as const }}>{badge.label}</span>
             </div>
           ))}
         </div>
@@ -445,7 +449,19 @@ export function StrategicCarouselPreview({
   productData,
   slideTexts,
   onSlideTextChange,
+  fontFamily = 'system-ui, -apple-system, sans-serif',
+  fontSize = 100,
+  onFontFamilyChange,
+  onFontSizeChange,
 }: StrategicCarouselPreviewProps) {
+  const FONT_OPTIONS = [
+    { label: 'Sistema (Padrão)', value: 'system-ui, -apple-system, sans-serif' },
+    { label: 'Arial', value: "'Arial', Helvetica, sans-serif" },
+    { label: 'Georgia (Elegante)', value: "Georgia, 'Times New Roman', serif" },
+    { label: 'Impact (Destaque)', value: "Impact, 'Arial Narrow', sans-serif" },
+    { label: 'Courier (Técnico)', value: "'Courier New', Courier, monospace" },
+  ];
+
   const slides = [
     { num: 1, label: '🎣 Hook / Gancho', component: <Slide1Hook image={slideImageMap[1] || ''} primaryColor={primaryColor} productData={productData} texts={slideTexts?.[1]} /> },
     { num: 2, label: '✨ Apresentação', component: <Slide2Solution image={slideImageMap[2] || ''} primaryColor={primaryColor} accentColor={accentColor} productData={productData} texts={slideTexts?.[2]} /> },
@@ -456,23 +472,62 @@ export function StrategicCarouselPreview({
   ];
 
   return (
-    <div className="flex flex-wrap gap-6 justify-center">
-      {slides.map((slide) => (
-        <div key={slide.num} className="flex flex-col items-center gap-2">
-          <span className="text-xs font-semibold text-muted-foreground">{slide.label}</span>
-          <SlideWrapper
-            slideNum={slide.num}
-            productImages={productImages}
-            currentImage={slideImageMap[slide.num] || ''}
-            onImageChange={onImageChange}
-            primaryColor={primaryColor}
-            slideTexts={slideTexts?.[slide.num as keyof SlideTextsType] as Record<string, string>}
-            onSlideTextChange={onSlideTextChange ? (key, value) => onSlideTextChange(slide.num, key, value) : undefined}
-          >
-            {slide.component}
-          </SlideWrapper>
+    <div className="space-y-4">
+      {/* Font & size controls */}
+      {(onFontFamilyChange || onFontSizeChange) && (
+        <div className="flex flex-wrap items-center gap-4 p-3 bg-muted/30 rounded-lg border border-border">
+          {onFontFamilyChange && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">Fonte:</span>
+              <select
+                value={fontFamily}
+                onChange={(e) => onFontFamilyChange(e.target.value)}
+                className="text-xs h-8 rounded border border-border bg-background px-2 cursor-pointer"
+                style={{ fontFamily }}
+              >
+                {FONT_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value} style={{ fontFamily: opt.value }}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          {onFontSizeChange && (
+            <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+              <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">Tamanho:</span>
+              <input
+                type="range"
+                min={60}
+                max={150}
+                step={5}
+                value={fontSize}
+                onChange={(e) => onFontSizeChange(Number(e.target.value))}
+                className="flex-1 h-2 rounded cursor-pointer accent-primary"
+              />
+              <span className="text-xs font-mono text-muted-foreground w-8">{fontSize}%</span>
+            </div>
+          )}
         </div>
-      ))}
+      )}
+
+      {/* Slides grid */}
+      <div className="flex flex-wrap gap-6 justify-center">
+        {slides.map((slide) => (
+          <div key={slide.num} className="flex flex-col items-center gap-2">
+            <span className="text-xs font-semibold text-muted-foreground">{slide.label}</span>
+            <SlideWrapper
+              slideNum={slide.num}
+              productImages={productImages}
+              currentImage={slideImageMap[slide.num] || ''}
+              onImageChange={onImageChange}
+              primaryColor={primaryColor}
+              slideTexts={slideTexts?.[slide.num as keyof SlideTextsType] as Record<string, string>}
+              onSlideTextChange={onSlideTextChange ? (key, value) => onSlideTextChange(slide.num, key, value) : undefined}
+            >
+              {slide.component}
+            </SlideWrapper>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
