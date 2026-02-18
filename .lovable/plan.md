@@ -1,115 +1,194 @@
 
-# Export de PNGs de Alta Resolução (1080×1350px) para o Carrossel Visual
+# Implementação Completa: Carrossel Visual — Fix CORS + Editor + Upload + Copy
 
-## Problema Atual
+## Estado Atual Analisado
 
-O botão "Baixar ZIP" no Carrossel Visual exporta **6 arquivos `.html`** — o usuário precisa abrir cada HTML no Chrome e tirar screenshot manualmente. A solicitação é exportar **PNGs de alta resolução diretamente**, sem HTML intermediário.
+Após leitura completa dos dois arquivos principais:
 
-## Solução: Canvas API Nativa (sem bibliotecas extras)
+### Problemas Identificados no Código
 
-Não há `html2canvas` nem `dom-to-image` instalados — e não são necessários. A solução correta é **redesenhar cada slide diretamente num `<canvas>` de 1080×1350px** usando a Canvas 2D API nativa do browser, que já suporta:
-- `drawImage()` para inserir fotos reais do produto
-- `fillRect()` + `createLinearGradient()` para os fundos e gradientes
-- `fillText()` para os textos com fontes do sistema
-- `canvas.toBlob('image/png')` para exportar como PNG real de alta resolução
+**1. CORS — Raiz do problema (linha 542-546 de StrategicCarouselPreview.tsx)**
+```
+img.crossOrigin = 'anonymous';
+img.src = url;
+```
+Isso faz o canvas ficar "tainted" porque as imagens do Supabase Storage não retornam `Access-Control-Allow-Origin` para operações canvas. O `canvas.toBlob()` falha silenciosamente, gerando PNG vazio.
 
-Cada slide é renderizado num canvas separado, convertido para PNG via blob e empacotado no ZIP com JSZip (já instalado).
+**2. `optimize-image` edge function — Já tem a infraestrutura mas não retorna Base64**
+A função existe, faz `fetch(imageUrl)` server-side e tem os headers CORS corretos. Só precisa de um parâmetro `returnBase64: true` para retornar `data:` URL. Quando Cloudflare não está configurado (caso atual), ela usa o fallback que retorna a URL original — sem resolver o CORS.
+
+**3. Slide 4 — Texto sobreposto (linhas 821-829)**
+O `wrapText` da keyword em `900 90px` retorna o `curY` mas esse valor não é capturado — o benefício começa fixo em `y=500`, independente do espaço que a keyword ocupa.
+
+**4. Slide 3 — Caixas sem ícone (linhas 768-778)**
+O `roundRect` é preenchido com `primaryColor` mas nenhum texto/ícone é desenhado dentro. O código só executa `ctx.fill()` e parte para o `wrapText` do item.
+
+**5. Slide 5 — Badge text sem truncagem (linhas 886-890)**
+`ctx.fillText(badge, 80 + 130, by + 65)` sem medir a largura. Textos longos como "Certificação Internacional de Qualidade" saem do card.
+
+**6. Slide 2 — Nome cortado (linha 726)**
+`ctx.textBaseline = 'bottom'` + `fillText` em posição fixa `H - 100` = texto pode ser cortado embaixo do canvas se a fonte é grande.
+
+**7. Recursos ausentes:** Upload por slide, editor de textos por slide, copy consolidada, botão IA.
 
 ---
 
-## Arquivos Modificados
+## Estratégia de Implementação
 
-| Arquivo | Tipo | Mudança |
-|---------|------|---------|
-| `src/components/StrategicCarouselPreview.tsx` | Edição | Substituir `generateSlideHTML()` por `generateSlidePNG()` — função async que renderiza cada slide num canvas e retorna `Blob` PNG |
-| `src/components/InstagramCopyGenerator.tsx` | Edição | Atualizar `handleExportZip()` para usar `generateSlidePNG()` e salvar `.png` ao invés de `.html` no ZIP |
+### Parte 1 — Fix CORS: `fetchAsDataUrl()` (Abordagem em Camadas)
 
----
+**Camada 1 — data: URL direta** (para uploads locais via FileReader — sempre funciona)
 
-## Nova Função: `generateSlidePNG()`
+**Camada 2 — Edge function `optimize-image` com `returnBase64: true`**
+Adicionar na edge function: quando `returnBase64 === true`, ao invés de retornar a URL otimizada, converte o `ArrayBuffer` da imagem em Base64 e retorna `{ dataUrl: "data:image/jpeg;base64,..." }`. O servidor faz o fetch da imagem (sem restrição CORS server-side) e retorna dados puros.
 
-Função assíncrona exportada de `StrategicCarouselPreview.tsx`:
+**Camada 3 — Fetch direto client-side como blob → FileReader**
+Se a edge function falhar, tenta `fetch(url)` direto e converte blob para data: URL.
 
-```text
-export async function generateSlidePNG(
-  slideNum: number,
-  imageUrl: string,
-  primaryColor: string,
-  accentColor: string,
-  productData: ProductData
-): Promise<Blob>
+**Camada 4 — URL original** (último fallback, slide renderiza sem imagem se canvas ficar tainted)
+
+A função `fetchAsDataUrl` é chamada para cada slide antes do `generateSlidePNG`, armazenando os data: URLs em um `Map` temporário durante o export do ZIP.
+
+### Parte 2 — Estado `slideTexts` e Inicialização
+
+Novo state em `InstagramCopyGenerator.tsx`:
+
+```
+type SlideTexts = {
+  1: { hook: string; productName: string };
+  2: { category: string; productName: string };
+  3: { title: string };
+  4: { label: string; keyword: string; benefit: string };
+  5: { title: string; badge1: string; badge2: string; badge3: string };
+  6: { productName: string; ctaButton: string; linkLabel: string; footer: string };
+}
 ```
 
-**Fluxo interno por slide:**
+Inicializado no `useEffect([isOpen])` usando os dados do produto como padrão. Passado como prop para `StrategicCarouselPreview` e para `generateSlidePNG`.
 
-1. Cria `canvas` de `1080 × 1350px` com `devicePixelRatio = 1`
-2. Carrega a imagem do produto via `new Image()` com `crossOrigin = 'anonymous'`
-3. Desenha fundo, imagem, gradientes e texto com a Canvas 2D API
-4. Retorna `canvas.toBlob('image/png')` como Promise
+### Parte 3 — Upload por Slide via FileReader
 
-**Mapeamento dos 6 layouts:**
+Adicionado dentro do `SlideWrapper`:
+- Botão "📤 Upload" com `<input type="file" accept="image/*" hidden>`
+- `FileReader.readAsDataURL()` → `onImageChange(slideNum, dataUrl)`
+- data: URL armazenada em `slideImageMap` → CORS-safe 100%
 
-| Slide | Renderização Canvas |
-|-------|---------------------|
-| 1 Hook | `fillRect` primário na metade superior → `drawImage` na metade inferior → `createLinearGradient` na junção → `fillText` extrabold centralizado |
-| 2 Solução | `fillRect` branco → `drawImage` centralizado com sombra → `fillText` nome/categoria |
-| 3 Técnico | `fillRect` escuro → `drawImage` lateral esquerda → lista de specs com ícone Unicode (⚡ 🛡 ★) à direita |
-| 4 Experiência | `drawImage` na metade esquerda → `fillRect` primário na metade direita → `fillText` benefício |
-| 5 Segurança | `drawImage` full → `filter: blur` via offscreen canvas → overlay escuro → badges com `strokeRect` + `fillText` |
-| 6 CTA | `fillRect` primário → `drawImage` miniatura circular com clip → botão simulado com `roundRect` + `fillText` |
+### Parte 4 — Editor Inline Colapsável por Slide
 
-**Tratamento do blur (Slide 5):**
-Como a Canvas API não tem `filter: blur` diretamente no `drawImage`, será usado o truque de desenhar a imagem num canvas auxiliar com `ctx.filter = 'blur(12px)'` antes de compor no canvas principal — técnica 100% nativa.
+Estado: `expandedSlideEditor: number | null` em `StrategicCarouselPreview`.
 
----
+Cada `SlideWrapper` recebe um ícone ✏️ que toggle o editor do slide. O editor mostra campos específicos por número do slide:
+- Slide 1: Textarea "Gancho", Input "Nome do produto"
+- Slide 2: Input "Categoria", Input "Nome"
+- Slide 3: Input "Título da seção"
+- Slide 4: Input "Label topo", Input "Palavra-chave", Textarea "Benefício"
+- Slide 5: Input "Título", 3x Input "Badge"
+- Slide 6: Input "Nome", Input "Texto do botão", Input "Link label", Input "Footer"
 
-## Atualização do `handleExportZip()`
+Ao editar, `onSlideTextChange(slideNum, key, value)` é chamado → atualiza `slideTexts` no pai → re-renderiza o preview em tempo real.
 
-```text
-// Antes (versão atual):
-const html = generateSlideHTML(i, slideImageMap[i] || '', primaryColor, accentColor, productData);
-zip.file(`${SLIDE_FILE_NAMES[i]}.html`, html);
+### Parte 5 — Botão "🤖 Gerar com IA"
 
-// Depois (nova versão):
-const pngBlob = await generateSlidePNG(i, slideImageMap[i] || '', primaryColor, accentColor, productData);
-zip.file(`${SLIDE_FILE_NAMES[i]}.png`, pngBlob);
+Novo botão no header do Card do Carrossel Visual. Chama `generate-instagram-carousel` com o productId. Mapeia a resposta de 7 slides para os 6 campos de `slideTexts`:
+- Slide 1 IA → hook do Slide 1 visual
+- Slide 7 IA (CTA) → ctaButton do Slide 6 visual
+- Slide 4 IA (técnico) → keyword do Slide 4 visual
+- etc.
+
+Se `generate-instagram-carousel` não retornar no formato esperado, usa `generate-social-content` como fallback.
+
+### Parte 6 — Seção "Copy para Carrossel Visual"
+
+Novo Card abaixo do grid de slides em `InstagramCopyGenerator.tsx`. Função `buildCarouselCopy()` monta o texto de todos os 6 slides formatado com separadores `━━━`. Botão "📋 Copiar Copy" usa `navigator.clipboard.writeText()`.
+
+### Parte 7 — Fixes de Layout no Canvas
+
+**Slide 4 — Capturar Y final do keyword**:
+```
+const kwFontSize = (features[0] || 'Excelência').length > 15 ? 65 : 90;
+ctx.font = `900 ${kwFontSize}px system-ui`;
+const benefitStartY = wrapText(ctx, keyword, halfW + 70, 270, halfW - 100, kwFontSize * 1.15);
+// Benefit começa onde keyword terminou + margem
+ctx.font = '400 40px system-ui';
+wrapText(ctx, benefit, halfW + 70, benefitStartY + 40, halfW - 100, 52);
 ```
 
-O nome do arquivo muda de `.html` para `.png`. O ZIP final conterá:
+**Slide 3 — Ícone Unicode dentro da caixa**:
+```
+const ICONS = ['⚡', '🛡', '⭐', '✅', '🔬'];
+// Após ctx.fill() da roundRect:
+ctx.font = '32px Arial, sans-serif';
+ctx.fillStyle = '#ffffff';
+ctx.textAlign = 'center';
+ctx.textBaseline = 'middle';
+ctx.fillText(ICONS[itemIndex % ICONS.length], rx + 28, ry + 28);
+// Resetar para texto do item
+ctx.textAlign = 'left';
+ctx.textBaseline = 'top';
+```
 
-```text
-carrossel-nome-produto/
-  slide-1-hook.png          ← 1080×1350px PNG real
-  slide-2-solucao.png       ← 1080×1350px PNG real
-  slide-3-tecnico.png       ← 1080×1350px PNG real
-  slide-4-experiencia.png   ← 1080×1350px PNG real
-  slide-5-seguranca.png     ← 1080×1350px PNG real
-  slide-6-cta.png           ← 1080×1350px PNG real
+**Slide 5 — Truncar badge text**:
+```
+function truncateToWidth(ctx, text, maxW) {
+  if (ctx.measureText(text).width <= maxW) return text;
+  let t = text;
+  while (ctx.measureText(t + '…').width > maxW && t.length > 1) t = t.slice(0, -1);
+  return t + '…';
+}
+const maxBadgeW = W - 160 - 130 - 60; // (canvas - margens - ícone - gap)
+const truncBadge = truncateToWidth(ctx, badge, maxBadgeW);
+ctx.fillText(truncBadge, 80 + 130, by + 65);
+```
+
+**Slide 2 — Nome do produto com wrapText**:
+```
+ctx.font = '900 72px system-ui';
+ctx.fillStyle = '#111111';
+ctx.textAlign = 'center';
+ctx.textBaseline = 'top';
+wrapText(ctx, productData.name, W / 2, H - 250, W - 160, 84);
 ```
 
 ---
 
-## Limitação de CORS nas Imagens
+## Arquivos a Modificar
 
-Para que `drawImage()` funcione com imagens externas, é necessário carregar com `crossOrigin = 'anonymous'`. Se o servidor de imagens não retornar o header `Access-Control-Allow-Origin`, o canvas ficará "tainted" e o `toBlob()` falhará.
-
-**Solução de fallback**: se a imagem falhar por CORS, o slide é gerado sem a foto do produto (fundo de cor pura), e um aviso é exibido no toast. O export do ZIP prossegue normalmente com os demais slides.
-
----
-
-## Texto e Fontes
-
-A Canvas API usa as fontes do sistema operacional. Para garantir aparência premium, os textos usarão:
-- `font = '900 96px system-ui, -apple-system, sans-serif'` para títulos extrabold
-- `font = '400 48px system-ui, -apple-system, sans-serif'` para subtítulos
-- `font = '700 40px system-ui, -apple-system, sans-serif'` para badges
+| Arquivo | Mudanças |
+|---------|---------|
+| `supabase/functions/optimize-image/index.ts` | Adicionar suporte a `returnBase64: true` — retorna `{ dataUrl: "data:..." }` convertendo o ArrayBuffer via `btoa()` |
+| `src/components/StrategicCarouselPreview.tsx` | (1) Nova função `fetchAsDataUrl()`, (2) Upload por slide em `SlideWrapper`, (3) Editor inline colapsável, (4) Props `slideTexts` + `onSlideTextChange`, (5) Fix layouts canvas slides 2/3/4/5, (6) `generateSlidePNG` aceita `slideTexts` |
+| `src/components/InstagramCopyGenerator.tsx` | (1) Estado `slideTexts` + inicializador, (2) Botão "🤖 Gerar com IA", (3) `handleExportZip` com `fetchAsDataUrl` pré-carregando imagens, (4) Card "Copy para Carrossel Visual", (5) Instrução do ZIP corrigida |
 
 ---
 
-## Resultado Final para o Usuário
+## Fluxo de Export ZIP Corrigido
 
-1. Abre o Instagram Modal → aba "Carrossel Visual"
-2. Seleciona imagens por slide / ajusta cores
-3. Clica "📦 Baixar ZIP (6 PNGs)"
-4. Recebe um `.zip` com 6 arquivos `.png` de 1080×1350px
-5. Faz upload direto no Instagram sem nenhuma etapa extra
+```
+handleExportZip():
+  1. Para cada slide i = 1..6:
+     a. imageUrl = slideImageMap[i]
+     b. safeDataUrl = await fetchAsDataUrl(imageUrl)
+        → se data: → retorna direto
+        → se URL → POST optimize-image?returnBase64=true → converte server-side
+        → fallback → fetch direto + FileReader
+     c. pngBlob = await generateSlidePNG(i, safeDataUrl, primaryColor, accentColor, productData, slideTexts[i])
+     d. zip.file(`slide-${i}.png`, pngBlob)
+  2. zip.generateAsync({ type: 'blob' }) → download
+```
+
+Este fluxo garante que o canvas **sempre** recebe um `data:` URL — eliminando completamente o "Tainted Canvas".
+
+---
+
+## Resultado para o Usuário
+
+Após a implementação:
+
+1. **ZIP com PNGs reais** — imagens do produto aparecem em todos os slides
+2. **Upload individual** — botão "📤 Upload" em cada slide para usar foto própria
+3. **Editor por slide** — ícone ✏️ expande campos editáveis específicos de cada slide
+4. **Preview em tempo real** — alterações no editor refletem instantaneamente no preview
+5. **Botão IA** — "🤖 Gerar com IA" popula textos dos 6 slides automaticamente
+6. **Copy consolidada** — seção com texto completo de todos os slides para copiar e colar
+7. **Layouts corretos** — Slide 4 sem sobreposição, Slide 3 com ícones, Slide 5 com truncagem, Slide 2 com nome completo
+
