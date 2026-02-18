@@ -533,7 +533,442 @@ export function StrategicCarouselPreview({
   );
 }
 
-// ==================== HTML EXPORT HELPERS ====================
+// ==================== PNG EXPORT — Canvas 2D API ====================
+
+function loadImage(url: string): Promise<HTMLImageElement | null> {
+  return new Promise((resolve) => {
+    if (!url) return resolve(null);
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null); // CORS fallback — render without image
+    img.src = url;
+  });
+}
+
+function wrapText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number): number {
+  const words = text.split(' ');
+  let line = '';
+  let curY = y;
+  for (const word of words) {
+    const testLine = line + word + ' ';
+    const metrics = ctx.measureText(testLine);
+    if (metrics.width > maxWidth && line !== '') {
+      ctx.fillText(line.trim(), x, curY);
+      line = word + ' ';
+      curY += lineHeight;
+    } else {
+      line = testLine;
+    }
+  }
+  if (line.trim()) {
+    ctx.fillText(line.trim(), x, curY);
+    curY += lineHeight;
+  }
+  return curY;
+}
+
+export async function generateSlidePNG(
+  slideNum: number,
+  imageUrl: string,
+  primaryColor: string,
+  accentColor: string,
+  productData: ProductData
+): Promise<Blob> {
+  const W = 1080;
+  const H = 1350;
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d')!;
+
+  const textOnPrimary = getLuminance(primaryColor) > 0.5 ? '#000000' : '#ffffff';
+  const textOnAccent = getLuminance(accentColor) > 0.5 ? '#000000' : '#ffffff';
+
+  const img = await loadImage(imageUrl);
+
+  const benefits = productData.benefits || [];
+  const features = productData.features || [];
+  const specs = productData.technicalSpecs || [];
+
+  // Helper: draw rounded rect
+  function roundRect(x: number, y: number, w: number, h: number, r: number) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.arcTo(x + w, y, x + w, y + r, r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+    ctx.lineTo(x + r, y + h);
+    ctx.arcTo(x, y + h, x, y + h - r, r);
+    ctx.lineTo(x, y + r);
+    ctx.arcTo(x, y, x + r, y, r);
+    ctx.closePath();
+  }
+
+  // Helper: draw slide number badge
+  function drawBadge(num: number, x: number, y: number, bg: string, fg: string) {
+    ctx.beginPath();
+    ctx.arc(x + 40, y + 40, 40, 0, Math.PI * 2);
+    ctx.fillStyle = bg;
+    ctx.fill();
+    ctx.font = '900 36px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = fg;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(num), x + 40, y + 40);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+  }
+
+  if (slideNum === 1) {
+    // ── Slide 1: Hook ──────────────────────────────────────────────
+    // Top: primary color
+    ctx.fillStyle = primaryColor;
+    ctx.fillRect(0, 0, W, H * 0.55);
+
+    // Bottom: image or dark
+    if (img) {
+      ctx.drawImage(img, 0, H * 0.40, W, H * 0.60);
+    } else {
+      ctx.fillStyle = '#333333';
+      ctx.fillRect(0, H * 0.40, W, H * 0.60);
+    }
+
+    // Gradient blend
+    const grad1 = ctx.createLinearGradient(0, H * 0.40, 0, H * 0.55);
+    grad1.addColorStop(0, primaryColor);
+    grad1.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = grad1;
+    ctx.fillRect(0, H * 0.40, W, 200);
+
+    // Bottom dark gradient
+    const grad2 = ctx.createLinearGradient(0, H - 300, 0, H);
+    grad2.addColorStop(0, 'rgba(0,0,0,0)');
+    grad2.addColorStop(1, 'rgba(0,0,0,0.75)');
+    ctx.fillStyle = grad2;
+    ctx.fillRect(0, H - 300, W, 300);
+
+    // Badge
+    drawBadge(1, 60, 60, 'rgba(255,255,255,0.2)', textOnPrimary);
+
+    // Hook text
+    const hookText = benefits[0]
+      ? `Você sabia que ${benefits[0].toLowerCase()}?`
+      : `Descubra o segredo por trás de ${productData.name}`;
+    ctx.font = '900 88px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = textOnPrimary;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.shadowColor = 'rgba(0,0,0,0.3)';
+    ctx.shadowBlur = 20;
+    wrapText(ctx, hookText, W / 2, H * 0.17, W - 160, 100);
+    ctx.shadowBlur = 0;
+
+    // Product name
+    ctx.font = '600 44px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(productData.name, W / 2, H - 60);
+
+  } else if (slideNum === 2) {
+    // ── Slide 2: Apresentação ──────────────────────────────────────
+    ctx.fillStyle = '#f8f8f8';
+    ctx.fillRect(0, 0, W, H);
+
+    // Badge
+    drawBadge(2, 80, 80, primaryColor, textOnPrimary);
+
+    // Category badge
+    let yOffset = 200;
+    if (productData.category) {
+      ctx.font = '700 36px system-ui, -apple-system, sans-serif';
+      const catW = ctx.measureText(productData.category.toUpperCase()).width + 96;
+      roundRect((W - catW) / 2, yOffset, catW, 80, 40);
+      ctx.fillStyle = primaryColor;
+      ctx.fill();
+      ctx.fillStyle = textOnPrimary;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(productData.category.toUpperCase(), W / 2, yOffset + 40);
+      yOffset += 120;
+    }
+
+    // Product image centered
+    if (img) {
+      const maxW = W * 0.70;
+      const maxH = 600;
+      let dw = img.naturalWidth || img.width;
+      let dh = img.naturalHeight || img.height;
+      const scale = Math.min(maxW / dw, maxH / dh, 1);
+      dw *= scale;
+      dh *= scale;
+      const ix = (W - dw) / 2;
+      const iy = yOffset + (H - yOffset - 280 - dh) / 2;
+      ctx.shadowColor = 'rgba(0,0,0,0.2)';
+      ctx.shadowBlur = 60;
+      ctx.shadowOffsetY = 30;
+      ctx.drawImage(img, ix, iy, dw, dh);
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetY = 0;
+    } else {
+      ctx.fillStyle = '#e0e0e0';
+      roundRect((W - 500) / 2, yOffset + 40, 500, 500, 20);
+      ctx.fill();
+    }
+
+    // Product name
+    ctx.font = '900 72px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = '#111111';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(productData.name, W / 2, H - 100);
+
+  } else if (slideNum === 3) {
+    // ── Slide 3: Técnico ───────────────────────────────────────────
+    ctx.fillStyle = '#0f0f14';
+    ctx.fillRect(0, 0, W, H);
+
+    // Left image column
+    const imgW = W * 0.42;
+    if (img) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, imgW, H);
+      ctx.clip();
+      ctx.drawImage(img, 0, 0, imgW, H);
+      ctx.restore();
+      // Gradient edge
+      const grad = ctx.createLinearGradient(imgW - 120, 0, imgW, 0);
+      grad.addColorStop(0, 'rgba(15,15,20,0)');
+      grad.addColorStop(1, '#0f0f14');
+      ctx.fillStyle = grad;
+      ctx.fillRect(imgW - 120, 0, 120, H);
+    }
+
+    // Badge
+    drawBadge(3, 60, 60, primaryColor, textOnPrimary);
+
+    // Right column text
+    const rx = imgW + 40;
+    let ry = 100;
+
+    ctx.font = '900 52px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText('Por que confiar?', rx, ry);
+    ry += 120;
+
+    const items = specs.length > 0
+      ? specs.slice(0, 5).map(s => s.label + (s.value ? ': ' + s.value : ''))
+      : features.slice(0, 5);
+
+    for (const item of items) {
+      // Icon box
+      ctx.fillStyle = primaryColor;
+      roundRect(rx, ry, 56, 56, 12);
+      ctx.fill();
+      ctx.font = '700 36px system-ui, -apple-system, sans-serif';
+      ctx.fillStyle = '#e0e0e0';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ry = wrapText(ctx, item, rx + 76, ry + 10, W - rx - 60, 44);
+      ry += 20;
+    }
+
+    if (items.length === 0) {
+      ctx.font = '400 36px system-ui, -apple-system, sans-serif';
+      ctx.fillStyle = '#aaaaaa';
+      ctx.fillText('Adicione especificações ao produto.', rx, ry);
+    }
+
+  } else if (slideNum === 4) {
+    // ── Slide 4: Experiência ────────────────────────────────────────
+    // Left: image
+    const halfW = W / 2;
+    if (img) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, halfW, H);
+      ctx.clip();
+      ctx.drawImage(img, 0, 0, halfW, H);
+      ctx.restore();
+    } else {
+      ctx.fillStyle = '#cccccc';
+      ctx.fillRect(0, 0, halfW, H);
+    }
+
+    // Badge on image
+    drawBadge(4, 60, 60, 'rgba(255,255,255,0.9)', '#111111');
+
+    // Right: primary color
+    ctx.fillStyle = primaryColor;
+    ctx.fillRect(halfW, 0, halfW, H);
+
+    const benefit = benefits[1] || benefits[0] || 'Resultados excepcionais em cada uso';
+    const keyword = features[0] || 'Excelência';
+
+    ctx.textAlign = 'left';
+    ctx.font = '600 36px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = textOnPrimary;
+    ctx.globalAlpha = 0.7;
+    ctx.textBaseline = 'top';
+    ctx.fillText('EXPERIÊNCIA', halfW + 70, 200);
+    ctx.globalAlpha = 1;
+
+    ctx.font = '900 90px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = textOnPrimary;
+    ctx.textBaseline = 'top';
+    wrapText(ctx, keyword, halfW + 70, 270, halfW - 100, 96);
+
+    ctx.font = '400 40px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = textOnPrimary;
+    ctx.globalAlpha = 0.9;
+    wrapText(ctx, benefit, halfW + 70, 500, halfW - 100, 52);
+    ctx.globalAlpha = 1;
+
+  } else if (slideNum === 5) {
+    // ── Slide 5: Segurança ──────────────────────────────────────────
+    if (img) {
+      // Draw blurred background using offscreen trick
+      const offCanvas = document.createElement('canvas');
+      offCanvas.width = W;
+      offCanvas.height = H;
+      const offCtx = offCanvas.getContext('2d')!;
+      offCtx.filter = 'blur(12px)';
+      offCtx.drawImage(img, -20, -20, W + 40, H + 40); // oversized to hide blur edges
+      ctx.drawImage(offCanvas, 0, 0);
+    } else {
+      ctx.fillStyle = '#222222';
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    // Dark overlay
+    ctx.fillStyle = 'rgba(0,0,0,0.65)';
+    ctx.fillRect(0, 0, W, H);
+
+    // Badge
+    drawBadge(5, 60, 60, 'rgba(255,255,255,0.2)', '#ffffff');
+
+    // Title
+    ctx.font = '900 90px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    wrapText(ctx, 'Você pode confiar', W / 2, 200, W - 160, 100);
+
+    // Badges list
+    const badges = [
+      features[0] || 'Biocompatível',
+      features[1] || benefits[0] || '5 Anos de Casos',
+      features[2] || benefits[1] || 'Qualidade Premium',
+    ];
+
+    let by = 520;
+    for (const badge of badges) {
+      // Glass card
+      ctx.fillStyle = 'rgba(255,255,255,0.12)';
+      roundRect(80, by, W - 160, 130, 20);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // Icon circle
+      ctx.beginPath();
+      ctx.arc(80 + 72, by + 65, 36, 0, Math.PI * 2);
+      ctx.fillStyle = primaryColor;
+      ctx.fill();
+
+      // Badge text
+      ctx.font = '700 44px system-ui, -apple-system, sans-serif';
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(badge, 80 + 130, by + 65);
+
+      by += 160;
+    }
+
+  } else if (slideNum === 6) {
+    // ── Slide 6: CTA ────────────────────────────────────────────────
+    ctx.fillStyle = primaryColor;
+    ctx.fillRect(0, 0, W, H);
+
+    // Badge
+    drawBadge(6, 60, 60, 'rgba(255,255,255,0.2)', textOnPrimary);
+
+    // Thumbnail circular
+    if (img) {
+      const cx = W / 2;
+      const cy = 320;
+      const r = 120;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.drawImage(img, cx - r, cy - r, r * 2, r * 2);
+      ctx.restore();
+      // Border
+      ctx.beginPath();
+      ctx.arc(cx, cy, r + 4, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+      ctx.lineWidth = 8;
+      ctx.stroke();
+    }
+
+    // Product name
+    ctx.font = '900 72px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = textOnPrimary;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    wrapText(ctx, productData.name, W / 2, 480, W - 160, 80);
+
+    // CTA button
+    const btnY = 700;
+    const btnH = 140;
+    const btnW = W - 200;
+    ctx.shadowColor = 'rgba(0,0,0,0.3)';
+    ctx.shadowBlur = 32;
+    roundRect((W - btnW) / 2, btnY, btnW, btnH, 24);
+    ctx.fillStyle = accentColor;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    ctx.font = '900 56px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = textOnAccent;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🛒 Comprar Agora', W / 2, btnY + btnH / 2);
+
+    // Link na bio
+    ctx.font = '400 44px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = textOnPrimary;
+    ctx.globalAlpha = 0.85;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText('🔗 Link na Bio', W / 2, 880);
+    ctx.globalAlpha = 1;
+
+    ctx.font = '400 34px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = textOnPrimary;
+    ctx.globalAlpha = 0.6;
+    ctx.textBaseline = 'top';
+    ctx.fillText('Direct para mais informações', W / 2, 960);
+    ctx.globalAlpha = 1;
+  }
+
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob);
+      else reject(new Error('Canvas toBlob falhou'));
+    }, 'image/png');
+  });
+}
+
+// ==================== HTML EXPORT HELPERS (legado) ====================
 export function generateSlideHTML(slideNum: number, imageUrl: string, primaryColor: string, accentColor: string, productData: ProductData): string {
   const textOnPrimary = getLuminance(primaryColor) > 0.5 ? '#000000' : '#ffffff';
   const textOnAccent = getLuminance(accentColor) > 0.5 ? '#000000' : '#ffffff';
