@@ -1,222 +1,176 @@
 
-# Correção Completa: Editor de Frases + Fontes + Textos Cortados + ZIP com CORS
+# Correção: Repetições de Texto + Distorção de Imagens no Carrossel Visual
 
-## Diagnóstico Exato dos Bugs
+## Diagnóstico Preciso dos Dois Bugs
 
-Após leitura completa dos dois arquivos (952 e 1764 linhas), os problemas estão identificados com precisão:
+### Bug 1 — Repetição de Informações entre Slides
 
-### Bug 1 — Editor de Frases Não Funciona (crítico)
-`StrategicCarouselPreview` em `InstagramCopyGenerator.tsx` linha 1733–1750 **não recebe** as props `slideTexts` nem `onSlideTextChange`. O editor abre, o usuário digita, mas nada atualiza porque as props não chegam ao componente.
+**Localização:** `InstagramCopyGenerator.tsx` linha 155–166, função `buildDefaultSlideTexts()`
 
-### Bug 2 — ZIP Sem CORS Fix (crítico)
-`handleExportZip` (linha 681–692) chama `generateSlidePNG(i, slideImageMap[i] || '', ...)` diretamente — sem passar pela função `fetchAsDataUrl` que foi criada exatamente para resolver o CORS. A imagem vai direto para o canvas sem conversão Base64, taintando o canvas e gerando PNGs vazios.
+O problema está na distribuição de dados entre slides:
 
-### Bug 3 — ZIP Não Passa `slideTexts`
-`handleExportZip` chama `generateSlidePNG(i, ..., productData)` sem o parâmetro `texts` — assim os PNGs exportados ignoram qualquer texto que o usuário editou.
+- **Slide 4 keyword**: usa `f[0]` (primeira feature)
+- **Slide 5 badge1**: usa `f[0]` novamente (mesma primeira feature)
+- **Slide 5 badge2**: usa `f[1]` (segunda feature) ou `b[0]` (primeiro benefit)
+- **Slide 4 benefit**: usa `b[1]` ou `b[0]` (mesmo benefit que pode ir para badge2)
 
-### Bug 4 — Textos Cortados (Slide 5 — Badges)
-No preview HTML, badge usa `whiteSpace: 'nowrap'` com `overflow: 'hidden'` e `textOverflow: 'ellipsis'` (linha 400), mas o container não tem largura máxima definida. Em textos longos como "Produto Nano-Híbrido Odontológico com nanotecnologia exclusiva" o badge container expande além dos limites do slide.
+Resultado: o usuário vê "Produto Nano-Híbrido Odontológico" tanto no Slide 4 (keyword gigante) quanto no Slide 5 (badge). "Biocompatibilidade comprovada..." aparece no Slide 4 (benefit) e como badge no Slide 5. "Longa duração..." idem.
 
-### Bug 5 — Textos Cortados (Slide 4 — Palavra-chave)
-No preview HTML, `Slide4Experience` usa `wordBreak: 'break-word'` na tag `h2` (linha 359) com `fontSize: kwFontSize` mas a div pai tem `overflow: 'hidden'` com `padding: '80px 70px'` — o texto da keyword quebra mas o benefício embaixo pode ser cortado pelo `overflow: hidden`.
+**Distribuição correta (sem repetição):**
 
-### Bug 6 — Sem Seletor de Fonte e Tamanho
-Não existe seletor de fonte (family) nem tamanho no código — é necessário adicionar ao estado e passar como prop para os slides.
+| Slide | Campo | Fonte |
+|-------|-------|-------|
+| 1 | hook | `b[0]` |
+| 1 | productName | nome do produto |
+| 2 | category | categoria |
+| 4 | keyword | `f[0]` (feature 1 - característica técnica) |
+| 4 | benefit | `b[2]` ou `b[1]` (benefit distinto do Slide 5) |
+| 5 | badge1 | `f[1]` (feature 2 - diferente da keyword do Slide 4) |
+| 5 | badge2 | `f[2]` ou `b[0]` (terceira característica) |
+| 5 | badge3 | `f[3]` ou `b[1]` (quarta característica) |
 
-### Bug 7 — Botão "Gerar com IA" Não Existe na UI
-O estado `generatingVisualCarousel` existe mas nenhum botão no JSX o aciona.
+Adicionalmente, os slide components em `StrategicCarouselPreview.tsx` têm um fallback duplo: se `texts` não tem o campo, caem no `productData.features[0]` diretamente — podendo sobrescrever o `slideTexts` com o dado repetido. O fallback precisa usar índices diferentes por slide.
 
-### Bug 8 — Seção "Copy para Carrossel Visual" Não Existe
-A função `buildCarouselCopy()` e o Card de copy não foram implementados no JSX.
+### Bug 2 — Imagens Distorcidas
 
----
+**Localização:** `StrategicCarouselPreview.tsx` — componentes HTML React dos slides 1, 3 e 4.
+
+**Slide 1:** A `<img>` tem `height: '60%'` e `width: '100%'` com `objectFit: 'cover'` — isso está correto e não distorce. OK.
+
+**Slide 2 (confirmado como o slide da screenshot):** 
+```
+style={{ maxWidth: '70%', maxHeight: 600, objectFit: 'contain' }}
+```
+O problema é que o container pai `flex: 1` não tem `height` definido em pixels — apenas `padding: '40px 0'`. Com `justifyContent: 'space-between'` no pai, a `flex: 1` area cresce variávelmente. O `maxHeight: 600` resolve para telas grandes mas em escala reduzida (`SLIDE_SCALE = 0.22`) pode causar efeito estranho.
+
+O bug real: a imagem usa `objectFit: 'contain'` mas **não tem `width` nem `height` definidos explicitamente** — o navegador calcula a altura baseado no tamanho natural da imagem. Como o slide está escalado via `transform: scale(0.22)`, as proporções ficam corretas visualmente, mas a imagem pode exceder o espaço disponível no layout flex e ser "espremida".
+
+**Fix:** Dar à div container da imagem `height` fixo (ex: `560px`) e à `img` `width: '100%', height: '100%', objectFit: 'contain'`.
+
+**Slide 3:** `img` com `width: '100%', height: '100%'` no container `42%` de largura — funciona bem com `objectFit: 'cover'`, mas o container `div` com `42%` de width sem height definido em um flex row vai herdar `height: 100%` do pai `SLIDE_H` — correto.
+
+**Slide 4:** `img` com `width: '100%', height: '100%'` num flex `50%` — correto pois o pai tem `height: SLIDE_H` fixo.
+
+**Conclusão:** O problema principal é o Slide 2, e secundariamente o Slide 1 onde a imagem sem `objectPosition` pode distorcer rostos/produtos.
 
 ## Solução Completa
 
-### Arquivo 1: `src/components/InstagramCopyGenerator.tsx`
+### Fix 1 — `buildDefaultSlideTexts` sem repetições
 
-#### Fix A — Passar `slideTexts` e `onSlideTextChange` para o preview (linha ~1733)
-```text
-// ANTES (incompleto):
-<StrategicCarouselPreview
-  slideImageMap={slideImageMap}
-  onImageChange={...}
-  productImages={productImages}
-  primaryColor={primaryColor}
-  accentColor={accentColor}
-  productData={{...}}
-/>
+**Arquivo:** `src/components/InstagramCopyGenerator.tsx`, linhas 155–166.
 
-// DEPOIS (correto):
-<StrategicCarouselPreview
-  slideImageMap={slideImageMap}
-  onImageChange={...}
-  productImages={productImages}
-  primaryColor={primaryColor}
-  accentColor={accentColor}
-  productData={{...}}
-  slideTexts={slideTexts}
-  onSlideTextChange={(slideNum, key, value) =>
-    setSlideTexts(prev => ({
-      ...prev,
-      [slideNum]: { ...(prev[slideNum] as any), [key]: value }
-    }))
-  }
-  fontFamily={fontFamily}
-  fontSize={fontSize}
-  onFontFamilyChange={setFontFamily}
-  onFontSizeChange={setFontSize}
-/>
+Nova lógica de distribuição usando índices distintos:
+
 ```
-
-#### Fix B — `handleExportZip` usar `fetchAsDataUrl` + passar `slideTexts`
-```text
-// ANTES:
-const pngBlob = await generateSlidePNG(i, slideImageMap[i] || '', primaryColor, accentColor, productData);
-
-// DEPOIS:
-const safeDataUrl = await fetchAsDataUrl(slideImageMap[i] || '');
-const textsForSlide = (slideTexts[i as keyof SlideTextsType] as Record<string, string>) || {};
-const pngBlob = await generateSlidePNG(i, safeDataUrl, primaryColor, accentColor, productData, textsForSlide);
-```
-
-#### Fix C — Adicionar estados de fonte
-```text
-const [fontFamily, setFontFamily] = useState<string>('system-ui');
-const [fontSize, setFontSize] = useState<number>(100); // escala percentual 60-150%
-```
-
-#### Fix D — Seletores de fonte e tamanho na UI (abaixo dos color pickers)
-
-**Famílias disponíveis:**
-- `system-ui` — Padrão do sistema
-- `Georgia, serif` — Serif elegante
-- `'Arial', sans-serif` — Arial clássico
-- `'Impact', sans-serif` — Impact (destaque)
-- `'Courier New', monospace` — Monospace técnico
-
-**Controle de tamanho:** slider de 60% a 150% (escala relativa aos tamanhos base de cada slide)
-
-#### Fix E — Botão "🤖 Gerar com IA" no header do Card
-Abaixo do botão ZIP, adicionar botão que chama `generateVisualCarouselTexts()`:
-```text
-const generateVisualCarouselTexts = async () => {
-  setGeneratingVisualCarousel(true);
-  try {
-    const { data } = await supabase.functions.invoke('generate-instagram-carousel', {
-      body: { productId, feedCopy: feedCopies[0]?.copy || '', approach: 'visual_carousel' }
-    });
-    // Mapear slides da IA → slideTexts (slide 1→hook, slide 4→keyword, slide 7→cta)
-    if (data?.slides) {
-      const s = data.slides;
-      setSlideTexts(prev => ({
-        ...prev,
-        1: { ...prev[1] as any, hook: s[0]?.text || prev[1]?.hook || '' },
-        4: { ...prev[4] as any, keyword: s[3]?.title || prev[4]?.keyword || '' },
-        6: { ...prev[6] as any, ctaButton: s[6]?.text?.split('\n')[0] || prev[6]?.ctaButton || '' },
-      }));
-    }
-  } catch {}
-  setGeneratingVisualCarousel(false);
-};
-```
-
-#### Fix F — Card "Copy para Carrossel Visual" abaixo dos slides
-```text
-function buildCarouselCopy(): string {
-  const t = slideTexts as Partial<SlideTextsType>;
-  return [
-    `SLIDE 1 — HOOK\n${t[1]?.hook || ''}`,
-    `━━━━━━━━━━━━━━━━━━\nSLIDE 2 — APRESENTAÇÃO\nProduto: ${t[2]?.productName || ''}\n${t[2]?.category ? `Categoria: ${t[2].category}` : ''}`,
-    `━━━━━━━━━━━━━━━━━━\nSLIDE 3 — DIFERENCIAIS\n${t[3]?.title || 'Por que confiar?'}`,
-    `━━━━━━━━━━━━━━━━━━\nSLIDE 4 — EXPERIÊNCIA\n${t[4]?.keyword || ''}\n${t[4]?.benefit || ''}`,
-    `━━━━━━━━━━━━━━━━━━\nSLIDE 5 — SEGURANÇA\n${t[5]?.title || ''}\n✅ ${t[5]?.badge1 || ''}\n✅ ${t[5]?.badge2 || ''}\n✅ ${t[5]?.badge3 || ''}`,
-    `━━━━━━━━━━━━━━━━━━\nSLIDE 6 — CTA\n${t[6]?.ctaButton || ''}\n${t[6]?.linkLabel || ''}\n${t[6]?.footer || ''}`,
-  ].join('\n\n');
+function buildDefaultSlideTexts(): Partial<SlideTextsType> {
+  const b = productBenefits || [];
+  const f = productFeatures || [];
+  return {
+    1: {
+      hook: b[0] ? `Você sabia que ${b[0].toLowerCase()}?`
+                 : `Descubra o segredo por trás de ${productName}`,
+      productName
+    },
+    2: { category: productCategory || '', productName },
+    3: { title: 'Por que confiar?' },
+    4: {
+      label: 'EXPERIÊNCIA',
+      keyword: f[0] || 'Excelência',          // Feature 1 (técnica)
+      benefit: b[2] || b[1] || b[0]           // Benefit diferente do usado no Slide 1 e 5
+               || 'Resultados excepcionais em cada uso'
+    },
+    5: {
+      title: 'Você pode confiar',
+      badge1: f[1] || f[0] || 'Biocompatível',   // Feature 2 (diferente da keyword)
+      badge2: f[2] || b[1] || '5 Anos de Casos', // Feature 3 ou benefit
+      badge3: f[3] || b[2] || 'Qualidade Premium' // Feature 4 ou benefit
+    },
+    6: {
+      productName,
+      ctaButton: '🛒 Comprar Agora',
+      linkLabel: '🔗 Link na Bio',
+      footer: 'Direct para mais informações'
+    },
+  };
 }
 ```
 
----
+### Fix 2 — Fallbacks nos slide components sem repetição
 
-### Arquivo 2: `src/components/StrategicCarouselPreview.tsx`
+**Arquivo:** `src/components/StrategicCarouselPreview.tsx`
 
-#### Fix G — Adicionar props `fontFamily`, `fontSize` e repassar para slides
+**Slide 4 (`Slide4Experience`):** O fallback do `benefit` atualmente usa `productData.benefits?.[1] || productData.benefits?.[0]`. Deve usar `[2] || [1]` para não repetir o `b[0]` que vai para o Slide 1 e potencialmente Slide 5.
 
-Adicionar ao `StrategicCarouselPreviewProps`:
-```text
-fontFamily?: string;
-fontSize?: number; // escala 60-150
+**Slide 5 (`Slide5Security`):** Os badges atualmente usam:
+- `badge1: features[0]` — mesmo que keyword do Slide 4
+- `badge2: features[1] || benefits[0]`
+- `badge3: features[2] || benefits[1]`
+
+Deve usar:
+- `badge1: features[1] || features[0]` — preferencialmente feature diferente da keyword
+- `badge2: features[2] || benefits[1]`
+- `badge3: features[3] || benefits[2]`
+
+### Fix 3 — Distorção de imagens no Slide 2
+
+**Arquivo:** `src/components/StrategicCarouselPreview.tsx`, função `Slide2Solution`, linha 281–287.
+
+**Antes:**
+```jsx
+<div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 0' }}>
+  <img src={image} alt="produto" style={{ maxWidth: '70%', maxHeight: 600, objectFit: 'contain', ... }} />
 ```
 
-Cada slide component recebe `fontFamily` e usa via `style={{ fontFamily }}` na div raiz. O `fontSize` escala os tamanhos base de cada elemento multiplicando por `(fontSize / 100)`.
-
-#### Fix H — Corrigir textos cortados no HTML preview (Slide 5 badges)
-Mudar `whiteSpace: 'nowrap'` para `wordBreak: 'break-word'` + `overflow: 'visible'` no `<span>` do badge, ou limitar o texto com `maxWidth` calculado:
-```text
-// ANTES:
-<span style={{ color: '#ffffff', fontSize: 40, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-  {badge.label}
-</span>
-
-// DEPOIS:
-<span style={{ color: '#ffffff', fontSize: 40, fontWeight: 700, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.3 }}>
-  {badge.label}
-</span>
+**Depois:**
+```jsx
+<div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 0', minHeight: 0, overflow: 'hidden' }}>
+  <img src={image} alt="produto" style={{
+    maxWidth: '70%',
+    maxHeight: '100%',      // respeita o container flex
+    height: 'auto',          // mantém proporção original
+    width: 'auto',           // mantém proporção original
+    objectFit: 'contain',
+    filter: 'drop-shadow(0 30px 60px rgba(0,0,0,0.2))'
+  }} />
 ```
 
-E ajustar a altura do card de badge para acomodar 2 linhas:
-```text
-// padding: '28px 44px' → padding: '20px 44px' com minHeight: 120
+A chave é `width: 'auto'` e `height: 'auto'` com `maxWidth` e `maxHeight` — o navegador calcula as dimensões mantendo o aspect ratio original da imagem. `minHeight: 0` no container flex permite que ele se comprima sem forçar a imagem a distorcer.
+
+### Fix 4 — Imagem do Slide 1 com objectPosition correto
+
+**Arquivo:** `src/components/StrategicCarouselPreview.tsx`, função `Slide1Hook`, linha 246.
+
+```jsx
+// Antes:
+style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '60%', width: '100%', objectFit: 'cover', objectPosition: 'center top' }}
+
+// Depois - adicionar background branco para evitar transparência:
+style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '60%', width: '100%', objectFit: 'cover', objectPosition: 'center center', backgroundColor: '#f0f0f0' }}
 ```
 
-#### Fix I — Corrigir textos cortados no Slide 4 (keyword + benefit)
-O `h2` da keyword tem `lineHeight: 1.05` mas `overflow: 'hidden'` no container. Solução: usar `overflowY: 'auto'` no container direito e separar keyword e benefit com layout flex:
-```text
-// Container direito: overflow: 'hidden' → overflow: 'visible'
-// h2 keyword: adicionar flexShrink: 0
-// p benefit: fontSize adaptativo se texto for longo
+### Fix 5 — Slide 3 e 4: garantir `objectPosition: 'top center'` para produto
+
+Para produtos (não cenários), `objectPosition: 'center top'` mostra melhor a parte superior do produto. Nas imagens de produto com fundo branco, `objectFit: 'cover'` pode cortar parte da embalagem.
+
+**Slide 3** (linha 313): trocar `objectFit: 'cover'` para `objectFit: 'contain'` no container left (fundo escuro #1a1a2e serve como fallback), ficando:
+```jsx
+<img src={image} alt="produto" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
 ```
 
----
+**Slide 4** (linha 353): manter `objectFit: 'cover'` pois é a metade esquerda de um split layout — não deve ter borda de fundo visível.
 
-## Seletor de Fontes e Tamanhos na UI
+## Resumo de Arquivos a Modificar
 
-No bloco de color pickers (linha ~1696), adicionar abaixo:
+| Arquivo | Linhas | Mudança |
+|---------|--------|---------|
+| `src/components/InstagramCopyGenerator.tsx` | 155–166 | `buildDefaultSlideTexts`: usar índices f[1], f[2], f[3] para Slide 5 badges; usar b[2]||b[1] para Slide 4 benefit |
+| `src/components/StrategicCarouselPreview.tsx` | 344, 372–379 | Fallbacks de `Slide4Experience` e `Slide5Security` com índices distintos |
+| `src/components/StrategicCarouselPreview.tsx` | 281–287 | `Slide2Solution`: trocar `maxHeight: 600` por `height: 'auto'`, `width: 'auto'`, `maxHeight: '100%'` + `minHeight: 0` no container |
+| `src/components/StrategicCarouselPreview.tsx` | 246 | `Slide1Hook`: adicionar `backgroundColor` na img |
 
-```text
-Fonte:
-[ sistema-ui ▼ ]   [ Arial ▼ ]   [ Georgia ▼ ]   [ Impact ▼ ]
+## Resultado Esperado
 
-Tamanho do texto:  [━━━━●━━━] 100%
-```
-
-**Opções de fonte:**
-| Label | Value (CSS) |
-|-------|-------------|
-| Sistema (Padrão) | `system-ui, -apple-system, sans-serif` |
-| Arial | `'Arial', Helvetica, sans-serif` |
-| Georgia (Elegante) | `Georgia, 'Times New Roman', serif` |
-| Impact (Destaque) | `Impact, 'Arial Narrow', sans-serif` |
-| Courier (Técnico) | `'Courier New', Courier, monospace` |
-
-**Escala de tamanho:** Slider de 60% a 150%, aplicado multiplicando todos os `fontSize` dos elementos canvas e CSS por `(escala / 100)`.
-
----
-
-## Resumo das Mudanças por Arquivo
-
-### `src/components/InstagramCopyGenerator.tsx`
-1. Adicionar estados `fontFamily` e `fontSize`
-2. Passar `slideTexts`, `onSlideTextChange`, `fontFamily`, `fontSize` para `<StrategicCarouselPreview>`
-3. Corrigir `handleExportZip` para usar `fetchAsDataUrl` + passar `slideTexts` + passar opções de fonte ao `generateSlidePNG`
-4. Adicionar botão "🤖 Gerar com IA" no header do Card
-5. Adicionar seletores de fonte e tamanho nos controles de cor
-6. Adicionar Card "📋 Copy para Carrossel Visual" com `buildCarouselCopy()` e botão copiar
-
-### `src/components/StrategicCarouselPreview.tsx`
-1. Adicionar props `fontFamily` e `fontSize` à interface
-2. Passar `fontFamily` como `style.fontFamily` nas divs raiz de cada slide component
-3. Aplicar escala de `fontSize` nos tamanhos de texto dos slides HTML preview
-4. Corrigir Slide 5 badge: trocar `whiteSpace: nowrap` por clamp de 2 linhas
-5. Corrigir Slide 4 keyword+benefit: overflow visível no container
-6. Atualizar `generateSlidePNG` para aceitar e aplicar `fontFamily` e `fontSize`
+- Slide 4 mostra a **palavra-chave técnica** (ex: "Nano-Híbrido") e um **benefício único** (ex: "Longa duração com mais de 5 anos")
+- Slide 5 mostra **3 badges distintos** de features/benefits que NÃO se repetem com o Slide 4 (ex: "Biocompatibilidade comprovada", "ISO 9001", "Fácil aplicação")
+- Slide 2 exibe a imagem do produto **sem distorção**, mantendo proporções originais (portrait, landscape, quadrada)
+- Nenhum texto aparece em dois slides simultâneos
