@@ -363,20 +363,37 @@ function Slide1Hook({ image, primaryColor, productData, texts }: { image: string
 
   return (
     <div style={{ width: SLIDE_W, height: SLIDE_H, position: 'relative', overflow: 'hidden', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '55%', background: primaryColor }} />
+      {/* Imagem full-bleed cobrindo todo o card */}
       {image ? (
-        <img src={image} alt="produto" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '60%', width: '100%', objectFit: 'cover', objectPosition: 'center center', backgroundColor: '#f0f0f0' }} />
+        <img src={image} alt="produto" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
       ) : (
-        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '60%', background: '#333' }} />
+        <div style={{ position: 'absolute', inset: 0, background: '#333' }} />
       )}
-      <div style={{ position: 'absolute', top: '40%', left: 0, right: 0, height: 200, background: `linear-gradient(to bottom, ${primaryColor}, transparent)` }} />
+
+      {/* Overlay escuro geral sutil para dar profundidade */}
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.28)' }} />
+
+      {/* Número do slide */}
       <div style={{ position: 'absolute', top: 60, left: 60, width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <span style={{ color: textColor, fontWeight: 900, fontSize: 36 }}>1</span>
+        <span style={{ color: '#ffffff', fontWeight: 900, fontSize: 36 }}>1</span>
       </div>
-      <div style={{ position: 'absolute', top: '8%', bottom: '48%', left: 80, right: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-        <p style={{ color: textColor, fontWeight: 400, fontSize: 52, lineHeight: 1.25, margin: 0, textShadow: '0 2px 20px rgba(0,0,0,0.3)' }}>{hook}</p>
+
+      {/* FAIXA CENTRAL OPACA com a frase — centralizada verticalmente */}
+      <div style={{
+        position: 'absolute',
+        top: '50%',
+        transform: 'translateY(-50%)',
+        left: 0,
+        right: 0,
+        padding: '60px 80px',
+        background: 'rgba(0, 0, 0, 0.58)',
+        textAlign: 'center',
+      }}>
+        <p style={{ color: '#ffffff', fontWeight: 400, fontSize: 52, lineHeight: 1.3, margin: 0 }}>{hook}</p>
       </div>
-      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 200, background: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent)' }} />
+
+      {/* Gradiente rodapé + nome do produto */}
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 200, background: 'linear-gradient(to top, rgba(0,0,0,0.75), transparent)' }} />
       <div style={{ position: 'absolute', bottom: 60, left: 80, right: 80 }}>
         <p style={{ color: '#ffffff', fontSize: 44, fontWeight: 600, margin: 0, textAlign: 'center' }}>{name}</p>
       </div>
@@ -859,33 +876,35 @@ export async function generateSlidePNG(
     })();
     const productName = texts?.productName || productData.name;
 
-    ctx.fillStyle = primaryColor;
-    ctx.fillRect(0, 0, W, H * 0.55);
+    // Imagem full-bleed cobrindo todo o canvas
     if (img) {
-      drawImageCover(ctx, img, 0, H * 0.40, W, H * 0.60);
+      drawImageCover(ctx, img, 0, 0, W, H);
     } else {
       ctx.fillStyle = '#333333';
-      ctx.fillRect(0, H * 0.40, W, H * 0.60);
+      ctx.fillRect(0, 0, W, H);
     }
-    const grad1 = ctx.createLinearGradient(0, H * 0.40, 0, H * 0.55);
-    grad1.addColorStop(0, primaryColor);
-    grad1.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = grad1;
-    ctx.fillRect(0, H * 0.40, W, 200);
+    // Overlay escuro geral sutil
+    ctx.fillStyle = 'rgba(0,0,0,0.28)';
+    ctx.fillRect(0, 0, W, H);
+    // Número do slide
+    drawBadge(1, 60, 60, 'rgba(255,255,255,0.2)', '#ffffff');
+    // Faixa central opaca com a frase
+    const faixaH = 340;
+    const faixaY = H / 2 - faixaH / 2;
+    ctx.fillStyle = 'rgba(0,0,0,0.58)';
+    ctx.fillRect(0, faixaY, W, faixaH);
+    ctx.font = '400 52px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    wrapText(ctx, hookText, W / 2, faixaY + 60, W - 160, 70, 'center');
+    // Gradiente rodapé
     const grad2 = ctx.createLinearGradient(0, H - 300, 0, H);
     grad2.addColorStop(0, 'rgba(0,0,0,0)');
     grad2.addColorStop(1, 'rgba(0,0,0,0.75)');
     ctx.fillStyle = grad2;
     ctx.fillRect(0, H - 300, W, 300);
-    drawBadge(1, 60, 60, 'rgba(255,255,255,0.2)', textOnPrimary);
-    ctx.font = '400 52px system-ui, -apple-system, sans-serif';
-    ctx.fillStyle = textOnPrimary;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    ctx.shadowColor = 'rgba(0,0,0,0.3)';
-    ctx.shadowBlur = 20;
-    wrapText(ctx, hookText, W / 2, H * 0.14, W - 160, 70, 'center');
-    ctx.shadowBlur = 0;
+    // Nome do produto no rodapé
     ctx.font = '600 44px system-ui, -apple-system, sans-serif';
     ctx.fillStyle = '#ffffff';
     ctx.textAlign = 'center';
