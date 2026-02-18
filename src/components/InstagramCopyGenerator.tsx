@@ -83,6 +83,13 @@ interface InstagramCopyGeneratorProps {
   productApplications?: string;
   productFaq?: Array<{ question: string; answer: string }>;
   productEcommerceHtml?: string;
+  competitorComparison?: {
+    enabled: boolean;
+    title?: string;
+    subtitle?: string;
+    table_headers: string[];
+    table_data: Array<Record<string, string>>;
+  };
   isOpen: boolean;
   onClose: () => void;
 }
@@ -103,7 +110,7 @@ function stripHtmlToText(html: string): string {
     .trim();
 }
 
-export function InstagramCopyGenerator({ productId, productName, productPrice, productCategory, productImages = [], productUrl, productBenefits, productFeatures, technicalSpecs, productSalesPitch, productDescription, productTargetAudience, productApplications, productFaq, productEcommerceHtml, isOpen, onClose }: InstagramCopyGeneratorProps) {
+export function InstagramCopyGenerator({ productId, productName, productPrice, productCategory, productImages = [], productUrl, productBenefits, productFeatures, technicalSpecs, productSalesPitch, productDescription, productTargetAudience, productApplications, productFaq, productEcommerceHtml, competitorComparison, isOpen, onClose }: InstagramCopyGeneratorProps) {
   // === Estados existentes (Copies de texto) ===
   const [feedCopies, setFeedCopies] = useState<CopyVariation[]>([
     { variation: 1, approach: 'storytelling', copy: '', link: '' },
@@ -788,6 +795,7 @@ ${slide.text}`;
         productUrl: productUrl,
         feedCopyBenefits: feedCopies.find(v => v.approach === 'benefits')?.copy || undefined,
         feedCopyProblemSolution: feedCopies.find(v => v.approach === 'problem_solution')?.copy || undefined,
+        competitorComparison: competitorComparison,
       };
 
       const SLIDE_FILE_NAMES: Record<number, string> = {
@@ -1985,6 +1993,7 @@ ${slide.text}`;
                          ecommerceHtmlText: productEcommerceHtml ? stripHtmlToText(productEcommerceHtml).slice(0, 300) : undefined,
                          feedCopyBenefits: feedCopies.find(v => v.approach === 'benefits')?.copy || undefined,
                          feedCopyProblemSolution: feedCopies.find(v => v.approach === 'problem_solution')?.copy || undefined,
+                         competitorComparison: competitorComparison,
                        }}
                       slideTexts={slideTexts}
                       onSlideTextChange={(slideNum, key, value) =>

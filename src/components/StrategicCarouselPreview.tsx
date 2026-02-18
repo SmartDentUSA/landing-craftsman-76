@@ -14,6 +14,14 @@ interface FAQ {
   answer: string;
 }
 
+interface CompetitorComparison {
+  enabled: boolean;
+  title?: string;
+  subtitle?: string;
+  table_headers: string[];
+  table_data: Array<Record<string, string>>;
+}
+
 interface ProductData {
   name: string;
   price?: number;
@@ -30,6 +38,7 @@ interface ProductData {
   ecommerceHtmlText?: string;
   feedCopyBenefits?: string;        // Copy IA — variação Benefits do Feed
   feedCopyProblemSolution?: string; // Copy IA — variação Problem/Solution do Feed
+  competitorComparison?: CompetitorComparison;
 }
 
 // ========================= SlideTexts Types =========================
@@ -477,6 +486,25 @@ function Slide2Solution({ image, primaryColor, accentColor, productData, texts }
   );
 }
 
+// ==================== HELPER: Filtrar linhas de descrição visual da IA ====================
+function isVisualDescriptionLine(line: string): boolean {
+  const lower = line.toLowerCase();
+  return (
+    /^\[.{10,}\]/.test(line) ||
+    lower.includes('gráfico') ||
+    lower.includes('ilustração') ||
+    lower.includes('imagem mostrando') ||
+    lower.includes('design deve') ||
+    lower.includes('estilizado') ||
+    lower.includes('flutuando em') ||
+    lower.includes('cores como') ||
+    lower.includes('nanopartículas') ||
+    lower.includes('sugestão visual') ||
+    lower.includes('sugestão de imagem') ||
+    (lower.includes('visualmente') && lower.includes('mostr'))
+  );
+}
+
 // ==================== SLIDE 3 — CIENTIFICIDADE ====================
 const SLIDE3_UNICODE_ICONS = ['⚡', '🛡', '⭐', '✅', '🔬'];
 
@@ -488,7 +516,7 @@ function Slide3Technical({ image, primaryColor, productData, texts }: { image: s
   const textOnPrimary = getLuminance(primaryColor) > 0.5 ? '#000000' : '#ffffff';
   const title = texts?.title || 'Por que confiar?';
 
-  // PRIORIDADE 1: Feed Copy Benefits — extração estruturada (headline + corpo + bullets)
+  // PRIORIDADE 1: Feed Copy Benefits — extração estruturada com filtro de linhas visuais
   const feedBenefits = productData.feedCopyBenefits;
 
   let benefitsHeadline = '';
@@ -496,13 +524,18 @@ function Slide3Technical({ image, primaryColor, productData, texts }: { image: s
   let benefitsBullets: string[] = [];
 
   if (feedBenefits) {
-    const lines = feedBenefits.split('\n').map((l: string) => l.trim()).filter(Boolean);
+    const allLines = feedBenefits.split('\n').map((l: string) => l.trim()).filter(Boolean);
+    const lines = allLines.filter((l: string) => !isVisualDescriptionLine(l));
     benefitsHeadline = lines[0]?.slice(0, 80) || '';
     const bulletLines = lines.filter((l: string) => /^[•\-✅🔥⚡🎯💡🌟⭐🏆💎👉➡️]/.test(l)).slice(0, 4);
     const bodyLines = lines.slice(1).filter((l: string) => !bulletLines.includes(l));
     benefitsBody = bodyLines.join(' ').slice(0, 200);
     benefitsBullets = bulletLines;
   }
+
+  // Tabela de comparação com concorrentes
+  const cc = productData.competitorComparison;
+  const hasCompetitorTable = cc?.enabled && cc.table_headers.length > 0 && cc.table_data.length > 0;
 
   return (
     <div style={{ width: SLIDE_W, height: SLIDE_H, background: '#0f0f14', fontFamily: 'system-ui, -apple-system, sans-serif', display: 'flex', position: 'relative', overflow: 'hidden' }}>
@@ -523,7 +556,7 @@ function Slide3Technical({ image, primaryColor, productData, texts }: { image: s
         <div style={{ width: 56, height: 3, background: primaryColor, borderRadius: 2, marginBottom: 36, flexShrink: 0 }} />
 
         {feedBenefits ? (
-          // ESTRUTURADO: Headline + Corpo + Bullets do feedCopyBenefits
+          // ESTRUTURADO: Headline + Corpo + Tabela/Bullets do feedCopyBenefits
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             {/* Headline em destaque */}
             {benefitsHeadline && (
@@ -537,16 +570,108 @@ function Slide3Technical({ image, primaryColor, productData, texts }: { image: s
                 {benefitsBody}
               </p>
             )}
-            {/* Bullets */}
-            {benefitsBullets.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 8 }}>
-                {benefitsBullets.map((bullet, idx) => (
-                  <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, borderLeft: `3px solid ${primaryColor}`, paddingLeft: 16 }}>
-                    <p style={{ color: '#e8e8e8', fontSize: 26, fontWeight: 500, margin: 0, lineHeight: 1.4 }}>{bullet}</p>
-                  </div>
-                ))}
+            {/* TABELA competitor_comparison (prioridade sobre bullets) */}
+            {hasCompetitorTable ? (
+              <div style={{ marginTop: 8 }}>
+                {cc!.title && (
+                  <p style={{ color: '#aaaaaa', fontSize: 20, fontWeight: 600, margin: '0 0 10px 0', textTransform: 'uppercase', letterSpacing: 1 }}>
+                    {cc!.title}
+                  </p>
+                )}
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr>
+                      {cc!.table_headers.map((header, i) => (
+                        <th key={i} style={{
+                          background: primaryColor,
+                          color: '#ffffff',
+                          fontSize: 22,
+                          fontWeight: 700,
+                          padding: '10px 14px',
+                          textAlign: 'left',
+                          border: '1px solid rgba(255,255,255,0.12)',
+                        }}>
+                          {header}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cc!.table_data.slice(0, 5).map((row, rowIdx) => (
+                      <tr key={rowIdx} style={{ background: rowIdx % 2 === 0 ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.02)' }}>
+                        {cc!.table_headers.map((header, colIdx) => (
+                          <td key={colIdx} style={{
+                            color: '#e0e0e0',
+                            fontSize: 20,
+                            fontWeight: colIdx === 0 ? 700 : 400,
+                            padding: '9px 14px',
+                            border: '1px solid rgba(255,255,255,0.12)',
+                          }}>
+                            {row[header] || '—'}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
+            ) : (
+              // Fallback: bullets do feedCopyBenefits
+              benefitsBullets.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 8 }}>
+                  {benefitsBullets.map((bullet, idx) => (
+                    <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, borderLeft: `3px solid ${primaryColor}`, paddingLeft: 16 }}>
+                      <p style={{ color: '#e8e8e8', fontSize: 26, fontWeight: 500, margin: 0, lineHeight: 1.4 }}>{bullet}</p>
+                    </div>
+                  ))}
+                </div>
+              )
             )}
+          </div>
+        ) : hasCompetitorTable ? (
+          // SEM feedBenefits mas COM tabela
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            {cc!.title && (
+              <p style={{ color: '#aaaaaa', fontSize: 20, fontWeight: 600, margin: 0, textTransform: 'uppercase', letterSpacing: 1 }}>
+                {cc!.title}
+              </p>
+            )}
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  {cc!.table_headers.map((header, i) => (
+                    <th key={i} style={{
+                      background: primaryColor,
+                      color: '#ffffff',
+                      fontSize: 22,
+                      fontWeight: 700,
+                      padding: '10px 14px',
+                      textAlign: 'left',
+                      border: '1px solid rgba(255,255,255,0.12)',
+                    }}>
+                      {header}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {cc!.table_data.slice(0, 5).map((row, rowIdx) => (
+                  <tr key={rowIdx} style={{ background: rowIdx % 2 === 0 ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.02)' }}>
+                    {cc!.table_headers.map((header, colIdx) => (
+                      <td key={colIdx} style={{
+                        color: '#e0e0e0',
+                        fontSize: 20,
+                        fontWeight: colIdx === 0 ? 700 : 400,
+                        padding: '9px 14px',
+                        border: '1px solid rgba(255,255,255,0.12)',
+                      }}>
+                        {row[header] || '—'}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         ) : (
           // FALLBACK: Lista de specs/features
@@ -596,10 +721,13 @@ function buildImpactNarrative(productData: ProductData): {
   // PRIORIDADE 0: Feed Copy Problem/Solution (copy IA com estrutura dor → solução)
   if (productData.feedCopyProblemSolution) {
     const copy = productData.feedCopyProblemSolution;
-    const lines = copy.split('\n').map((l: string) => l.trim()).filter(Boolean);
+    const allLines = copy.split('\n').map((l: string) => l.trim()).filter(Boolean);
+    // Filtrar linhas que são sugestões visuais/descrições de imagem
+    const lines = allLines.filter((l: string) => !isVisualDescriptionLine(l));
     headline = (lines[0]?.slice(0, 80) || name);
-    const body = lines.slice(1).join(' ').slice(0, 250);
     const bulletLines = lines.filter((l: string) => /^[•\-💸⏳✅🔥⚡🎯]/.test(l)).slice(0, 3);
+    const bodyLines = lines.slice(1).filter((l: string) => !bulletLines.includes(l));
+    const body = bodyLines.join(' ').slice(0, 250);
     return {
       headline,
       impactText: body || copy.slice(0, 250),
