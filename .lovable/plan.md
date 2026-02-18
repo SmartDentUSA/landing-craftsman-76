@@ -1,126 +1,139 @@
 
-# Fix: Botão "🤖 Gerar com IA" — Mapeamento Correto de Todos os Slides
+# Inserir Ferramentas de Edição Completas em Todos os Cards do Carrossel
 
-## O Problema Central
+## O Problema
 
-O botão **🤖 Gerar com IA** chama a edge function `generate-instagram-carousel` que retorna 6 slides, cada um com `title`, `text` e `image_suggestion`. O mapeamento atual em `InstagramCopyGenerator.tsx` (linha 854–883) está **com erros estruturais** em 4 dos 6 slides:
+O editor inline de cada card do carrossel tem ferramentas diferentes dependendo do slide. Atualmente apenas os Cards 2 e 4 têm os controles mais completos:
 
-```
-Slide 1: hook = buildSmartHook() LOCAL — ignora o texto da IA do slide 1  ✅ (ok por design)
-Slide 2: NÃO é mapeado da IA — mantém padrão do produto  ✅ (ok)
-Slide 3: title = s[2]?.title  —  mas o CORPO (specs/bullets) de s[2]?.text é IGNORADO  ❌
-Slide 4: label = s[3]?.image_suggestion  ❌  (sugestão de foto vira label do card!)
-         keyword = s[3]?.title ✅
-         benefit = s[3]?.text ✅
-Slide 5: title = s[4]?.title ✅
-         badge1/badge2/badge3 = NÃO mapeados da IA — ficam como padrão  ❌
-Slide 6: ctaButton = s[5]?.text.split('\n')[0]  ❌  (corpo motivacional longo)
-         linkLabel/footer = NÃO mapeados da IA  ❌
-```
+- **Card 2**: tem `slider` (escala de imagem %) e `color` (cor de fundo)
+- **Card 4**: tem `textarea` com barra de formatação: **B** (Negrito), _I_ (Itálico), **AA** (Maiúsculas)
 
-## Estratégia de Correção
+Os outros cards têm apenas `input` simples, sem nenhuma dessas ferramentas.
 
-A edge function retorna o campo `text` com o corpo real de cada slide. Precisamos:
+## Solução
 
-1. **Slide 3**: Extrair do `text` da IA o título técnico (primeira linha) e usá-lo. O campo `title` do JSON da IA já vem correto como título do slide 3.
+Atualizar o objeto `SLIDE_EDITOR_FIELDS` em `src/components/StrategicCarouselPreview.tsx` para que **todos os cards** tenham:
 
-2. **Slide 4**: Remover completamente `s[3]?.image_suggestion` do mapeamento do `label`. O label deve ser sempre fixo como `'EXPERIÊNCIA / FLUXO'` ou vir de edição prévia do usuário.
+1. Campos de texto longo como `textarea` (com barra B / I / AA)
+2. `slider` de escala de imagem (`imageScale`)
+3. `color` de cor de fundo (`bgColor`)
 
-3. **Slide 5**: Extrair os **badges** do `text` do slide 5, quebrando por `\n` e pegando as linhas como bullets/badges.
+---
 
-4. **Slide 6**: O `ctaButton` nunca deve vir do `text` do slide 6. Deve ser extraído do `title` do slide 6 (que é o rótulo da ação, ex: "CTA") — mas como esse título também é genérico ("CTA"), usar um valor inteligente extraído das **primeiras palavras do text** (máximo 50 chars) ou um default limpo (`'💡 Saiba Mais'`).
+## Detalhamento por Card
 
-## Detalhamento das Correções
+### Card 1 — Gancho
+Atualmente:
+- `hook` → `textarea` ✅ (já tem B/I/AA)
+- `productName` → `input`
 
-### Arquivo: `src/components/InstagramCopyGenerator.tsx`
-
-#### Correção 1 — Slide 4: remover `image_suggestion` do `label` (linha 867)
+Falta: `imageScale` (slider) e `bgColor` (color)
 
 ```typescript
-// DE:
-label: s[3]?.image_suggestion || prevTexts[4]?.label || 'EXPERIÊNCIA',
-
-// PARA:
-label: prevTexts[4]?.label || 'EXPERIÊNCIA / FLUXO',
+1: [
+  { key: 'hook', label: 'Texto do Gancho', type: 'textarea' },
+  { key: 'productName', label: 'Nome do produto', type: 'input' },
+  { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
+  { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
+],
 ```
 
-#### Correção 2 — Slide 5: mapear badges do `text` da IA (linhas 871–876)
+### Card 3 — Diferencial Técnico
+Atualmente:
+- `title` → `input` simples (sem formatação)
 
-O `text` do Slide 5 contém o corpo da autoridade Smart Dent — linhas separadas por `\n` que servem como badges. Extrair os 3 primeiros bullets:
+Falta: formatação B/I/AA (mudar para `textarea`), `imageScale`, `bgColor`
 
 ```typescript
-// Extrair badges do text do Slide 5 (quebrado por \n)
-const slide5Lines = (s[4]?.text || '').split('\n').map((l: string) => l.replace(/^[-•*✅]\s*/, '').trim()).filter(Boolean);
-
-5: {
-  title: s[4]?.title || prevTexts[5]?.title || 'Tecnologia Smart Dent',
-  badge1: slide5Lines[0] || prevTexts[5]?.badge1 || '',
-  badge2: slide5Lines[1] || prevTexts[5]?.badge2 || '',
-  badge3: slide5Lines[2] || prevTexts[5]?.badge3 || '',
-},
+3: [
+  { key: 'title', label: 'Título da seção', type: 'textarea' },
+  { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
+  { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
+],
 ```
 
-#### Correção 3 — Slide 6: `ctaButton` com valor correto (linha 879)
+### Card 4 — Experiência/Fluxo
+Atualmente:
+- `label` → `input`
+- `keyword` → `input`
+- `benefit` → `textarea` ✅ (tem B/I/AA)
 
-O CTA do slide 6 deve ser uma frase curta de ação. A edge function coloca no `text` do slide 6 o corpo motivacional + chamada. A primeira frase curta (≤ 50 chars) ou um default limpo:
+Falta: `imageScale` (slider) e `bgColor` (color)
 
 ```typescript
-// Extrair CTA limpo: pegar primeira linha do text do slide 6 que seja curta
-const slide6Lines = (s[5]?.text || '').split('\n').map((l: string) => l.trim()).filter(Boolean);
-const ctaCandidate = slide6Lines.find((l: string) => l.length >= 5 && l.length <= 55);
-
-6: {
-  productName: prevTexts[6]?.productName || productName,
-  ctaButton: (ctaCandidate && ctaCandidate.length <= 55) ? ctaCandidate : '💡 Saiba Mais',
-  linkLabel: prevTexts[6]?.linkLabel || '🔗 Link na Bio',
-  footer: prevTexts[6]?.footer || 'Direct para mais informações',
-},
+4: [
+  { key: 'label', label: 'Label topo (ex: EXPERIÊNCIA)', type: 'input' },
+  { key: 'keyword', label: 'Palavra-chave', type: 'input' },
+  { key: 'benefit', label: 'Benefício', type: 'textarea' },
+  { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
+  { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
+],
 ```
 
-#### Correção 4 — Slide 1: usar o `text` da IA para o gancho quando existir
+### Card 5 — Autoridade Smart Dent
+Atualmente:
+- `title` → `input`
+- `badge1/2/3` → `input` simples
 
-Atualmente o hook do Slide 1 ignora completamente o texto gerado pela IA e usa apenas o `buildSmartHook()` local (que extrai do `sales_pitch`). O usuário quer que a IA gere o texto de todos os slides. 
-
-A edge function retorna `s[0]?.text` que é exatamente o gancho/afirmação de impacto gerado pela IA com base na metodologia Smart Dent. Devemos usar esse texto quando disponível:
+Falta: formatação B/I/AA (mudar para `textarea`), `imageScale`, `bgColor`
 
 ```typescript
-// DE:
-hook: buildSmartHook(productName, productBenefits || [], productFeatures || [], productSalesPitch),
-
-// PARA: priorizar gancho da IA, fallback para buildSmartHook
-const aiHook = s[0]?.text?.split('\n')[0]?.trim();
-hook: (aiHook && aiHook.length >= 10 && aiHook.length <= 120) ? aiHook : buildSmartHook(productName, productBenefits || [], productFeatures || [], productSalesPitch),
+5: [
+  { key: 'title', label: 'Título', type: 'textarea' },
+  { key: 'badge1', label: 'Badge 1', type: 'textarea' },
+  { key: 'badge2', label: 'Badge 2', type: 'textarea' },
+  { key: 'badge3', label: 'Badge 3', type: 'textarea' },
+  { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
+  { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
+],
 ```
 
-## Também: Edge Function — adicionar campo `cta_label` no Slide 6
+### Card 6 — CTA
+Atualmente:
+- todos `input` simples
 
-Para dar ao frontend um campo explícito de label do botão (sem depender de parsear `text`), adicionar no prompt da edge function:
+Falta: formatação B/I/AA em campos de texto, `imageScale`, `bgColor`
 
-```json
-{ "position": 6, "title": "CTA", "text": "...", "cta_label": "...", "image_suggestion": "..." }
+```typescript
+6: [
+  { key: 'productName', label: 'Nome exibido', type: 'input' },
+  { key: 'ctaButton', label: 'Texto do botão CTA', type: 'textarea' },
+  { key: 'linkLabel', label: 'Label do link', type: 'input' },
+  { key: 'footer', label: 'Texto de rodapé', type: 'textarea' },
+  { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
+  { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
+],
 ```
 
-E no sistema prompt, instruir: `cta_label deve ter no máximo 6 palavras, é o texto do botão CTA (ex: 'Conheça no Link da Bio', 'Acesse pelo Link', 'Saiba Mais')`.
+---
 
-No frontend, usar `s[5]?.cta_label` como primeira opção para `ctaButton`.
+## Impacto no Canvas (generateSlidePNG)
 
-## Resumo das Mudanças
+Os campos `imageScale` e `bgColor` são novos nos slides 1, 3, 4, 5 e 6. O canvas precisa usar esses valores quando renderizar cada slide. Atualmente o canvas só usa `imageScale` e `bgColor` no Slide 2. Precisamos:
 
-| Arquivo | Mudança | Linha |
+- Aplicar `bgColor` como cor de fundo do painel em todos os slides que o possuam (como overlay escuro por padrão ou personalizado)
+- Aplicar `imageScale` para controlar o zoom da imagem de cada slide no canvas
+
+Isso será feito nas funções canvas de cada slide em `generateSlidePNG` (dentro de `StrategicCarouselPreview.tsx`) e no preview visual (JSX de cada slide), usando o mesmo padrão do Slide 2.
+
+---
+
+## Arquivo Modificado
+
+| Arquivo | Mudança | Linhas |
 |---|---|---|
-| `InstagramCopyGenerator.tsx` | Slide 1: usar `s[0]?.text` da IA como hook quando disponível | ~860 |
-| `InstagramCopyGenerator.tsx` | Slide 4: remover `image_suggestion` do label | ~867 |
-| `InstagramCopyGenerator.tsx` | Slide 5: extrair badges do `text` do slide 5 | ~871–876 |
-| `InstagramCopyGenerator.tsx` | Slide 6: ctaButton via `cta_label` ou primeira linha curta do text | ~879 |
-| `supabase/functions/generate-instagram-carousel/index.ts` | Adicionar campo `cta_label` no schema do Slide 6 e no prompt | ~128–137 |
+| `src/components/StrategicCarouselPreview.tsx` | `SLIDE_EDITOR_FIELDS`: adicionar `slider` e `color` nos cards 1, 3, 4, 5, 6; mudar `input` para `textarea` nos campos de texto longo | 84–116 |
+| `src/components/StrategicCarouselPreview.tsx` | Canvas + JSX: ler `texts?.imageScale` e `texts?.bgColor` para aplicar nos slides 1, 3, 4, 5, 6 | ~1340 (canvas), ~580 (JSX) |
 
-**2 arquivos, 5 mudanças. Resultado: todos os 6 slides populados corretamente pela IA.**
+**1 arquivo, mudanças focadas. Zero quebra em funcionalidades existentes.**
 
 ## Antes / Depois
 
-| Slide | Campo | Antes (bugado) | Depois (correto) |
-|---|---|---|---|
-| Slide 1 | hook | `buildSmartHook()` local (ignora IA) | Texto da IA, fallback para `buildSmartHook()` |
-| Slide 4 | label | `"IMAGEM DAS MÃOS DE..."` (image_suggestion) | `"EXPERIÊNCIA / FLUXO"` (fixo) |
-| Slide 5 | badge1/2/3 | vazio ou valor padrão (ignora IA) | Bullets extraídos do `text` do slide 5 |
-| Slide 6 | ctaButton | `"Elimine o risco de retrabalho..."` (corpo longo) | `cta_label` da IA ou primeira linha curta ≤ 55 chars |
+| Card | Antes | Depois |
+|---|---|---|
+| Card 1 | `textarea` (B/I/AA) + `input` | `textarea` (B/I/AA) + `input` + `slider` + `color` |
+| Card 2 | `input` × 3 + `slider` + `color` ✅ | sem mudança |
+| Card 3 | `input` simples | `textarea` (B/I/AA) + `slider` + `color` |
+| Card 4 | `input` × 2 + `textarea` (B/I/AA) | `input` × 2 + `textarea` (B/I/AA) + `slider` + `color` |
+| Card 5 | `input` × 4 | `textarea` × 4 (B/I/AA) + `slider` + `color` |
+| Card 6 | `input` × 4 | `input` × 2 + `textarea` × 2 (B/I/AA) + `slider` + `color` |
