@@ -1,147 +1,126 @@
 
-# Fix: Margens, Overflow de Texto e Filtros nos Cards Exportados
+# Fix: Botão "🤖 Gerar com IA" — Mapeamento Correto de Todos os Slides
 
-## Diagnóstico por Slide
+## O Problema Central
 
-Analisando as 4 imagens enviadas, foram identificados **4 problemas distintos** nos slides exportados:
+O botão **🤖 Gerar com IA** chama a edge function `generate-instagram-carousel` que retorna 6 slides, cada um com `title`, `text` e `image_suggestion`. O mapeamento atual em `InstagramCopyGenerator.tsx` (linha 854–883) está **com erros estruturais** em 4 dos 6 slides:
 
----
-
-### Problema 1 — Slide 3: Título cortado na borda direita
-
-"Fidelidade Cromática Δ" aparece cortado no canto direito do card.
-
-**Causa técnica (linha 1387):**
-```typescript
-ctx.fillText(title, rx, ry);  // ← fillText sem wrap!
 ```
-O `rx = imgW + 40 ≈ 494px`. Com fonte `900 52px`, "Fidelidade Cromática ΔE < 1" mede ~620px, ultrapassando o canvas em `494 + 620 = 1114px > 1080px`.
-
-**Correção:** Substituir `fillText` por `wrapText` para o título do Slide 3, limitando a largura ao espaço disponível (`W - rx - 60 = 526px`).
-
----
-
-### Problema 2 — Slide 3: Texto dos bullets começa 76px mais à direita do `maxWidth` calculado
-
-`TEXT_MAX_W_S3 = W - rx - 60 = 526px` é calculado a partir de `rx`, mas o texto começa em `rx + 76` (após o ícone). Então o `wrapText` recebe `526px` de largura mas começa deslocado — o texto ultrapassa o lado direito do canvas.
-
-**Causa técnica (linhas 1352, 1362–1373, 1409):**
-- `measureLinesS3` mede com `TEXT_MAX_W_S3 = 526px`
-- `wrapText` usa `TEXT_MAX_W_S3 = 526px` mas texto começa em `rx + 76`
-- Logo, as linhas quebram com base em 526px mas renderizam a partir de 570px, saindo do canvas
-
-**Correção:** Definir `TEXT_W_S3 = W - rx - 76 - 60 = 450px` e usar em ambos `measureLinesS3` e `wrapText`.
-
----
-
-### Problema 3 — Slide 4: Label ainda exibe "IMAGEM DAS MÃOS DE UM DENTISTA APLICANDO"
-
-A função `isVisualDescriptionLine()` não captura esta frase. A palavra `imagem` seguida de `das mãos` e `dentista aplicando` não estão na lista de padrões.
-
-**Causa técnica (linha 490–537):** Padrões ausentes:
-- `"imagem das"` (ex: "imagem das mãos de um dentista...")
-- `"imagem de"` (ex: "imagem de um profissional...")
-- `"imagem do"`, `"imagem da"` (variações genéricas)
-- `"dentista aplicando"`, `"profissional aplicando"`, `"aplicando o produto"`
-
-**Correção:** Adicionar esses padrões à `isVisualDescriptionLine()`.
-
----
-
-### Problema 4 — Slide 6: ctaBtn contém texto motivacional em vez de label de ação
-
-No Slide 6, o botão CTA exibe "Elimine o risco de retrabalho e garanta a satisfação do seu paciente com a cor BL2 fiel." — isso é o corpo motivacional do Slide 6, não o label do botão CTA ("💡 Saiba Mais").
-
-**Causa técnica (linha 1602):** O campo `texts?.ctaButton` foi salvo com o texto motivacional (vindo do campo de texto editável que o usuário preencheu erroneamente). Não há validação para detectar que o conteúdo é inadequado como botão CTA.
-
-**Correção:** Adicionar um guard no canvas: se `ctaBtn` tiver mais de 60 caracteres (indicativo de texto longo/motivacional), fazer fallback para o default `'💡 Saiba Mais'`.
-
----
-
-## Detalhamento Técnico das Correções
-
-### Arquivo: `src/components/StrategicCarouselPreview.tsx`
-
-#### Correção 1 + 2 — Slide 3: título com wrapText + largura correta dos bullets (linhas 1347–1412)
-
-```typescript
-// Linha 1347: rx permanece igual
-const rx = imgW + 40;
-const TEXT_FONT_S3 = '700 34px system-ui, -apple-system, sans-serif';
-const GAP_S3 = 44;
-const ICON_SIZE_S3 = 56;
-const LINE_H_S3 = 44;
-// ANTES: const TEXT_MAX_W_S3 = W - rx - 60;
-// DEPOIS: separar largura do título e largura do texto dos bullets
-const TITLE_MAX_W_S3 = W - rx - 60;          // título: a partir de rx
-const TEXT_MAX_W_S3 = W - rx - 76 - 60;      // bullets: a partir de rx+76 (após ícone)
+Slide 1: hook = buildSmartHook() LOCAL — ignora o texto da IA do slide 1  ✅ (ok por design)
+Slide 2: NÃO é mapeado da IA — mantém padrão do produto  ✅ (ok)
+Slide 3: title = s[2]?.title  —  mas o CORPO (specs/bullets) de s[2]?.text é IGNORADO  ❌
+Slide 4: label = s[3]?.image_suggestion  ❌  (sugestão de foto vira label do card!)
+         keyword = s[3]?.title ✅
+         benefit = s[3]?.text ✅
+Slide 5: title = s[4]?.title ✅
+         badge1/badge2/badge3 = NÃO mapeados da IA — ficam como padrão  ❌
+Slide 6: ctaButton = s[5]?.text.split('\n')[0]  ❌  (corpo motivacional longo)
+         linkLabel/footer = NÃO mapeados da IA  ❌
 ```
 
-No `measureLinesS3` (linha 1362): trocar `TEXT_MAX_W_S3` por `TEXT_MAX_W_S3` (já está correto com o novo valor).
+## Estratégia de Correção
 
-Linha 1383–1388: substituir `fillText(title, ...)` por `wrapText(ctx, title, rx, ry, TITLE_MAX_W_S3, 52 * 1.2)` e calcular o avanço de `ry` multiplicando as linhas geradas.
+A edge function retorna o campo `text` com o corpo real de cada slide. Precisamos:
 
-Linha 1409: já usa `TEXT_MAX_W_S3` — passará a usar o novo valor mais estreito automaticamente.
+1. **Slide 3**: Extrair do `text` da IA o título técnico (primeira linha) e usá-lo. O campo `title` do JSON da IA já vem correto como título do slide 3.
 
-```typescript
-// DE (linha 1387):
-ctx.fillText(title, rx, ry);
-ry += TITLE_H_S3;
+2. **Slide 4**: Remover completamente `s[3]?.image_suggestion` do mapeamento do `label`. O label deve ser sempre fixo como `'EXPERIÊNCIA / FLUXO'` ou vir de edição prévia do usuário.
 
-// PARA:
-const titleEndY = wrapText(ctx, title, rx, ry, TITLE_MAX_W_S3, 52 * 1.2);
-ry = titleEndY + 28;  // gap após o título
-```
+3. **Slide 5**: Extrair os **badges** do `text` do slide 5, quebrando por `\n` e pegando as linhas como bullets/badges.
 
-E o `TITLE_H_S3` que entrava no `totalContentH_S3` precisa ser recalculado dinamicamente medindo o título também.
+4. **Slide 6**: O `ctaButton` nunca deve vir do `text` do slide 6. Deve ser extraído do `title` do slide 6 (que é o rótulo da ação, ex: "CTA") — mas como esse título também é genérico ("CTA"), usar um valor inteligente extraído das **primeiras palavras do text** (máximo 50 chars) ou um default limpo (`'💡 Saiba Mais'`).
 
-#### Correção 3 — Slide 4: expandir `isVisualDescriptionLine()` (linhas 501–504)
+## Detalhamento das Correções
 
-Adicionar na função:
-```typescript
-// Padrões com "imagem de/da/do/das" — sugestões fotográficas
-lower.startsWith('imagem de') ||
-lower.startsWith('imagem da') ||
-lower.startsWith('imagem do') ||
-lower.startsWith('imagem das') ||
-lower.startsWith('imagem dos') ||
-lower.includes('dentista aplicando') ||
-lower.includes('profissional aplicando') ||
-lower.includes('aplicando o produto') ||
-lower.includes('aplicando o cimento') ||
-lower.includes('mãos de um dentista') ||
-lower.includes('mãos do dentista') ||
-```
+### Arquivo: `src/components/InstagramCopyGenerator.tsx`
 
-#### Correção 4 — Slide 6: guard no ctaBtn (linha 1602)
+#### Correção 1 — Slide 4: remover `image_suggestion` do `label` (linha 867)
 
 ```typescript
 // DE:
-const ctaBtn = texts?.ctaButton || '💡 Saiba Mais';
+label: s[3]?.image_suggestion || prevTexts[4]?.label || 'EXPERIÊNCIA',
 
 // PARA:
-const rawCtaBtn = texts?.ctaButton || '';
-const ctaBtn = (rawCtaBtn && rawCtaBtn.length <= 60) ? rawCtaBtn : '💡 Saiba Mais';
+label: prevTexts[4]?.label || 'EXPERIÊNCIA / FLUXO',
 ```
 
----
+#### Correção 2 — Slide 5: mapear badges do `text` da IA (linhas 871–876)
 
-## Resumo dos Arquivos e Linhas Modificados
+O `text` do Slide 5 contém o corpo da autoridade Smart Dent — linhas separadas por `\n` que servem como badges. Extrair os 3 primeiros bullets:
 
-| Slide | Problema | Arquivo | Linhas |
-|---|---|---|---|
-| Slide 3 | Título sem wrap — cortado na direita | `StrategicCarouselPreview.tsx` | 1352, 1376–1388 |
-| Slide 3 | Largura dos bullets errada (76px offset) | `StrategicCarouselPreview.tsx` | 1352, 1362–1373, 1409 |
-| Slide 4 | Label com sugestão visual não filtrada | `StrategicCarouselPreview.tsx` | 501–535 |
-| Slide 6 | ctaBtn com texto motivacional longo | `StrategicCarouselPreview.tsx` | 1602 |
+```typescript
+// Extrair badges do text do Slide 5 (quebrado por \n)
+const slide5Lines = (s[4]?.text || '').split('\n').map((l: string) => l.replace(/^[-•*✅]\s*/, '').trim()).filter(Boolean);
 
-**1 arquivo, 4 correções cirúrgicas. Zero impacto nos outros slides ou na preview interativa.**
+5: {
+  title: s[4]?.title || prevTexts[5]?.title || 'Tecnologia Smart Dent',
+  badge1: slide5Lines[0] || prevTexts[5]?.badge1 || '',
+  badge2: slide5Lines[1] || prevTexts[5]?.badge2 || '',
+  badge3: slide5Lines[2] || prevTexts[5]?.badge3 || '',
+},
+```
 
-## Antes / Depois por Slide
+#### Correção 3 — Slide 6: `ctaButton` com valor correto (linha 879)
 
-| Slide | Problema | Resultado Esperado |
+O CTA do slide 6 deve ser uma frase curta de ação. A edge function coloca no `text` do slide 6 o corpo motivacional + chamada. A primeira frase curta (≤ 50 chars) ou um default limpo:
+
+```typescript
+// Extrair CTA limpo: pegar primeira linha do text do slide 6 que seja curta
+const slide6Lines = (s[5]?.text || '').split('\n').map((l: string) => l.trim()).filter(Boolean);
+const ctaCandidate = slide6Lines.find((l: string) => l.length >= 5 && l.length <= 55);
+
+6: {
+  productName: prevTexts[6]?.productName || productName,
+  ctaButton: (ctaCandidate && ctaCandidate.length <= 55) ? ctaCandidate : '💡 Saiba Mais',
+  linkLabel: prevTexts[6]?.linkLabel || '🔗 Link na Bio',
+  footer: prevTexts[6]?.footer || 'Direct para mais informações',
+},
+```
+
+#### Correção 4 — Slide 1: usar o `text` da IA para o gancho quando existir
+
+Atualmente o hook do Slide 1 ignora completamente o texto gerado pela IA e usa apenas o `buildSmartHook()` local (que extrai do `sales_pitch`). O usuário quer que a IA gere o texto de todos os slides. 
+
+A edge function retorna `s[0]?.text` que é exatamente o gancho/afirmação de impacto gerado pela IA com base na metodologia Smart Dent. Devemos usar esse texto quando disponível:
+
+```typescript
+// DE:
+hook: buildSmartHook(productName, productBenefits || [], productFeatures || [], productSalesPitch),
+
+// PARA: priorizar gancho da IA, fallback para buildSmartHook
+const aiHook = s[0]?.text?.split('\n')[0]?.trim();
+hook: (aiHook && aiHook.length >= 10 && aiHook.length <= 120) ? aiHook : buildSmartHook(productName, productBenefits || [], productFeatures || [], productSalesPitch),
+```
+
+## Também: Edge Function — adicionar campo `cta_label` no Slide 6
+
+Para dar ao frontend um campo explícito de label do botão (sem depender de parsear `text`), adicionar no prompt da edge function:
+
+```json
+{ "position": 6, "title": "CTA", "text": "...", "cta_label": "...", "image_suggestion": "..." }
+```
+
+E no sistema prompt, instruir: `cta_label deve ter no máximo 6 palavras, é o texto do botão CTA (ex: 'Conheça no Link da Bio', 'Acesse pelo Link', 'Saiba Mais')`.
+
+No frontend, usar `s[5]?.cta_label` como primeira opção para `ctaButton`.
+
+## Resumo das Mudanças
+
+| Arquivo | Mudança | Linha |
 |---|---|---|
-| Slide 3 — título | "Fidelidade Cromática Δ" cortado na borda direita | Título quebra em 2 linhas dentro do painel |
-| Slide 3 — bullets | Texto vaza para fora do canvas na borda direita | Bullets respeitam margem direita de 60px |
-| Slide 4 — label | "IMAGEM DAS MÃOS DE UM DENTISTA APLICANDO" | "EXPERIÊNCIA / FLUXO" |
-| Slide 6 — botão | "Elimine o risco de retrabalho..." (texto longo) | "💡 Saiba Mais" |
+| `InstagramCopyGenerator.tsx` | Slide 1: usar `s[0]?.text` da IA como hook quando disponível | ~860 |
+| `InstagramCopyGenerator.tsx` | Slide 4: remover `image_suggestion` do label | ~867 |
+| `InstagramCopyGenerator.tsx` | Slide 5: extrair badges do `text` do slide 5 | ~871–876 |
+| `InstagramCopyGenerator.tsx` | Slide 6: ctaButton via `cta_label` ou primeira linha curta do text | ~879 |
+| `supabase/functions/generate-instagram-carousel/index.ts` | Adicionar campo `cta_label` no schema do Slide 6 e no prompt | ~128–137 |
+
+**2 arquivos, 5 mudanças. Resultado: todos os 6 slides populados corretamente pela IA.**
+
+## Antes / Depois
+
+| Slide | Campo | Antes (bugado) | Depois (correto) |
+|---|---|---|---|
+| Slide 1 | hook | `buildSmartHook()` local (ignora IA) | Texto da IA, fallback para `buildSmartHook()` |
+| Slide 4 | label | `"IMAGEM DAS MÃOS DE..."` (image_suggestion) | `"EXPERIÊNCIA / FLUXO"` (fixo) |
+| Slide 5 | badge1/2/3 | vazio ou valor padrão (ignora IA) | Bullets extraídos do `text` do slide 5 |
+| Slide 6 | ctaButton | `"Elimine o risco de retrabalho..."` (corpo longo) | `cta_label` da IA ou primeira linha curta ≤ 55 chars |
