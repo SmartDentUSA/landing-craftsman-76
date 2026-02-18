@@ -1,139 +1,142 @@
 
-# Inserir Ferramentas de Edição Completas em Todos os Cards do Carrossel
+# Fix: Card 3 (Cientificidade) — Regeneração IA + Campos de Edição das Linhas
 
-## O Problema
+## Diagnóstico Completo
 
-O editor inline de cada card do carrossel tem ferramentas diferentes dependendo do slide. Atualmente apenas os Cards 2 e 4 têm os controles mais completos:
+O Card 3 tem **dois problemas independentes**:
 
-- **Card 2**: tem `slider` (escala de imagem %) e `color` (cor de fundo)
-- **Card 4**: tem `textarea` com barra de formatação: **B** (Negrito), _I_ (Itálico), **AA** (Maiúsculas)
+### Problema 1 — IA só gera o título, ignora o corpo
 
-Os outros cards têm apenas `input` simples, sem nenhuma dessas ferramentas.
+No mapeamento do botão "🤖 Gerar com IA" (`InstagramCopyGenerator.tsx`, linha 868):
 
-## Solução
+```typescript
+3: {
+  title: s[2]?.title || 'Por que confiar?',
+  // s[2]?.text (corpo com bullets técnicos da IA) é IGNORADO!
+},
+```
 
-Atualizar o objeto `SLIDE_EDITOR_FIELDS` em `src/components/StrategicCarouselPreview.tsx` para que **todos os cards** tenham:
+A edge function retorna `s[2]?.text` com frases como:
+- "Fidelidade cromática ΔE < 1"
+- "Elimina chalk effect sem jateamento"
+- "Alta carga inorgânica 79%"
 
-1. Campos de texto longo como `textarea` (com barra B / I / AA)
-2. `slider` de escala de imagem (`imageScale`)
-3. `color` de cor de fundo (`bgColor`)
+Mas esses dados nunca chegam ao card — ele sempre exibe `productData.feedCopyBenefits` ou `productData.technicalSpecs` (dados estáticos do produto).
+
+### Problema 2 — Nenhum campo editável para o conteúdo principal
+
+`SlideTextsType[3]` só tem:
+```typescript
+3: { title: string; imageScale?: string; bgColor?: string }
+```
+
+E `SLIDE_EDITOR_FIELDS[3]` só expõe `title` + `imageScale` + `bgColor` — sem campos para `headline`, `body` ou os `bullets` que são o conteúdo visual dominante do card.
 
 ---
 
-## Detalhamento por Card
+## Solução em 3 Partes
 
-### Card 1 — Gancho
-Atualmente:
-- `hook` → `textarea` ✅ (já tem B/I/AA)
-- `productName` → `input`
+### Parte 1 — Expandir `SlideTextsType[3]` com campos de conteúdo
 
-Falta: `imageScale` (slider) e `bgColor` (color)
+Adicionar campos editáveis para o conteúdo do corpo:
 
 ```typescript
-1: [
-  { key: 'hook', label: 'Texto do Gancho', type: 'textarea' },
-  { key: 'productName', label: 'Nome do produto', type: 'input' },
-  { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
-  { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
-],
+3: {
+  title: string;
+  headline?: string;    // frase em destaque com cor primária
+  body?: string;        // texto de apoio
+  bullet1?: string;     // linha técnica 1
+  bullet2?: string;     // linha técnica 2
+  bullet3?: string;     // linha técnica 3
+  bullet4?: string;     // linha técnica 4
+  imageScale?: string;
+  bgColor?: string;
+}
 ```
 
-### Card 3 — Diferencial Técnico
-Atualmente:
-- `title` → `input` simples (sem formatação)
-
-Falta: formatação B/I/AA (mudar para `textarea`), `imageScale`, `bgColor`
+### Parte 2 — Adicionar campos em `SLIDE_EDITOR_FIELDS[3]`
 
 ```typescript
 3: [
-  { key: 'title', label: 'Título da seção', type: 'textarea' },
+  { key: 'title',    label: 'Título da seção',     type: 'textarea' },
+  { key: 'headline', label: 'Headline em destaque', type: 'textarea' },
+  { key: 'body',     label: 'Texto de apoio',       type: 'textarea' },
+  { key: 'bullet1',  label: 'Bullet técnico 1',     type: 'textarea' },
+  { key: 'bullet2',  label: 'Bullet técnico 2',     type: 'textarea' },
+  { key: 'bullet3',  label: 'Bullet técnico 3',     type: 'textarea' },
+  { key: 'bullet4',  label: 'Bullet técnico 4',     type: 'textarea' },
   { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
-  { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
+  { key: 'bgColor',    label: 'Cor de fundo',         type: 'color'  },
 ],
 ```
 
-### Card 4 — Experiência/Fluxo
-Atualmente:
-- `label` → `input`
-- `keyword` → `input`
-- `benefit` → `textarea` ✅ (tem B/I/AA)
+### Parte 3 — Corrigir o mapeamento da IA (`InstagramCopyGenerator.tsx`)
 
-Falta: `imageScale` (slider) e `bgColor` (color)
+Parsear o `s[2]?.text` gerado pela IA para extrair bullets e headline:
 
 ```typescript
-4: [
-  { key: 'label', label: 'Label topo (ex: EXPERIÊNCIA)', type: 'input' },
-  { key: 'keyword', label: 'Palavra-chave', type: 'input' },
-  { key: 'benefit', label: 'Benefício', type: 'textarea' },
-  { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
-  { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
-],
+3: (() => {
+  const slide3Text = s[2]?.text || '';
+  const slide3Lines = slide3Text
+    .split('\n')
+    .map((l: string) => l.replace(/^[-•*✅🔬⚡🛡⭐]\s*/, '').trim())
+    .filter(Boolean);
+  // Filtrar sugestões de imagem
+  const contentLines = slide3Lines.filter((l: string) => !isAIVisualSuggestion(l));
+  return {
+    title:    s[2]?.title   || prevTexts[3]?.title    || 'Por que confiar?',
+    headline: contentLines[0] || prevTexts[3]?.headline || '',
+    body:     contentLines[1] || prevTexts[3]?.body     || '',
+    bullet1:  contentLines[2] || prevTexts[3]?.bullet1  || '',
+    bullet2:  contentLines[3] || prevTexts[3]?.bullet2  || '',
+    bullet3:  contentLines[4] || prevTexts[3]?.bullet3  || '',
+    bullet4:  contentLines[5] || prevTexts[3]?.bullet4  || '',
+  };
+})(),
 ```
 
-### Card 5 — Autoridade Smart Dent
-Atualmente:
-- `title` → `input`
-- `badge1/2/3` → `input` simples
+### Parte 4 — Slide3Technical: usar `texts` quando preenchido
 
-Falta: formatação B/I/AA (mudar para `textarea`), `imageScale`, `bgColor`
+O componente `Slide3Technical` atualmente ignora `texts` para o corpo — usa sempre `productData.feedCopyBenefits`. Adicionar prioridade: **se `texts?.headline` ou `texts?.bullet1` estiverem preenchidos (vieram da IA ou edição manual), usar esses dados; caso contrário, fallback para `feedCopyBenefits` / `technicalSpecs`**.
 
 ```typescript
-5: [
-  { key: 'title', label: 'Título', type: 'textarea' },
-  { key: 'badge1', label: 'Badge 1', type: 'textarea' },
-  { key: 'badge2', label: 'Badge 2', type: 'textarea' },
-  { key: 'badge3', label: 'Badge 3', type: 'textarea' },
-  { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
-  { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
-],
+// PRIORIDADE 0: Textos editados/gerados por IA (texts?.headline, texts?.bullet1...)
+const hasAITexts = texts?.headline || texts?.bullet1;
+
+if (hasAITexts) {
+  // Usar textos da IA/edição
+  benefitsHeadline = texts?.headline || '';
+  benefitsBody = texts?.body || '';
+  benefitsBullets = [texts?.bullet1, texts?.bullet2, texts?.bullet3, texts?.bullet4]
+    .filter(Boolean) as string[];
+} else if (feedBenefits) {
+  // PRIORIDADE 1: feedCopyBenefits (existente)
+  ...
+}
 ```
 
-### Card 6 — CTA
-Atualmente:
-- todos `input` simples
+### Parte 5 — Canvas (`generateSlidePNG`): usar `texts` para os bullets
 
-Falta: formatação B/I/AA em campos de texto, `imageScale`, `bgColor`
-
-```typescript
-6: [
-  { key: 'productName', label: 'Nome exibido', type: 'input' },
-  { key: 'ctaButton', label: 'Texto do botão CTA', type: 'textarea' },
-  { key: 'linkLabel', label: 'Label do link', type: 'input' },
-  { key: 'footer', label: 'Texto de rodapé', type: 'textarea' },
-  { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
-  { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
-],
-```
+A função canvas do Slide 3 (linha ~1378) lê `productData.technicalSpecs` para os bullets. Adicionar a mesma prioridade: se `texts?.bullet1` existir, usar esses bullets em vez das specs.
 
 ---
 
-## Impacto no Canvas (generateSlidePNG)
+## Arquivos Modificados
 
-Os campos `imageScale` e `bgColor` são novos nos slides 1, 3, 4, 5 e 6. O canvas precisa usar esses valores quando renderizar cada slide. Atualmente o canvas só usa `imageScale` e `bgColor` no Slide 2. Precisamos:
+| Arquivo | Mudança |
+|---|---|
+| `src/components/StrategicCarouselPreview.tsx` | `SlideTextsType[3]`: adicionar `headline`, `body`, `bullet1-4` |
+| `src/components/StrategicCarouselPreview.tsx` | `SLIDE_EDITOR_FIELDS[3]`: adicionar campos de edição para headline, body, bullet1-4 |
+| `src/components/StrategicCarouselPreview.tsx` | `Slide3Technical`: priorizar `texts?.headline/bullet1-4` sobre dados estáticos |
+| `src/components/StrategicCarouselPreview.tsx` | Canvas Slide 3: usar `texts?.bullet1-4` quando disponíveis |
+| `src/components/InstagramCopyGenerator.tsx` | Mapeamento Slide 3: parsear `s[2]?.text` para extrair headline e bullets |
 
-- Aplicar `bgColor` como cor de fundo do painel em todos os slides que o possuam (como overlay escuro por padrão ou personalizado)
-- Aplicar `imageScale` para controlar o zoom da imagem de cada slide no canvas
-
-Isso será feito nas funções canvas de cada slide em `generateSlidePNG` (dentro de `StrategicCarouselPreview.tsx`) e no preview visual (JSX de cada slide), usando o mesmo padrão do Slide 2.
-
----
-
-## Arquivo Modificado
-
-| Arquivo | Mudança | Linhas |
-|---|---|---|
-| `src/components/StrategicCarouselPreview.tsx` | `SLIDE_EDITOR_FIELDS`: adicionar `slider` e `color` nos cards 1, 3, 4, 5, 6; mudar `input` para `textarea` nos campos de texto longo | 84–116 |
-| `src/components/StrategicCarouselPreview.tsx` | Canvas + JSX: ler `texts?.imageScale` e `texts?.bgColor` para aplicar nos slides 1, 3, 4, 5, 6 | ~1340 (canvas), ~580 (JSX) |
-
-**1 arquivo, mudanças focadas. Zero quebra em funcionalidades existentes.**
+**2 arquivos. Resultado: Card 3 regenerado pela IA com todos os campos editáveis.**
 
 ## Antes / Depois
 
-| Card | Antes | Depois |
+| Aspecto | Antes | Depois |
 |---|---|---|
-| Card 1 | `textarea` (B/I/AA) + `input` | `textarea` (B/I/AA) + `input` + `slider` + `color` |
-| Card 2 | `input` × 3 + `slider` + `color` ✅ | sem mudança |
-| Card 3 | `input` simples | `textarea` (B/I/AA) + `slider` + `color` |
-| Card 4 | `input` × 2 + `textarea` (B/I/AA) | `input` × 2 + `textarea` (B/I/AA) + `slider` + `color` |
-| Card 5 | `input` × 4 | `textarea` × 4 (B/I/AA) + `slider` + `color` |
-| Card 6 | `input` × 4 | `input` × 2 + `textarea` × 2 (B/I/AA) + `slider` + `color` |
+| IA regenera corpo | Nunca — só título | Sim — headline + body + 4 bullets extraídos de `s[2]?.text` |
+| Campos editáveis | Só `title` | `title` + `headline` + `body` + `bullet1` + `bullet2` + `bullet3` + `bullet4` |
+| Prioridade de dados | Sempre `productData` estático | IA/edição manual → feedCopyBenefits → specs do produto |
