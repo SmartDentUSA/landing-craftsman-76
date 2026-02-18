@@ -535,7 +535,7 @@ function Slide4Experience({ image, primaryColor, productData, texts }: { image: 
 
       {/* Overlay lateral direito — cobre 1/4 do card onde ficam os textos */}
       <div style={{
-        position: 'absolute', top: 0, right: 0, bottom: 0, width: '28%',
+        position: 'absolute', top: 0, right: 0, bottom: 0, width: '78%',
         background: 'linear-gradient(to left, rgba(15,15,20,0.72), transparent)',
         zIndex: 1
       }} />
@@ -547,7 +547,7 @@ function Slide4Experience({ image, primaryColor, productData, texts }: { image: 
 
       {/* Painel direito — textos em 1/4 do card */}
       <div style={{
-        position: 'absolute', top: 0, right: 0, bottom: 0, width: '25%',
+        position: 'absolute', top: 0, right: 0, bottom: 0, width: '75%',
         display: 'flex', flexDirection: 'column', justifyContent: 'center',
         padding: '60px 40px 60px 24px', gap: 16, zIndex: 2
       }}>
@@ -1098,8 +1098,8 @@ export async function generateSlidePNG(
     const keyword = texts?.keyword || features[0] || 'Excelência';
     const benefit = texts?.benefit || benefits[1] || benefits[0] || 'Resultados excepcionais em cada uso';
     const label4 = texts?.label || 'EXPERIÊNCIA';
-    // Fontes reduzidas para caber em 1/4 do card
-    const kwFontSizeCanvas = keyword.length > 30 ? 28 : keyword.length > 20 ? 34 : keyword.length > 15 ? 42 : 54;
+    // Fontes ampliadas para ocupar 75% do card
+    const kwFontSizeCanvas = keyword.length > 30 ? 52 : keyword.length > 20 ? 64 : keyword.length > 15 ? 72 : 80;
 
     // Imagem full-bleed cobrindo todo o canvas
     if (img) {
@@ -1117,7 +1117,7 @@ export async function generateSlidePNG(
     ctx.fillRect(0, 0, W, H);
 
     // Overlay direito — cobre 1/4 do card (direito)
-    const gradRight4 = ctx.createLinearGradient(W * 0.72, 0, W, 0);
+    const gradRight4 = ctx.createLinearGradient(W * 0.22, 0, W, 0);
     gradRight4.addColorStop(0, 'rgba(0,0,0,0)');
     gradRight4.addColorStop(1, 'rgba(15,15,20,0.72)');
     ctx.fillStyle = gradRight4;
@@ -1125,9 +1125,9 @@ export async function generateSlidePNG(
 
     drawBadge(4, 60, 60, 'rgba(255,255,255,0.15)', '#ffffff');
 
-    // Textos no 1/4 direito do canvas
-    const rx4 = W * 0.76;
-    const textW4 = W - rx4 - 50;
+    // Textos nos 75% direitos do canvas
+    const rx4 = W * 0.26;
+    const textW4 = W - rx4 - 80;
 
     // Medir linhas do keyword para centramento vertical
     ctx.font = `900 ${kwFontSizeCanvas}px system-ui, -apple-system, sans-serif`;
@@ -1142,7 +1142,7 @@ export async function generateSlidePNG(
     const labelBlockH4 = 26 + 24;
     const kwBlockH4 = kwLines4 * kwLineH4 + 24;
     // Medir linhas do benefit
-    ctx.font = '400 24px system-ui, -apple-system, sans-serif';
+    ctx.font = '400 36px system-ui, -apple-system, sans-serif';
     const benWordsArr = benefit.split(' ');
     let benLine4 = '';
     let benLines4 = 1;
@@ -1150,7 +1150,7 @@ export async function generateSlidePNG(
       const test = benLine4 + w + ' ';
       if (ctx.measureText(test).width > textW4 && benLine4 !== '') { benLines4++; benLine4 = w + ' '; } else { benLine4 = test; }
     }
-    const benBlockH4 = benLines4 * 34;
+    const benBlockH4 = benLines4 * 52;
     const totalH4 = labelBlockH4 + kwBlockH4 + benBlockH4;
     let ry4 = Math.max(80, (H - totalH4) / 2);
 
@@ -1169,10 +1169,10 @@ export async function generateSlidePNG(
     ry4 = wrapText(ctx, keyword, rx4, ry4, textW4, kwLineH4) + 24;
 
     // Benefit
-    ctx.font = '400 24px system-ui, -apple-system, sans-serif';
+    ctx.font = '400 36px system-ui, -apple-system, sans-serif';
     ctx.fillStyle = '#e0e0e0';
     ctx.globalAlpha = 0.9;
-    wrapText(ctx, benefit, rx4, ry4, textW4, 34);
+    wrapText(ctx, benefit, rx4, ry4, textW4, 52);
     ctx.globalAlpha = 1;
 
   } else if (slideNum === 5) {
