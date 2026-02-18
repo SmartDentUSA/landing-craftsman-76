@@ -490,18 +490,49 @@ function Slide2Solution({ image, primaryColor, accentColor, productData, texts }
 function isVisualDescriptionLine(line: string): boolean {
   const lower = line.toLowerCase();
   return (
+    // Linhas entre colchetes: [Imagem: ...], [Infográfico: ...]
     /^\[.{10,}\]/.test(line) ||
+    // Tipos de conteúdo visual
+    lower.includes('infográfico') ||
     lower.includes('gráfico') ||
     lower.includes('ilustração') ||
+    lower.includes('diagrama') ||
+    lower.includes('animação') ||
+    // Descrições de ações visuais
     lower.includes('imagem mostrando') ||
+    lower.includes('setas indicam') ||
+    lower.includes('seta indicando') ||
+    lower.includes('ícones flutuantes') ||
+    lower.includes('ícones discretos') ||
+    lower.includes('ícone indicando') ||
+    lower.includes('ícones indicam') ||
+    lower.includes('icones flutuantes') ||
+    lower.includes('icones discretos') ||
+    lower.includes('icone indicando') ||
+    lower.includes('icones indicam') ||
+    // Estilo e design de imagem
     lower.includes('design deve') ||
     lower.includes('estilizado') ||
     lower.includes('flutuando em') ||
+    lower.includes('flutuantes') ||
     lower.includes('cores como') ||
     lower.includes('nanopartículas') ||
+    // Instruções de criação visual
     lower.includes('sugestão visual') ||
     lower.includes('sugestão de imagem') ||
-    (lower.includes('visualmente') && lower.includes('mostr'))
+    lower.includes('fundo deve') ||
+    lower.includes('fundo com') ||
+    lower.includes('deve mostrar') ||
+    lower.includes('deve conter') ||
+    lower.includes('deve transmitir') ||
+    lower.includes('transmitir credibilidade') ||
+    lower.includes('credibilidade científica') ||
+    // Padrões compostos: contexto visual
+    (lower.includes('visualmente') && lower.includes('mostr')) ||
+    (lower.includes('3d') && lower.includes('mostrando')) ||
+    (lower.includes('mostrando') && lower.includes('ponta')) ||
+    (lower.includes('mostrando') && lower.includes('caneta')) ||
+    (lower.includes('mostrando') && lower.includes('camada'))
   );
 }
 
