@@ -13,23 +13,15 @@ interface CarouselSlide {
   image_suggestion: string;
 }
 
-const APPROACH_DESCRIPTIONS: Record<string, string> = {
-  storytelling: 'Narrativa emocional que conecta o produto à jornada do cliente',
-  benefits: 'Foco nos benefícios e vantagens práticas do produto',
-  problem_solution: 'Estrutura problema→solução que mostra a transformação',
-  urgency: 'Gatilhos de urgência e escassez para ação imediata'
+// Papéis fixos de cada slide — Metodologia Smart Dent (6 slides)
+const SLIDE_ROLES: Record<number, { name: string; role: string }> = {
+  1: { name: 'Gancho', role: 'Identifique a maior dor/problema que o produto resolve. Use a Descrição e Keywords para criar pergunta ou afirmação de impacto.' },
+  2: { name: 'Solução', role: 'Apresente o produto como a solução ideal. Destaque a principal conveniência (ex: pincel aplicador, rapidez, exclusividade).' },
+  3: { name: 'Diferencial Técnico', role: 'Use dados técnicos reais (ex: elimina chalk effect, substitui jateamento) para explicar por que o produto funciona. Foque no benefício técnico real.' },
+  4: { name: 'Experiência / Fluxo', role: 'Descreva como a vida do técnico/dentista fica mais fácil com o produto no dia a dia. Tom: fluência clínica.' },
+  5: { name: 'Autoridade Smart Dent', role: 'Reforce que é tecnologia Smart Dent e mencione a categoria do produto. Credibilidade de marca.' },
+  6: { name: 'CTA', role: 'Chamada para ação clara (Link na Bio ou Comentário). NUNCA inclua valores monetários. Foco no próximo passo.' },
 };
-
-const SLIDE_STRUCTURE = `
-ESTRUTURA OBRIGATÓRIA DOS 7 SLIDES:
-- Slide 1: CAPA (Gancho) - Pare o scroll, desperte curiosidade. Título impactante que faz a pessoa querer ver mais.
-- Slide 2: A DOR (Identificação) - Mostre que você entende o problema do público. Crie identificação emocional.
-- Slide 3: VIRADA DE CHAVE - O momento "aha!". A transição de problema para possibilidade de solução.
-- Slide 4: DIFERENCIAL TÉCNICO - Credibilidade e especificações. O que torna este produto único.
-- Slide 5: VANTAGENS PRÁTICAS - Benefícios tangíveis no dia-a-dia. Como melhora a vida do cliente.
-- Slide 6: RESULTADO FINAL - Transformação/before-after. O resultado que o cliente terá.
-- Slide 7: CTA - Chamada para ação clara e direta. O que o cliente deve fazer agora.
-`;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -50,14 +42,14 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Buscar dados do produto
+    // Buscar dados do produto — campos ampliados para a nova estrutura Smart Dent
     console.log('🔍 Buscando produto:', productId);
     const { data: product, error: productError } = await supabase
       .from('products_repository')
-      .select('name, benefits, features, keywords, applications, target_audience, sales_pitch')
+      .select('name, benefits, features, keywords, applications, target_audience, sales_pitch, category, technical_specifications, description, competitor_comparison')
       .eq('id', productId)
       .maybeSingle();
-    
+
     console.log('📦 Produto encontrado:', product ? product.name : 'null', 'Erro:', productError);
 
     if (productError || !product) {
@@ -75,100 +67,72 @@ serve(async (req) => {
       );
     }
 
-    const approachDescription = APPROACH_DESCRIPTIONS[approach] || approach;
-    
     // Preparar contexto do produto
     const benefits = Array.isArray(product.benefits) ? product.benefits.join(', ') : (product.benefits || '');
     const features = Array.isArray(product.features) ? product.features.join(', ') : (product.features || '');
     const keywords = Array.isArray(product.keywords) ? product.keywords.join(', ') : (product.keywords || '');
 
-    const systemPrompt = `Você é um especialista em marketing digital para Instagram, especializado em criar carrosséis que convertem.
+    // Especificações técnicas: array de objetos {label, value} ou array de strings
+    let technicalSpecs = '';
+    if (Array.isArray(product.technical_specifications) && product.technical_specifications.length > 0) {
+      technicalSpecs = product.technical_specifications
+        .map((s: any) => typeof s === 'object' ? `${s.label || s.name || ''}: ${s.value || ''}` : String(s))
+        .filter(Boolean)
+        .join(' | ');
+    }
 
-Seu objetivo é criar um carrossel de 7 slides que conta uma história coesa e leva o usuário do problema à ação.
+    const systemPrompt = `Você é um Especialista em Copywriting para Instagram e Estrategista de Marketing Digital para a Smart Dent.
+Sua especialidade é transformar especificações técnicas de produtos odontológicos em narrativas de vendas de alta conversão para carrosséis.
 
-REGRA ANTI-ALUCINAÇÃO (OBRIGATÓRIA):
-- O texto do Slide 1 (gancho/capa) deve ser extraído EXCLUSIVAMENTE do campo "DISCURSO DE VENDAS" fornecido abaixo.
-- Use apenas a primeira frase significativa do discurso de vendas como gancho do Slide 1.
-- NÃO invente, NÃO parafraseie com palavras próprias, NÃO use termos que não estejam no discurso de vendas.
-- Se não houver discurso de vendas disponível, use APENAS o nome do produto como gancho.
+MISSÃO: Usar SOMENTE as informações fornecidas no contexto do produto. Nunca inventar dados, números, claims clínicos ou características não documentadas.
 
-REGRAS CRÍTICAS:
-1. Cada slide deve ter:
-   - Título: máximo 30 caracteres, impactante
-   - Texto: máximo 150 caracteres, direto e emocional
-   - Sugestão de imagem: descrição detalhada de 50-100 palavras
-2. Os slides devem fluir como uma narrativa contínua
-3. Adapte o tom para a abordagem específica (${approachDescription})
-4. Use linguagem que engaja e cria conexão emocional
-5. A sugestão de imagem deve ser específica e realizável
+REGRAS DE ESTILO:
+- Linguagem técnica, porém acessível para dentistas e TPDs
+- Destaque termos específicos da área (ex: IPA, alta carga inorgânica, chalk effect, caracterização)
+- Textos curtos e escaneáveis (máximo 3 tópicos por slide)
+- PROIBIDO citar preços, condições comerciais ou valores monetários
 
-${SLIDE_STRUCTURE}
+ESTRUTURA OBRIGATÓRIA DOS 6 SLIDES:
+Slide 1 — GANCHO: Identifique a maior dor ou problema que o produto resolve (use Descrição e Keywords) e crie pergunta ou afirmação de impacto.
+Slide 2 — SOLUÇÃO: Apresente o produto como a solução ideal. Destaque a principal conveniência.
+Slide 3 — DIFERENCIAL TÉCNICO: Use dados técnicos reais para explicar por que o produto funciona. Foco no benefício técnico real, não em promessas genéricas.
+Slide 4 — EXPERIÊNCIA/FLUXO: Descreva como a vida do técnico/dentista fica mais fácil com o produto no dia a dia.
+Slide 5 — AUTORIDADE SMART DENT: Reforce que é tecnologia Smart Dent e mencione a categoria do produto.
+Slide 6 — CTA: Chamada para ação clara (Link na Bio ou Comentário). NUNCA inclua valores monetários.
 
-Retorne APENAS um JSON válido no formato especificado.`;
+ANTI-ALUCINAÇÃO (OBRIGATÓRIO):
+- Use APENAS dados presentes abaixo
+- NÃO invente especificações, números ou resultados clínicos
+- Se um dado não existir, escreva de forma neutra
+- NUNCA mencione preços, promoções ou condições de pagamento
+
+Retorne APENAS um JSON válido, sem markdown.`;
 
     const userPrompt = `PRODUTO: ${product.name}
+CATEGORIA: ${product.category || 'Não informado'}
+DESCRIÇÃO: ${product.description || 'Não informado'}
 BENEFÍCIOS: ${benefits}
-DIFERENCIAIS: ${features}
+DIFERENCIAIS TÉCNICOS: ${features}
+APLICAÇÕES: ${product.applications || ''}
 PALAVRAS-CHAVE: ${keywords}
-PÚBLICO-ALVO: ${product.target_audience || 'Profissionais da área'}
+PÚBLICO-ALVO: ${Array.isArray(product.target_audience) ? product.target_audience.join(', ') : (product.target_audience || 'Profissionais da área')}
+ESPECIFICAÇÕES TÉCNICAS: ${technicalSpecs || 'Não informado'}
+SALES PITCH: ${product.sales_pitch || 'Não disponível'}
 
-DISCURSO DE VENDAS (USE EXCLUSIVAMENTE PARA O SLIDE 1 - GANCHO):
-${(product as any).sales_pitch || 'Não disponível — use apenas o nome do produto como gancho'}
-
-ABORDAGEM: ${approach.toUpperCase()} - ${approachDescription}
-
-COPY DO FEED ORIGINAL (use como base para consistência):
+COPY DO FEED ORIGINAL (use como base para consistência de linguagem):
 ${feedCopy}
 
----
-
-Gere um CARROSSEL de 7 slides para Instagram.
+Gere um CARROSSEL de 6 slides para Instagram.
 
 Retorne APENAS este JSON (sem markdown, sem explicações):
 {
   "slides": [
-    {
-      "position": 1,
-      "title": "Capa (Gancho)",
-      "text": "Texto impactante do slide 1...",
-      "image_suggestion": "Descrição detalhada da imagem sugerida para o slide 1..."
-    },
-    {
-      "position": 2,
-      "title": "A Dor",
-      "text": "Texto do slide 2...",
-      "image_suggestion": "Descrição detalhada..."
-    },
-    {
-      "position": 3,
-      "title": "Virada de Chave",
-      "text": "Texto do slide 3...",
-      "image_suggestion": "Descrição detalhada..."
-    },
-    {
-      "position": 4,
-      "title": "Diferencial Técnico",
-      "text": "Texto do slide 4...",
-      "image_suggestion": "Descrição detalhada..."
-    },
-    {
-      "position": 5,
-      "title": "Vantagens Práticas",
-      "text": "Texto do slide 5...",
-      "image_suggestion": "Descrição detalhada..."
-    },
-    {
-      "position": 6,
-      "title": "Resultado Final",
-      "text": "Texto do slide 6...",
-      "image_suggestion": "Descrição detalhada..."
-    },
-    {
-      "position": 7,
-      "title": "CTA",
-      "text": "Texto do slide 7...",
-      "image_suggestion": "Descrição detalhada..."
-    }
+    { "position": 1, "title": "Gancho", "text": "...", "image_suggestion": "..." },
+    { "position": 2, "title": "Solução", "text": "...", "image_suggestion": "..." },
+    { "position": 3, "title": "Diferencial Técnico", "text": "...", "image_suggestion": "..." },
+    { "position": 4, "title": "Experiência / Fluxo", "text": "...", "image_suggestion": "..." },
+    { "position": 5, "title": "Autoridade Smart Dent", "text": "...", "image_suggestion": "..." },
+    { "position": 6, "title": "CTA", "text": "...", "image_suggestion": "..." }
   ]
 }`;
 
@@ -179,7 +143,7 @@ Retorne APENAS este JSON (sem markdown, sem explicações):
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-3-flash-preview',
+        model: 'google/gemini-2.5-flash-preview',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
@@ -216,7 +180,6 @@ Retorne APENAS este JSON (sem markdown, sem explicações):
     // Parse JSON response
     let slides: CarouselSlide[];
     try {
-      // Remove markdown code blocks if present
       let cleanContent = content.trim();
       if (cleanContent.startsWith('```json')) {
         cleanContent = cleanContent.slice(7);
@@ -231,8 +194,9 @@ Retorne APENAS este JSON (sem markdown, sem explicações):
       const parsed = JSON.parse(cleanContent);
       slides = parsed.slides;
 
-      if (!Array.isArray(slides) || slides.length !== 7) {
-        throw new Error('Invalid slides array');
+      // Validar: espera exatamente 6 slides (nova estrutura Smart Dent)
+      if (!Array.isArray(slides) || slides.length !== 6) {
+        throw new Error('Invalid slides array — expected 6 slides');
       }
     } catch (parseError) {
       console.error('Error parsing AI response:', parseError, content);
@@ -240,7 +204,7 @@ Retorne APENAS este JSON (sem markdown, sem explicações):
     }
 
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         slides,
         approach,
         productName: product.name,

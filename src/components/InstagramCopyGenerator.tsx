@@ -619,15 +619,14 @@ CENA ${i + 1}:
     toast({ title: "HTML Copiado!", description: "Versão HTML do roteiro copiada." });
   };
 
-  // === Funções para Carrossel (7 Slides) ===
+  // === Funções para Carrossel (6 Slides — Metodologia Smart Dent) ===
   const SLIDE_TITLES: Record<number, string> = {
-    1: 'Capa (Gancho)',
-    2: 'A Dor (Identificação)',
-    3: 'Virada de Chave',
-    4: 'Diferencial Técnico',
-    5: 'Vantagens Práticas',
-    6: 'Resultado Final',
-    7: 'CTA (Chamada para Ação)'
+    1: 'Gancho',
+    2: 'Solução',
+    3: 'Diferencial Técnico',
+    4: 'Experiência / Fluxo',
+    5: 'Autoridade Smart Dent',
+    6: 'CTA (Chamada para Ação)'
   };
 
   const generateCarouselFromFeed = async (variationNum: number) => {
