@@ -212,3 +212,6 @@ verify_jwt = false
 
 [functions.generate-display-banners]
 verify_jwt = false
+
+[functions.import-systemb-authors]
+verify_jwt = false
