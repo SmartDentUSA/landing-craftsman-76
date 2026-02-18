@@ -45,7 +45,7 @@ interface ProductData {
 export interface SlideTextsType {
   1: { hook: string; productName: string; imageScale?: string; bgColor?: string };
   2: { category: string; introLabel?: string; productName: string; imageScale?: string; bgColor?: string };
-  3: { title: string; imageScale?: string; bgColor?: string };
+  3: { title: string; headline?: string; body?: string; bullet1?: string; bullet2?: string; bullet3?: string; bullet4?: string; imageScale?: string; bgColor?: string };
   4: { label: string; keyword: string; benefit: string; imageScale?: string; bgColor?: string };
   5: { title: string; badge1: string; badge2: string; badge3: string; imageScale?: string; bgColor?: string };
   6: { productName: string; ctaButton: string; linkLabel: string; footer: string; imageScale?: string; bgColor?: string };
@@ -96,9 +96,15 @@ const SLIDE_EDITOR_FIELDS: Record<number, Array<{ key: string; label: string; ty
     { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
   ],
   3: [
-    { key: 'title', label: 'Título da seção', type: 'textarea' },
+    { key: 'title',    label: 'Título da seção',      type: 'textarea' },
+    { key: 'headline', label: 'Headline em destaque',  type: 'textarea' },
+    { key: 'body',     label: 'Texto de apoio',        type: 'textarea' },
+    { key: 'bullet1',  label: 'Bullet técnico 1',      type: 'textarea' },
+    { key: 'bullet2',  label: 'Bullet técnico 2',      type: 'textarea' },
+    { key: 'bullet3',  label: 'Bullet técnico 3',      type: 'textarea' },
+    { key: 'bullet4',  label: 'Bullet técnico 4',      type: 'textarea' },
     { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
-    { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
+    { key: 'bgColor',    label: 'Cor de fundo',         type: 'color' },
   ],
   4: [
     { key: 'label', label: 'Label topo (ex: EXPERIÊNCIA)', type: 'input' },
@@ -564,7 +570,7 @@ function isVisualDescriptionLine(line: string): boolean {
 // ==================== SLIDE 3 — CIENTIFICIDADE ====================
 const SLIDE3_UNICODE_ICONS = ['⚡', '🛡', '⭐', '✅', '🔬'];
 
-function Slide3Technical({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; accentColor: string; productData: ProductData; texts?: { title?: string; imageScale?: string; bgColor?: string } }) {
+function Slide3Technical({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; accentColor: string; productData: ProductData; texts?: { title?: string; headline?: string; body?: string; bullet1?: string; bullet2?: string; bullet3?: string; bullet4?: string; imageScale?: string; bgColor?: string } }) {
   const specs = productData.technicalSpecs?.slice(0, 5) || [];
   const features = productData.features?.slice(0, 5) || [];
   const items = specs.length > 0 ? specs.map(s => ({ label: s.label, value: s.value })) : features.map(f => ({ label: f, value: '' }));
@@ -572,21 +578,29 @@ function Slide3Technical({ image, primaryColor, productData, texts }: { image: s
   const textOnPrimary = getLuminance(primaryColor) > 0.5 ? '#000000' : '#ffffff';
   const title = texts?.title || 'Por que confiar?';
 
-  // PRIORIDADE 1: Feed Copy Benefits — extração estruturada com filtro de linhas visuais
-  const feedBenefits = productData.feedCopyBenefits;
+  // PRIORIDADE 0: Textos editados/gerados por IA
+  const hasAITexts = !!(texts?.headline || texts?.bullet1);
 
   let benefitsHeadline = '';
   let benefitsBody = '';
   let benefitsBullets: string[] = [];
 
-  if (feedBenefits) {
-    const allLines = feedBenefits.split('\n').map((l: string) => l.trim()).filter(Boolean);
-    const lines = allLines.filter((l: string) => !isVisualDescriptionLine(l));
-    benefitsHeadline = lines[0]?.slice(0, 80) || '';
-    const bulletLines = lines.filter((l: string) => /^[•\-✅🔥⚡🎯💡🌟⭐🏆💎👉➡️]/.test(l)).slice(0, 4);
-    const bodyLines = lines.slice(1).filter((l: string) => !bulletLines.includes(l));
-    benefitsBody = bodyLines.join(' ').slice(0, 200);
-    benefitsBullets = bulletLines;
+  if (hasAITexts) {
+    benefitsHeadline = texts?.headline || '';
+    benefitsBody = texts?.body || '';
+    benefitsBullets = [texts?.bullet1, texts?.bullet2, texts?.bullet3, texts?.bullet4].filter(Boolean) as string[];
+  } else {
+    // PRIORIDADE 1: Feed Copy Benefits — extração estruturada com filtro de linhas visuais
+    const feedBenefits = productData.feedCopyBenefits;
+    if (feedBenefits) {
+      const allLines = feedBenefits.split('\n').map((l: string) => l.trim()).filter(Boolean);
+      const lines = allLines.filter((l: string) => !isVisualDescriptionLine(l));
+      benefitsHeadline = lines[0]?.slice(0, 80) || '';
+      const bulletLines = lines.filter((l: string) => /^[•\-✅🔥⚡🎯💡🌟⭐🏆💎👉➡️]/.test(l)).slice(0, 4);
+      const bodyLines = lines.slice(1).filter((l: string) => !bulletLines.includes(l));
+      benefitsBody = bodyLines.join(' ').slice(0, 200);
+      benefitsBullets = bulletLines;
+    }
   }
 
   // Tabela de comparação com concorrentes
@@ -614,8 +628,9 @@ function Slide3Technical({ image, primaryColor, productData, texts }: { image: s
         {/* Divider accent */}
         <div style={{ width: 56, height: 3, background: primaryColor, borderRadius: 2, marginBottom: 36, flexShrink: 0 }} />
 
-        {feedBenefits ? (
-          // ESTRUTURADO: Headline + Corpo + Tabela/Bullets do feedCopyBenefits
+
+        {(benefitsHeadline || benefitsBullets.length > 0) ? (
+          // ESTRUTURADO: Headline + Corpo + Tabela/Bullets (IA/editado ou feedCopyBenefits)
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             {/* Headline em destaque */}
             {benefitsHeadline && (
@@ -629,8 +644,8 @@ function Slide3Technical({ image, primaryColor, productData, texts }: { image: s
                 {benefitsBody}
               </p>
             )}
-            {/* TABELA competitor_comparison (prioridade sobre bullets) */}
-            {hasCompetitorTable ? (
+            {/* TABELA competitor_comparison (prioridade sobre bullets, só sem IA texts) */}
+            {!hasAITexts && hasCompetitorTable ? (
               <div style={{ marginTop: 8 }}>
                 {cc!.title && (
                   <p style={{ color: '#aaaaaa', fontSize: 20, fontWeight: 600, margin: '0 0 10px 0', textTransform: 'uppercase', letterSpacing: 1 }}>
@@ -675,7 +690,7 @@ function Slide3Technical({ image, primaryColor, productData, texts }: { image: s
                 </table>
               </div>
             ) : (
-              // Fallback: bullets do feedCopyBenefits
+              // Bullets (IA/editados ou do feedCopyBenefits)
               benefitsBullets.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 8 }}>
                   {benefitsBullets.map((bullet, idx) => (
@@ -1410,9 +1425,13 @@ export async function generateSlidePNG(
     const TITLE_MAX_W_S3 = W - rx - 60;       // título começa em rx
     const TEXT_MAX_W_S3 = W - rx - 76 - 60;   // bullets começam em rx+76 (após ícone)
 
-    const items = specs.length > 0
-      ? specs.slice(0, 5).map(s => s.label + (s.value ? ': ' + s.value : ''))
-      : features.slice(0, 5);
+    // PRIORIDADE: texts?.bullet1-4 da IA/edição; fallback para specs/features
+    const aiCanvasBullets = [texts?.bullet1, texts?.bullet2, texts?.bullet3, texts?.bullet4].filter(Boolean) as string[];
+    const items = aiCanvasBullets.length > 0
+      ? aiCanvasBullets
+      : specs.length > 0
+        ? specs.slice(0, 5).map(s => s.label + (s.value ? ': ' + s.value : ''))
+        : features.slice(0, 5);
 
     // Pre-calculate line count for each item to determine true height
     const measureLinesS3 = (text: string): number => {

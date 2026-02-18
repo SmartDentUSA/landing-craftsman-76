@@ -865,9 +865,38 @@ ${slide.text}`;
                 productName: prevTexts[1]?.productName || productName,
               };
             })(),
-            3: {
-              title: s[2]?.title || 'Por que confiar?',
-            },
+            3: (() => {
+              const slide3Text = s[2]?.text || '';
+              const slide3Lines = slide3Text
+                .split('\n')
+                .map((l: string) => l.replace(/^[-•*✅🔬⚡🛡⭐💡🔥🎯]\s*/, '').trim())
+                .filter(Boolean);
+              // Filtrar linhas de sugestão visual (infográfico, imagem de, etc.)
+              const contentLines = slide3Lines.filter((l: string) => {
+                const lower = l.toLowerCase();
+                return !(
+                  /^\[.{10,}\]/.test(l) ||
+                  lower.includes('infográfico') ||
+                  lower.includes('ilustração') ||
+                  lower.includes('diagrama') ||
+                  lower.startsWith('imagem de') ||
+                  lower.startsWith('imagem da') ||
+                  lower.startsWith('imagem do') ||
+                  lower.includes('imagem mostrando') ||
+                  lower.includes('dentista aplicando') ||
+                  lower.includes('profissional aplicando')
+                );
+              });
+              return {
+                title:    s[2]?.title   || prevTexts[3]?.title    || 'Por que confiar?',
+                headline: contentLines[0] || prevTexts[3]?.headline || '',
+                body:     contentLines[1] || prevTexts[3]?.body     || '',
+                bullet1:  contentLines[2] || prevTexts[3]?.bullet1  || '',
+                bullet2:  contentLines[3] || prevTexts[3]?.bullet2  || '',
+                bullet3:  contentLines[4] || prevTexts[3]?.bullet3  || '',
+                bullet4:  contentLines[5] || prevTexts[3]?.bullet4  || '',
+              };
+            })(),
             4: {
               // label fixo — nunca usar image_suggestion da IA
               label: prevTexts[4]?.label || 'EXPERIÊNCIA / FLUXO',
