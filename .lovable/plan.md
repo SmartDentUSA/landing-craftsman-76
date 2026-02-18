@@ -1,75 +1,145 @@
 
-# Slide 3: Extrair Headline, Corpo e Bullets do feedCopyBenefits
+# Dois Fixes: Filtrar Descrições de Imagem + Tabela no Slide 3 (Cientificidade)
 
-## Situação Atual
+## Problema 1 — Texto de imagem aparecendo no card
 
-No `Slide3Technical` (linhas 515–519), quando `feedCopyBenefits` existe, o texto é exibido como um único parágrafo bruto:
+O texto "Gráfico 3D estilizado e elegante mostrando as nanopartículas..." é uma **sugestão visual** que a IA insere na copy como descrição de imagem. A função `buildImpactNarrative()` (Slide 4) e o parsing do `Slide3Technical` (Slide 3) não filtram essas linhas — então elas aparecem como headline ou corpo.
 
-```typescript
-<p style={{ ... whiteSpace: 'pre-line' }}>
-  {feedBenefits.slice(0, 500)}
-</p>
-```
-
-Isso joga todo o texto junto sem estrutura visual — igual ao problema já resolvido no Slide 4.
-
-## O Que Mudar
-
-Aplicar a **mesma lógica de extração estruturada** que já existe no Slide 4 (`buildImpactNarrative` com `feedCopyProblemSolution`):
-
-1. **Headline** → primeira linha não-vazia da copy (até 80 chars), exibida em destaque
-2. **Corpo** → demais linhas de texto corrido (até 250 chars)
-3. **Bullets** → linhas que começam com emoji ou marcador (`•`, `-`, `✅`, `🔥`, etc.)
-
-## Implementação Técnica
-
-### Arquivo: `src/components/StrategicCarouselPreview.tsx` — Função `Slide3Technical` (linhas 491–519)
-
-Substituir o bloco atual de exibição do `feedBenefits` por lógica estruturada:
+### Solução
+Adicionar a função auxiliar `isVisualDescriptionLine()` no `StrategicCarouselPreview.tsx` e aplicá-la nos dois slides antes de usar qualquer linha como texto:
 
 ```typescript
-// Parsing estruturado do feedCopyBenefits
-let benefitsHeadline = '';
-let benefitsBody = '';
-let benefitsBullets: string[] = [];
-
-if (feedBenefits) {
-  const lines = feedBenefits.split('\n').map(l => l.trim()).filter(Boolean);
-  benefitsHeadline = lines[0]?.slice(0, 80) || '';
-  const bulletLines = lines.filter(l => /^[•\-✅🔥⚡🎯💡🌟⭐🏆💎👉➡️]/.test(l)).slice(0, 4);
-  const bodyLines = lines.slice(1).filter(l => !bulletLines.includes(l));
-  benefitsBody = bodyLines.join(' ').slice(0, 200);
-  benefitsBullets = bulletLines;
+function isVisualDescriptionLine(line: string): boolean {
+  const lower = line.toLowerCase();
+  return (
+    /^\[.{10,}\]/.test(line) ||   // [Imagem: ...]
+    lower.includes('gráfico') ||
+    lower.includes('ilustração') ||
+    lower.includes('imagem mostrando') ||
+    lower.includes('design deve') ||
+    lower.includes('estilizado') ||
+    lower.includes('flutuando em') ||
+    lower.includes('cores como') ||
+    lower.includes('nanopartículas') ||
+    (lower.includes('visualmente') && lower.includes('mostr'))
+  );
 }
 ```
 
-### Layout Visual do Slide 3 (quando feedCopyBenefits existe)
+Aplicar em:
+- **Slide 3**: filtrar `lines` antes de extrair `benefitsHeadline`, `benefitsBody`, `benefitsBullets`
+- **Slide 4**: filtrar `lines` em `buildImpactNarrative()` antes de extrair headline, body e bullets do `feedCopyProblemSolution`
+
+---
+
+## Problema 2 — Tabela `competitor_comparison` no Card 3 (Cientificidade)
+
+A tabela de comparação com concorrentes (`competitor_comparison`) já existe no produto (campo no banco), mas:
+- **Não é passada** como prop do `InstagramCopyGenerator` para o `StrategicCarouselPreview`
+- **Não é renderizada** no `Slide3Technical`
+
+### Plano de implementação
+
+**Passo 1 — Expandir `ProductData` interface em `StrategicCarouselPreview.tsx`:**
+
+```typescript
+interface CompetitorComparison {
+  enabled: boolean;
+  title?: string;
+  subtitle?: string;
+  table_headers: string[];
+  table_data: Array<Record<string, string>>;
+}
+
+interface ProductData {
+  // ...campos existentes...
+  competitorComparison?: CompetitorComparison;
+}
+```
+
+**Passo 2 — Adicionar prop `competitorComparison` em `InstagramCopyGeneratorProps`:**
+
+```typescript
+interface InstagramCopyGeneratorProps {
+  // ...props existentes...
+  competitorComparison?: {
+    enabled: boolean;
+    title?: string;
+    subtitle?: string;
+    table_headers: string[];
+    table_data: Array<Record<string, string>>;
+  };
+}
+```
+
+**Passo 3 — Passar `competitorComparison` no `productData` do `StrategicCarouselPreview`:**
+
+```typescript
+productData={{
+  // ...campos existentes...
+  competitorComparison: competitorComparison,
+}}
+```
+
+**Passo 4 — Renderizar a tabela no `Slide3Technical`:**
+
+Quando `competitorComparison?.enabled && table_headers.length > 0 && table_data.length > 0`, exibir uma tabela compacta no painel direito do Slide 3, acima ou no lugar dos bullets do `feedCopyBenefits`:
 
 ```
 ┌─────────────────────────────────────────────────────┐
 │ [3]                                                 │
 │                                                     │
-│  [IMAGEM]  │  TÍTULO EDITÁVEL                       │
+│  [IMAGEM]  │  TÍTULO ("Por que confiar?")           │
 │            │  ─────── (divider)                     │
-│            │  HEADLINE (1ª linha — destaque)        │
+│            │  HEADLINE (do feedCopyBenefits)        │
 │            │                                        │
-│            │  Corpo de texto                        │
-│            │                                        │
-│            │  ✅ Bullet 1                           │
-│            │  🔥 Bullet 2                           │
-│            │  ⚡ Bullet 3                           │
+│            │  ┌────────┬────────┬────────┐          │
+│            │  │ Header │ Coluna │ Coluna │          │
+│            │  ├────────┼────────┼────────┤          │
+│            │  │ Linha 1│  val   │  val   │          │
+│            │  │ Linha 2│  val   │  val   │          │
+│            │  └────────┴────────┴────────┘          │
 └─────────────────────────────────────────────────────┘
 ```
 
-**Estilos:**
-- **Headline**: cor do `primaryColor`, bold, ~36px
-- **Corpo**: `#d8d8d8`, ~26px, lineHeight 1.6
-- **Bullets**: cada item com mini-card ou linha com accent color à esquerda
+**Hierarquia no Slide 3 (nova ordem):**
+1. `feedCopyBenefits` extraído (headline + corpo)
+2. **Tabela `competitor_comparison`** (se habilitada e com dados) — substituindo ou completando os bullets
+3. Fallback: `feedCopyBenefits` bullets
+4. Fallback final: specs técnicas / features
 
-## Arquivo a Modificar
+**Estilo da tabela no slide (em px, para canvas 1080×1350):**
+- Cabeçalho da tabela: `background: primaryColor`, texto branco, `fontSize: 22px`, `fontWeight: 700`
+- Linhas pares: `background: rgba(255,255,255,0.06)`
+- Linhas ímpares: `background: rgba(255,255,255,0.02)`
+- Bordas: `1px solid rgba(255,255,255,0.12)`
+- Texto das células: `color: #e0e0e0`, `fontSize: 20px`
+- Primeira coluna (nome do produto/concorrente): bold
+
+**Passo 5 — Passar `competitorComparison` no `generateSlidePNG()` (export ZIP):**
+
+```typescript
+const productData = {
+  name: productName,
+  // ...campos existentes...
+  competitorComparison: competitorComparison,
+};
+```
+
+---
+
+## Localização dos Callers — onde buscar `competitorComparison`
+
+O `InstagramCopyGenerator` é aberto por chamadores que já têm os dados do produto. É necessário verificar onde o componente é instanciado para adicionar a nova prop.
+
+---
+
+## Arquivos a Modificar
 
 | Arquivo | Mudança |
 |---|---|
-| `src/components/StrategicCarouselPreview.tsx` | Bloco `feedBenefits` no `Slide3Technical` — extrai headline/body/bullets e renderiza com hierarquia visual |
+| `src/components/StrategicCarouselPreview.tsx` | 1) Interface `ProductData` + `CompetitorComparison`; 2) `isVisualDescriptionLine()` helper; 3) Aplicar filtro em Slide 3 e Slide 4; 4) Renderizar tabela no `Slide3Technical` |
+| `src/components/InstagramCopyGenerator.tsx` | 1) Adicionar prop `competitorComparison`; 2) Passá-la no `productData` do `StrategicCarouselPreview` e no export ZIP |
+| Componentes que abrem `InstagramCopyGenerator` | Passar `competitorComparison` como prop (buscar e atualizar todos os callers) |
 
-**1 arquivo, mudança cirúrgica. Zero impacto no fallback (specs/features continua igual).**
+**Zero chamadas de API extras. Usa dados já carregados do banco.**
