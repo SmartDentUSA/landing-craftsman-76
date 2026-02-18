@@ -640,6 +640,22 @@ function truncateToWidth(ctx: CanvasRenderingContext2D, text: string, maxW: numb
   return t + '…';
 }
 
+function drawImageCover(
+  ctx: CanvasRenderingContext2D,
+  img: HTMLImageElement,
+  x: number, y: number, w: number, h: number
+) {
+  const iw = img.naturalWidth || img.width;
+  const ih = img.naturalHeight || img.height;
+  if (!iw || !ih) { ctx.drawImage(img, x, y, w, h); return; }
+  const scale = Math.max(w / iw, h / ih);
+  const sw = w / scale;
+  const sh = h / scale;
+  const sx = (iw - sw) / 2;
+  const sy = (ih - sh) / 2;
+  ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+}
+
 export async function generateSlidePNG(
   slideNum: number,
   imageUrl: string,
@@ -715,7 +731,7 @@ export async function generateSlidePNG(
     ctx.fillStyle = primaryColor;
     ctx.fillRect(0, 0, W, H * 0.55);
     if (img) {
-      ctx.drawImage(img, 0, H * 0.40, W, H * 0.60);
+      drawImageCover(ctx, img, 0, H * 0.40, W, H * 0.60);
     } else {
       ctx.fillStyle = '#333333';
       ctx.fillRect(0, H * 0.40, W, H * 0.60);
@@ -804,7 +820,7 @@ export async function generateSlidePNG(
       ctx.beginPath();
       ctx.rect(0, 0, imgW, H);
       ctx.clip();
-      ctx.drawImage(img, 0, 0, imgW, H);
+      drawImageCover(ctx, img, 0, 0, imgW, H);
       ctx.restore();
       const grad = ctx.createLinearGradient(imgW - 120, 0, imgW, 0);
       grad.addColorStop(0, 'rgba(15,15,20,0)');
@@ -864,7 +880,7 @@ export async function generateSlidePNG(
       ctx.beginPath();
       ctx.rect(0, 0, halfW, H);
       ctx.clip();
-      ctx.drawImage(img, 0, 0, halfW, H);
+      drawImageCover(ctx, img, 0, 0, halfW, H);
       ctx.restore();
     } else {
       ctx.fillStyle = '#cccccc';
@@ -958,7 +974,7 @@ export async function generateSlidePNG(
       ctx.beginPath();
       ctx.arc(cx, cy, r, 0, Math.PI * 2);
       ctx.clip();
-      ctx.drawImage(img, cx - r, cy - r, r * 2, r * 2);
+      drawImageCover(ctx, img, cx - r, cy - r, r * 2, r * 2);
       ctx.restore();
       ctx.beginPath();
       ctx.arc(cx, cy, r + 4, 0, Math.PI * 2);
