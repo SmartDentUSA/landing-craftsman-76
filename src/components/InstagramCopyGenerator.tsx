@@ -145,6 +145,7 @@ export function InstagramCopyGenerator({ productId, productName, productPrice, p
 
   // === Estados para Carrossel Visual (6 Slides Estratégicos) ===
   const [slideImageMap, setSlideImageMap] = useState<Record<number, string>>({});
+  const [allProductImages, setAllProductImages] = useState<Array<{ url: string; alt?: string }>>(productImages);
   const [primaryColor, setPrimaryColor] = useState('#1a1a2e');
   const [accentColor, setAccentColor] = useState('#e94560');
   const [isExportingZip, setIsExportingZip] = useState(false);
@@ -192,6 +193,8 @@ export function InstagramCopyGenerator({ productId, productName, productPrice, p
 
   useEffect(() => {
     if (!isOpen) return;
+    // Reset images to prop initially
+    setAllProductImages(productImages);
     if (productImages && productImages.length > 0) {
       const map: Record<number, string> = {};
       for (let i = 1; i <= 6; i++) {
@@ -207,11 +210,33 @@ export function InstagramCopyGenerator({ productId, productName, productPrice, p
     try {
       const { data, error } = await supabase
         .from('products_repository')
-        .select('instagram_copies, instagram_reels_scripts')
+        .select('instagram_copies, instagram_reels_scripts, image_url, images_gallery')
         .eq('id', productId)
         .single();
 
       if (error) throw error;
+
+      // Rebuild the full image list from DB (in case parent didn't pass all gallery images)
+      const dbImageUrl = (data as any)?.image_url;
+      const dbGallery = Array.isArray((data as any)?.images_gallery) ? (data as any).images_gallery : [];
+      const allImgs: Array<{ url: string; alt?: string }> = [];
+      if (dbImageUrl) allImgs.push({ url: dbImageUrl, alt: 'Produto' });
+      dbGallery.forEach((g: { url: string; alt?: string }) => {
+        if (g?.url && !allImgs.find(i => i.url === g.url)) allImgs.push({ url: g.url, alt: g.alt });
+      });
+      if (allImgs.length > 0) {
+        setAllProductImages(allImgs);
+        // Also seed slideImageMap if it's still empty
+        setSlideImageMap(prev => {
+          const hasImages = Object.values(prev).some(v => v);
+          if (!hasImages) {
+            const map: Record<number, string> = {};
+            for (let i = 1; i <= 6; i++) map[i] = allImgs[(i - 1) % allImgs.length].url;
+            return map;
+          }
+          return prev;
+        });
+      }
 
       const instagramData = data?.instagram_copies as InstagramCopy;
       
@@ -800,18 +825,41 @@ ${slide.text}`;
       if (error) throw error;
       if (data?.slides && Array.isArray(data.slides)) {
         const s = data.slides;
-        setSlideTexts(prev => ({
-          ...prev,
-          // Slide 1: SEMPRE usar buildSmartHook com sales_pitch real — NUNCA o texto inventado pela IA
-          1: {
-            ...(prev[1] as any),
-            hook: buildSmartHook(productName, productBenefits || [], productFeatures || [], productSalesPitch),
-          },
-          3: { ...(prev[3] as any), title: s[2]?.title || (prev[3] as any)?.title || 'Por que confiar?' },
-          4: { ...(prev[4] as any), keyword: s[3]?.title || (prev[4] as any)?.keyword || '', benefit: s[3]?.text || (prev[4] as any)?.benefit || '' },
-          6: { ...(prev[6] as any), ctaButton: s[6]?.text?.split('\n')[0] || (prev[6] as any)?.ctaButton || '🛒 Comprar Agora' },
-        }));
-        toast({ title: "✨ Textos gerados!", description: "Slides 1, 3, 4 e 6 atualizados com IA." });
+        // Replace slide texts completely — do NOT spread prev per slide so old values don't persist
+        setSlideTexts(prev => {
+          const prevTexts = prev as any;
+          return {
+            ...prev,
+            // Slide 1: SEMPRE usar buildSmartHook com sales_pitch real — NUNCA o texto inventado pela IA
+            1: {
+              hook: buildSmartHook(productName, productBenefits || [], productFeatures || [], productSalesPitch),
+              productName: prevTexts[1]?.productName || productName,
+            },
+            3: {
+              title: s[2]?.title || 'Por que confiar?',
+            },
+            4: {
+              label: s[3]?.image_suggestion || prevTexts[4]?.label || 'EXPERIÊNCIA',
+              keyword: s[3]?.title || prevTexts[4]?.keyword || '',
+              benefit: s[3]?.text || prevTexts[4]?.benefit || '',
+            },
+            5: {
+              title: s[4]?.title || prevTexts[5]?.title || 'Você pode confiar',
+              badge1: prevTexts[5]?.badge1 || '',
+              badge2: prevTexts[5]?.badge2 || '',
+              badge3: prevTexts[5]?.badge3 || '',
+            },
+            6: {
+              productName: prevTexts[6]?.productName || productName,
+              ctaButton: s[5]?.text?.split('\n')[0] || s[6]?.text?.split('\n')[0] || '🛒 Comprar Agora',
+              linkLabel: prevTexts[6]?.linkLabel || '🔗 Link na Bio',
+              footer: prevTexts[6]?.footer || 'Direct para mais informações',
+            },
+          };
+        });
+        toast({ title: "✨ Textos gerados!", description: "Slides 1, 3, 4, 5 e 6 atualizados com IA." });
+      } else {
+        toast({ title: "Aviso", description: "A IA não retornou slides. Tente novamente.", variant: "destructive" });
       }
     } catch {
       toast({ title: "Erro", description: "Não foi possível gerar textos com IA.", variant: "destructive" });
@@ -1861,14 +1909,14 @@ ${slide.text}`;
                       />
                       <span className="text-xs text-muted-foreground font-mono">{accentColor}</span>
                     </div>
-                    {productImages.length === 0 && (
+                    {allProductImages.length === 0 && (
                       <Badge variant="warning" className="text-xs">
                         Nenhuma imagem disponível
                       </Badge>
                     )}
-                    {productImages.length > 0 && (
+                    {allProductImages.length > 0 && (
                       <Badge variant="secondary" className="text-xs">
-                        {productImages.length} {productImages.length === 1 ? 'imagem' : 'imagens'}
+                        {allProductImages.length} {allProductImages.length === 1 ? 'imagem' : 'imagens'}
                       </Badge>
                     )}
                   </div>
@@ -1880,7 +1928,7 @@ ${slide.text}`;
                       onImageChange={(slideNum, url) =>
                         setSlideImageMap((prev) => ({ ...prev, [slideNum]: url }))
                       }
-                      productImages={productImages}
+                      productImages={allProductImages}
                       primaryColor={primaryColor}
                       accentColor={accentColor}
                       productData={{
