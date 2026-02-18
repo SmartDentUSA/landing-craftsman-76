@@ -786,6 +786,8 @@ ${slide.text}`;
         features: productFeatures,
         technicalSpecs: technicalSpecs,
         productUrl: productUrl,
+        feedCopyBenefits: feedCopies.find(v => v.approach === 'benefits')?.copy || undefined,
+        feedCopyProblemSolution: feedCopies.find(v => v.approach === 'problem_solution')?.copy || undefined,
       };
 
       const SLIDE_FILE_NAMES: Record<number, string> = {
@@ -1981,6 +1983,8 @@ ${slide.text}`;
                          applications: productApplications,
                          faq: productFaq,
                          ecommerceHtmlText: productEcommerceHtml ? stripHtmlToText(productEcommerceHtml).slice(0, 300) : undefined,
+                         feedCopyBenefits: feedCopies.find(v => v.approach === 'benefits')?.copy || undefined,
+                         feedCopyProblemSolution: feedCopies.find(v => v.approach === 'problem_solution')?.copy || undefined,
                        }}
                       slideTexts={slideTexts}
                       onSlideTextChange={(slideNum, key, value) =>
