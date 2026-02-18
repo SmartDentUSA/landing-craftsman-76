@@ -51,13 +51,20 @@ EXEMPLOS de bons ganchos (para referência de estilo, NÃO copie):
 - "Isso já causou um problema na sua clínica?"
 - "A virada de chave que 9 em 10 dentistas ignoram"`;
 
+    // Seed aleatório para evitar cache do modelo
+    const randomSeed = Math.floor(Math.random() * 99999);
+    const styles = ['pergunta retórica', 'afirmação surpreendente', 'dado numérico', 'provocação direta', 'promessa transformadora', 'curiosidade técnica'];
+    const style = styles[randomSeed % styles.length];
+
     const userPrompt = `PRODUTO: ${productName}
 ${salesPitch ? `DISCURSO DE VENDAS (use como INSPIRAÇÃO): ${salesPitch}` : ''}
 ${benefitsList ? `BENEFÍCIOS PRINCIPAIS: ${benefitsList}` : ''}
 ${featuresList ? `DIFERENCIAIS: ${featuresList}` : ''}
 
-Crie um gancho único, criativo e diferente de qualquer exemplo dado. 
-Varie o estilo (pode ser pergunta, afirmação, dado, provocação).
+VARIAÇÃO #${randomSeed} — Estilo obrigatório desta vez: ${style.toUpperCase()}
+
+Crie um gancho único, criativo e DIFERENTE de qualquer exemplo dado.
+Use obrigatoriamente o estilo "${style}" nesta geração.
 Retorne APENAS o texto do gancho (40-80 caracteres):`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -67,13 +74,13 @@ Retorne APENAS o texto do gancho (40-80 caracteres):`;
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-3-flash-preview',
+        model: 'google/gemini-2.0-flash-001',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ],
-        temperature: 1.0, // Alta criatividade para variedade
-        max_tokens: 100,
+        temperature: 1.2,
+        max_tokens: 120,
       }),
     });
 

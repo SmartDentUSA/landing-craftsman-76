@@ -356,17 +356,24 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
 function Slide1Hook({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; productData: ProductData; texts?: { hook?: string; productName?: string } }) {
   const textColor = getLuminance(primaryColor) > 0.5 ? '#000000' : '#ffffff';
   const hook = texts?.hook || (() => {
-    // Somente o sales_pitch é fonte legítima para o gancho — sem inventar texto
     if (productData.salesPitch) {
-      const sentences = productData.salesPitch.split(/[.!]/);
-      const first = sentences[0]?.trim();
-      if (first && first.length >= 15 && first.length <= 80) return first;
-      const clause = first?.split(',')[0]?.trim();
-      if (clause && clause.length >= 20 && clause.length <= 80) return clause;
-      const truncated = (first || '').slice(0, 80).split(' ').slice(0, -1).join(' ');
-      if (truncated.length >= 20) return truncated;
+      const pitch = productData.salesPitch.trim();
+      // Tenta encontrar uma frase completa entre 40-90 chars
+      const sentences = pitch.split(/(?<=[.!?])\s+/);
+      for (const sentence of sentences) {
+        const s = sentence.trim();
+        if (s.length >= 40 && s.length <= 90) return s;
+      }
+      // Pega até 90 chars quebrando na palavra — não no meio de uma frase longa
+      if (pitch.length <= 90) return pitch;
+      const words = pitch.split(' ');
+      let accumulated = '';
+      for (const word of words) {
+        if ((accumulated + ' ' + word).trim().length > 90) break;
+        accumulated = (accumulated + ' ' + word).trim();
+      }
+      if (accumulated.length >= 30) return accumulated;
     }
-    // Sem pitch: apenas o nome do produto
     return productData.name || '';
   })();
   const name = texts?.productName || productData.name;
