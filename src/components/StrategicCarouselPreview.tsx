@@ -601,6 +601,12 @@ function Slide3Technical({ image, primaryColor, productData, texts }: { image: s
       benefitsBody = bodyLines.join(' ').slice(0, 200);
       benefitsBullets = bulletLines;
     }
+    // PRIORIDADE 1.5: Benefits do produto (array cadastrado no repositório)
+    else if (productData.benefits && productData.benefits.length > 0) {
+      const rawBenefits = productData.benefits as string[];
+      benefitsHeadline = rawBenefits[0]?.slice(0, 80) || '';
+      benefitsBullets = rawBenefits.slice(1, 5);
+    }
   }
 
   // Tabela de comparação com concorrentes
@@ -1425,13 +1431,18 @@ export async function generateSlidePNG(
     const TITLE_MAX_W_S3 = W - rx - 60;       // título começa em rx
     const TEXT_MAX_W_S3 = W - rx - 76 - 60;   // bullets começam em rx+76 (após ícone)
 
-    // PRIORIDADE: texts?.bullet1-4 da IA/edição; fallback para specs/features
+    // PRIORIDADE: texts?.bullet1-4 da IA/edição; depois benefits do produto; fallback para specs/features
     const aiCanvasBullets = [texts?.bullet1, texts?.bullet2, texts?.bullet3, texts?.bullet4].filter(Boolean) as string[];
+    const productBenefitsCanvas = aiCanvasBullets.length === 0 && productData.benefits && (productData.benefits as string[]).length > 0
+      ? (productData.benefits as string[])
+      : null;
     const items = aiCanvasBullets.length > 0
       ? aiCanvasBullets
-      : specs.length > 0
-        ? specs.slice(0, 5).map(s => s.label + (s.value ? ': ' + s.value : ''))
-        : features.slice(0, 5);
+      : productBenefitsCanvas
+        ? productBenefitsCanvas.slice(0, 5)
+        : specs.length > 0
+          ? specs.slice(0, 5).map(s => s.label + (s.value ? ': ' + s.value : ''))
+          : features.slice(0, 5);
 
     // Pre-calculate line count for each item to determine true height
     const measureLinesS3 = (text: string): number => {

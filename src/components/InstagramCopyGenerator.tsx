@@ -207,7 +207,14 @@ export function InstagramCopyGenerator({ productId, productName, productPrice, p
     return {
       1: { hook: buildSmartHook(productName, b, f, productSalesPitch), productName },
       2: { category: productCategory || '', introLabel: 'Apresentando', productName },
-      3: { title: 'Por que confiar?' },
+      3: {
+        title: 'Por que confiar?',
+        headline: b[0] || '',
+        bullet1: b[1] || '',
+        bullet2: b[2] || '',
+        bullet3: b[3] || '',
+        bullet4: b[4] || '',
+      },
       4: { label: 'EXPERIÊNCIA', keyword: f[0] || '', benefit: b[2] || b[1] || b[0] || '' },
       5: { title: 'Você pode confiar', badge1: f[1] || f[0] || '', badge2: f[2] || b[1] || '', badge3: f[3] || b[2] || '' },
       6: { productName, ctaButton: '🛒 Comprar Agora', linkLabel: '🔗 Link na Bio', footer: 'Direct para mais informações' },
