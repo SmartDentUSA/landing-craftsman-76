@@ -243,7 +243,7 @@ function Slide1Hook({ image, primaryColor, productData, texts }: { image: string
     <div style={{ width: SLIDE_W, height: SLIDE_H, position: 'relative', overflow: 'hidden', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '55%', background: primaryColor }} />
       {image ? (
-        <img src={image} alt="produto" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '60%', width: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
+        <img src={image} alt="produto" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '60%', width: '100%', objectFit: 'cover', objectPosition: 'center center', backgroundColor: '#f0f0f0' }} />
       ) : (
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '60%', background: '#333' }} />
       )}
@@ -278,9 +278,9 @@ function Slide2Solution({ image, primaryColor, accentColor, productData, texts }
           {category}
         </div>
       )}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 0' }}>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 0', minHeight: 0, overflow: 'hidden' }}>
         {image ? (
-          <img src={image} alt="produto" style={{ maxWidth: '70%', maxHeight: 600, objectFit: 'contain', filter: 'drop-shadow(0 30px 60px rgba(0,0,0,0.2))' }} />
+          <img src={image} alt="produto" style={{ maxWidth: '70%', maxHeight: '100%', height: 'auto', width: 'auto', objectFit: 'contain', filter: 'drop-shadow(0 30px 60px rgba(0,0,0,0.2))' }} />
         ) : (
           <div style={{ width: 500, height: 500, background: '#e0e0e0', borderRadius: 20 }} />
         )}
@@ -310,7 +310,7 @@ function Slide3Technical({ image, primaryColor, productData, texts }: { image: s
       </div>
       <div style={{ width: '42%', position: 'relative', overflow: 'hidden' }}>
         {image ? (
-          <img src={image} alt="produto" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
+          <img src={image} alt="produto" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
         ) : (
           <div style={{ width: '100%', height: '100%', background: '#1a1a2e' }} />
         )}
@@ -341,7 +341,7 @@ function Slide3Technical({ image, primaryColor, productData, texts }: { image: s
 // ==================== SLIDE 4 — EXPERIÊNCIA ====================
 function Slide4Experience({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; productData: ProductData; texts?: { label?: string; keyword?: string; benefit?: string } }) {
   const textOnPrimary = getLuminance(primaryColor) > 0.5 ? '#000000' : '#ffffff';
-  const benefit = texts?.benefit || productData.benefits?.[1] || productData.benefits?.[0] || 'Resultados excepcionais em cada uso';
+  const benefit = texts?.benefit || productData.benefits?.[2] || productData.benefits?.[1] || 'Resultados excepcionais em cada uso';
   const keyword = texts?.keyword || productData.features?.[0] || 'Excelência';
   const label = texts?.label || 'Experiência';
   const kwFontSize = keyword.length > 15 ? 65 : 90;
@@ -373,9 +373,9 @@ function Slide5Security({ image, primaryColor, productData, texts }: { image: st
   const benefits = productData.benefits || [];
   const title = texts?.title || 'Você pode confiar';
   const badges = [
-    { icon: 'shield', label: texts?.badge1 || features[0] || 'Biocompatível' },
-    { icon: 'award', label: texts?.badge2 || features[1] || benefits[0] || '5 Anos de Casos' },
-    { icon: 'check', label: texts?.badge3 || features[2] || benefits[1] || 'Qualidade Premium' },
+    { icon: 'shield', label: texts?.badge1 || features[1] || features[0] || 'Biocompatível' },
+    { icon: 'award', label: texts?.badge2 || features[2] || benefits[1] || '5 Anos de Casos' },
+    { icon: 'check', label: texts?.badge3 || features[3] || benefits[2] || 'Qualidade Premium' },
   ];
 
   return (
