@@ -1,104 +1,154 @@
 
-# Fix: Expandir `isVisualDescriptionLine()` para Cobrir Mais Padrões de Sugestão Visual
+# Reformular Prompt do `generate-instagram-carousel` — Nova Estrutura de 6 Slides Smart Dent
 
-## Diagnóstico
+## O que muda e por quê
 
-A frase **"Infográfico estilizado em 3D mostrando a ponta da caneta..."** passa pelo filtro atual porque a função `isVisualDescriptionLine()` (linha 490 de `StrategicCarouselPreview.tsx`) não cobre todos os padrões que a IA usa para descrever conteúdo visual.
+Atualmente a edge function `generate-instagram-carousel` gera **7 slides** com estrutura genérica (Dor → Virada → Diferencial Técnico → Vantagens → Resultado → CTA). O usuário quer que o sistema siga a **metodologia Smart Dent de 6 slides**, específica para produtos odontológicos e com **restrição explícita de preços/condições comerciais**.
 
-Analisando a frase completa:
-- `"Infográfico estilizado em 3D mostrando a ponta da caneta..."` → a palavra **"Infográfico"** não está na lista
-- `"Setas indicam a remoção química..."` → **"setas indicam"** não está na lista
-- `"Ícones flutuantes discretos indicam..."` → **"ícones flutuantes"** não está (o filtro tem `flutuando em` mas não `flutuantes`)
-- `"Ícones"** referentes a elementos gráficos → não coberto
+---
 
-A palavra `estilizado` **está** na lista mas a frase começar com "Infográfico" faz a linha entrar antes de chegar à palavra. Na verdade, `lower.includes('estilizado')` deveria pegar — mas provavelmente a linha foi fragmentada ou está em uma posição diferente de `lines[0]`.
+## Diferenças entre a estrutura atual e a nova
 
-## Causa Real
+| Posição | Atual (7 slides) | Nova (6 slides) |
+|---|---|---|
+| 1 | Capa (Gancho) — genérico | **Gancho** — dor/problema real do produto |
+| 2 | A Dor (Identificação) | **Solução** — produto como saída ideal |
+| 3 | Virada de Chave | **Diferencial Técnico** — dados técnicos reais |
+| 4 | Diferencial Técnico | **Experiência/Fluxo** — como fica o dia a dia |
+| 5 | Vantagens Práticas | **Autoridade Smart Dent** — reforço de marca |
+| 6 | Resultado Final | **CTA** — sem preço, foco no próximo passo |
+| 7 | CTA | *(removido)* |
 
-O filtro atual em `isVisualDescriptionLine()` tem gaps para os padrões mais novos que a IA gera:
+---
+
+## Mudanças na Edge Function `generate-instagram-carousel`
+
+### 1. Ampliar o `SELECT` do banco — buscar mais campos
+
+O query atual só pega 7 campos. A nova estrutura precisa de mais dados para gerar com fidelidade:
 
 ```typescript
-// Padrões NÃO cobertos atualmente:
-"Infográfico estilizado em 3D mostrando..."   // falta: 'infográfico'
-"Setas indicam a remoção química..."          // falta: 'setas indicam'
-"Ícones flutuantes discretos indicam..."      // falta: 'ícones flutuantes', 'ícones discretos'
-"...criação de uma camada de ancoragem..."    // parte de frase visual mais longa
+// Atual
+.select('name, benefits, features, keywords, applications, target_audience, sales_pitch')
+
+// Novo — adicionar category, technical_specifications, description, competitor_comparison
+.select('name, benefits, features, keywords, applications, target_audience, sales_pitch, category, technical_specifications, description, competitor_comparison')
 ```
 
-## A Correção — Arquivo: `src/components/StrategicCarouselPreview.tsx`, linhas 490–506
+### 2. Substituir `APPROACH_DESCRIPTIONS` por `SLIDE_ROLES` fixos
 
-Expandir a função `isVisualDescriptionLine()` adicionando as palavras-chave faltantes e melhorar a cobertura com padrões gerais:
+A nova estrutura não depende de "abordagens" variáveis — cada slide tem papel fixo:
 
 ```typescript
-function isVisualDescriptionLine(line: string): boolean {
-  const lower = line.toLowerCase();
-  return (
-    // Linhas entre colchetes: [Imagem: ...], [Infográfico: ...]
-    /^\[.{10,}\]/.test(line) ||
-    // Tipos de conteúdo visual
-    lower.includes('infográfico') ||           // ← NOVO
-    lower.includes('gráfico') ||
-    lower.includes('ilustração') ||
-    lower.includes('diagrama') ||              // ← NOVO
-    lower.includes('animação') ||             // ← NOVO
-    // Descrições de ações visuais
-    lower.includes('imagem mostrando') ||
-    lower.includes('setas indicam') ||         // ← NOVO
-    lower.includes('seta indicando') ||        // ← NOVO
-    lower.includes('ícones flutuantes') ||     // ← NOVO
-    lower.includes('ícones discretos') ||      // ← NOVO
-    lower.includes('ícone indicando') ||       // ← NOVO
-    lower.includes('ícones indicam') ||        // ← NOVO
-    // Estilo e design de imagem
-    lower.includes('design deve') ||
-    lower.includes('estilizado') ||
-    lower.includes('flutuando em') ||
-    lower.includes('flutuantes') ||            // ← NOVO (cobre "ícones flutuantes discretos")
-    lower.includes('cores como') ||
-    lower.includes('nanopartículas') ||
-    // Instruções de criação visual
-    lower.includes('sugestão visual') ||
-    lower.includes('sugestão de imagem') ||
-    lower.includes('fundo deve') ||            // ← NOVO
-    lower.includes('fundo com') ||             // ← NOVO (ex: "fundo com partículas...")
-    lower.includes('deve mostrar') ||          // ← NOVO
-    lower.includes('deve conter') ||           // ← NOVO
-    lower.includes('deve transmitir') ||       // ← NOVO
-    lower.includes('transmitir credibilidade') ||
-    lower.includes('credibilidade científica') ||
-    // Padrão geral: linha com "mostrando" em contexto visual
-    (lower.includes('visualmente') && lower.includes('mostr')) ||
-    (lower.includes('3d') && lower.includes('mostrando')) ||   // ← NOVO: "3D mostrando..."
-    (lower.includes('mostrando') && lower.includes('ponta')) || // ← NOVO: "mostrando a ponta"
-    (lower.includes('mostrando') && lower.includes('caneta'))   // ← NOVO: "mostrando a caneta"
-  );
-}
+const SLIDE_ROLES = {
+  1: { name: 'Gancho', role: 'Identifique a maior dor/problema que o produto resolve. Use a Descrição e Keywords para criar pergunta ou afirmação de impacto.' },
+  2: { name: 'Solução', role: 'Apresente o produto como a solução ideal. Destaque a principal conveniência (ex: pincel aplicador, rapidez, exclusividade).' },
+  3: { name: 'Diferencial Técnico', role: 'Use dados técnicos reais (ex: elimina chalk effect, substitui jateamento) para explicar por que o produto funciona. Foque no benefício técnico real.' },
+  4: { name: 'Experiência / Fluxo', role: 'Descreva como a vida do técnico/dentista fica mais fácil com o produto no dia a dia. Tom: fluência clínica.' },
+  5: { name: 'Autoridade Smart Dent', role: 'Reforce que é tecnologia Smart Dent e mencione a categoria do produto. Credibilidade de marca.' },
+  6: { name: 'CTA', role: 'Chamada para ação clara (Link na Bio ou Comentário). NUNCA inclua valores monetários. Foco no próximo passo.' },
+};
 ```
 
-## Por que essa abordagem é correta
+### 3. Reformular o `systemPrompt`
 
-Em vez de listar palavras específicas de cada produto (como "caneta", "resina"), adicionamos padrões **estruturais** que a IA usa para descrever qualquer imagem:
-- Tipos de mídia: `infográfico`, `diagrama`, `animação`
-- Ações de composição visual: `setas indicam`, `ícones flutuantes`, `fundo deve`
-- Predicados de design: `deve mostrar`, `deve transmitir`, `deve conter`
+```typescript
+const systemPrompt = `Você é um Especialista em Copywriting para Instagram e Estrategista de Marketing Digital para a Smart Dent.
+Sua especialidade é transformar especificações técnicas de produtos odontológicos em narrativas de vendas de alta conversão para carrosséis.
 
-Isso torna o filtro robusto para futuros produtos diferentes.
+MISSÃO: Usar SOMENTE as informações fornecidas no contexto do produto. Nunca inventar dados, números, claims clínicos ou características não documentadas.
 
-## Arquivo a Modificar
+REGRAS DE ESTILO:
+- Linguagem técnica, porém acessível para dentistas e TPDs
+- Destaque termos específicos da área (ex: IPA, alta carga inorgânica, chalk effect, caracterização)
+- Textos curtos e escaneáveis (máximo 3 tópicos por slide)
+- PROIBIDO citar preços, condições comerciais ou valores monetários
 
-| Arquivo | Mudança | Linhas |
-|---|---|---|
-| `src/components/StrategicCarouselPreview.tsx` | Expandir `isVisualDescriptionLine()` com ~12 novos padrões | 490–506 |
+ESTRUTURA OBRIGATÓRIA DOS 6 SLIDES:
+Slide 1 — GANCHO: Identifique a maior dor ou problema que o produto resolve (use Descrição e Keywords) e crie pergunta ou afirmação de impacto.
+Slide 2 — SOLUÇÃO: Apresente o produto como a solução ideal. Destaque a principal conveniência.
+Slide 3 — DIFERENCIAL TÉCNICO: Use dados técnicos reais para explicar por que o produto funciona. Foco no benefício técnico real, não em promessas genéricas.
+Slide 4 — EXPERIÊNCIA/FLUXO: Descreva como a vida do técnico/dentista fica mais fácil com o produto no dia a dia.
+Slide 5 — AUTORIDADE SMART DENT: Reforce que é tecnologia Smart Dent e mencione a categoria do produto.
+Slide 6 — CTA: Chamada para ação clara (Link na Bio ou Comentário). NUNCA inclua valores monetários.
 
-**1 arquivo, 1 função, mudança aditiva. Zero risco de regressão — apenas expande o filtro existente.**
+ANTI-ALUCINAÇÃO (OBRIGATÓRIO):
+- Use APENAS dados presentes abaixo
+- NÃO invente especificações, números ou resultados clínicos
+- Se um dado não existir, escreva de forma neutra
+- NUNCA mencione preços, promoções ou condições de pagamento
 
-## Exemplos do Antes / Depois
+Retorne APENAS um JSON válido, sem markdown.`;
+```
 
-| Frase | Antes | Depois |
-|---|---|---|
-| "Infográfico estilizado em 3D mostrando..." | ❌ Passa (aparece no card) | ✅ Filtrada |
-| "Setas indicam a remoção química..." | ❌ Passa | ✅ Filtrada |
-| "Ícones flutuantes discretos indicam '135 MPa'..." | ❌ Passa | ✅ Filtrada |
-| "Gráfico 3D com nanopartículas..." | ✅ Já filtrada | ✅ Ainda filtrada |
+### 4. Reformular o `userPrompt`
 
-O filtro é aplicado tanto no **Slide 3** (`feedCopyBenefits`) quanto no **Slide 4** (`feedCopyProblemSolution`) — ambos já chamam `isVisualDescriptionLine()`, então a correção nessa única função resolve os dois slides automaticamente.
+```typescript
+const userPrompt = `PRODUTO: ${product.name}
+CATEGORIA: ${product.category || 'Não informado'}
+DESCRIÇÃO: ${product.description || 'Não informado'}
+BENEFÍCIOS: ${benefits}
+DIFERENCIAIS TÉCNICOS: ${features}
+APLICAÇÕES: ${product.applications || ''}
+PALAVRAS-CHAVE: ${keywords}
+PÚBLICO-ALVO: ${product.target_audience || 'Profissionais da área'}
+ESPECIFICAÇÕES TÉCNICAS: ${technicalSpecs}
+SALES PITCH: ${product.sales_pitch || 'Não disponível'}
+
+Gere um CARROSSEL de 6 slides para Instagram.
+
+Retorne APENAS este JSON (sem markdown, sem explicações):
+{
+  "slides": [
+    { "position": 1, "title": "Gancho", "text": "...", "image_suggestion": "..." },
+    { "position": 2, "title": "Solução", "text": "...", "image_suggestion": "..." },
+    { "position": 3, "title": "Diferencial Técnico", "text": "...", "image_suggestion": "..." },
+    { "position": 4, "title": "Experiência / Fluxo", "text": "...", "image_suggestion": "..." },
+    { "position": 5, "title": "Autoridade Smart Dent", "text": "...", "image_suggestion": "..." },
+    { "position": 6, "title": "CTA", "text": "...", "image_suggestion": "..." }
+  ]
+}`;
+```
+
+### 5. Ajustar validação de `slides.length` — de 7 para 6
+
+```typescript
+// Atual
+if (!Array.isArray(slides) || slides.length !== 7) {
+
+// Novo
+if (!Array.isArray(slides) || slides.length !== 6) {
+```
+
+---
+
+## Mudanças no `InstagramCopyGenerator.tsx`
+
+### Atualizar `SLIDE_TITLES` — de 7 para 6 entradas
+
+```typescript
+const SLIDE_TITLES: Record<number, string> = {
+  1: 'Gancho',
+  2: 'Solução',
+  3: 'Diferencial Técnico',
+  4: 'Experiência / Fluxo',
+  5: 'Autoridade Smart Dent',
+  6: 'CTA (Chamada para Ação)'
+};
+```
+
+### Ajustar `feedCarousels` — estrutura inicial de estados permanece (approach é mantido para compatibilidade)
+
+A exibição dos slides no painel de texto de carrossel usa `SLIDE_TITLES` para rotular — isso já refletirá os 6 slides automaticamente.
+
+---
+
+## Arquivos a Modificar
+
+| Arquivo | Mudança |
+|---|---|
+| `supabase/functions/generate-instagram-carousel/index.ts` | 1) Ampliar SELECT para incluir `category`, `description`, `technical_specifications`; 2) Substituir `APPROACH_DESCRIPTIONS` + `SLIDE_STRUCTURE` pelo novo `SLIDE_ROLES`; 3) Reformular `systemPrompt` com metodologia Smart Dent; 4) Reformular `userPrompt` com campos extras; 5) Validar `slides.length === 6` |
+| `src/components/InstagramCopyGenerator.tsx` | Atualizar `SLIDE_TITLES` para 6 slides com nomes corretos |
+
+**Zero impacto no carrossel visual estratégico (6 slides) — ele é gerado por caminho separado.**
+**Zero impacto nas copies de Feed/Reels — são geradas por `generate-social-content`.**
