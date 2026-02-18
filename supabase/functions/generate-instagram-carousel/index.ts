@@ -54,7 +54,7 @@ serve(async (req) => {
     console.log('🔍 Buscando produto:', productId);
     const { data: product, error: productError } = await supabase
       .from('products_repository')
-      .select('name, benefits, features, keywords, applications, target_audience')
+      .select('name, benefits, features, keywords, applications, target_audience, sales_pitch')
       .eq('id', productId)
       .maybeSingle();
     
@@ -86,6 +86,12 @@ serve(async (req) => {
 
 Seu objetivo é criar um carrossel de 7 slides que conta uma história coesa e leva o usuário do problema à ação.
 
+REGRA ANTI-ALUCINAÇÃO (OBRIGATÓRIA):
+- O texto do Slide 1 (gancho/capa) deve ser extraído EXCLUSIVAMENTE do campo "DISCURSO DE VENDAS" fornecido abaixo.
+- Use apenas a primeira frase significativa do discurso de vendas como gancho do Slide 1.
+- NÃO invente, NÃO parafraseie com palavras próprias, NÃO use termos que não estejam no discurso de vendas.
+- Se não houver discurso de vendas disponível, use APENAS o nome do produto como gancho.
+
 REGRAS CRÍTICAS:
 1. Cada slide deve ter:
    - Título: máximo 30 caracteres, impactante
@@ -105,6 +111,9 @@ BENEFÍCIOS: ${benefits}
 DIFERENCIAIS: ${features}
 PALAVRAS-CHAVE: ${keywords}
 PÚBLICO-ALVO: ${product.target_audience || 'Profissionais da área'}
+
+DISCURSO DE VENDAS (USE EXCLUSIVAMENTE PARA O SLIDE 1 - GANCHO):
+${(product as any).sales_pitch || 'Não disponível — use apenas o nome do produto como gancho'}
 
 ABORDAGEM: ${approach.toUpperCase()} - ${approachDescription}
 

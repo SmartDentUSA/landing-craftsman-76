@@ -802,9 +802,13 @@ ${slide.text}`;
         const s = data.slides;
         setSlideTexts(prev => ({
           ...prev,
-          1: { ...(prev[1] as any), hook: s[0]?.text || (prev[1] as any)?.hook || '' },
+          // Slide 1: SEMPRE usar buildSmartHook com sales_pitch real — NUNCA o texto inventado pela IA
+          1: {
+            ...(prev[1] as any),
+            hook: buildSmartHook(productName, productBenefits || [], productFeatures || [], productSalesPitch),
+          },
           3: { ...(prev[3] as any), title: s[2]?.title || (prev[3] as any)?.title || 'Por que confiar?' },
-          4: { ...(prev[4] as any), keyword: s[3]?.title || (prev[4] as any)?.keyword || 'Excelência', benefit: s[3]?.text || (prev[4] as any)?.benefit || '' },
+          4: { ...(prev[4] as any), keyword: s[3]?.title || (prev[4] as any)?.keyword || '', benefit: s[3]?.text || (prev[4] as any)?.benefit || '' },
           6: { ...(prev[6] as any), ctaButton: s[6]?.text?.split('\n')[0] || (prev[6] as any)?.ctaButton || '🛒 Comprar Agora' },
         }));
         toast({ title: "✨ Textos gerados!", description: "Slides 1, 3, 4 e 6 atualizados com IA." });
