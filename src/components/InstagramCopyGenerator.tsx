@@ -6,10 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Copy, Edit, Save, X, Zap, Code, ExternalLink, Film, Plus, ChevronLeft, ChevronRight, Image, Sparkles } from "lucide-react";
+import { Loader2, Copy, Edit, Save, X, Zap, Code, ExternalLink, Film, Plus, ChevronLeft, ChevronRight, Image, Sparkles, Download, Palette } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { StrategicCarouselPreview, generateSlideHTML } from "./StrategicCarouselPreview";
+import JSZip from "jszip";
 
 // === Tipos para Carrossel (7 Slides) ===
 interface CarouselSlide {
@@ -67,6 +69,13 @@ interface ReelsScript {
 interface InstagramCopyGeneratorProps {
   productId: string;
   productName: string;
+  productPrice?: number;
+  productCategory?: string;
+  productImages?: Array<{ url: string; alt?: string }>;
+  productUrl?: string;
+  productBenefits?: string[];
+  productFeatures?: string[];
+  technicalSpecs?: Array<{ label: string; value: string }>;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -78,7 +87,7 @@ const REELS_SCRIPT_LABELS: Record<string, { label: string; description: string }
   demonstration: { label: '🎯 Demonstração', description: 'Mostra o produto em ação' }
 };
 
-export function InstagramCopyGenerator({ productId, productName, isOpen, onClose }: InstagramCopyGeneratorProps) {
+export function InstagramCopyGenerator({ productId, productName, productPrice, productCategory, productImages = [], productUrl, productBenefits, productFeatures, technicalSpecs, isOpen, onClose }: InstagramCopyGeneratorProps) {
   // === Estados existentes (Copies de texto) ===
   const [feedCopies, setFeedCopies] = useState<CopyVariation[]>([
     { variation: 1, approach: 'storytelling', copy: '', link: '' },
@@ -131,6 +140,22 @@ export function InstagramCopyGenerator({ productId, productName, isOpen, onClose
   });
 
   const { toast } = useToast();
+
+  // === Estados para Carrossel Visual (6 Slides Estratégicos) ===
+  const [slideImageMap, setSlideImageMap] = useState<Record<number, string>>({});
+  const [primaryColor, setPrimaryColor] = useState('#1a1a2e');
+  const [accentColor, setAccentColor] = useState('#e94560');
+  const [isExportingZip, setIsExportingZip] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && productImages && productImages.length > 0) {
+      const map: Record<number, string> = {};
+      for (let i = 1; i <= 6; i++) {
+        map[i] = productImages[(i - 1) % productImages.length].url;
+      }
+      setSlideImageMap(map);
+    }
+  }, [productImages, isOpen]);
 
   useEffect(() => {
     if (isOpen) {
@@ -607,6 +632,54 @@ ${slide.text}`;
 
   const getCarouselForVariation = (variationNum: number): FeedCarousel | undefined => {
     return feedCarousels.find(c => c.variation === variationNum);
+  };
+
+  // === Export ZIP — Carrossel Visual ===
+  const handleExportZip = async () => {
+    setIsExportingZip(true);
+    try {
+      const zip = new JSZip();
+      const productData = {
+        name: productName,
+        price: productPrice,
+        category: productCategory,
+        benefits: productBenefits,
+        features: productFeatures,
+        technicalSpecs: technicalSpecs,
+        productUrl: productUrl,
+      };
+
+      const SLIDE_FILE_NAMES: Record<number, string> = {
+        1: 'slide-1-hook',
+        2: 'slide-2-solucao',
+        3: 'slide-3-tecnico',
+        4: 'slide-4-experiencia',
+        5: 'slide-5-seguranca',
+        6: 'slide-6-cta',
+      };
+
+      for (let i = 1; i <= 6; i++) {
+        const html = generateSlideHTML(i, slideImageMap[i] || '', primaryColor, accentColor, productData);
+        zip.file(`${SLIDE_FILE_NAMES[i]}.html`, html);
+      }
+
+      const content = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(content);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `carrossel-${productName.toLowerCase().replace(/\s+/g, '-')}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({ title: "ZIP gerado!", description: "6 slides HTML baixados com sucesso." });
+    } catch (error) {
+      console.error('Erro ao gerar ZIP:', error);
+      toast({ title: "Erro", description: "Não foi possível gerar o ZIP.", variant: "destructive" });
+    } finally {
+      setIsExportingZip(false);
+    }
   };
 
   // === Funções existentes de salvar ===
@@ -1556,6 +1629,97 @@ ${slide.text}`;
                       );
                     })}
                   </Tabs>
+                </CardContent>
+              </Card>
+
+              {/* === SEÇÃO CARROSSEL VISUAL (6 LAYOUTS ESTRATÉGICOS) === */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2">
+                      <Palette className="h-5 w-5" />
+                      🎨 Carrossel Visual — 6 Layouts de Alta Conversão
+                    </CardTitle>
+                    <Button
+                      onClick={handleExportZip}
+                      disabled={isExportingZip}
+                      size="sm"
+                      variant="outline"
+                    >
+                      {isExportingZip ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : (
+                        <Download className="h-4 w-4 mr-2" />
+                      )}
+                      📦 Baixar ZIP (6 Slides)
+                    </Button>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Preview visual em tempo real com as imagens reais do produto. Clique nas miniaturas abaixo de cada slide para trocar a foto.
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Color pickers */}
+                  <div className="flex flex-wrap items-center gap-6 p-4 bg-muted/40 rounded-lg border">
+                    <div className="flex items-center gap-3">
+                      <label className="text-sm font-medium text-muted-foreground whitespace-nowrap">Cor Primária</label>
+                      <input
+                        type="color"
+                        value={primaryColor}
+                        onChange={(e) => setPrimaryColor(e.target.value)}
+                        className="w-10 h-10 rounded cursor-pointer border border-border"
+                        title="Cor primária dos slides"
+                      />
+                      <span className="text-xs text-muted-foreground font-mono">{primaryColor}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <label className="text-sm font-medium text-muted-foreground whitespace-nowrap">Cor de Destaque</label>
+                      <input
+                        type="color"
+                        value={accentColor}
+                        onChange={(e) => setAccentColor(e.target.value)}
+                        className="w-10 h-10 rounded cursor-pointer border border-border"
+                        title="Cor de destaque (botões, preço)"
+                      />
+                      <span className="text-xs text-muted-foreground font-mono">{accentColor}</span>
+                    </div>
+                    {productImages.length === 0 && (
+                      <Badge variant="warning" className="text-xs">
+                        Nenhuma imagem de produto disponível — adicione imagens ao produto para preview
+                      </Badge>
+                    )}
+                    {productImages.length > 0 && (
+                      <Badge variant="secondary" className="text-xs">
+                        {productImages.length} {productImages.length === 1 ? 'imagem disponível' : 'imagens disponíveis'}
+                      </Badge>
+                    )}
+                  </div>
+
+                  {/* Slides grid */}
+                  <div className="overflow-x-auto pb-2">
+                    <StrategicCarouselPreview
+                      slideImageMap={slideImageMap}
+                      onImageChange={(slideNum, url) =>
+                        setSlideImageMap((prev) => ({ ...prev, [slideNum]: url }))
+                      }
+                      productImages={productImages}
+                      primaryColor={primaryColor}
+                      accentColor={accentColor}
+                      productData={{
+                        name: productName,
+                        price: productPrice,
+                        category: productCategory,
+                        benefits: productBenefits,
+                        features: productFeatures,
+                        technicalSpecs: technicalSpecs,
+                        productUrl: productUrl,
+                      }}
+                    />
+                  </div>
+
+                  <p className="text-xs text-muted-foreground text-center">
+                    Baixe o ZIP → abra cada HTML no Chrome → Print (Ctrl+P) → Salvar como PDF ou screenshot em 1080×1350px
+                  </p>
                 </CardContent>
               </Card>
             </>
