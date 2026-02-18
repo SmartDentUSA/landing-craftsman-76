@@ -167,21 +167,14 @@ export function InstagramCopyGenerator({ productId, productName, productPrice, p
   }
 
   function buildSmartHook(name: string, benefits: string[], features: string[], pitch?: string): string {
-    // 1. PRIORIDADE: Extrair da primeira frase do sales_pitch (fonte mais estratégica)
+    // ÚNICA fonte legítima: o sales_pitch real do produto
     if (pitch) {
       const pitchHook = extractHookFromSalesPitch(pitch);
       if (pitchHook) return pitchHook;
     }
-    // 2. Feature curta em forma de pergunta (≤ 35 chars)
-    const shortFeature = (features || []).find(f => f && f.length <= 35);
-    if (shortFeature) return `Você já ouviu falar em ${shortFeature}?`;
-    // 3. Benefício curto como headline impactante (≤ 45 chars)
-    const shortBenefit = (benefits || []).find(b => b && b.length <= 45);
-    if (shortBenefit) return shortBenefit.charAt(0).toUpperCase() + shortBenefit.slice(1);
-    // 4. Gancho direto com nome do produto
-    if (name) return `${name}: a escolha que muda tudo`;
-    // 5. Fallback genérico
-    return 'Descubra o segredo por trás do melhor resultado';
+    // Sem pitch: apenas o nome do produto, sem adicionar palavras inventadas
+    if (name) return name;
+    return 'Produto';
   }
 
   function buildDefaultSlideTexts(): Partial<SlideTextsType> {
@@ -191,8 +184,8 @@ export function InstagramCopyGenerator({ productId, productName, productPrice, p
       1: { hook: buildSmartHook(productName, b, f, productSalesPitch), productName },
       2: { category: productCategory || '', productName },
       3: { title: 'Por que confiar?' },
-      4: { label: 'EXPERIÊNCIA', keyword: f[0] || 'Excelência', benefit: b[2] || b[1] || b[0] || 'Resultados excepcionais em cada uso' },
-      5: { title: 'Você pode confiar', badge1: f[1] || f[0] || 'Biocompatível', badge2: f[2] || b[1] || '5 Anos de Casos', badge3: f[3] || b[2] || 'Qualidade Premium' },
+      4: { label: 'EXPERIÊNCIA', keyword: f[0] || '', benefit: b[2] || b[1] || b[0] || '' },
+      5: { title: 'Você pode confiar', badge1: f[1] || f[0] || '', badge2: f[2] || b[1] || '', badge3: f[3] || b[2] || '' },
       6: { productName, ctaButton: '🛒 Comprar Agora', linkLabel: '🔗 Link na Bio', footer: 'Direct para mais informações' },
     };
   }
@@ -264,7 +257,17 @@ export function InstagramCopyGenerator({ productId, productName, productPrice, p
       // Carregar textos do Carrossel Visual salvo
       const copies = data?.instagram_copies as any;
       if (copies?.visual_carousel_texts) {
-        setSlideTexts(copies.visual_carousel_texts);
+        const savedTexts = copies.visual_carousel_texts;
+        // SEMPRE recalcular o hook do Slide 1 com o sales_pitch atual (nunca usar valor preso do banco)
+        const freshHook = buildSmartHook(productName, productBenefits || [], productFeatures || [], productSalesPitch);
+        setSlideTexts({
+          ...savedTexts,
+          1: {
+            ...savedTexts[1],
+            hook: freshHook,
+            productName: productName,
+          }
+        });
         if (copies.visual_carousel_colors) {
           setPrimaryColor(copies.visual_carousel_colors.primaryColor || '#1a1a2e');
           setAccentColor(copies.visual_carousel_colors.accentColor || '#e94560');

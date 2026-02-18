@@ -244,21 +244,18 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
 function Slide1Hook({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; productData: ProductData; texts?: { hook?: string; productName?: string } }) {
   const textColor = getLuminance(primaryColor) > 0.5 ? '#000000' : '#ffffff';
   const hook = texts?.hook || (() => {
-    // Prioridade 1: extrair do sales_pitch
+    // Somente o sales_pitch é fonte legítima para o gancho — sem inventar texto
     if (productData.salesPitch) {
       const sentences = productData.salesPitch.split(/[.!]/);
       const first = sentences[0]?.trim();
       if (first && first.length >= 15 && first.length <= 90) return first;
       const clause = first?.split(',')[0]?.trim();
       if (clause && clause.length >= 20 && clause.length <= 90) return clause;
+      const truncated = (first || '').slice(0, 80).split(' ').slice(0, -1).join(' ');
+      if (truncated.length >= 20) return truncated + '...';
     }
-    const features = productData.features || [];
-    const benefits = productData.benefits || [];
-    const shortFeature = features.find(f => f && f.length <= 35);
-    if (shortFeature) return `Você já ouviu falar em ${shortFeature}?`;
-    const shortBenefit = benefits.find(b => b && b.length <= 45);
-    if (shortBenefit) return shortBenefit.charAt(0).toUpperCase() + shortBenefit.slice(1);
-    return `${productData.name}: a escolha que muda tudo`;
+    // Sem pitch: apenas o nome do produto
+    return productData.name || '';
   })();
   const name = texts?.productName || productData.name;
 
