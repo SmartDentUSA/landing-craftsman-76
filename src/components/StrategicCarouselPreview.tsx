@@ -580,30 +580,28 @@ function Slide4Experience({ image, primaryColor, productData, texts }: { image: 
   const impactFontSize = finalImpact.length > 180 ? 20 : finalImpact.length > 120 ? 22 : finalImpact.length > 70 ? 25 : 28;
 
   return (
-    <div style={{ width: SLIDE_W, height: SLIDE_H, fontFamily: 'system-ui, -apple-system, sans-serif', position: 'relative', overflow: 'hidden', background: '#0f0f14' }}>
-      {/* Imagem full-bleed */}
-      {image ? (
-        <img src={image} alt="produto em uso" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
-      ) : (
-        <div style={{ position: 'absolute', inset: 0, background: '#1a1a2e' }} />
-      )}
-
-      {/* Overlay lateral esquerdo */}
-      <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '20%', background: 'linear-gradient(to right, rgba(15,15,20,0.6), transparent)', zIndex: 1 }} />
-
-      {/* Overlay lateral direito — painel de textos mais denso */}
-      <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: '80%', background: 'linear-gradient(to left, rgba(10,10,16,0.94) 55%, rgba(10,10,16,0.70) 80%, transparent)', zIndex: 1 }} />
+    <div style={{ width: SLIDE_W, height: SLIDE_H, fontFamily: 'system-ui, -apple-system, sans-serif', position: 'relative', overflow: 'hidden', background: '#0f0f14', display: 'flex' }}>
+      {/* Imagem à esquerda — 42% */}
+      <div style={{ width: '42%', flexShrink: 0, position: 'relative', overflow: 'hidden' }}>
+        {image ? (
+          <img src={image} alt="produto em uso" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
+        ) : (
+          <div style={{ width: '100%', height: '100%', background: '#1a1a2e' }} />
+        )}
+        {/* Feather borda direita */}
+        <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: 140, background: 'linear-gradient(to right, transparent, #0f0f14)' }} />
+      </div>
 
       {/* Número do slide */}
       <div style={{ position: 'absolute', top: 60, left: 60, width: 70, height: 70, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <span style={{ color: '#fff', fontWeight: 900, fontSize: 30 }}>4</span>
       </div>
 
-      {/* Painel direito — textos */}
+      {/* Painel direito — textos (58%) */}
       <div style={{
-        position: 'absolute', top: 0, right: 0, bottom: 0, width: '78%',
+        flex: 1,
         display: 'flex', flexDirection: 'column', justifyContent: 'center',
-        padding: '80px 48px 80px 28px', gap: 18, zIndex: 2
+        padding: '80px 60px 80px 48px', gap: 18, background: '#0f0f14',
       }}>
         {/* Label contextual */}
         <p style={{ color: '#fff', opacity: 0.65, fontSize: labelFontSize, fontWeight: 700, margin: 0, textTransform: 'uppercase' as const, letterSpacing: 3, wordBreak: 'break-word' as const }}>{finalLabel}</p>
@@ -612,10 +610,10 @@ function Slide4Experience({ image, primaryColor, productData, texts }: { image: 
         <div style={{ width: 56, height: 3, background: primaryColor, borderRadius: 2, flexShrink: 0 }} />
 
         {/* Headline — benefício principal */}
-        <h2 style={{ color: '#ffffff', fontSize: kwFontSize, fontWeight: 900, margin: 0, lineHeight: 1.05, wordBreak: 'break-word' as const, textShadow: '0 2px 20px rgba(0,0,0,0.7)' }}>{finalKeyword}</h2>
+        <h2 style={{ color: '#ffffff', fontSize: kwFontSize, fontWeight: 900, margin: 0, lineHeight: 1.05, wordBreak: 'break-word' as const }}>{finalKeyword}</h2>
 
         {/* Texto de impacto — síntese dor → resolução */}
-        <p style={{ color: '#d8d8d8', fontSize: impactFontSize, lineHeight: 1.55, margin: 0, fontWeight: 400, wordBreak: 'break-word' as const, textShadow: '0 1px 8px rgba(0,0,0,0.6)' }}>{finalImpact}</p>
+        <p style={{ color: '#d8d8d8', fontSize: impactFontSize, lineHeight: 1.55, margin: 0, fontWeight: 400, wordBreak: 'break-word' as const }}>{finalImpact}</p>
 
         {/* Bullets de prova técnica */}
         {finalBullets.length > 0 && (
@@ -1178,34 +1176,33 @@ export async function generateSlidePNG(
 
     const kwFontSizeCanvas = keyword.length > 30 ? 52 : keyword.length > 20 ? 62 : keyword.length > 15 ? 70 : 78;
 
-    // Imagem full-bleed
+    // ---- Layout split 42/58 (igual ao Slide 3) ----
+    // Fundo escuro total
+    ctx.fillStyle = '#0f0f14';
+    ctx.fillRect(0, 0, W, H);
+
+    // Imagem à esquerda (42%) com clip
+    const imgW4 = Math.round(W * 0.42);
     if (img) {
-      drawImageCover(ctx, img, 0, 0, W, H);
-    } else {
-      ctx.fillStyle = '#1a1a2e';
-      ctx.fillRect(0, 0, W, H);
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, imgW4, H);
+      ctx.clip();
+      drawImageCover(ctx, img, 0, 0, imgW4, H);
+      ctx.restore();
+      // Feather na borda direita da imagem para fundir com o painel escuro
+      const grad4 = ctx.createLinearGradient(imgW4 - 140, 0, imgW4, 0);
+      grad4.addColorStop(0, 'rgba(15,15,20,0)');
+      grad4.addColorStop(1, '#0f0f14');
+      ctx.fillStyle = grad4;
+      ctx.fillRect(imgW4 - 140, 0, 140, H);
     }
-
-    // Overlay esquerdo leve
-    const gradLeft4 = ctx.createLinearGradient(0, 0, W * 0.22, 0);
-    gradLeft4.addColorStop(0, 'rgba(15,15,20,0.6)');
-    gradLeft4.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = gradLeft4;
-    ctx.fillRect(0, 0, W, H);
-
-    // Overlay direito — mais denso para legibilidade
-    const gradRight4 = ctx.createLinearGradient(W * 0.22, 0, W, 0);
-    gradRight4.addColorStop(0, 'rgba(0,0,0,0)');
-    gradRight4.addColorStop(0.4, 'rgba(10,10,16,0.75)');
-    gradRight4.addColorStop(1, 'rgba(10,10,16,0.92)');
-    ctx.fillStyle = gradRight4;
-    ctx.fillRect(0, 0, W, H);
 
     drawBadge(4, 60, 60, 'rgba(255,255,255,0.15)', '#ffffff');
 
-    // Textos nos 75% direitos
-    const rx4 = W * 0.26;
-    const textW4 = W - rx4 - 80;
+    // Painel de texto à direita
+    const rx4 = imgW4 + 48;
+    const textW4 = W - rx4 - 60;
 
     // Font sizes dinâmicos
     const benFontSizeCanvas = mainText.length > 240 ? 26 : mainText.length > 150 ? 30 : mainText.length > 80 ? 33 : 36;
@@ -1307,12 +1304,25 @@ export async function generateSlidePNG(
     ctx.textBaseline = 'top';
     wrapText(ctx, title5, W / 2, 200, W - 160, 96, 'center');
     const maxBadgeTextW = W - 160 - 130 - 60;
+    const BADGE_LINE_H = 52;
+    const BADGE_FONT = '700 40px system-ui, -apple-system, sans-serif';
     let by = 520;
     for (const badge of badges5) {
-      // Measure how many lines this badge will take so we can size the box
-      ctx.font = '700 40px system-ui, -apple-system, sans-serif';
-      const badgeLines = Math.ceil(ctx.measureText(badge).width / maxBadgeTextW) || 1;
-      const badgeBoxH = Math.max(130, 30 + badgeLines * 52);
+      // Medir linhas reais via word-wrap manual (igual ao wrapText)
+      ctx.font = BADGE_FONT;
+      const badgeWords = badge.split(' ');
+      let bLine = '';
+      let badgeLines = 1;
+      for (const bw of badgeWords) {
+        const test = bLine + bw + ' ';
+        if (ctx.measureText(test).width > maxBadgeTextW && bLine !== '') {
+          badgeLines++;
+          bLine = bw + ' ';
+        } else {
+          bLine = test;
+        }
+      }
+      const badgeBoxH = Math.max(130, 40 + badgeLines * BADGE_LINE_H);
       ctx.fillStyle = 'rgba(255,255,255,0.12)';
       roundRect(80, by, W - 160, badgeBoxH, 20);
       ctx.fill();
@@ -1323,11 +1333,14 @@ export async function generateSlidePNG(
       ctx.arc(80 + 72, by + badgeBoxH / 2, 36, 0, Math.PI * 2);
       ctx.fillStyle = primaryColor;
       ctx.fill();
-      ctx.font = '700 40px system-ui, -apple-system, sans-serif';
+      ctx.font = BADGE_FONT;
       ctx.fillStyle = '#ffffff';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
-      wrapText(ctx, badge, 80 + 130, by + (badgeBoxH / 2) - (badgeLines * 52) / 2, maxBadgeTextW, 52);
+      // Centralizar verticalmente o bloco de texto dentro da caixa
+      const textBlockH = badgeLines * BADGE_LINE_H;
+      const textStartY = by + (badgeBoxH - textBlockH) / 2;
+      wrapText(ctx, badge, 80 + 130, textStartY, maxBadgeTextW, BADGE_LINE_H);
       by += badgeBoxH + 25;
     }
 
@@ -1430,7 +1443,7 @@ export function generateSlideHTML(slideNum: number, imageUrl: string, primaryCol
     3: `<div style="width:100%;height:100%;display:flex;"><div style="width:42%;position:relative;overflow:hidden;">${imageUrl ? `<img src="${imageUrl}" style="width:100%;height:100%;object-fit:cover;">` : ''}<div style="position:absolute;top:0;right:0;bottom:0;width:120px;background:linear-gradient(to right,transparent,#0f0f14);"></div></div><div style="flex:1;padding:100px 60px 80px 40px;display:flex;flex-direction:column;justify-content:center;background:#0f0f14;"><h2 style="color:#fff;font-size:52px;font-weight:900;margin:0 0 60px 0;">Por que confiar?</h2><div style="display:flex;flex-direction:column;gap:36px;">${items.join('')}</div></div></div>`,
     4: `<div style="width:100%;height:100%;display:flex;"><div style="width:50%;position:relative;overflow:hidden;">${imageUrl ? `<img src="${imageUrl}" style="width:100%;height:100%;object-fit:cover;">` : '<div style="width:100%;height:100%;background:#ccc;"></div>'}</div><div style="width:50%;background:${primaryColor};display:flex;flex-direction:column;justify-content:center;padding:80px 70px;box-sizing:border-box;"><p style="color:${textOnPrimary};opacity:0.7;font-size:36px;font-weight:600;margin:0 0 20px 0;text-transform:uppercase;letter-spacing:4px;">Experiência</p><h2 style="color:${textOnPrimary};font-size:${(features[0] || 'Excelência').length > 15 ? 65 : 90}px;font-weight:900;margin:0 0 40px 0;line-height:1;word-break:break-word;">${features[0] || 'Excelência'}</h2><p style="color:${textOnPrimary};opacity:0.9;font-size:38px;line-height:1.5;margin:0;">${benefits[1] || benefits[0] || 'Resultados excepcionais em cada uso'}</p></div></div>`,
     5: `${imageUrl ? `<img src="${imageUrl}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:blur(8px);transform:scale(1.1);">` : '<div style="position:absolute;inset:0;background:#222;"></div>'}<div style="position:absolute;inset:0;background:rgba(0,0,0,0.65);"></div><div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px;gap:50px;"><h2 style="color:#fff;font-size:86px;font-weight:900;margin:0;text-align:center;">Você pode confiar</h2><div style="display:flex;flex-direction:column;gap:28px;width:100%;">${[features[0]||'Biocompatível', features[1]||benefits[0]||'5 Anos de Casos', features[2]||benefits[1]||'Qualidade Premium'].map(badge => `<div style="display:flex;align-items:center;gap:36px;background:rgba(255,255,255,0.12);border-radius:20px;padding:28px 44px;border:1px solid rgba(255,255,255,0.2);overflow:hidden;"><div style="width:72px;height:72px;border-radius:50%;background:${primaryColor};flex-shrink:0;"></div><span style="color:#fff;font-size:40px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${badge}</span></div>`).join('')}</div></div>`,
-    6: `<div style="width:100%;height:100%;background:${primaryColor};display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px;box-sizing:border-box;gap:60px;"><div style="width:240px;height:240px;border-radius:24px;overflow:hidden;border:4px solid rgba(255,255,255,0.8);">${imageUrl ? `<img src="${imageUrl}" style="width:100%;height:100%;object-fit:cover;">` : '<div style="width:100%;height:100%;background:#eee;"></div>'}</div><h2 style="color:${textOnPrimary};font-size:68px;font-weight:900;margin:0;text-align:center;">${productData.name}</h2><div style="background:${accentColor};color:${textOnAccent};border-radius:24px;padding:36px 72px;font-size:52px;font-weight:900;">🛒 Comprar Agora</div><span style="color:${textOnPrimary};opacity:0.85;font-size:44px;">🔗 Link na Bio</span><p style="color:${textOnPrimary};opacity:0.6;font-size:34px;margin:0;">Direct para mais informações</p></div>`,
+    6: `<div style="width:100%;height:100%;background:${primaryColor};display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px;box-sizing:border-box;gap:60px;"><div style="width:240px;height:240px;border-radius:24px;overflow:hidden;border:4px solid rgba(255,255,255,0.8);">${imageUrl ? `<img src="${imageUrl}" style="width:100%;height:100%;object-fit:cover;">` : '<div style="width:100%;height:100%;background:#eee;"></div>'}</div><h2 style="color:${textOnPrimary};font-size:68px;font-weight:900;margin:0;text-align:center;">${productData.name}</h2><div style="background:${accentColor};color:${textOnAccent};border-radius:24px;padding:36px 72px;font-size:52px;font-weight:900;">💡 Saiba Mais</div><span style="color:${textOnPrimary};opacity:0.85;font-size:44px;">🔗 Saiba Mais</span><p style="color:${textOnPrimary};opacity:0.6;font-size:34px;margin:0;">Direct para mais informações</p></div>`,
   };
 
   const SLIDE_NAMES: Record<number, string> = { 1: 'Hook / Gancho', 2: 'Apresentação da Solução', 3: 'Diferencial Técnico', 4: 'Benefício na Prática', 5: 'Segurança / Quebra de Objeção', 6: 'Chamada para Ação' };
