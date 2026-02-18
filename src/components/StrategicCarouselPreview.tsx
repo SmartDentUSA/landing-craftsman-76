@@ -19,6 +19,8 @@ interface ProductData {
   technicalSpecs?: TechnicalSpec[];
   productUrl?: string;
   salesPitch?: string;
+  targetAudience?: string[];
+  applications?: string;
 }
 
 // ========================= SlideTexts Types =========================
@@ -505,33 +507,77 @@ function Slide3Technical({ image, primaryColor, productData, texts }: { image: s
   );
 }
 
-// ==================== SLIDE 4 — EXPERIÊNCIA ====================
-function Slide4Experience({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; productData: ProductData; texts?: { label?: string; keyword?: string; benefit?: string } }) {
+// ==================== FUNÇÃO DE SÍNTESE DE IMPACTO ====================
+function buildImpactNarrative(productData: ProductData): {
+  headline: string;
+  impactText: string;
+  proofBullets: string[];
+  label: string;
+} {
+  const benefits = (productData.benefits as string[]) || [];
+  const features = (productData.features as string[]) || [];
+  const specs = productData.technicalSpecs || [];
   const salesPitch = productData.salesPitch || '';
   const description = productData.description || '';
+  const applications = productData.applications || '';
+  const targetAudience = (productData.targetAudience as string[]) || [];
   const name = productData.name || '';
-  const features = (productData.features as string[]) || [];
-  const benefits = (productData.benefits as string[]) || [];
 
-  // Headline: feature mais impactante ou nome do produto
-  const keyword = texts?.keyword || features[0] || name || 'Excelência';
+  // 1. Headline — benefício mais estratégico/impactante
+  const headline = benefits[0] || features[0] || name || 'Resultados que transformam';
 
-  // Label contextual com nome do produto
-  const label = texts?.label || (name ? `Experiência com ${name}` : 'Experiência');
+  // 2. Texto de impacto: síntese da dor → resolução
+  let impactText = '';
+  if (salesPitch) {
+    impactText = salesPitch.slice(0, 220);
+  } else if (description && benefits[1]) {
+    impactText = `${description.slice(0, 130)}. ${benefits[1]}`.slice(0, 220);
+  } else if (description && applications) {
+    impactText = `${description.slice(0, 130)}. ${applications}`.slice(0, 220);
+  } else if (description) {
+    impactText = description.slice(0, 220);
+  } else if (benefits.length >= 2) {
+    impactText = `${benefits[1]}${benefits[2] ? ` — ${benefits[2]}` : ''}`;
+  } else if (applications) {
+    impactText = applications.slice(0, 220);
+  } else if (targetAudience.length > 0) {
+    impactText = `Desenvolvido para ${targetAudience.slice(0, 2).join(' e ')}.`;
+  } else {
+    impactText = 'Solução desenvolvida para resultados reais e consistentes.';
+  }
 
-  // Parágrafo principal: salesPitch é o diferencial real; cai para description se vazio
-  const mainText = texts?.benefit || salesPitch || description.slice(0, 280) || benefits[0] || 'Resultados excepcionais em cada uso';
+  // 3. Bullets de prova técnica: specs prioritários, depois features curtas, depois benefits restantes
+  const specBullets = specs.slice(0, 3).map(s => `${s.label}: ${s.value}`);
+  const featureBullets = features.filter(f => f !== headline && f.length < 80);
+  const benefitBullets = benefits.filter(b => b !== headline).slice(1);
 
-  // Bullets complementares: até 3 features/benefits adicionais que não sejam o keyword
-  const bulletPool = [
-    ...features.filter(f => f !== keyword),
-    ...benefits,
-  ].filter(Boolean).slice(0, 3) as string[];
+  const allBullets = [...specBullets, ...featureBullets, ...benefitBullets]
+    .filter(Boolean)
+    .filter(b => b.length < 80)
+    .slice(0, 3);
 
-  // Auto-sizing
-  const kwFontSize = keyword.length > 30 ? 42 : keyword.length > 20 ? 52 : keyword.length > 15 ? 62 : 78;
-  const labelFontSize = label.length > 40 ? 18 : label.length > 30 ? 22 : 26;
-  const mainFontSize = mainText.length > 240 ? 20 : mainText.length > 150 ? 22 : mainText.length > 80 ? 25 : 28;
+  return {
+    headline,
+    impactText,
+    proofBullets: allBullets,
+    label: 'Impacto Real',
+  };
+}
+
+// ==================== SLIDE 4 — EXPERIÊNCIA ====================
+function Slide4Experience({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; productData: ProductData; texts?: { label?: string; keyword?: string; benefit?: string } }) {
+  const { headline, impactText, proofBullets, label } = buildImpactNarrative(productData);
+
+  // Respeitar edições manuais do usuário
+  const finalLabel = texts?.label || label;
+  const finalKeyword = texts?.keyword || headline;
+  const finalImpact = texts?.benefit || impactText;
+  const finalBullets = proofBullets;
+
+  // Auto-sizing calibrado para conteúdo rico
+  const kwFontSize = finalKeyword.length > 50 ? 38 : finalKeyword.length > 35 ? 46 : finalKeyword.length > 22 ? 56 : 68;
+  const labelFontSize = 22;
+  const impactFontSize = finalImpact.length > 180 ? 20 : finalImpact.length > 120 ? 22 : finalImpact.length > 70 ? 25 : 28;
 
   return (
     <div style={{ width: SLIDE_W, height: SLIDE_H, fontFamily: 'system-ui, -apple-system, sans-serif', position: 'relative', overflow: 'hidden', background: '#0f0f14' }}>
@@ -545,39 +591,39 @@ function Slide4Experience({ image, primaryColor, productData, texts }: { image: 
       {/* Overlay lateral esquerdo */}
       <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '20%', background: 'linear-gradient(to right, rgba(15,15,20,0.6), transparent)', zIndex: 1 }} />
 
-      {/* Overlay lateral direito — painel de textos */}
-      <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: '78%', background: 'linear-gradient(to left, rgba(10,10,16,0.88) 60%, transparent)', zIndex: 1 }} />
+      {/* Overlay lateral direito — painel de textos mais denso */}
+      <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: '80%', background: 'linear-gradient(to left, rgba(10,10,16,0.94) 55%, rgba(10,10,16,0.70) 80%, transparent)', zIndex: 1 }} />
 
       {/* Número do slide */}
       <div style={{ position: 'absolute', top: 60, left: 60, width: 70, height: 70, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <span style={{ color: '#fff', fontWeight: 900, fontSize: 30 }}>4</span>
       </div>
 
-      {/* Painel direito — textos em 75% do card */}
+      {/* Painel direito — textos */}
       <div style={{
-        position: 'absolute', top: 0, right: 0, bottom: 0, width: '76%',
+        position: 'absolute', top: 0, right: 0, bottom: 0, width: '78%',
         display: 'flex', flexDirection: 'column', justifyContent: 'center',
-        padding: '80px 48px 80px 28px', gap: 20, zIndex: 2
+        padding: '80px 48px 80px 28px', gap: 18, zIndex: 2
       }}>
-        {/* Label */}
-        <p style={{ color: '#fff', opacity: 0.65, fontSize: labelFontSize, fontWeight: 700, margin: 0, textTransform: 'uppercase' as const, letterSpacing: 3, wordBreak: 'break-word' as const }}>{label}</p>
+        {/* Label contextual */}
+        <p style={{ color: '#fff', opacity: 0.65, fontSize: labelFontSize, fontWeight: 700, margin: 0, textTransform: 'uppercase' as const, letterSpacing: 3, wordBreak: 'break-word' as const }}>{finalLabel}</p>
 
         {/* Divider accent */}
         <div style={{ width: 56, height: 3, background: primaryColor, borderRadius: 2, flexShrink: 0 }} />
 
-        {/* Headline / keyword */}
-        <h2 style={{ color: '#ffffff', fontSize: kwFontSize, fontWeight: 900, margin: 0, lineHeight: 1.05, wordBreak: 'break-word' as const, textShadow: '0 2px 20px rgba(0,0,0,0.7)' }}>{keyword}</h2>
+        {/* Headline — benefício principal */}
+        <h2 style={{ color: '#ffffff', fontSize: kwFontSize, fontWeight: 900, margin: 0, lineHeight: 1.05, wordBreak: 'break-word' as const, textShadow: '0 2px 20px rgba(0,0,0,0.7)' }}>{finalKeyword}</h2>
 
-        {/* Parágrafo principal — salesPitch / description */}
-        <p style={{ color: '#d8d8d8', fontSize: mainFontSize, lineHeight: 1.55, margin: 0, fontWeight: 400, wordBreak: 'break-word' as const, textShadow: '0 1px 8px rgba(0,0,0,0.6)' }}>{mainText}</p>
+        {/* Texto de impacto — síntese dor → resolução */}
+        <p style={{ color: '#d8d8d8', fontSize: impactFontSize, lineHeight: 1.55, margin: 0, fontWeight: 400, wordBreak: 'break-word' as const, textShadow: '0 1px 8px rgba(0,0,0,0.6)' }}>{finalImpact}</p>
 
-        {/* Bullets complementares */}
-        {bulletPool.length > 0 && (
+        {/* Bullets de prova técnica */}
+        {finalBullets.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 4 }}>
-            {bulletPool.map((item, i) => (
+            {finalBullets.map((item, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                <div style={{ width: 8, height: 8, borderRadius: '50%', background: primaryColor, flexShrink: 0, marginTop: mainFontSize * 0.35 }} />
-                <span style={{ color: '#c8c8c8', fontSize: mainFontSize * 0.88, lineHeight: 1.4, fontWeight: 500, wordBreak: 'break-word' as const }}>{item}</span>
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: primaryColor, flexShrink: 0, marginTop: impactFontSize * 0.35 }} />
+                <span style={{ color: '#c8c8c8', fontSize: impactFontSize * 0.88, lineHeight: 1.4, fontWeight: 500, wordBreak: 'break-word' as const }}>{item}</span>
               </div>
             ))}
           </div>
@@ -586,6 +632,7 @@ function Slide4Experience({ image, primaryColor, productData, texts }: { image: 
     </div>
   );
 }
+
 
 // ==================== SLIDE 5 — SEGURANÇA ====================
 function Slide5Security({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; productData: ProductData; texts?: { title?: string; badge1?: string; badge2?: string; badge3?: string } }) {
@@ -1123,18 +1170,11 @@ export async function generateSlidePNG(
     }
 
   } else if (slideNum === 4) {
-    const salesPitch4 = productData.salesPitch || '';
-    const description4 = productData.description || '';
-    const name4 = productData.name || '';
-    const keyword = texts?.keyword || features[0] || name4 || 'Excelência';
-    const mainText = texts?.benefit || salesPitch4 || description4.slice(0, 280) || benefits[0] || 'Resultados excepcionais em cada uso';
-    const label4 = texts?.label || (name4 ? `Experiência com ${name4}` : 'Experiência');
-
-    // Bullets: features adicionais + benefits (exceto o keyword)
-    const bulletPool4 = [
-      ...features.filter(f => f !== keyword),
-      ...benefits,
-    ].filter(Boolean).slice(0, 3) as string[];
+    const { headline: narHeadline, impactText: narImpact, proofBullets: narBullets, label: narLabel } = buildImpactNarrative(productData);
+    const keyword = texts?.keyword || narHeadline;
+    const mainText = texts?.benefit || narImpact;
+    const label4 = texts?.label || narLabel;
+    const bulletPool4 = narBullets;
 
     const kwFontSizeCanvas = keyword.length > 30 ? 52 : keyword.length > 20 ? 62 : keyword.length > 15 ? 70 : 78;
 

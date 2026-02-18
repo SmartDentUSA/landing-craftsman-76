@@ -131,6 +131,7 @@ interface Product {
     li_product_id?: string;
     [key: string]: any;
   };
+  applications?: string;
 }
 
 interface TechnicalSpec {
@@ -749,6 +750,8 @@ export function ModernProductCard({
         technicalSpecs={product.technical_specifications}
         productSalesPitch={product.sales_pitch}
         productDescription={product.description}
+        productTargetAudience={product.target_audience as string[] | undefined}
+        productApplications={product.applications}
       />
 
       {/* Modal de Geração TikTok */}

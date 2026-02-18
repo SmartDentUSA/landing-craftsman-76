@@ -79,6 +79,8 @@ interface InstagramCopyGeneratorProps {
   technicalSpecs?: Array<{ label: string; value: string }>;
   productSalesPitch?: string;
   productDescription?: string;
+  productTargetAudience?: string[];
+  productApplications?: string;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -90,7 +92,7 @@ const REELS_SCRIPT_LABELS: Record<string, { label: string; description: string }
   demonstration: { label: '🎯 Demonstração', description: 'Mostra o produto em ação' }
 };
 
-export function InstagramCopyGenerator({ productId, productName, productPrice, productCategory, productImages = [], productUrl, productBenefits, productFeatures, technicalSpecs, productSalesPitch, productDescription, isOpen, onClose }: InstagramCopyGeneratorProps) {
+export function InstagramCopyGenerator({ productId, productName, productPrice, productCategory, productImages = [], productUrl, productBenefits, productFeatures, technicalSpecs, productSalesPitch, productDescription, productTargetAudience, productApplications, isOpen, onClose }: InstagramCopyGeneratorProps) {
   // === Estados existentes (Copies de texto) ===
   const [feedCopies, setFeedCopies] = useState<CopyVariation[]>([
     { variation: 1, approach: 'storytelling', copy: '', link: '' },
@@ -1964,6 +1966,8 @@ ${slide.text}`;
                          technicalSpecs: technicalSpecs,
                          productUrl: productUrl,
                          salesPitch: productSalesPitch,
+                         targetAudience: productTargetAudience,
+                         applications: productApplications,
                        }}
                       slideTexts={slideTexts}
                       onSlideTextChange={(slideNum, key, value) =>
