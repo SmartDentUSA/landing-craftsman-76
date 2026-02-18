@@ -225,6 +225,14 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
               )}
             </div>
           ))}
+          <div className="flex justify-end pt-2 border-t border-border">
+            <button
+              onClick={() => setEditorOpen(false)}
+              className="flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer font-medium"
+            >
+              ✓ Aplicar
+            </button>
+          </div>
         </div>
       )}
     </div>

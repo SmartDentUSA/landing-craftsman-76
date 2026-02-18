@@ -151,6 +151,7 @@ export function InstagramCopyGenerator({ productId, productName, productPrice, p
   const [slideTexts, setSlideTexts] = useState<Partial<SlideTextsType>>({});
   const [fontFamily, setFontFamily] = useState<string>('system-ui, -apple-system, sans-serif');
   const [fontSize, setFontSize] = useState<number>(100);
+  const [savingVisualCarousel, setSavingVisualCarousel] = useState(false);
 
   function buildDefaultSlideTexts(): Partial<SlideTextsType> {
     const b = productBenefits || [];
@@ -166,22 +167,15 @@ export function InstagramCopyGenerator({ productId, productName, productPrice, p
   }
 
   useEffect(() => {
-    if (isOpen && productImages && productImages.length > 0) {
+    if (!isOpen) return;
+    if (productImages && productImages.length > 0) {
       const map: Record<number, string> = {};
       for (let i = 1; i <= 6; i++) {
         map[i] = productImages[(i - 1) % productImages.length].url;
       }
       setSlideImageMap(map);
     }
-    if (isOpen) {
-      setSlideTexts(buildDefaultSlideTexts());
-    }
-  }, [productImages, isOpen]);
-
-  useEffect(() => {
-    if (isOpen) {
-      loadExistingCopies();
-    }
+    loadExistingCopies();
   }, [isOpen, productId]);
 
   const loadExistingCopies = async () => {
@@ -235,6 +229,22 @@ export function InstagramCopyGenerator({ productId, productName, productPrice, p
       if (instagramData?.feed_carousels && Array.isArray(instagramData.feed_carousels)) {
         setFeedCarousels(instagramData.feed_carousels as FeedCarousel[]);
       }
+
+      // Carregar textos do Carrossel Visual salvo
+      const copies = data?.instagram_copies as any;
+      if (copies?.visual_carousel_texts) {
+        setSlideTexts(copies.visual_carousel_texts);
+        if (copies.visual_carousel_colors) {
+          setPrimaryColor(copies.visual_carousel_colors.primaryColor || '#1a1a2e');
+          setAccentColor(copies.visual_carousel_colors.accentColor || '#e94560');
+        }
+        if (copies.visual_carousel_font) {
+          setFontFamily(copies.visual_carousel_font.fontFamily || 'system-ui, -apple-system, sans-serif');
+          setFontSize(copies.visual_carousel_font.fontSize || 100);
+        }
+      } else {
+        setSlideTexts(buildDefaultSlideTexts());
+      }
     } catch (error) {
       console.error('Erro ao carregar copies:', error);
       toast({
@@ -245,6 +255,39 @@ export function InstagramCopyGenerator({ productId, productName, productPrice, p
     } finally {
       setLoading(false);
     }
+  };
+
+  const saveVisualCarouselTexts = async () => {
+    setSavingVisualCarousel(true);
+    try {
+      const { data: existingData } = await supabase
+        .from('products_repository')
+        .select('instagram_copies')
+        .eq('id', productId)
+        .single();
+
+      const existingCopies = (existingData?.instagram_copies as any) || {};
+
+      const { error } = await supabase
+        .from('products_repository')
+        .update({
+          instagram_copies: {
+            ...existingCopies,
+            visual_carousel_texts: slideTexts,
+            visual_carousel_colors: { primaryColor, accentColor },
+            visual_carousel_font: { fontFamily, fontSize },
+            last_updated: new Date().toISOString(),
+          } as any
+        })
+        .eq('id', productId);
+
+      if (error) throw error;
+
+      toast({ title: "💾 Salvo!", description: "Textos do Carrossel Visual salvos com sucesso." });
+    } catch (error) {
+      toast({ title: "Erro", description: "Não foi possível salvar o Carrossel Visual.", variant: "destructive" });
+    }
+    setSavingVisualCarousel(false);
   };
 
   const getApproachLabel = (approach: string): string => {
@@ -1736,6 +1779,18 @@ ${slide.text}`;
                           <Download className="h-4 w-4 mr-2" />
                         )}
                         📦 Baixar ZIP
+                      </Button>
+                      <Button
+                        onClick={saveVisualCarouselTexts}
+                        disabled={savingVisualCarousel}
+                        size="sm"
+                      >
+                        {savingVisualCarousel ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : (
+                          <Save className="h-4 w-4 mr-2" />
+                        )}
+                        💾 Salvar
                       </Button>
                     </div>
                   </div>
