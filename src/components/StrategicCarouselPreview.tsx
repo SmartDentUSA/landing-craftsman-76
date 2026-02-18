@@ -510,7 +510,12 @@ function Slide4Experience({ image, primaryColor, productData, texts }: { image: 
   const benefit = texts?.benefit || productData.benefits?.[2] || productData.benefits?.[1] || 'Resultados excepcionais em cada uso';
   const keyword = texts?.keyword || productData.features?.[0] || 'Excelência';
   const label = texts?.label || 'Experiência';
-  const kwFontSize = keyword.length > 15 ? 65 : 90;
+  // Auto-sizing: keyword
+  const kwFontSize = keyword.length > 30 ? 44 : keyword.length > 20 ? 55 : keyword.length > 15 ? 65 : 90;
+  // Auto-sizing: label (truncate visually if too long)
+  const labelFontSize = label.length > 30 ? 26 : label.length > 20 ? 30 : 36;
+  // Auto-sizing: benefit
+  const benefitFontSize = benefit.length > 120 ? 24 : benefit.length > 80 ? 28 : benefit.length > 60 ? 32 : 38;
 
   return (
     <div style={{ width: SLIDE_W, height: SLIDE_H, fontFamily: 'system-ui, -apple-system, sans-serif', display: 'flex', overflow: 'hidden' }}>
@@ -524,10 +529,10 @@ function Slide4Experience({ image, primaryColor, productData, texts }: { image: 
           <span style={{ fontWeight: 900, fontSize: 30, color: '#111' }}>4</span>
         </div>
       </div>
-      <div style={{ width: '50%', background: primaryColor, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '80px 70px', overflow: 'hidden' }}>
-        <p style={{ color: textOnPrimary, opacity: 0.7, fontSize: 36, fontWeight: 600, margin: '0 0 20px 0', textTransform: 'uppercase' as const, letterSpacing: 4, flexShrink: 0 }}>{label}</p>
-        <h2 style={{ color: textOnPrimary, fontSize: kwFontSize, fontWeight: 900, margin: '0 0 30px 0', lineHeight: 1.05, wordBreak: 'break-word' as const, flexShrink: 0 }}>{keyword}</h2>
-        <p style={{ color: textOnPrimary, opacity: 0.9, fontSize: benefit.length > 60 ? 32 : 38, lineHeight: 1.5, margin: 0, fontWeight: 400, wordBreak: 'break-word' as const }}>{benefit}</p>
+      <div style={{ width: '50%', background: primaryColor, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '60px 70px', gap: 16, overflow: 'hidden' }}>
+        <p style={{ color: textOnPrimary, opacity: 0.7, fontSize: labelFontSize, fontWeight: 600, margin: 0, textTransform: 'uppercase' as const, letterSpacing: 3, flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{label}</p>
+        <h2 style={{ color: textOnPrimary, fontSize: kwFontSize, fontWeight: 900, margin: 0, lineHeight: 1.1, wordBreak: 'break-word' as const, flexShrink: 0, overflow: 'hidden' }}>{keyword}</h2>
+        <p style={{ color: textOnPrimary, opacity: 0.9, fontSize: benefitFontSize, lineHeight: 1.5, margin: 0, fontWeight: 400, wordBreak: 'break-word' as const, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 6, WebkitBoxOrient: 'vertical' as const }}>{benefit}</p>
       </div>
     </div>
   );
