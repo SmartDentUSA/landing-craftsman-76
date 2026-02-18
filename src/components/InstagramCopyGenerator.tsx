@@ -160,11 +160,12 @@ export function InstagramCopyGenerator({ productId, productName, productPrice, p
     const sentences = pitch.split(/[.!]/);
     const firstSentence = sentences[0]?.trim();
     if (!firstSentence || firstSentence.length < 15) return null;
-    if (firstSentence.length <= 90) return firstSentence;
+    if (firstSentence.length <= 80) return firstSentence;
     const firstClause = firstSentence.split(',')[0]?.trim();
-    if (firstClause && firstClause.length >= 20 && firstClause.length <= 90) return firstClause;
+    if (firstClause && firstClause.length >= 20 && firstClause.length <= 80) return firstClause;
+    // Truncar na última palavra inteira antes de 80 chars
     const truncated = firstSentence.slice(0, 80).split(' ').slice(0, -1).join(' ');
-    return truncated.length >= 20 ? truncated + '...' : null;
+    return truncated.length >= 20 ? truncated : null;
   }
 
   function buildSmartHook(name: string, benefits: string[], features: string[], pitch?: string): string {
@@ -183,7 +184,7 @@ export function InstagramCopyGenerator({ productId, productName, productPrice, p
     const f = productFeatures || [];
     return {
       1: { hook: buildSmartHook(productName, b, f, productSalesPitch), productName },
-      2: { category: productCategory || '', productName },
+      2: { category: productCategory || '', introLabel: 'Apresentando', productName },
       3: { title: 'Por que confiar?' },
       4: { label: 'EXPERIÊNCIA', keyword: f[0] || '', benefit: b[2] || b[1] || b[0] || '' },
       5: { title: 'Você pode confiar', badge1: f[1] || f[0] || '', badge2: f[2] || b[1] || '', badge3: f[3] || b[2] || '' },
