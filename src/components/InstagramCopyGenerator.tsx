@@ -159,8 +159,8 @@ export function InstagramCopyGenerator({ productId, productName, productPrice, p
       1: { hook: b[0] ? `Você sabia que ${b[0].toLowerCase()}?` : `Descubra o segredo por trás de ${productName}`, productName },
       2: { category: productCategory || '', productName },
       3: { title: 'Por que confiar?' },
-      4: { label: 'EXPERIÊNCIA', keyword: f[0] || 'Excelência', benefit: b[1] || b[0] || 'Resultados excepcionais em cada uso' },
-      5: { title: 'Você pode confiar', badge1: f[0] || 'Biocompatível', badge2: f[1] || '5 Anos de Casos', badge3: f[2] || 'Qualidade Premium' },
+      4: { label: 'EXPERIÊNCIA', keyword: f[0] || 'Excelência', benefit: b[2] || b[1] || b[0] || 'Resultados excepcionais em cada uso' },
+      5: { title: 'Você pode confiar', badge1: f[1] || f[0] || 'Biocompatível', badge2: f[2] || b[1] || '5 Anos de Casos', badge3: f[3] || b[2] || 'Qualidade Premium' },
       6: { productName, ctaButton: '🛒 Comprar Agora', linkLabel: '🔗 Link na Bio', footer: 'Direct para mais informações' },
     };
   }
