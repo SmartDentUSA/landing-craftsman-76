@@ -1,180 +1,128 @@
 
-# Slide 4 (Experiência): Usar FAQs do Produto e HTML E-commerce
+# Slides 3 e 4: Usar Copies de Feed (Benefits + Problem/Solution)
 
-## O Problema
+## O Que o Usuário Quer
 
-O Slide 4 usa a função `buildImpactNarrative()` que sintetiza dados de `salesPitch`, `description`, `benefits` e `features`. O resultado é genérico porque esses campos muitas vezes têm conteúdo repetitivo ou curto demais.
+O sistema já gera 4 variações de "Copy para Feed" por IA:
+- **Variação 2 — Benefits** (`feedCopies[1].copy`): copy focada em benefícios
+- **Variação 3 — Problem/Solution** (`feedCopies[2].copy`): copy com estrutura dor → solução
 
-O usuário quer que o Slide 4 use fontes de conteúdo mais ricas e estratégicas:
-1. **FAQs do produto** — perguntas e respostas já estruturadas com o raciocínio cliente/dor/solução
-2. **HTML E-commerce gerado** — texto rico já otimizado com benefícios, argumentos de venda e contexto de uso
-
----
-
-## Onde estão esses dados
-
-### FAQs (`product.faq`)
-- Já existe no tipo `Product` em `ModernProductCard.tsx` (linha 94): `faq?: Array<{ question: string; answer: string }>`
-- **NÃO** está sendo passado para o `InstagramCopyGenerator` nem para o `ProductData` do carrossel
-- Os FAQs são a fonte mais rica: cada Q&A contém a dor (`question`) e a resolução (`answer`)
-
-### HTML E-commerce (`product.ecommerce_html`)
-- Já existe no tipo `Product` (linha 116–129): `ecommerce_html?: { html_content: string; ... }`
-- Contém HTML gerado por IA com argumentos completos de venda
-- Precisamos extrair o texto puro (strip HTML tags) para usar no carrossel
-- **NÃO** está sendo passado para o `InstagramCopyGenerator`
+Essas copies já estão salvas no banco (campo `instagram_copies.feed_copies`). O usuário quer que os **Slides 3 e 4** do carrossel visual usem esses textos ricos como fonte de conteúdo.
 
 ---
 
-## Estratégia de Conteúdo do Slide 4
+## Mapeamento Proposto
 
-A nova `buildImpactNarrative()` seguirá esta ordem de prioridade:
-
-```
-1. FAQs  →  headline = primeira pergunta (FAQ[0].question)
-             impactText = primeira resposta (FAQ[0].answer)
-             bullets = perguntas subsequentes (FAQ[1..3].question)
-2. HTML E-commerce (fallback)  →  extrai primeiros 300 chars de texto limpo
-3. salesPitch / description / benefits (fallback final — comportamento atual)
-```
-
-### Por que FAQs são a melhor fonte:
-- `question` captura a **dor** do cliente em linguagem natural ("Como isso resolve meu problema?")
-- `answer` captura a **solução** já argumentada
-- Estrutura Q&A é nativa para carrossel: headline = dor, texto = resolução, bullets = mais dúvidas comuns
+| Slide | Fonte atual | Nova fonte (preferencial) |
+|---|---|---|
+| **Slide 3** — Diferenciais | `technicalSpecs` + `features` | **Feed Copy #2 — Benefits** |
+| **Slide 4** — Experiência | FAQs → ecommerceHtml → salesPitch | **Feed Copy #3 — Problem/Solution** → FAQs → ecommerceHtml → salesPitch |
 
 ---
 
 ## Mudanças Técnicas
 
-### 1. `StrategicCarouselPreview.tsx` — Expandir `ProductData` interface
+### 1. `InstagramCopyGenerator.tsx` — Passar copies para `StrategicCarouselPreview`
 
-Adicionar `faq` e `ecommerceHtmlText` ao interface:
+Adicionar duas novas props ao `productData` do `StrategicCarouselPreview`:
 
-```typescript
-interface FAQ {
-  question: string;
-  answer: string;
-}
-
-interface ProductData {
-  name: string;
-  price?: number;
-  category?: string;
-  description?: string;
-  benefits?: string[];
-  features?: string[];
-  technicalSpecs?: TechnicalSpec[];
-  productUrl?: string;
-  salesPitch?: string;
-  targetAudience?: string[];
-  applications?: string;
-  faq?: FAQ[];               // NOVO
-  ecommerceHtmlText?: string; // NOVO — texto limpo do HTML gerado
-}
-```
-
-### 2. `StrategicCarouselPreview.tsx` — Atualizar `buildImpactNarrative()`
-
-Substituir a lógica atual pela nova lógica com prioridade FAQs → ecommerce → fallback:
-
-```typescript
-function buildImpactNarrative(productData: ProductData) {
-  const faqs = productData.faq || [];
-  const ecommerceText = productData.ecommerceHtmlText || '';
-  const salesPitch = productData.salesPitch || '';
-  const description = productData.description || '';
-  const benefits = productData.benefits || [];
-  const features = productData.features || [];
-  const specs = productData.technicalSpecs || [];
-
-  let headline = '';
-  let impactText = '';
-  let proofBullets: string[] = [];
-
-  if (faqs.length > 0) {
-    // FAQs: headline = primeira pergunta, texto = primeira resposta, bullets = mais perguntas
-    headline = faqs[0].question;
-    impactText = faqs[0].answer.slice(0, 250);
-    // Bullets: próximas perguntas (sem a que virou headline)
-    const faqBullets = faqs.slice(1, 4).map(f => f.question).filter(q => q.length < 90);
-    proofBullets = faqBullets.slice(0, 3);
-  } else if (ecommerceText) {
-    // HTML E-commerce: usar primeiros 300 chars como texto rico
-    headline = benefits[0] || features[0] || productData.name;
-    impactText = ecommerceText.slice(0, 250);
-    proofBullets = [benefits[1], benefits[2], features[0]].filter(Boolean).slice(0, 3);
-  } else {
-    // Fallback atual: salesPitch → description → benefits
-    headline = benefits[0] || features[0] || productData.name || 'Resultados que transformam';
-    if (salesPitch) {
-      impactText = salesPitch.slice(0, 220);
-    } else if (description && benefits[1]) {
-      impactText = `${description.slice(0, 130)}. ${benefits[1]}`.slice(0, 220);
-    } else if (description) {
-      impactText = description.slice(0, 220);
-    } else {
-      impactText = 'Solução desenvolvida para resultados reais e consistentes.';
-    }
-    const specBullets = specs.slice(0, 3).map(s => `${s.label}: ${s.value}`);
-    const featureBullets = features.filter(f => f !== headline && f.length < 80);
-    proofBullets = [...specBullets, ...featureBullets].slice(0, 3);
-  }
-
-  return { headline, impactText, proofBullets, label: 'Perguntas & Respostas' };
-}
-```
-
-O `label` agora contextualiza a origem: `"Perguntas & Respostas"` quando FAQs estão disponíveis, `"Impacto Real"` nos outros casos.
-
-### 3. `InstagramCopyGenerator.tsx` — Adicionar props `productFaq` e `productEcommerceHtml`
-
-**Interface (`InstagramCopyGeneratorProps`):**
-```typescript
-productFaq?: Array<{ question: string; answer: string }>;
-productEcommerceHtml?: string; // html_content bruto
-```
-
-**Função de extração de texto limpo (inline — sem dependência nova):**
-```typescript
-function stripHtmlToText(html: string): string {
-  return html
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-```
-
-**No `productData` passado ao `StrategicCarouselPreview` (linha ~1959):**
 ```typescript
 productData={{
   // ...props existentes...
   faq: productFaq,
   ecommerceHtmlText: productEcommerceHtml ? stripHtmlToText(productEcommerceHtml).slice(0, 300) : undefined,
+  feedCopyBenefits: feedCopies.find(v => v.approach === 'benefits')?.copy || undefined,       // NOVO
+  feedCopyProblemSolution: feedCopies.find(v => v.approach === 'problem_solution')?.copy || undefined, // NOVO
 }}
 ```
 
-### 4. `ModernProductCard.tsx` — Passar `faq` e `ecommerce_html` para `InstagramCopyGenerator`
+Isso aproveita os dados **já carregados** do banco — sem nenhuma chamada extra.
+
+### 2. `StrategicCarouselPreview.tsx` — Expandir interface `ProductData`
 
 ```typescript
-<InstagramCopyGenerator
-  // ...props existentes...
-  productFaq={product.faq}
-  productEcommerceHtml={product.ecommerce_html?.html_content}
-/>
+interface ProductData {
+  // ...campos existentes...
+  faq?: FAQ[];
+  ecommerceHtmlText?: string;
+  feedCopyBenefits?: string;        // NOVO — variação Benefits do Feed
+  feedCopyProblemSolution?: string; // NOVO — variação Problem/Solution do Feed
+}
+```
+
+### 3. `StrategicCarouselPreview.tsx` — Slide 3: Usar `feedCopyBenefits`
+
+O **Slide 3** (`Slide3Technical`) exibe uma lista de bullets com specs/features. A nova lógica:
+
+- **Se `feedCopyBenefits` existe**: exibir o texto diretamente no painel direito do slide (como parágrafo rico), em vez de uma lista de specs
+- **Fallback**: comportamento atual (specs técnicas + features)
+
+O título (`texts?.title || 'Por que confiar?'`) permanece editável normalmente.
+
+**Layout do Slide 3 com feedCopyBenefits**:
+- Lado esquerdo: imagem do produto (igual ao atual)
+- Lado direito: título + divider + **texto da copy Benefits** em fonte fluida (tamanho auto-sizing por comprimento)
+
+### 4. `StrategicCarouselPreview.tsx` — Slide 4: Usar `feedCopyProblemSolution`
+
+A função `buildImpactNarrative()` ganha uma nova **prioridade 0** — antes dos FAQs:
+
+```typescript
+function buildImpactNarrative(productData: ProductData) {
+  // NOVA Prioridade 0: Feed Copy Problem/Solution
+  if (productData.feedCopyProblemSolution) {
+    const copy = productData.feedCopyProblemSolution;
+    // Extrai headline: primeira linha não-vazia
+    const lines = copy.split('\n').map(l => l.trim()).filter(Boolean);
+    const headline = lines[0]?.slice(0, 80) || productData.name;
+    // Corpo: demais linhas até 250 chars
+    const body = lines.slice(1).join(' ').slice(0, 250);
+    // Bullets: linhas que começam com emoji ou hífen (listas)
+    const bulletLines = lines.filter(l => /^[•\-💸⏳✅🔥⚡🎯]/.test(l)).slice(0, 3);
+    return {
+      headline,
+      impactText: body || copy.slice(0, 250),
+      proofBullets: bulletLines,
+      label: 'Problema & Solução',
+    };
+  }
+
+  // Prioridade 1: FAQs (comportamento atual)
+  // ...resto da função sem mudanças
+}
+```
+
+### 5. Canvas PNG — `generateSlidePNG()` no `InstagramCopyGenerator.tsx`
+
+O `productData` passado para `generateSlidePNG()` (linha 805) já usa os campos do `productData` básico. Precisamos incluir os novos campos para que o export PNG também use as copies:
+
+```typescript
+const productData = {
+  name: productName,
+  // ...campos existentes...
+  feedCopyBenefits: feedCopies.find(v => v.approach === 'benefits')?.copy || undefined,
+  feedCopyProblemSolution: feedCopies.find(v => v.approach === 'problem_solution')?.copy || undefined,
+};
 ```
 
 ---
 
-## Resultado Visual Esperado
+## Hierarquia de Conteúdo Final
 
-| Cenário | Label | Headline | Texto Principal | Bullets |
-|---|---|---|---|---|
-| Produto com FAQs | "Perguntas & Respostas" | 1ª pergunta do FAQ | 1ª resposta do FAQ | Próximas 3 perguntas |
-| Produto com E-commerce HTML | "Impacto Real" | `benefits[0]` | Texto extraído do HTML | `benefits[1..2]` |
-| Produto sem nenhum | "Impacto Real" | `benefits[0]` | `salesPitch` ou `description` | Specs técnicas |
+### Slide 3 — Diferenciais
+```
+1. feedCopyBenefits (copy IA gerada — mais rica)
+2. technicalSpecs (comportamento atual)
+3. features (fallback final)
+```
+
+### Slide 4 — Experiência
+```
+1. feedCopyProblemSolution (copy IA com estrutura dor → solução)
+2. FAQs do produto (perguntas e respostas estruturadas)
+3. ecommerceHtmlText (HTML gerado limpo)
+4. salesPitch / description / benefits (fallback final)
+```
 
 ---
 
@@ -182,8 +130,7 @@ productData={{
 
 | Arquivo | Mudança |
 |---|---|
-| `src/components/StrategicCarouselPreview.tsx` | Interface `ProductData` + função `buildImpactNarrative()` |
-| `src/components/InstagramCopyGenerator.tsx` | 2 novas props + função `stripHtmlToText` + passar para `productData` |
-| `src/components/ModernProductCard.tsx` | Passar `product.faq` e `product.ecommerce_html?.html_content` |
+| `src/components/StrategicCarouselPreview.tsx` | Interface `ProductData` + `buildImpactNarrative()` + `Slide3Technical` |
+| `src/components/InstagramCopyGenerator.tsx` | `productData` no `StrategicCarouselPreview` + `productData` no export ZIP |
 
-**3 arquivos, mudanças cirúrgicas. Canvas do Slide 4 já usa `buildImpactNarrative()` — se atualiza automaticamente.**
+**2 arquivos, mudanças cirúrgicas. Zero chamadas de API extras — usa dados já carregados.**
