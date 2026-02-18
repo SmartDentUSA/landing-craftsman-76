@@ -999,36 +999,72 @@ export async function generateSlidePNG(
     }
     drawBadge(3, 60, 60, primaryColor, textOnPrimary);
     const rx = imgW + 40;
-    let ry = 100;
+    const TEXT_FONT_S3 = '700 34px system-ui, -apple-system, sans-serif';
+    const GAP_S3 = 44;
+    const ICON_SIZE_S3 = 56;
+    const LINE_H_S3 = 44;
+    const TEXT_MAX_W_S3 = W - rx - 60;
+
+    const items = specs.length > 0
+      ? specs.slice(0, 5).map(s => s.label + (s.value ? ': ' + s.value : ''))
+      : features.slice(0, 5);
+
+    // Pre-calculate line count for each item to determine true height
+    const measureLinesS3 = (text: string): number => {
+      ctx.font = TEXT_FONT_S3;
+      const words = text.split(' ');
+      let line = '';
+      let lines = 1;
+      for (const word of words) {
+        const test = line + word + ' ';
+        if (ctx.measureText(test).width > TEXT_MAX_W_S3 && line !== '') {
+          lines++;
+          line = word + ' ';
+        } else {
+          line = test;
+        }
+      }
+      return lines;
+    };
+
+    const TITLE_H_S3 = 52 * 1.2 + 60;
+    const itemHeightsS3 = items.map(item => Math.max(ICON_SIZE_S3, measureLinesS3(item) * LINE_H_S3));
+    const totalContentH_S3 = TITLE_H_S3 + itemHeightsS3.reduce((a, b) => a + b, 0) + GAP_S3 * (items.length - 1);
+
+    // Vertically center content like JSX justifyContent:'center'
+    let ry = Math.max(80, (H - totalContentH_S3) / 2);
+
     ctx.font = '900 52px system-ui, -apple-system, sans-serif';
     ctx.fillStyle = '#ffffff';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
     ctx.fillText(title, rx, ry);
-    ry += 120;
-    const items = specs.length > 0
-      ? specs.slice(0, 5).map(s => s.label + (s.value ? ': ' + s.value : ''))
-      : features.slice(0, 5);
+    ry += TITLE_H_S3;
+
     for (let i = 0; i < items.length; i++) {
-      const item = items[i];
+      const itemH = itemHeightsS3[i];
+      const itemY = ry;
+
       // Icon box
       ctx.fillStyle = primaryColor;
-      roundRect(rx, ry, 56, 56, 12);
+      roundRect(rx, itemY, ICON_SIZE_S3, ICON_SIZE_S3, 12);
       ctx.fill();
-      // Unicode icon centered in box
       ctx.font = '32px Arial, sans-serif';
       ctx.fillStyle = '#ffffff';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(ICONS_CANVAS[i % ICONS_CANVAS.length], rx + 28, ry + 28);
-      // Item text
-      ctx.font = '700 34px system-ui, -apple-system, sans-serif';
+      ctx.fillText(ICONS_CANVAS[i % ICONS_CANVAS.length], rx + 28, itemY + 28);
+
+      // Item text — starts at same Y as icon
+      ctx.font = TEXT_FONT_S3;
       ctx.fillStyle = '#e0e0e0';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
-      ry = wrapText(ctx, item, rx + 76, ry + 10, W - rx - 60, 42);
-      ry += 18;
+      wrapText(ctx, items[i], rx + 76, itemY + 10, TEXT_MAX_W_S3, LINE_H_S3);
+
+      ry += itemH + GAP_S3;
     }
+
     if (items.length === 0) {
       ctx.font = '400 36px system-ui, -apple-system, sans-serif';
       ctx.fillStyle = '#aaaaaa';
