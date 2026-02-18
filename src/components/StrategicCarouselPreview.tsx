@@ -17,6 +17,7 @@ interface ProductData {
   features?: string[];
   technicalSpecs?: TechnicalSpec[];
   productUrl?: string;
+  salesPitch?: string;
 }
 
 // ========================= SlideTexts Types =========================
@@ -243,6 +244,14 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
 function Slide1Hook({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; productData: ProductData; texts?: { hook?: string; productName?: string } }) {
   const textColor = getLuminance(primaryColor) > 0.5 ? '#000000' : '#ffffff';
   const hook = texts?.hook || (() => {
+    // Prioridade 1: extrair do sales_pitch
+    if (productData.salesPitch) {
+      const sentences = productData.salesPitch.split(/[.!]/);
+      const first = sentences[0]?.trim();
+      if (first && first.length >= 15 && first.length <= 90) return first;
+      const clause = first?.split(',')[0]?.trim();
+      if (clause && clause.length >= 20 && clause.length <= 90) return clause;
+    }
     const features = productData.features || [];
     const benefits = productData.benefits || [];
     const shortFeature = features.find(f => f && f.length <= 35);
@@ -690,6 +699,14 @@ export async function generateSlidePNG(
 
   if (slideNum === 1) {
     const hookText = texts?.hook || (() => {
+      // Prioridade 1: extrair do sales_pitch
+      if (productData.salesPitch) {
+        const sentences = productData.salesPitch.split(/[.!]/);
+        const first = sentences[0]?.trim();
+        if (first && first.length >= 15 && first.length <= 90) return first;
+        const clause = first?.split(',')[0]?.trim();
+        if (clause && clause.length >= 20 && clause.length <= 90) return clause;
+      }
       const shortFeature = (productData.features || []).find(f => f && f.length <= 35);
       if (shortFeature) return `Você já ouviu falar em ${shortFeature}?`;
       const shortBenefit = (benefits || []).find(b => b && b.length <= 45);
@@ -1005,6 +1022,14 @@ export function generateSlideHTML(slideNum: number, imageUrl: string, primaryCol
     : features.map(f => `<div style="display:flex;align-items:flex-start;gap:24px;"><div style="width:56px;height:56px;border-radius:12px;background:${primaryColor};flex-shrink:0;"></div><div><p style="color:#e0e0e0;font-weight:700;font-size:36px;margin:0;">${f}</p></div></div>`);
 
   const smartHook = (() => {
+    // Prioridade 1: extrair do sales_pitch
+    if (productData.salesPitch) {
+      const sentences = productData.salesPitch.split(/[.!]/);
+      const first = sentences[0]?.trim();
+      if (first && first.length >= 15 && first.length <= 90) return first;
+      const clause = first?.split(',')[0]?.trim();
+      if (clause && clause.length >= 20 && clause.length <= 90) return clause;
+    }
     const shortFeature = features.find(f => f && f.length <= 35);
     if (shortFeature) return `Você já ouviu falar em ${shortFeature}?`;
     const shortBenefit = benefits.find(b => b && b.length <= 45);
