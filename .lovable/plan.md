@@ -1,132 +1,189 @@
 
-# Corrigir Divergência: Imagens Exportadas ≠ Preview do Sistema
+# Slide 4 (Experiência): Usar FAQs do Produto e HTML E-commerce
 
-## Diagnóstico Completo
+## O Problema
 
-Analisando os 6 slides exportados versus o código, há **3 categorias de problemas**:
+O Slide 4 usa a função `buildImpactNarrative()` que sintetiza dados de `salesPitch`, `description`, `benefits` e `features`. O resultado é genérico porque esses campos muitas vezes têm conteúdo repetitivo ou curto demais.
 
-### Categoria 1 — Slide 4: Texto flutuante sobre imagem (principal problema)
-O canvas do Slide 4 renderiza tudo sobre a imagem full-bleed com overlay gradiente. O resultado:
-- Bullets sobrepostos à imagem ficam ilegíveis (texto sobre texto na foto)
-- "INFOGRÁFICO DETALHADO..." é um texto de prompt AI que está vazando de algum campo do produto para o campo `label` ou `keyword`
-- O layout full-bleed funciona bem no preview pequeno (escala 22%) mas falha no canvas 1080x1350px real
+O usuário quer que o Slide 4 use fontes de conteúdo mais ricas e estratégicas:
+1. **FAQs do produto** — perguntas e respostas já estruturadas com o raciocínio cliente/dor/solução
+2. **HTML E-commerce gerado** — texto rico já otimizado com benefícios, argumentos de venda e contexto de uso
 
-**Solução**: O Slide 4 no canvas deve usar o **mesmo layout split 40%/60%** que o Slide 3 (imagem à esquerda, painel escuro à direita com texto), em vez de full-bleed com overlay. Isso garante legibilidade total e consistência com o preview.
+---
 
-### Categoria 2 — Slide 6: "Link na Bio" persistindo no canvas
-O canvas linha 1337-1338 foi atualizado para "💡 Saiba Mais" e "🔗 Saiba Mais", mas o `generateSlideHTML()` na linha 1433 ainda tem `'🛒 Comprar Agora'` e `'🔗 Link na Bio'` hardcoded. Isso afeta o export HTML (não o PNG), mas deve ser corrigido por consistência.
+## Onde estão esses dados
 
-### Categoria 3 — Slide 5: Badges com texto cortado
-O canvas usa `white-space: nowrap` (via `truncateToWidth`) para badges. Badges longos como "Volume de construção otimizado (144 × 81 × 150 mm) para peças dentárias" são truncados. A lógica JSX usa `wordBreak: 'break-word'` e funciona corretamente.
+### FAQs (`product.faq`)
+- Já existe no tipo `Product` em `ModernProductCard.tsx` (linha 94): `faq?: Array<{ question: string; answer: string }>`
+- **NÃO** está sendo passado para o `InstagramCopyGenerator` nem para o `ProductData` do carrossel
+- Os FAQs são a fonte mais rica: cada Q&A contém a dor (`question`) e a resolução (`answer`)
+
+### HTML E-commerce (`product.ecommerce_html`)
+- Já existe no tipo `Product` (linha 116–129): `ecommerce_html?: { html_content: string; ... }`
+- Contém HTML gerado por IA com argumentos completos de venda
+- Precisamos extrair o texto puro (strip HTML tags) para usar no carrossel
+- **NÃO** está sendo passado para o `InstagramCopyGenerator`
+
+---
+
+## Estratégia de Conteúdo do Slide 4
+
+A nova `buildImpactNarrative()` seguirá esta ordem de prioridade:
+
+```
+1. FAQs  →  headline = primeira pergunta (FAQ[0].question)
+             impactText = primeira resposta (FAQ[0].answer)
+             bullets = perguntas subsequentes (FAQ[1..3].question)
+2. HTML E-commerce (fallback)  →  extrai primeiros 300 chars de texto limpo
+3. salesPitch / description / benefits (fallback final — comportamento atual)
+```
+
+### Por que FAQs são a melhor fonte:
+- `question` captura a **dor** do cliente em linguagem natural ("Como isso resolve meu problema?")
+- `answer` captura a **solução** já argumentada
+- Estrutura Q&A é nativa para carrossel: headline = dor, texto = resolução, bullets = mais dúvidas comuns
 
 ---
 
 ## Mudanças Técnicas
 
-### Fix 1 — Canvas Slide 4: Trocar full-bleed por layout split (linhas 1172–1279)
+### 1. `StrategicCarouselPreview.tsx` — Expandir `ProductData` interface
 
-Em vez do layout atual (imagem + overlay gradiente + texto flutuante), o canvas do Slide 4 passa a usar o mesmo padrão do Slide 3:
-
-```
-|── 42% imagem com clip ──|── 58% painel #0f0f14 com textos ──|
-```
+Adicionar `faq` e `ecommerceHtmlText` ao interface:
 
 ```typescript
-} else if (slideNum === 4) {
-  const { headline, impactText, proofBullets, label: narLabel } = buildImpactNarrative(productData);
-  const keyword = texts?.keyword || headline;
-  const mainText = texts?.benefit || impactText;
-  const label4 = texts?.label || narLabel;
-  const bulletPool4 = proofBullets;
+interface FAQ {
+  question: string;
+  answer: string;
+}
 
-  // Fundo escuro
-  ctx.fillStyle = '#0f0f14';
-  ctx.fillRect(0, 0, W, H);
-
-  // Imagem à esquerda (42%) com clip
-  const imgW4 = Math.round(W * 0.42);
-  if (img) {
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(0, 0, imgW4, H);
-    ctx.clip();
-    drawImageCover(ctx, img, 0, 0, imgW4, H);
-    ctx.restore();
-    // Gradiente de feather na borda direita da imagem
-    const grad4 = ctx.createLinearGradient(imgW4 - 120, 0, imgW4, 0);
-    grad4.addColorStop(0, 'rgba(15,15,20,0)');
-    grad4.addColorStop(1, '#0f0f14');
-    ctx.fillStyle = grad4;
-    ctx.fillRect(imgW4 - 120, 0, 120, H);
-  }
-
-  drawBadge(4, 60, 60, 'rgba(255,255,255,0.15)', '#ffffff');
-
-  // Painel de texto à direita
-  const rx4 = imgW4 + 40;
-  const textW4 = W - rx4 - 60;
-
-  // Font sizes dinâmicos
-  const kwFontSizeCanvas = keyword.length > 30 ? 52 : keyword.length > 20 ? 62 : 72;
-  const benFontSizeCanvas = mainText.length > 200 ? 28 : mainText.length > 120 ? 32 : 36;
-  const benLineH4 = benFontSizeCanvas * 1.5;
-  const kwLineH4 = kwFontSizeCanvas * 1.1;
-  const bulletFontSize4 = benFontSizeCanvas * 0.85;
-
-  // Calcular alturas para centramento vertical
-  // ... (mesma lógica existente, mas com rx4 = imgW4 + 40)
-
-  // Label, divider, keyword, mainText, bullets — mesma lógica existente
-  // Só muda o ponto de origem rx4 e a ausência de overlay
+interface ProductData {
+  name: string;
+  price?: number;
+  category?: string;
+  description?: string;
+  benefits?: string[];
+  features?: string[];
+  technicalSpecs?: TechnicalSpec[];
+  productUrl?: string;
+  salesPitch?: string;
+  targetAudience?: string[];
+  applications?: string;
+  faq?: FAQ[];               // NOVO
+  ecommerceHtmlText?: string; // NOVO — texto limpo do HTML gerado
 }
 ```
 
-### Fix 2 — Canvas Slide 5: Permitir wrap nos badges (linhas 1309–1331)
+### 2. `StrategicCarouselPreview.tsx` — Atualizar `buildImpactNarrative()`
 
-Trocar `truncateToWidth` por `wrapText` para badges longos:
+Substituir a lógica atual pela nova lógica com prioridade FAQs → ecommerce → fallback:
 
 ```typescript
-// Antes (linha 1330):
-ctx.fillText(badge, 80 + 130, by + badgeBoxH / 2, maxBadgeTextW);
+function buildImpactNarrative(productData: ProductData) {
+  const faqs = productData.faq || [];
+  const ecommerceText = productData.ecommerceHtmlText || '';
+  const salesPitch = productData.salesPitch || '';
+  const description = productData.description || '';
+  const benefits = productData.benefits || [];
+  const features = productData.features || [];
+  const specs = productData.technicalSpecs || [];
 
-// Depois — medir linhas corretamente:
-ctx.font = '700 40px system-ui, -apple-system, sans-serif';
-const words5 = badge.split(' ');
-// ... measureLines para calcular badgeLines antes de desenhar caixa
-// usar wrapText centrado verticalmente dentro da caixa
+  let headline = '';
+  let impactText = '';
+  let proofBullets: string[] = [];
+
+  if (faqs.length > 0) {
+    // FAQs: headline = primeira pergunta, texto = primeira resposta, bullets = mais perguntas
+    headline = faqs[0].question;
+    impactText = faqs[0].answer.slice(0, 250);
+    // Bullets: próximas perguntas (sem a que virou headline)
+    const faqBullets = faqs.slice(1, 4).map(f => f.question).filter(q => q.length < 90);
+    proofBullets = faqBullets.slice(0, 3);
+  } else if (ecommerceText) {
+    // HTML E-commerce: usar primeiros 300 chars como texto rico
+    headline = benefits[0] || features[0] || productData.name;
+    impactText = ecommerceText.slice(0, 250);
+    proofBullets = [benefits[1], benefits[2], features[0]].filter(Boolean).slice(0, 3);
+  } else {
+    // Fallback atual: salesPitch → description → benefits
+    headline = benefits[0] || features[0] || productData.name || 'Resultados que transformam';
+    if (salesPitch) {
+      impactText = salesPitch.slice(0, 220);
+    } else if (description && benefits[1]) {
+      impactText = `${description.slice(0, 130)}. ${benefits[1]}`.slice(0, 220);
+    } else if (description) {
+      impactText = description.slice(0, 220);
+    } else {
+      impactText = 'Solução desenvolvida para resultados reais e consistentes.';
+    }
+    const specBullets = specs.slice(0, 3).map(s => `${s.label}: ${s.value}`);
+    const featureBullets = features.filter(f => f !== headline && f.length < 80);
+    proofBullets = [...specBullets, ...featureBullets].slice(0, 3);
+  }
+
+  return { headline, impactText, proofBullets, label: 'Perguntas & Respostas' };
+}
 ```
 
-A altura `badgeBoxH` já é calculada com base em `badgeLines`, mas o texto é renderizado com `fillText` em vez de `wrapText`. Basta substituir `fillText` por `wrapText` na linha correta.
+O `label` agora contextualiza a origem: `"Perguntas & Respostas"` quando FAQs estão disponíveis, `"Impacto Real"` nos outros casos.
 
-### Fix 3 — generateSlideHTML Slide 6: Atualizar strings legadas (linha 1433)
+### 3. `InstagramCopyGenerator.tsx` — Adicionar props `productFaq` e `productEcommerceHtml`
+
+**Interface (`InstagramCopyGeneratorProps`):**
+```typescript
+productFaq?: Array<{ question: string; answer: string }>;
+productEcommerceHtml?: string; // html_content bruto
+```
+
+**Função de extração de texto limpo (inline — sem dependência nova):**
+```typescript
+function stripHtmlToText(html: string): string {
+  return html
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+```
+
+**No `productData` passado ao `StrategicCarouselPreview` (linha ~1959):**
+```typescript
+productData={{
+  // ...props existentes...
+  faq: productFaq,
+  ecommerceHtmlText: productEcommerceHtml ? stripHtmlToText(productEcommerceHtml).slice(0, 300) : undefined,
+}}
+```
+
+### 4. `ModernProductCard.tsx` — Passar `faq` e `ecommerce_html` para `InstagramCopyGenerator`
 
 ```typescript
-// Linha 1433, trocar no slideBodies[6]:
-// '🛒 Comprar Agora'  →  '💡 Saiba Mais'
-// '🔗 Link na Bio'    →  '🔗 Saiba Mais'
+<InstagramCopyGenerator
+  // ...props existentes...
+  productFaq={product.faq}
+  productEcommerceHtml={product.ecommerce_html?.html_content}
+/>
 ```
 
 ---
 
-## Por que Slide 4 Split é a Solução Certa
+## Resultado Visual Esperado
 
-O layout full-bleed com overlay foi projetado para quando o produto tem foto de alta qualidade e ambiente. Na prática, muitos produtos têm fundo branco ou cinza — o overlay escuro sobre fundo branco cria um visual cinza desbotado, e os bullets ficam sobrepostos à imagem do produto.
-
-O split 42/58 resolve:
-- Texto sempre sobre fundo escuro sólido (#0f0f14) — 100% legível
-- Imagem do produto claramente visível à esquerda
-- Consistência visual com o Slide 3 (padrão estabelecido)
-- O JSX do preview também deve ser atualizado para usar split (remover full-bleed)
+| Cenário | Label | Headline | Texto Principal | Bullets |
+|---|---|---|---|---|
+| Produto com FAQs | "Perguntas & Respostas" | 1ª pergunta do FAQ | 1ª resposta do FAQ | Próximas 3 perguntas |
+| Produto com E-commerce HTML | "Impacto Real" | `benefits[0]` | Texto extraído do HTML | `benefits[1..2]` |
+| Produto sem nenhum | "Impacto Real" | `benefits[0]` | `salesPitch` ou `description` | Specs técnicas |
 
 ---
 
 ## Arquivos a Modificar
 
-| Arquivo | Linhas | Mudança |
-|---|---|---|
-| `src/components/StrategicCarouselPreview.tsx` | 582–633 | Slide 4 JSX: trocar full-bleed por split 42/58 |
-| `src/components/StrategicCarouselPreview.tsx` | 1172–1279 | Canvas Slide 4: trocar full-bleed por split idêntico ao Slide 3 |
-| `src/components/StrategicCarouselPreview.tsx` | 1309–1331 | Canvas Slide 5: `fillText` → `wrapText` para badges |
-| `src/components/StrategicCarouselPreview.tsx` | 1433 | `generateSlideHTML` Slide 6: atualizar strings CTA |
+| Arquivo | Mudança |
+|---|---|
+| `src/components/StrategicCarouselPreview.tsx` | Interface `ProductData` + função `buildImpactNarrative()` |
+| `src/components/InstagramCopyGenerator.tsx` | 2 novas props + função `stripHtmlToText` + passar para `productData` |
+| `src/components/ModernProductCard.tsx` | Passar `product.faq` e `product.ecommerce_html?.html_content` |
 
-**1 arquivo, 4 seções cirúrgicas.**
+**3 arquivos, mudanças cirúrgicas. Canvas do Slide 4 já usa `buildImpactNarrative()` — se atualiza automaticamente.**
