@@ -150,6 +150,7 @@ export function InstagramCopyGenerator({ productId, productName, productPrice, p
   const [accentColor, setAccentColor] = useState('#e94560');
   const [isExportingZip, setIsExportingZip] = useState(false);
   const [generatingVisualCarousel, setGeneratingVisualCarousel] = useState(false);
+  const [generatingHook, setGeneratingHook] = useState(false);
   const [slideTexts, setSlideTexts] = useState<Partial<SlideTextsType>>({});
   const [fontFamily, setFontFamily] = useState<string>('system-ui, -apple-system, sans-serif');
   const [fontSize, setFontSize] = useState<number>(100);
@@ -831,7 +832,7 @@ ${slide.text}`;
           const prevTexts = prev as any;
           return {
             ...prev,
-            // Slide 1: SEMPRE usar buildSmartHook com sales_pitch real — NUNCA o texto inventado pela IA
+            // Slide 1: Usar IA para gancho criativo e único (chamada assíncrona à edge function)
             1: {
               hook: buildSmartHook(productName, productBenefits || [], productFeatures || [], productSalesPitch),
               productName: prevTexts[1]?.productName || productName,
@@ -1853,6 +1854,26 @@ ${slide.text}`;
                           <Sparkles className="h-4 w-4 mr-2" />
                         )}
                         🤖 Gerar com IA
+                      </Button>
+                      <Button
+                        onClick={async () => {
+                          setGeneratingHook(true);
+                          try {
+                            const { data } = await supabase.functions.invoke('generate-carousel-hook', {
+                              body: { productName, salesPitch: productSalesPitch || '', benefits: productBenefits || [], features: productFeatures || [] },
+                            });
+                            if (data?.hook) {
+                              setSlideTexts(prev => ({ ...prev, 1: { ...((prev[1] as any) || {}), hook: data.hook, productName: (prev[1] as any)?.productName || productName } }));
+                              toast({ title: '🎣 Novo gancho gerado!', description: data.hook });
+                            }
+                          } finally { setGeneratingHook(false); }
+                        }}
+                        disabled={generatingHook}
+                        size="sm"
+                        variant="outline"
+                      >
+                        {generatingHook ? <span className="animate-spin mr-1">⏳</span> : '🎣'}
+                        {generatingHook ? 'Gerando...' : 'Novo Gancho IA'}
                       </Button>
                       <Button
                         onClick={handleExportZip}
