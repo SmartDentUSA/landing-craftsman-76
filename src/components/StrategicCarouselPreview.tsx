@@ -190,7 +190,7 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
 
       {/* Action row: thumbnails + upload + edit */}
       <div className="flex items-center gap-1 flex-wrap justify-center" style={{ maxWidth: containerW + 40 }}>
-        {productImages.slice(0, 5).map((img, idx) => (
+        {productImages.map((img, idx) => (
           <button
             key={idx}
             onClick={() => onImageChange(slideNum, img.url)}
