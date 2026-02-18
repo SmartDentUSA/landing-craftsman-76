@@ -737,6 +737,16 @@ export function ModernProductCard({
         onClose={() => setShowInstagramModal(false)}
         productId={product.id}
         productName={product.name}
+        productPrice={product.price}
+        productCategory={product.category}
+        productImages={[
+          ...(product.image_url ? [{ url: product.image_url, alt: product.name }] : []),
+          ...(Array.isArray(product.images_gallery) ? product.images_gallery : [])
+        ]}
+        productUrl={product.product_url}
+        productBenefits={product.benefits}
+        productFeatures={product.features}
+        technicalSpecs={product.technical_specifications}
       />
 
       {/* Modal de Geração TikTok */}
