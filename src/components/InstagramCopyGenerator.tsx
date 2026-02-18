@@ -10,7 +10,8 @@ import { Loader2, Copy, Edit, Save, X, Zap, Code, ExternalLink, Film, Plus, Chev
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { StrategicCarouselPreview, generateSlidePNG } from "./StrategicCarouselPreview";
+import { StrategicCarouselPreview, generateSlidePNG, fetchAsDataUrl } from "./StrategicCarouselPreview";
+import type { SlideTextsType } from "./StrategicCarouselPreview";
 import JSZip from "jszip";
 
 // === Tipos para Carrossel (7 Slides) ===
@@ -146,6 +147,21 @@ export function InstagramCopyGenerator({ productId, productName, productPrice, p
   const [primaryColor, setPrimaryColor] = useState('#1a1a2e');
   const [accentColor, setAccentColor] = useState('#e94560');
   const [isExportingZip, setIsExportingZip] = useState(false);
+  const [generatingVisualCarousel, setGeneratingVisualCarousel] = useState(false);
+  const [slideTexts, setSlideTexts] = useState<Partial<SlideTextsType>>({});
+
+  function buildDefaultSlideTexts(): Partial<SlideTextsType> {
+    const b = productBenefits || [];
+    const f = productFeatures || [];
+    return {
+      1: { hook: b[0] ? `Você sabia que ${b[0].toLowerCase()}?` : `Descubra o segredo por trás de ${productName}`, productName },
+      2: { category: productCategory || '', productName },
+      3: { title: 'Por que confiar?' },
+      4: { label: 'EXPERIÊNCIA', keyword: f[0] || 'Excelência', benefit: b[1] || b[0] || 'Resultados excepcionais em cada uso' },
+      5: { title: 'Você pode confiar', badge1: f[0] || 'Biocompatível', badge2: f[1] || '5 Anos de Casos', badge3: f[2] || 'Qualidade Premium' },
+      6: { productName, ctaButton: '🛒 Comprar Agora', linkLabel: '🔗 Link na Bio', footer: 'Direct para mais informações' },
+    };
+  }
 
   useEffect(() => {
     if (isOpen && productImages && productImages.length > 0) {
@@ -154,6 +170,9 @@ export function InstagramCopyGenerator({ productId, productName, productPrice, p
         map[i] = productImages[(i - 1) % productImages.length].url;
       }
       setSlideImageMap(map);
+    }
+    if (isOpen) {
+      setSlideTexts(buildDefaultSlideTexts());
     }
   }, [productImages, isOpen]);
 
