@@ -343,7 +343,7 @@ function Slide1Hook({ image, primaryColor, productData, texts }: { image: string
         <span style={{ color: textColor, fontWeight: 900, fontSize: 36 }}>1</span>
       </div>
       <div style={{ position: 'absolute', top: '15%', left: 80, right: 80, textAlign: 'center' }}>
-        <p style={{ color: textColor, fontWeight: 900, fontSize: 80, lineHeight: 1.1, margin: 0, textShadow: '0 2px 20px rgba(0,0,0,0.3)' }}>{hook}</p>
+        <p style={{ color: textColor, fontWeight: 400, fontSize: 58, lineHeight: 1.2, margin: 0, textShadow: '0 2px 20px rgba(0,0,0,0.3)' }}>{hook}</p>
       </div>
       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 200, background: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent)' }} />
       <div style={{ position: 'absolute', bottom: 60, left: 80, right: 80 }}>
@@ -833,7 +833,7 @@ export async function generateSlidePNG(
     ctx.fillStyle = grad2;
     ctx.fillRect(0, H - 300, W, 300);
     drawBadge(1, 60, 60, 'rgba(255,255,255,0.2)', textOnPrimary);
-    ctx.font = '900 80px system-ui, -apple-system, sans-serif';
+    ctx.font = '400 58px system-ui, -apple-system, sans-serif';
     ctx.fillStyle = textOnPrimary;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
