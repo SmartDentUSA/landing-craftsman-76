@@ -1,38 +1,60 @@
 
-# Fix: Dois Problemas na Exportação do Carrossel
+# Fix: Margens, Overflow de Texto e Filtros nos Cards Exportados
 
-## Diagnóstico Visual dos Slides Exportados
+## Diagnóstico por Slide
 
-Analisando as 6 imagens enviadas, foram identificados **2 problemas concretos**:
-
----
-
-### Problema 1 — Slide 4: Eyebrow label contém sugestão visual da IA
-
-No **Slide 4** aparece no topo:
-```
-DENTISTA UTILIZANDO UMA ESPÁTULA DE INSERÇ...  (cortado)
-```
-
-Isso é o campo `label4` sendo renderizado via `ctx.fillText()` na linha 1491 do canvas. Esse texto vem de `texts?.label` quando o usuário editou manualmente o campo "Label topo" do Slide 4 no editor — e o valor veio diretamente da `image_suggestion` da IA (que a edge function retorna como sugestão de imagem, não como texto do card).
-
-Causa técnica: o campo `label` do Slide 4 está sendo preenchido automaticamente em `InstagramCopyGenerator.tsx` com o valor da `image_suggestion` retornada pela IA.
-
-**Solução**: No `buildImpactNarrative()` (que define o `narLabel` para o canvas Slide 4), o label deve ser fixo e conciso — nunca deve ser populado com `image_suggestion`. Corrigir o default para `'Experiência / Fluxo'` em vez de vir de dados variáveis. Além disso, aplicar `isVisualDescriptionLine()` também no campo `label4` no canvas, e truncar com `ctx.fillText` limitado por largura máxima.
+Analisando as 4 imagens enviadas, foram identificados **4 problemas distintos** nos slides exportados:
 
 ---
 
-### Problema 2 — Slide 6: Texto do CTA cortado horizontalmente
+### Problema 1 — Slide 3: Título cortado na borda direita
 
-O texto `"s DA2. Clique no link da bio para conferir e"` aparece cortado na borda esquerda e direita — significa que o `ctaBtn` é uma frase longa que ultrapassa os 1080px do canvas. 
+"Fidelidade Cromática Δ" aparece cortado no canto direito do card.
 
-Causa técnica: na linha 1642 do canvas:
+**Causa técnica (linha 1387):**
 ```typescript
-ctx.fillText(ctaBtn, W / 2, btnY + btnH / 2);
+ctx.fillText(title, rx, ry);  // ← fillText sem wrap!
 ```
-O `fillText()` não faz word-wrap. Se o texto for longo, ele vai além do canvas. O botão tem largura `btnW = W - 200 = 880px`, mas `fillText` ignora esse limite.
+O `rx = imgW + 40 ≈ 494px`. Com fonte `900 52px`, "Fidelidade Cromática ΔE < 1" mede ~620px, ultrapassando o canvas em `494 + 620 = 1114px > 1080px`.
 
-**Solução**: Substituir `ctx.fillText(ctaBtn, ...)` por `wrapText(ctx, ctaBtn, ...)` passando a largura máxima do botão (`btnW - 80` para padding interno), e também reduzir a fonte dinamicamente para textos longos (igual ao padrão do Slide 1 e 2).
+**Correção:** Substituir `fillText` por `wrapText` para o título do Slide 3, limitando a largura ao espaço disponível (`W - rx - 60 = 526px`).
+
+---
+
+### Problema 2 — Slide 3: Texto dos bullets começa 76px mais à direita do `maxWidth` calculado
+
+`TEXT_MAX_W_S3 = W - rx - 60 = 526px` é calculado a partir de `rx`, mas o texto começa em `rx + 76` (após o ícone). Então o `wrapText` recebe `526px` de largura mas começa deslocado — o texto ultrapassa o lado direito do canvas.
+
+**Causa técnica (linhas 1352, 1362–1373, 1409):**
+- `measureLinesS3` mede com `TEXT_MAX_W_S3 = 526px`
+- `wrapText` usa `TEXT_MAX_W_S3 = 526px` mas texto começa em `rx + 76`
+- Logo, as linhas quebram com base em 526px mas renderizam a partir de 570px, saindo do canvas
+
+**Correção:** Definir `TEXT_W_S3 = W - rx - 76 - 60 = 450px` e usar em ambos `measureLinesS3` e `wrapText`.
+
+---
+
+### Problema 3 — Slide 4: Label ainda exibe "IMAGEM DAS MÃOS DE UM DENTISTA APLICANDO"
+
+A função `isVisualDescriptionLine()` não captura esta frase. A palavra `imagem` seguida de `das mãos` e `dentista aplicando` não estão na lista de padrões.
+
+**Causa técnica (linha 490–537):** Padrões ausentes:
+- `"imagem das"` (ex: "imagem das mãos de um dentista...")
+- `"imagem de"` (ex: "imagem de um profissional...")
+- `"imagem do"`, `"imagem da"` (variações genéricas)
+- `"dentista aplicando"`, `"profissional aplicando"`, `"aplicando o produto"`
+
+**Correção:** Adicionar esses padrões à `isVisualDescriptionLine()`.
+
+---
+
+### Problema 4 — Slide 6: ctaBtn contém texto motivacional em vez de label de ação
+
+No Slide 6, o botão CTA exibe "Elimine o risco de retrabalho e garanta a satisfação do seu paciente com a cor BL2 fiel." — isso é o corpo motivacional do Slide 6, não o label do botão CTA ("💡 Saiba Mais").
+
+**Causa técnica (linha 1602):** O campo `texts?.ctaButton` foi salvo com o texto motivacional (vindo do campo de texto editável que o usuário preencheu erroneamente). Não há validação para detectar que o conteúdo é inadequado como botão CTA.
+
+**Correção:** Adicionar um guard no canvas: se `ctaBtn` tiver mais de 60 caracteres (indicativo de texto longo/motivacional), fazer fallback para o default `'💡 Saiba Mais'`.
 
 ---
 
@@ -40,95 +62,86 @@ O `fillText()` não faz word-wrap. Se o texto for longo, ele vai além do canvas
 
 ### Arquivo: `src/components/StrategicCarouselPreview.tsx`
 
-#### Correção 1 — `buildImpactNarrative()` label fixo (linha 766)
-
-Mudar o label retornado para `'Experiência / Fluxo'` quando vier de `feedCopyProblemSolution`, pois é mais correto e conciso:
+#### Correção 1 + 2 — Slide 3: título com wrapText + largura correta dos bullets (linhas 1347–1412)
 
 ```typescript
-// Linha 766 — DE:
-label: 'Problema & Solução',
+// Linha 1347: rx permanece igual
+const rx = imgW + 40;
+const TEXT_FONT_S3 = '700 34px system-ui, -apple-system, sans-serif';
+const GAP_S3 = 44;
+const ICON_SIZE_S3 = 56;
+const LINE_H_S3 = 44;
+// ANTES: const TEXT_MAX_W_S3 = W - rx - 60;
+// DEPOIS: separar largura do título e largura do texto dos bullets
+const TITLE_MAX_W_S3 = W - rx - 60;          // título: a partir de rx
+const TEXT_MAX_W_S3 = W - rx - 76 - 60;      // bullets: a partir de rx+76 (após ícone)
+```
+
+No `measureLinesS3` (linha 1362): trocar `TEXT_MAX_W_S3` por `TEXT_MAX_W_S3` (já está correto com o novo valor).
+
+Linha 1383–1388: substituir `fillText(title, ...)` por `wrapText(ctx, title, rx, ry, TITLE_MAX_W_S3, 52 * 1.2)` e calcular o avanço de `ry` multiplicando as linhas geradas.
+
+Linha 1409: já usa `TEXT_MAX_W_S3` — passará a usar o novo valor mais estreito automaticamente.
+
+```typescript
+// DE (linha 1387):
+ctx.fillText(title, rx, ry);
+ry += TITLE_H_S3;
 
 // PARA:
-label: 'Experiência / Fluxo',
+const titleEndY = wrapText(ctx, title, rx, ry, TITLE_MAX_W_S3, 52 * 1.2);
+ry = titleEndY + 28;  // gap após o título
 ```
 
-#### Correção 2 — Canvas Slide 4: aplicar isVisualDescriptionLine no label (linha 1491)
+E o `TITLE_H_S3` que entrava no `totalContentH_S3` precisa ser recalculado dinamicamente medindo o título também.
 
-O label do Slide 4 vem de `texts?.label || narLabel`. Se o usuário populou `texts.label` com conteúdo de `image_suggestion`, precisamos detectar e ignorar:
+#### Correção 3 — Slide 4: expandir `isVisualDescriptionLine()` (linhas 501–504)
+
+Adicionar na função:
+```typescript
+// Padrões com "imagem de/da/do/das" — sugestões fotográficas
+lower.startsWith('imagem de') ||
+lower.startsWith('imagem da') ||
+lower.startsWith('imagem do') ||
+lower.startsWith('imagem das') ||
+lower.startsWith('imagem dos') ||
+lower.includes('dentista aplicando') ||
+lower.includes('profissional aplicando') ||
+lower.includes('aplicando o produto') ||
+lower.includes('aplicando o cimento') ||
+lower.includes('mãos de um dentista') ||
+lower.includes('mãos do dentista') ||
+```
+
+#### Correção 4 — Slide 6: guard no ctaBtn (linha 1602)
 
 ```typescript
-// Linha 1426 — DE:
-const label4 = texts?.label || narLabel;
+// DE:
+const ctaBtn = texts?.ctaButton || '💡 Saiba Mais';
 
 // PARA:
-const rawLabel4 = texts?.label || narLabel;
-const label4 = isVisualDescriptionLine(rawLabel4) ? 'Experiência / Fluxo' : rawLabel4;
-```
-
-E também truncar o label antes do `fillText` para evitar overflow:
-
-```typescript
-// Linha 1491 — DE:
-ctx.fillText(label4.toUpperCase(), rx4, ry4);
-
-// PARA:
-ctx.fillText(label4.slice(0, 40).toUpperCase(), rx4, ry4);
-```
-
-#### Correção 3 — Canvas Slide 6: wrapText no botão CTA (linha 1638-1642)
-
-```typescript
-// DE (linha 1638-1642):
-ctx.font = '900 52px system-ui, -apple-system, sans-serif';
-ctx.fillStyle = textOnAccent;
-ctx.textAlign = 'center';
-ctx.textBaseline = 'middle';
-ctx.fillText(ctaBtn, W / 2, btnY + btnH / 2);
-
-// PARA — fonte dinâmica + wrapText centrado:
-const ctaBtnFontSize = ctaBtn.length > 25 ? 38 : ctaBtn.length > 18 ? 44 : 52;
-ctx.font = `900 ${ctaBtnFontSize}px system-ui, -apple-system, sans-serif`;
-ctx.fillStyle = textOnAccent;
-ctx.textAlign = 'center';
-ctx.textBaseline = 'middle';
-// Usar fillText limitado pela largura do botão — substituir por wrapText centrado
-ctx.save();
-ctx.rect((W - btnW) / 2, btnY, btnW, btnH);
-ctx.clip();
-ctx.fillText(ctaBtn, W / 2, btnY + btnH / 2);
-ctx.restore();
-```
-
-Na verdade a solução mais limpa é usar `wrapText` com textBaseline `top` e ajustar o Y para centrar verticalmente:
-
-```typescript
-const ctaBtnFontSize = ctaBtn.length > 30 ? 36 : ctaBtn.length > 20 ? 44 : 52;
-ctx.font = `900 ${ctaBtnFontSize}px system-ui, -apple-system, sans-serif`;
-ctx.fillStyle = textOnAccent;
-ctx.textAlign = 'center';
-ctx.textBaseline = 'top';
-const ctaBtnLineH = ctaBtnFontSize * 1.2;
-// Calcular linhas para centrar verticalmente dentro do botão
-const ctaBtnLines = Math.ceil(ctx.measureText(ctaBtn).width / (btnW - 80));
-const ctaBtnBlockH = ctaBtnLines * ctaBtnLineH;
-wrapText(ctx, ctaBtn, W / 2, btnY + (btnH - ctaBtnBlockH) / 2, btnW - 80, ctaBtnLineH, 'center');
+const rawCtaBtn = texts?.ctaButton || '';
+const ctaBtn = (rawCtaBtn && rawCtaBtn.length <= 60) ? rawCtaBtn : '💡 Saiba Mais';
 ```
 
 ---
 
-## Resumo dos Arquivos Modificados
+## Resumo dos Arquivos e Linhas Modificados
 
-| Arquivo | Mudança | Linhas |
+| Slide | Problema | Arquivo | Linhas |
+|---|---|---|---|
+| Slide 3 | Título sem wrap — cortado na direita | `StrategicCarouselPreview.tsx` | 1352, 1376–1388 |
+| Slide 3 | Largura dos bullets errada (76px offset) | `StrategicCarouselPreview.tsx` | 1352, 1362–1373, 1409 |
+| Slide 4 | Label com sugestão visual não filtrada | `StrategicCarouselPreview.tsx` | 501–535 |
+| Slide 6 | ctaBtn com texto motivacional longo | `StrategicCarouselPreview.tsx` | 1602 |
+
+**1 arquivo, 4 correções cirúrgicas. Zero impacto nos outros slides ou na preview interativa.**
+
+## Antes / Depois por Slide
+
+| Slide | Problema | Resultado Esperado |
 |---|---|---|
-| `src/components/StrategicCarouselPreview.tsx` | 1) `label` fixo `'Experiência / Fluxo'` em `buildImpactNarrative()` | ~766 |
-| `src/components/StrategicCarouselPreview.tsx` | 2) Filtrar `texts?.label` do Slide 4 com `isVisualDescriptionLine` + truncar a 40 chars | ~1426, ~1491 |
-| `src/components/StrategicCarouselPreview.tsx` | 3) Font dinâmica + `wrapText` centrado no botão CTA do Slide 6 no canvas | ~1638-1642 |
-
-**3 mudanças cirúrgicas, 1 arquivo. Zero impacto nos outros slides.**
-
-## Antes / Depois
-
-| Slide | Problema | Resultado esperado |
-|---|---|---|
-| Slide 4 label | "DENTISTA UTILIZANDO UMA ESPÁTULA DE INSERÇ..." | "EXPERIÊNCIA / FLUXO" |
-| Slide 6 CTA botão | "s DA2. Clique no link da bio para conferir e" cortado | Texto centralizado e ajustado ao botão |
+| Slide 3 — título | "Fidelidade Cromática Δ" cortado na borda direita | Título quebra em 2 linhas dentro do painel |
+| Slide 3 — bullets | Texto vaza para fora do canvas na borda direita | Bullets respeitam margem direita de 60px |
+| Slide 4 — label | "IMAGEM DAS MÃOS DE UM DENTISTA APLICANDO" | "EXPERIÊNCIA / FLUXO" |
+| Slide 6 — botão | "Elimine o risco de retrabalho..." (texto longo) | "💡 Saiba Mais" |
