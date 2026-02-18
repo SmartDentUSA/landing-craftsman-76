@@ -488,11 +488,21 @@ function Slide3Technical({ image, primaryColor, productData, texts }: { image: s
   const textOnPrimary = getLuminance(primaryColor) > 0.5 ? '#000000' : '#ffffff';
   const title = texts?.title || 'Por que confiar?';
 
-  // PRIORIDADE 1: Feed Copy Benefits (texto rico gerado por IA)
+  // PRIORIDADE 1: Feed Copy Benefits — extração estruturada (headline + corpo + bullets)
   const feedBenefits = productData.feedCopyBenefits;
-  const benefitsFontSize = feedBenefits
-    ? (feedBenefits.length > 400 ? 22 : feedBenefits.length > 250 ? 26 : feedBenefits.length > 150 ? 30 : 34)
-    : 36;
+
+  let benefitsHeadline = '';
+  let benefitsBody = '';
+  let benefitsBullets: string[] = [];
+
+  if (feedBenefits) {
+    const lines = feedBenefits.split('\n').map((l: string) => l.trim()).filter(Boolean);
+    benefitsHeadline = lines[0]?.slice(0, 80) || '';
+    const bulletLines = lines.filter((l: string) => /^[•\-✅🔥⚡🎯💡🌟⭐🏆💎👉➡️]/.test(l)).slice(0, 4);
+    const bodyLines = lines.slice(1).filter((l: string) => !bulletLines.includes(l));
+    benefitsBody = bodyLines.join(' ').slice(0, 200);
+    benefitsBullets = bulletLines;
+  }
 
   return (
     <div style={{ width: SLIDE_W, height: SLIDE_H, background: '#0f0f14', fontFamily: 'system-ui, -apple-system, sans-serif', display: 'flex', position: 'relative', overflow: 'hidden' }}>
@@ -513,10 +523,31 @@ function Slide3Technical({ image, primaryColor, productData, texts }: { image: s
         <div style={{ width: 56, height: 3, background: primaryColor, borderRadius: 2, marginBottom: 36, flexShrink: 0 }} />
 
         {feedBenefits ? (
-          // RICH TEXT: Feed Copy Benefits (IA)
-          <p style={{ color: '#d8d8d8', fontSize: benefitsFontSize, lineHeight: 1.6, margin: 0, fontWeight: 400, wordBreak: 'break-word' as const, whiteSpace: 'pre-line' as const }}>
-            {feedBenefits.slice(0, 500)}
-          </p>
+          // ESTRUTURADO: Headline + Corpo + Bullets do feedCopyBenefits
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            {/* Headline em destaque */}
+            {benefitsHeadline && (
+              <p style={{ color: primaryColor, fontSize: 36, fontWeight: 800, margin: 0, lineHeight: 1.25 }}>
+                {benefitsHeadline}
+              </p>
+            )}
+            {/* Corpo do texto */}
+            {benefitsBody && (
+              <p style={{ color: '#d8d8d8', fontSize: 26, fontWeight: 400, margin: 0, lineHeight: 1.6 }}>
+                {benefitsBody}
+              </p>
+            )}
+            {/* Bullets */}
+            {benefitsBullets.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 8 }}>
+                {benefitsBullets.map((bullet, idx) => (
+                  <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, borderLeft: `3px solid ${primaryColor}`, paddingLeft: 16 }}>
+                    <p style={{ color: '#e8e8e8', fontSize: 26, fontWeight: 500, margin: 0, lineHeight: 1.4 }}>{bullet}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         ) : (
           // FALLBACK: Lista de specs/features
           <div style={{ display: 'flex', flexDirection: 'column', gap: 36 }}>
