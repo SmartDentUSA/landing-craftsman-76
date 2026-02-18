@@ -553,9 +553,9 @@ function Slide4Experience({ image, primaryColor, productData, texts }: { image: 
         display: 'flex', flexDirection: 'column', justifyContent: 'center',
         padding: '60px 40px 60px 24px', gap: 16, zIndex: 2
       }}>
-        <p style={{ color: '#fff', opacity: 0.7, fontSize: labelFontSize * 0.75, fontWeight: 600, margin: 0, textTransform: 'uppercase' as const, letterSpacing: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{label}</p>
-        <h2 style={{ color: '#ffffff', fontSize: kwFontSize * 0.7, fontWeight: 900, margin: 0, lineHeight: 1.1, wordBreak: 'break-word' as const, textShadow: '0 2px 16px rgba(0,0,0,0.6)' }}>{keyword}</h2>
-        <p style={{ color: '#e0e0e0', opacity: 0.9, fontSize: benefitFontSize * 0.7, lineHeight: 1.5, margin: 0, fontWeight: 400, wordBreak: 'break-word' as const, textShadow: '0 1px 8px rgba(0,0,0,0.5)' }}>{benefit}</p>
+        <p style={{ color: '#fff', opacity: 0.7, fontSize: labelFontSize, fontWeight: 600, margin: 0, textTransform: 'uppercase' as const, letterSpacing: 2, wordBreak: 'break-word' as const }}>{label}</p>
+        <h2 style={{ color: '#ffffff', fontSize: kwFontSize, fontWeight: 900, margin: 0, lineHeight: 1.1, wordBreak: 'break-word' as const, textShadow: '0 2px 16px rgba(0,0,0,0.6)' }}>{keyword}</h2>
+        <p style={{ color: '#e0e0e0', opacity: 0.9, fontSize: benefitFontSize, lineHeight: 1.5, margin: 0, fontWeight: 400, wordBreak: 'break-word' as const, textShadow: '0 1px 8px rgba(0,0,0,0.5)' }}>{benefit}</p>
       </div>
     </div>
   );
@@ -1097,9 +1097,11 @@ export async function generateSlidePNG(
     }
 
   } else if (slideNum === 4) {
-    const keyword = texts?.keyword || features[0] || 'Excelência';
-    const benefit = texts?.benefit || benefits[1] || benefits[0] || 'Resultados excepcionais em cada uso';
-    const label4 = texts?.label || 'EXPERIÊNCIA';
+    const salesPitch4 = productData.salesPitch || '';
+    const name4 = productData.name || '';
+    const keyword = texts?.keyword || features[0] || name4 || 'Excelência';
+    const benefit = texts?.benefit || salesPitch4 || benefits[0] || benefits[1] || 'Resultados excepcionais em cada uso';
+    const label4 = texts?.label || (name4 ? `Experiência com ${name4}` : 'Experiência');
     // Fontes ampliadas para ocupar 75% do card
     const kwFontSizeCanvas = keyword.length > 30 ? 52 : keyword.length > 20 ? 64 : keyword.length > 15 ? 72 : 80;
 
@@ -1144,7 +1146,9 @@ export async function generateSlidePNG(
     const labelBlockH4 = 26 + 24;
     const kwBlockH4 = kwLines4 * kwLineH4 + 24;
     // Medir linhas do benefit
-    ctx.font = '400 36px system-ui, -apple-system, sans-serif';
+    const benFontSizeCanvas = benefit.length > 200 ? 28 : benefit.length > 120 ? 32 : 36;
+    const benLineH4 = benFontSizeCanvas * 1.45;
+    ctx.font = `400 ${benFontSizeCanvas}px system-ui, -apple-system, sans-serif`;
     const benWordsArr = benefit.split(' ');
     let benLine4 = '';
     let benLines4 = 1;
@@ -1152,7 +1156,7 @@ export async function generateSlidePNG(
       const test = benLine4 + w + ' ';
       if (ctx.measureText(test).width > textW4 && benLine4 !== '') { benLines4++; benLine4 = w + ' '; } else { benLine4 = test; }
     }
-    const benBlockH4 = benLines4 * 52;
+    const benBlockH4 = benLines4 * benLineH4;
     const totalH4 = labelBlockH4 + kwBlockH4 + benBlockH4;
     let ry4 = Math.max(80, (H - totalH4) / 2);
 
@@ -1171,10 +1175,10 @@ export async function generateSlidePNG(
     ry4 = wrapText(ctx, keyword, rx4, ry4, textW4, kwLineH4) + 24;
 
     // Benefit
-    ctx.font = '400 36px system-ui, -apple-system, sans-serif';
+    ctx.font = `400 ${benFontSizeCanvas}px system-ui, -apple-system, sans-serif`;
     ctx.fillStyle = '#e0e0e0';
     ctx.globalAlpha = 0.9;
-    wrapText(ctx, benefit, rx4, ry4, textW4, 52);
+    wrapText(ctx, benefit, rx4, ry4, textW4, benLineH4);
     ctx.globalAlpha = 1;
 
   } else if (slideNum === 5) {
