@@ -518,21 +518,42 @@ function Slide4Experience({ image, primaryColor, productData, texts }: { image: 
   const benefitFontSize = benefit.length > 120 ? 24 : benefit.length > 80 ? 28 : benefit.length > 60 ? 32 : 38;
 
   return (
-    <div style={{ width: SLIDE_W, height: SLIDE_H, fontFamily: 'system-ui, -apple-system, sans-serif', display: 'flex', overflow: 'hidden' }}>
-      <div style={{ width: '50%', position: 'relative', overflow: 'hidden' }}>
-        {image ? (
-          <img src={image} alt="produto em uso" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
-        ) : (
-          <div style={{ width: '100%', height: '100%', background: '#ccc' }} />
-        )}
-        <div style={{ position: 'absolute', top: 60, left: 60, width: 70, height: 70, borderRadius: '50%', background: 'rgba(255,255,255,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <span style={{ fontWeight: 900, fontSize: 30, color: '#111' }}>4</span>
-        </div>
+    <div style={{ width: SLIDE_W, height: SLIDE_H, fontFamily: 'system-ui, -apple-system, sans-serif', position: 'relative', overflow: 'hidden', background: '#0f0f14' }}>
+      {/* Imagem full-bleed */}
+      {image ? (
+        <img src={image} alt="produto em uso" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
+      ) : (
+        <div style={{ position: 'absolute', inset: 0, background: '#1a1a2e' }} />
+      )}
+
+      {/* Overlay lateral esquerdo — ~1/3 do card, fade para transparente */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, bottom: 0, width: '38%',
+        background: 'linear-gradient(to right, rgba(15,15,20,0.55), transparent)',
+        zIndex: 1
+      }} />
+
+      {/* Overlay lateral direito — para legibilidade dos textos */}
+      <div style={{
+        position: 'absolute', top: 0, right: 0, bottom: 0, width: '62%',
+        background: 'linear-gradient(to left, rgba(15,15,20,0.68), transparent)',
+        zIndex: 1
+      }} />
+
+      {/* Número do slide */}
+      <div style={{ position: 'absolute', top: 60, left: 60, width: 70, height: 70, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <span style={{ color: '#fff', fontWeight: 900, fontSize: 30 }}>4</span>
       </div>
-      <div style={{ width: '50%', background: primaryColor, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '60px 70px', gap: 16, overflow: 'hidden' }}>
-        <p style={{ color: textOnPrimary, opacity: 0.7, fontSize: labelFontSize, fontWeight: 600, margin: 0, textTransform: 'uppercase' as const, letterSpacing: 3, flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{label}</p>
-        <h2 style={{ color: textOnPrimary, fontSize: kwFontSize, fontWeight: 900, margin: 0, lineHeight: 1.1, wordBreak: 'break-word' as const, flexShrink: 0, overflow: 'hidden' }}>{keyword}</h2>
-        <p style={{ color: textOnPrimary, opacity: 0.9, fontSize: benefitFontSize, lineHeight: 1.5, margin: 0, fontWeight: 400, wordBreak: 'break-word' as const, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 6, WebkitBoxOrient: 'vertical' as const }}>{benefit}</p>
+
+      {/* Painel direito — textos sobre a imagem, sem fundo sólido */}
+      <div style={{
+        position: 'absolute', top: 0, right: 0, bottom: 0, width: '62%',
+        display: 'flex', flexDirection: 'column', justifyContent: 'center',
+        padding: '80px 70px 80px 40px', gap: 20, zIndex: 2
+      }}>
+        <p style={{ color: '#fff', opacity: 0.7, fontSize: labelFontSize, fontWeight: 600, margin: 0, textTransform: 'uppercase' as const, letterSpacing: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{label}</p>
+        <h2 style={{ color: '#ffffff', fontSize: kwFontSize, fontWeight: 900, margin: 0, lineHeight: 1.1, wordBreak: 'break-word' as const, textShadow: '0 2px 16px rgba(0,0,0,0.6)' }}>{keyword}</h2>
+        <p style={{ color: '#e0e0e0', opacity: 0.9, fontSize: benefitFontSize, lineHeight: 1.5, margin: 0, fontWeight: 400, wordBreak: 'break-word' as const, textShadow: '0 1px 8px rgba(0,0,0,0.5)' }}>{benefit}</p>
       </div>
     </div>
   );
@@ -1077,40 +1098,80 @@ export async function generateSlidePNG(
     const keyword = texts?.keyword || features[0] || 'Excelência';
     const benefit = texts?.benefit || benefits[1] || benefits[0] || 'Resultados excepcionais em cada uso';
     const label4 = texts?.label || 'EXPERIÊNCIA';
-    const kwFontSize = keyword.length > 15 ? 65 : 90;
+    const kwFontSizeCanvas = keyword.length > 30 ? 44 : keyword.length > 20 ? 55 : keyword.length > 15 ? 65 : 90;
 
-    const halfW = W / 2;
+    // Imagem full-bleed cobrindo todo o canvas
     if (img) {
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(0, 0, halfW, H);
-      ctx.clip();
-      drawImageCover(ctx, img, 0, 0, halfW, H);
-      ctx.restore();
+      drawImageCover(ctx, img, 0, 0, W, H);
     } else {
-      ctx.fillStyle = '#cccccc';
-      ctx.fillRect(0, 0, halfW, H);
+      ctx.fillStyle = '#1a1a2e';
+      ctx.fillRect(0, 0, W, H);
     }
-    drawBadge(4, 60, 60, 'rgba(255,255,255,0.9)', '#111111');
-    ctx.fillStyle = primaryColor;
-    ctx.fillRect(halfW, 0, halfW, H);
-    ctx.textAlign = 'left';
-    ctx.font = '600 36px system-ui, -apple-system, sans-serif';
-    ctx.fillStyle = textOnPrimary;
-    ctx.globalAlpha = 0.7;
-    ctx.textBaseline = 'top';
-    ctx.fillText(label4.toUpperCase(), halfW + 70, 200);
-    ctx.globalAlpha = 1;
-    // Keyword with adaptive font + capture Y
-    ctx.font = `900 ${kwFontSize}px system-ui, -apple-system, sans-serif`;
-    ctx.fillStyle = textOnPrimary;
-    ctx.textBaseline = 'top';
-    const benefitStartY = wrapText(ctx, keyword, halfW + 70, 270, halfW - 100, kwFontSize * 1.15);
-    // Benefit text starts after keyword
+
+    // Overlay esquerdo ~38% — fade para transparente (mais transparente)
+    const gradLeft4 = ctx.createLinearGradient(0, 0, W * 0.42, 0);
+    gradLeft4.addColorStop(0, 'rgba(15,15,20,0.55)');
+    gradLeft4.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = gradLeft4;
+    ctx.fillRect(0, 0, W, H);
+
+    // Overlay direito 62% — fade para legibilidade dos textos
+    const gradRight4 = ctx.createLinearGradient(W * 0.38, 0, W, 0);
+    gradRight4.addColorStop(0, 'rgba(0,0,0,0)');
+    gradRight4.addColorStop(1, 'rgba(15,15,20,0.68)');
+    ctx.fillStyle = gradRight4;
+    ctx.fillRect(0, 0, W, H);
+
+    drawBadge(4, 60, 60, 'rgba(255,255,255,0.15)', '#ffffff');
+
+    // Textos no lado direito — centralizados verticalmente
+    const rx4 = W * 0.40;
+    const textW4 = W - rx4 - 80;
+
+    // Medir linhas do keyword para centramento vertical
+    ctx.font = `900 ${kwFontSizeCanvas}px system-ui, -apple-system, sans-serif`;
+    const kwLineH4 = kwFontSizeCanvas * 1.15;
+    const kwWordsArr = keyword.split(' ');
+    let kwLine4 = '';
+    let kwLines4 = 1;
+    for (const w of kwWordsArr) {
+      const test = kwLine4 + w + ' ';
+      if (ctx.measureText(test).width > textW4 && kwLine4 !== '') { kwLines4++; kwLine4 = w + ' '; } else { kwLine4 = test; }
+    }
+    const labelBlockH4 = 40 + 36;
+    const kwBlockH4 = kwLines4 * kwLineH4 + 36;
+    // Estimate benefit lines
     ctx.font = '400 38px system-ui, -apple-system, sans-serif';
-    ctx.fillStyle = textOnPrimary;
+    const benWordsArr = benefit.split(' ');
+    let benLine4 = '';
+    let benLines4 = 1;
+    for (const w of benWordsArr) {
+      const test = benLine4 + w + ' ';
+      if (ctx.measureText(test).width > textW4 && benLine4 !== '') { benLines4++; benLine4 = w + ' '; } else { benLine4 = test; }
+    }
+    const benBlockH4 = benLines4 * 52;
+    const totalH4 = labelBlockH4 + kwBlockH4 + benBlockH4;
+    let ry4 = Math.max(80, (H - totalH4) / 2);
+
+    // Label
+    ctx.font = '600 36px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText(label4.toUpperCase(), rx4, ry4);
+    ry4 += labelBlockH4;
+
+    // Keyword
+    ctx.font = `900 ${kwFontSizeCanvas}px system-ui, -apple-system, sans-serif`;
+    ctx.fillStyle = '#ffffff';
+    ctx.textBaseline = 'top';
+    ry4 = wrapText(ctx, keyword, rx4, ry4, textW4, kwLineH4) + 36;
+
+    // Benefit
+    ctx.font = '400 38px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = '#e0e0e0';
     ctx.globalAlpha = 0.9;
-    wrapText(ctx, benefit, halfW + 70, benefitStartY + 40, halfW - 100, 52);
+    wrapText(ctx, benefit, rx4, ry4, textW4, 52);
     ctx.globalAlpha = 1;
 
   } else if (slideNum === 5) {
