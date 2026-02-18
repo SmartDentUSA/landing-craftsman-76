@@ -499,6 +499,18 @@ function isVisualDescriptionLine(line: string): boolean {
     lower.includes('diagrama') ||
     lower.includes('animação') ||
     // Descrições de ações visuais
+    // Padrões "imagem de/da/do/das" — sugestões fotográficas da IA
+    lower.startsWith('imagem de') ||
+    lower.startsWith('imagem da') ||
+    lower.startsWith('imagem do') ||
+    lower.startsWith('imagem das') ||
+    lower.startsWith('imagem dos') ||
+    lower.includes('dentista aplicando') ||
+    lower.includes('profissional aplicando') ||
+    lower.includes('aplicando o produto') ||
+    lower.includes('aplicando o cimento') ||
+    lower.includes('mãos de um dentista') ||
+    lower.includes('mãos do dentista') ||
     lower.includes('imagem mostrando') ||
     lower.includes('setas indicam') ||
     lower.includes('seta indicando') ||
@@ -1349,7 +1361,8 @@ export async function generateSlidePNG(
     const GAP_S3 = 44;
     const ICON_SIZE_S3 = 56;
     const LINE_H_S3 = 44;
-    const TEXT_MAX_W_S3 = W - rx - 60;
+    const TITLE_MAX_W_S3 = W - rx - 60;       // título começa em rx
+    const TEXT_MAX_W_S3 = W - rx - 76 - 60;   // bullets começam em rx+76 (após ícone)
 
     const items = specs.length > 0
       ? specs.slice(0, 5).map(s => s.label + (s.value ? ': ' + s.value : ''))
@@ -1373,7 +1386,22 @@ export async function generateSlidePNG(
       return lines;
     };
 
-    const TITLE_H_S3 = 52 * 1.2 + 60;
+    // Medir quantas linhas o título ocupa com wrapText
+    ctx.font = '900 52px system-ui, -apple-system, sans-serif';
+    const titleLineH_S3 = 52 * 1.2;
+    const titleWords = title.split(' ');
+    let titleLine = '';
+    let titleLinesCount = 1;
+    for (const word of titleWords) {
+      const test = titleLine + word + ' ';
+      if (ctx.measureText(test).width > TITLE_MAX_W_S3 && titleLine !== '') {
+        titleLinesCount++;
+        titleLine = word + ' ';
+      } else {
+        titleLine = test;
+      }
+    }
+    const TITLE_H_S3 = titleLinesCount * titleLineH_S3 + 28 + 32; // linhas + gap após título + padding
     const itemHeightsS3 = items.map(item => Math.max(ICON_SIZE_S3, measureLinesS3(item) * LINE_H_S3));
     const totalContentH_S3 = TITLE_H_S3 + itemHeightsS3.reduce((a, b) => a + b, 0) + GAP_S3 * (items.length - 1);
 
@@ -1384,8 +1412,8 @@ export async function generateSlidePNG(
     ctx.fillStyle = '#ffffff';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    ctx.fillText(title, rx, ry);
-    ry += TITLE_H_S3;
+    const titleEndY = wrapText(ctx, title, rx, ry, TITLE_MAX_W_S3, titleLineH_S3);
+    ry = titleEndY + 28;
 
     for (let i = 0; i < items.length; i++) {
       const itemH = itemHeightsS3[i];
@@ -1599,7 +1627,8 @@ export async function generateSlidePNG(
 
   } else if (slideNum === 6) {
     const name6 = texts?.productName || productData.name;
-    const ctaBtn = texts?.ctaButton || '💡 Saiba Mais';
+    const rawCtaBtn = texts?.ctaButton || '';
+    const ctaBtn = (rawCtaBtn && rawCtaBtn.length <= 60) ? rawCtaBtn : '💡 Saiba Mais';
     const linkLbl = texts?.linkLabel || '🔗 Saiba Mais';
     const ftr = texts?.footer || 'Direct para mais informações';
 
