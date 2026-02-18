@@ -1,173 +1,156 @@
 
-# Correção do Slide 1: Frases sem Contexto ("Você sabia que...")
+# Correção do Hook do Slide 1: Usar o Discurso de Vendas do Produto
 
-## Diagnóstico do Problema
+## Diagnóstico
 
-O hook do Slide 1 é gerado em **dois lugares** com a mesma lógica incorreta:
+O hook do Slide 1 atualmente usa `buildSmartHook(name, benefits, features)` que busca features/benefícios curtos ou cai no fallback genérico `"[Produto]: a escolha que muda tudo"`.
 
-**1. `InstagramCopyGenerator.tsx` linha 160** — `buildDefaultSlideTexts()`:
-```js
-hook: b[0] ? `Você sabia que ${b[0].toLowerCase()}?` : `Descubra o segredo por trás de ${productName}`
-```
+O problema: o `sales_pitch` do produto — que contém **exatamente** a linguagem estratégica de venda — **nunca é passado** para o `InstagramCopyGenerator`. Olhando o banco, o pitch tem frases como:
 
-**2. `StrategicCarouselPreview.tsx` linha 686** — fallback no canvas:
-```js
-const hookText = texts?.hook || (benefits[0] ? `Você sabia que ${benefits[0].toLowerCase()}?` : ...)
-```
+> *"O SmartMake Intensivo Mahogany é a escolha ideal para profissionais que buscam controle cromático sem precedentes..."*
+> *"A fusão perfeita entre alta estética e performance mecânica..."*
 
-O `b[0]` é um **benefício completo** como `"Longa duração com mais de 5 anos de garantia"`. Ao concatenar com o prefixo:
+São exatamente esses pontos que devem virar o gancho do Slide 1.
 
-> **"Você sabia que longa duração com mais de 5 anos de garantia?"**
+**Falhas em cadeia:**
+1. `ModernProductCard.tsx` → não passa `product.sales_pitch` para `<InstagramCopyGenerator />`
+2. `InstagramCopyGenerator` → não tem prop `productSalesPitch`
+3. `buildSmartHook()` → não usa o pitch para extrair o gancho
+4. `StrategicCarouselPreview.tsx` → `ProductData` não tem campo `salesPitch`
 
-Isso não é uma frase de impacto — é uma frase técnica mal formatada como pergunta retórica.
+## Solução: Extrair o Gancho do Sales Pitch
 
-## Causa Raiz
+### Lógica de extração do hook a partir do pitch
 
-O sistema foi pensado para que `productBenefits[0]` fosse uma frase curta e impactante (ex: `"dura mais tempo"`), mas na prática os benefícios cadastrados no repositório são **frases longas e descritivas** (ex: `"Biocompatibilidade comprovada clinicamente em pacientes"`, `"Longa durabilidade com mais de 5 anos"`).
+O `sales_pitch` é um parágrafo longo. A estratégia é extrair a **primeira frase impactante** (geralmente a mais estratégica, pois redatores colocam o gancho principal no início).
 
-O template `"Você sabia que {benefício}?"` só funciona quando o benefício é um **fragmento nominal curto**, não uma frase completa.
+**Nova hierarquia do `buildSmartHook`:**
 
-## Solução: Lógica de Hook Contextualizada
+1. **Sales pitch (nova prioridade #1)** → Pegar a primeira frase do pitch (até o primeiro `.` ou `!` ou `,`), limitada a ~80 chars para caber no slide
+2. **Feature curta (≤35 chars)** → `"Você já ouviu falar em [feature]?"` (atual prioridade 1)
+3. **Benefício curto (≤45 chars)** → headline solo (atual prioridade 2)
+4. **Fallback com nome** → `"[Produto]: a escolha que muda tudo"` (atual prioridade 3)
 
-### Nova função `buildSmartHook()` em `InstagramCopyGenerator.tsx`
-
-Criar uma função que gera hooks adequados baseados no contexto do produto, com lógica inteligente:
-
+**Função de extração de frase do pitch:**
 ```ts
-function buildSmartHook(): string {
-  const b = productBenefits || [];
-  const f = productFeatures || [];
-  
-  // Prioridade 1: se tiver nome do produto, fazer gancho direto sobre ele
-  if (productName) {
-    if (b[0]) {
-      // Usar o benefício de forma diferente — não como complemento de "Você sabia que"
-      // mas como punchline após o produto
-      const shortBenefit = b[0].length > 50 
-        ? b[0].split(' ').slice(0, 6).join(' ') + '...' 
-        : b[0];
-      return `${productName}: ${shortBenefit}`;
-    }
-    if (f[0]) {
-      return `Conheça o ${productName}`;
-    }
-    return `${productName} vai mudar o jogo`;
+function extractHookFromSalesPitch(pitch: string, productName: string): string | null {
+  if (!pitch || pitch.length < 10) return null;
+
+  // Remove o nome do produto do início (ex: "O SmartMake Intensivo Mahogany é..." → "é a escolha ideal...")
+  // Pega a primeira frase completa (até ponto final ou ! ou limite de 90 chars)
+  const sentences = pitch.split(/[.!]/);
+  const firstSentence = sentences[0]?.trim();
+
+  if (!firstSentence || firstSentence.length < 15) return null;
+
+  // Se a frase for curta o bastante para o slide (≤ 90 chars), usa diretamente
+  if (firstSentence.length <= 90) return firstSentence;
+
+  // Se for longa, pega até a primeira vírgula (cláusula principal) — mais impactante
+  const firstClause = firstSentence.split(',')[0]?.trim();
+  if (firstClause && firstClause.length >= 20 && firstClause.length <= 90) return firstClause;
+
+  // Último recurso: trunca em 80 chars na última palavra
+  const truncated = firstSentence.slice(0, 80).split(' ').slice(0, -1).join(' ');
+  return truncated.length >= 20 ? truncated + '...' : null;
+}
+```
+
+## Arquivos a Modificar
+
+### 1. `src/components/ModernProductCard.tsx`
+
+Adicionar `product.sales_pitch` ao chamar `<InstagramCopyGenerator>`:
+
+```tsx
+// Linha 735-750 (dentro de <InstagramCopyGenerator>):
+// ADICIONAR:
+productSalesPitch={product.sales_pitch}
+```
+
+### 2. `src/components/InstagramCopyGenerator.tsx`
+
+**A) Interface de props — adicionar `productSalesPitch`:**
+```ts
+// No InstagramCopyGeneratorProps:
+productSalesPitch?: string;
+```
+
+**B) Destructuring — adicionar `productSalesPitch`:**
+```ts
+export function InstagramCopyGenerator({ ..., productSalesPitch, ... })
+```
+
+**C) Função `extractHookFromSalesPitch` — adicionar antes de `buildSmartHook`:**
+```ts
+function extractHookFromSalesPitch(pitch: string): string | null {
+  if (!pitch || pitch.length < 10) return null;
+  const sentences = pitch.split(/[.!]/);
+  const firstSentence = sentences[0]?.trim();
+  if (!firstSentence || firstSentence.length < 15) return null;
+  if (firstSentence.length <= 90) return firstSentence;
+  const firstClause = firstSentence.split(',')[0]?.trim();
+  if (firstClause && firstClause.length >= 20 && firstClause.length <= 90) return firstClause;
+  const truncated = firstSentence.slice(0, 80).split(' ').slice(0, -1).join(' ');
+  return truncated.length >= 20 ? truncated + '...' : null;
+}
+```
+
+**D) Atualizar `buildSmartHook` para usar pitch como prioridade #1:**
+```ts
+function buildSmartHook(name: string, benefits: string[], features: string[], pitch?: string): string {
+  // 1. PRIORIDADE: Extrair da primeira frase do sales_pitch (fonte mais estratégica)
+  if (pitch) {
+    const pitchHook = extractHookFromSalesPitch(pitch);
+    if (pitchHook) return pitchHook;
   }
-  return 'Descubra o segredo';
-}
-```
-
-Na verdade, a abordagem mais simples e eficaz é **NÃO usar `"Você sabia que"` como template**. Em vez disso, usar ganchos de impacto direto:
-
-**Nova lógica `buildDefaultSlideTexts` — Slide 1:**
-
-```ts
-1: {
-  hook: (() => {
-    const b = productBenefits || [];
-    const f = productFeatures || [];
-    // Gancho direto sem concatenação que cria frases sem sentido
-    if (b[0] && b[0].length <= 40) {
-      return `Você sabia que ${b[0].toLowerCase()}?`;   // só usa se for curto
-    }
-    if (productName) {
-      return `${productName} vai mudar o jogo`;
-    }
-    return 'Descubra o segredo';
-  })(),
-  productName
-}
-```
-
-Porém, a solução mais elegante é criar **4 templates de hook** e selecionar o mais adequado baseado no que está disponível:
-
-```ts
-function buildSmartHook(name: string, benefits: string[], features: string[]): string {
-  const b = benefits || [];
-  const f = features || [];
-
-  // Template 1: Gancho de transformação — usa nome do produto
-  if (name) return `${name} que vai mudar seu resultado`;
-
-  // Template 2: Pergunta com feature curta (< 30 chars)
-  const shortFeature = f.find(feat => feat && feat.length < 30);
-  if (shortFeature) return `Você já ouviu falar em ${shortFeature}?`;
-
-  // Template 3: Benefício como afirmação, não como complemento de "sabia que"
-  const shortBenefit = b.find(ben => ben && ben.length < 40);
-  if (shortBenefit) return shortBenefit;
-
-  // Fallback
-  return `Descubra o segredo por trás de ${name || 'nosso produto'}`;
-}
-```
-
-## Implementação Final
-
-### Arquivo: `src/components/InstagramCopyGenerator.tsx`
-
-**Mudança 1 — Substituir a linha 160 do `buildDefaultSlideTexts`:**
-
-```ts
-// ANTES (linha 160):
-1: { hook: b[0] ? `Você sabia que ${b[0].toLowerCase()}?` : `Descubra o segredo por trás de ${productName}`, productName },
-
-// DEPOIS:
-1: { hook: buildSmartHook(productName, b, f), productName },
-```
-
-**Adicionar a função `buildSmartHook` antes de `buildDefaultSlideTexts` (linha 156):**
-
-```ts
-function buildSmartHook(name: string, benefits: string[], features: string[]): string {
-  // Tenta ganchos em ordem de preferência
-
-  // 1. Feature curta em forma de pergunta (< 35 chars — funciona bem no formato "Você já ouviu falar em X?")
+  // 2. Feature curta em forma de pergunta (≤ 35 chars)
   const shortFeature = (features || []).find(f => f && f.length <= 35);
   if (shortFeature) return `Você já ouviu falar em ${shortFeature}?`;
-
-  // 2. Benefício curto como afirmação impactante (< 45 chars — fica bem como headline solo)
+  // 3. Benefício curto como headline impactante (≤ 45 chars)
   const shortBenefit = (benefits || []).find(b => b && b.length <= 45);
-  if (shortBenefit) return `${shortBenefit.charAt(0).toUpperCase() + shortBenefit.slice(1)}`;
-
-  // 3. Gancho direto com nome do produto
+  if (shortBenefit) return shortBenefit.charAt(0).toUpperCase() + shortBenefit.slice(1);
+  // 4. Gancho direto com nome do produto
   if (name) return `${name}: a escolha que muda tudo`;
-
-  // 4. Fallback genérico
+  // 5. Fallback genérico
   return 'Descubra o segredo por trás do melhor resultado';
 }
 ```
 
-### Arquivo: `src/components/StrategicCarouselPreview.tsx`
-
-**Mudança 2 — Corrigir o fallback no canvas (linha 686):**
-
+**E) Passar pitch para `buildSmartHook` em `buildDefaultSlideTexts`:**
 ```ts
-// ANTES (linha 686):
-const hookText = texts?.hook || (benefits[0] 
-  ? `Você sabia que ${benefits[0].toLowerCase()}?` 
-  : `Descubra o segredo por trás de ${productData.name}`);
-
-// DEPOIS:
-const hookText = texts?.hook || (() => {
-  const shortFeature = (productData.features || []).find(f => f && f.length <= 35);
-  if (shortFeature) return `Você já ouviu falar em ${shortFeature}?`;
-  const shortBenefit = (benefits || []).find(b => b && b.length <= 45);
-  if (shortBenefit) return shortBenefit.charAt(0).toUpperCase() + shortBenefit.slice(1);
-  return `${productData.name}: a escolha que muda tudo`;
-})();
+1: { hook: buildSmartHook(productName, b, f, productSalesPitch), productName },
 ```
 
-**Mudança 3 — Mesmo fallback no HTML preview `Slide1Hook` (linha 245):**
+### 3. `src/components/StrategicCarouselPreview.tsx`
 
+**A) Adicionar `salesPitch` ao tipo `ProductData`:**
 ```ts
-// ANTES (linha 245-247):
-const hook = texts?.hook || (productData.benefits?.[0]
-  ? `Você sabia que ${productData.benefits[0].toLowerCase()}?`
-  : `Descubra o segredo por trás de ${productData.name}`);
+interface ProductData {
+  name: string;
+  price?: number;
+  category?: string;
+  benefits?: string[];
+  features?: string[];
+  technicalSpecs?: TechnicalSpec[];
+  productUrl?: string;
+  salesPitch?: string;  // ← novo
+}
+```
 
-// DEPOIS:
+**B) Atualizar fallback do hook no `Slide1Hook` e no canvas `generateSlidePNG`** para também usar `productData.salesPitch`:
+
+No `Slide1Hook` (linha 245):
+```ts
 const hook = texts?.hook || (() => {
+  // Prioridade: sales pitch
+  if (productData.salesPitch) {
+    const sentences = productData.salesPitch.split(/[.!]/);
+    const first = sentences[0]?.trim();
+    if (first && first.length >= 15 && first.length <= 90) return first;
+    const clause = first?.split(',')[0]?.trim();
+    if (clause && clause.length >= 20 && clause.length <= 90) return clause;
+  }
   const features = productData.features || [];
   const benefits = productData.benefits || [];
   const shortFeature = features.find(f => f && f.length <= 35);
@@ -178,28 +161,31 @@ const hook = texts?.hook || (() => {
 })();
 ```
 
-## Como o Hook Fica Agora — Exemplos
+**C) Passar `salesPitch` ao montar `productData` em `InstagramCopyGenerator.tsx`** (dentro do `<StrategicCarouselPreview>`, onde é passado o objeto `productData`):
+```tsx
+productData={{
+  name: productName,
+  category: productCategory,
+  benefits: productBenefits,
+  features: productFeatures,
+  technicalSpecs,
+  productUrl,
+  salesPitch: productSalesPitch,  // ← novo
+}}
+```
 
-| Dados do produto | Hook gerado antes (quebrado) | Hook gerado depois (correto) |
-|-----------------|------------------------------|------------------------------|
-| Feature: "Nano-Híbrido" | "Você sabia que nano-híbrido?" | "Você já ouviu falar em Nano-Híbrido?" |
-| Feature: "Tecnologia bioativa de última geração" | (muito longo) | ← pula para próxima regra |
-| Benefit: "Longa duração com mais de 5 anos" | "Você sabia que longa duração com mais de 5 anos?" | ← pula (> 45 chars) |
-| Benefit: "Resultados imediatos" | "Você sabia que resultados imediatos?" | "Resultados imediatos" (headline limpo) |
-| Só nome: "Tetric N-Ceram" | "Descubra o segredo por trás de Tetric N-Ceram" | "Tetric N-Ceram: a escolha que muda tudo" |
+## Resultado por Exemplo Real
 
-## Arquivos a Modificar
+| Produto | Sales Pitch (início) | Hook Gerado |
+|---------|---------------------|-------------|
+| SmartMake Intensivo Mahogany | "O SmartMake Intensivo Mahogany é a escolha ideal para profissionais que buscam um controle cromático..." | "O SmartMake Intensivo Mahogany é a escolha ideal para profissionais que buscam um controle cromático" |
+| Atos Resina Composta DA2 | "A Atos Resina Composta Direta - DA2 é a fusão perfeita entre alta estética e performance mecânica." | "A Atos Resina Composta Direta - DA2 é a fusão perfeita entre alta estética e performance mecânica" |
+| Produto sem pitch | — | feature curta ou benefício (fallback atual) |
 
-| Arquivo | Linha | Mudança |
-|---------|-------|---------|
-| `src/components/InstagramCopyGenerator.tsx` | ~156 | Adicionar função `buildSmartHook()` |
-| `src/components/InstagramCopyGenerator.tsx` | 160 | Usar `buildSmartHook()` no `buildDefaultSlideTexts` |
-| `src/components/StrategicCarouselPreview.tsx` | 245–247 | Corrigir fallback hook em `Slide1Hook` (HTML) |
-| `src/components/StrategicCarouselPreview.tsx` | 686 | Corrigir fallback hook no canvas `generateSlidePNG` |
+## Resumo dos arquivos
 
-## Resultado
-
-- **Features curtas** (≤ 35 chars) → `"Você já ouviu falar em {feature}?"` — pergunta direta e impactante
-- **Benefícios médios** (≤ 45 chars) → headline solo em maiúscula — clean e forte
-- **Dados longos ou ausentes** → `"{Produto}: a escolha que muda tudo"` — fallback com identidade do produto
-- **Nunca mais** `"Você sabia que longa duração com mais de 5 anos?"` ✅
+| Arquivo | Mudança |
+|---------|---------|
+| `src/components/ModernProductCard.tsx` | Adicionar `productSalesPitch={product.sales_pitch}` |
+| `src/components/InstagramCopyGenerator.tsx` | Prop `productSalesPitch`, função `extractHookFromSalesPitch`, atualizar `buildSmartHook`, passar `salesPitch` ao `productData` |
+| `src/components/StrategicCarouselPreview.tsx` | Campo `salesPitch` na interface `ProductData`, usar no `Slide1Hook` e no canvas `generateSlidePNG` |
