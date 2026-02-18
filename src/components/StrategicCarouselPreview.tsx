@@ -13,6 +13,7 @@ interface ProductData {
   name: string;
   price?: number;
   category?: string;
+  description?: string;
   benefits?: string[];
   features?: string[];
   technicalSpecs?: TechnicalSpec[];
@@ -506,18 +507,31 @@ function Slide3Technical({ image, primaryColor, productData, texts }: { image: s
 
 // ==================== SLIDE 4 — EXPERIÊNCIA ====================
 function Slide4Experience({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; productData: ProductData; texts?: { label?: string; keyword?: string; benefit?: string } }) {
-  const textOnPrimary = getLuminance(primaryColor) > 0.5 ? '#000000' : '#ffffff';
   const salesPitch = productData.salesPitch || '';
+  const description = productData.description || '';
   const name = productData.name || '';
-  const benefit = texts?.benefit || salesPitch || productData.benefits?.[0] || productData.benefits?.[1] || 'Resultados excepcionais em cada uso';
-  const keyword = texts?.keyword || productData.features?.[0] || name || 'Excelência';
+  const features = (productData.features as string[]) || [];
+  const benefits = (productData.benefits as string[]) || [];
+
+  // Headline: feature mais impactante ou nome do produto
+  const keyword = texts?.keyword || features[0] || name || 'Excelência';
+
+  // Label contextual com nome do produto
   const label = texts?.label || (name ? `Experiência com ${name}` : 'Experiência');
-  // Auto-sizing: keyword
-  const kwFontSize = keyword.length > 30 ? 44 : keyword.length > 20 ? 55 : keyword.length > 15 ? 65 : 90;
-  // Auto-sizing: label (truncate visually if too long)
-  const labelFontSize = label.length > 40 ? 20 : label.length > 30 ? 24 : label.length > 20 ? 28 : 34;
-  // Auto-sizing: benefit — sales_pitch pode ser mais longo
-  const benefitFontSize = benefit.length > 200 ? 22 : benefit.length > 120 ? 26 : benefit.length > 80 ? 30 : benefit.length > 60 ? 34 : 38;
+
+  // Parágrafo principal: salesPitch é o diferencial real; cai para description se vazio
+  const mainText = texts?.benefit || salesPitch || description.slice(0, 280) || benefits[0] || 'Resultados excepcionais em cada uso';
+
+  // Bullets complementares: até 3 features/benefits adicionais que não sejam o keyword
+  const bulletPool = [
+    ...features.filter(f => f !== keyword),
+    ...benefits,
+  ].filter(Boolean).slice(0, 3) as string[];
+
+  // Auto-sizing
+  const kwFontSize = keyword.length > 30 ? 42 : keyword.length > 20 ? 52 : keyword.length > 15 ? 62 : 78;
+  const labelFontSize = label.length > 40 ? 18 : label.length > 30 ? 22 : 26;
+  const mainFontSize = mainText.length > 240 ? 20 : mainText.length > 150 ? 22 : mainText.length > 80 ? 25 : 28;
 
   return (
     <div style={{ width: SLIDE_W, height: SLIDE_H, fontFamily: 'system-ui, -apple-system, sans-serif', position: 'relative', overflow: 'hidden', background: '#0f0f14' }}>
@@ -528,34 +542,46 @@ function Slide4Experience({ image, primaryColor, productData, texts }: { image: 
         <div style={{ position: 'absolute', inset: 0, background: '#1a1a2e' }} />
       )}
 
-      {/* Overlay lateral esquerdo — fade para transparente */}
-      <div style={{
-        position: 'absolute', top: 0, left: 0, bottom: 0, width: '20%',
-        background: 'linear-gradient(to right, rgba(15,15,20,0.55), transparent)',
-        zIndex: 1
-      }} />
+      {/* Overlay lateral esquerdo */}
+      <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '20%', background: 'linear-gradient(to right, rgba(15,15,20,0.6), transparent)', zIndex: 1 }} />
 
-      {/* Overlay lateral direito — cobre 1/4 do card onde ficam os textos */}
-      <div style={{
-        position: 'absolute', top: 0, right: 0, bottom: 0, width: '78%',
-        background: 'linear-gradient(to left, rgba(15,15,20,0.72), transparent)',
-        zIndex: 1
-      }} />
+      {/* Overlay lateral direito — painel de textos */}
+      <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: '78%', background: 'linear-gradient(to left, rgba(10,10,16,0.88) 60%, transparent)', zIndex: 1 }} />
 
       {/* Número do slide */}
       <div style={{ position: 'absolute', top: 60, left: 60, width: 70, height: 70, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <span style={{ color: '#fff', fontWeight: 900, fontSize: 30 }}>4</span>
       </div>
 
-      {/* Painel direito — textos em 1/4 do card */}
+      {/* Painel direito — textos em 75% do card */}
       <div style={{
-        position: 'absolute', top: 0, right: 0, bottom: 0, width: '75%',
+        position: 'absolute', top: 0, right: 0, bottom: 0, width: '76%',
         display: 'flex', flexDirection: 'column', justifyContent: 'center',
-        padding: '60px 40px 60px 24px', gap: 16, zIndex: 2
+        padding: '80px 48px 80px 28px', gap: 20, zIndex: 2
       }}>
-        <p style={{ color: '#fff', opacity: 0.7, fontSize: labelFontSize, fontWeight: 600, margin: 0, textTransform: 'uppercase' as const, letterSpacing: 2, wordBreak: 'break-word' as const }}>{label}</p>
-        <h2 style={{ color: '#ffffff', fontSize: kwFontSize, fontWeight: 900, margin: 0, lineHeight: 1.1, wordBreak: 'break-word' as const, textShadow: '0 2px 16px rgba(0,0,0,0.6)' }}>{keyword}</h2>
-        <p style={{ color: '#e0e0e0', opacity: 0.9, fontSize: benefitFontSize, lineHeight: 1.5, margin: 0, fontWeight: 400, wordBreak: 'break-word' as const, textShadow: '0 1px 8px rgba(0,0,0,0.5)' }}>{benefit}</p>
+        {/* Label */}
+        <p style={{ color: '#fff', opacity: 0.65, fontSize: labelFontSize, fontWeight: 700, margin: 0, textTransform: 'uppercase' as const, letterSpacing: 3, wordBreak: 'break-word' as const }}>{label}</p>
+
+        {/* Divider accent */}
+        <div style={{ width: 56, height: 3, background: primaryColor, borderRadius: 2, flexShrink: 0 }} />
+
+        {/* Headline / keyword */}
+        <h2 style={{ color: '#ffffff', fontSize: kwFontSize, fontWeight: 900, margin: 0, lineHeight: 1.05, wordBreak: 'break-word' as const, textShadow: '0 2px 20px rgba(0,0,0,0.7)' }}>{keyword}</h2>
+
+        {/* Parágrafo principal — salesPitch / description */}
+        <p style={{ color: '#d8d8d8', fontSize: mainFontSize, lineHeight: 1.55, margin: 0, fontWeight: 400, wordBreak: 'break-word' as const, textShadow: '0 1px 8px rgba(0,0,0,0.6)' }}>{mainText}</p>
+
+        {/* Bullets complementares */}
+        {bulletPool.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 4 }}>
+            {bulletPool.map((item, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: primaryColor, flexShrink: 0, marginTop: mainFontSize * 0.35 }} />
+                <span style={{ color: '#c8c8c8', fontSize: mainFontSize * 0.88, lineHeight: 1.4, fontWeight: 500, wordBreak: 'break-word' as const }}>{item}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1098,14 +1124,21 @@ export async function generateSlidePNG(
 
   } else if (slideNum === 4) {
     const salesPitch4 = productData.salesPitch || '';
+    const description4 = productData.description || '';
     const name4 = productData.name || '';
     const keyword = texts?.keyword || features[0] || name4 || 'Excelência';
-    const benefit = texts?.benefit || salesPitch4 || benefits[0] || benefits[1] || 'Resultados excepcionais em cada uso';
+    const mainText = texts?.benefit || salesPitch4 || description4.slice(0, 280) || benefits[0] || 'Resultados excepcionais em cada uso';
     const label4 = texts?.label || (name4 ? `Experiência com ${name4}` : 'Experiência');
-    // Fontes ampliadas para ocupar 75% do card
-    const kwFontSizeCanvas = keyword.length > 30 ? 52 : keyword.length > 20 ? 64 : keyword.length > 15 ? 72 : 80;
 
-    // Imagem full-bleed cobrindo todo o canvas
+    // Bullets: features adicionais + benefits (exceto o keyword)
+    const bulletPool4 = [
+      ...features.filter(f => f !== keyword),
+      ...benefits,
+    ].filter(Boolean).slice(0, 3) as string[];
+
+    const kwFontSizeCanvas = keyword.length > 30 ? 52 : keyword.length > 20 ? 62 : keyword.length > 15 ? 70 : 78;
+
+    // Imagem full-bleed
     if (img) {
       drawImageCover(ctx, img, 0, 0, W, H);
     } else {
@@ -1113,72 +1146,97 @@ export async function generateSlidePNG(
       ctx.fillRect(0, 0, W, H);
     }
 
-    // Overlay esquerdo leve — fade para transparente
+    // Overlay esquerdo leve
     const gradLeft4 = ctx.createLinearGradient(0, 0, W * 0.22, 0);
-    gradLeft4.addColorStop(0, 'rgba(15,15,20,0.55)');
+    gradLeft4.addColorStop(0, 'rgba(15,15,20,0.6)');
     gradLeft4.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = gradLeft4;
     ctx.fillRect(0, 0, W, H);
 
-    // Overlay direito — cobre 1/4 do card (direito)
+    // Overlay direito — mais denso para legibilidade
     const gradRight4 = ctx.createLinearGradient(W * 0.22, 0, W, 0);
     gradRight4.addColorStop(0, 'rgba(0,0,0,0)');
-    gradRight4.addColorStop(1, 'rgba(15,15,20,0.72)');
+    gradRight4.addColorStop(0.4, 'rgba(10,10,16,0.75)');
+    gradRight4.addColorStop(1, 'rgba(10,10,16,0.92)');
     ctx.fillStyle = gradRight4;
     ctx.fillRect(0, 0, W, H);
 
     drawBadge(4, 60, 60, 'rgba(255,255,255,0.15)', '#ffffff');
 
-    // Textos nos 75% direitos do canvas
+    // Textos nos 75% direitos
     const rx4 = W * 0.26;
     const textW4 = W - rx4 - 80;
 
-    // Medir linhas do keyword para centramento vertical
+    // Font sizes dinâmicos
+    const benFontSizeCanvas = mainText.length > 240 ? 26 : mainText.length > 150 ? 30 : mainText.length > 80 ? 33 : 36;
+    const benLineH4 = benFontSizeCanvas * 1.5;
+    const bulletFontSize4 = benFontSizeCanvas * 0.85;
+
+    // Medir alturas para centramento vertical
     ctx.font = `900 ${kwFontSizeCanvas}px system-ui, -apple-system, sans-serif`;
-    const kwLineH4 = kwFontSizeCanvas * 1.15;
-    const kwWordsArr = keyword.split(' ');
-    let kwLine4 = '';
-    let kwLines4 = 1;
-    for (const w of kwWordsArr) {
+    const kwLineH4 = kwFontSizeCanvas * 1.1;
+    let kwLine4 = '', kwLines4 = 1;
+    for (const w of keyword.split(' ')) {
       const test = kwLine4 + w + ' ';
       if (ctx.measureText(test).width > textW4 && kwLine4 !== '') { kwLines4++; kwLine4 = w + ' '; } else { kwLine4 = test; }
     }
-    const labelBlockH4 = 26 + 24;
-    const kwBlockH4 = kwLines4 * kwLineH4 + 24;
-    // Medir linhas do benefit
-    const benFontSizeCanvas = benefit.length > 200 ? 28 : benefit.length > 120 ? 32 : 36;
-    const benLineH4 = benFontSizeCanvas * 1.45;
     ctx.font = `400 ${benFontSizeCanvas}px system-ui, -apple-system, sans-serif`;
-    const benWordsArr = benefit.split(' ');
-    let benLine4 = '';
-    let benLines4 = 1;
-    for (const w of benWordsArr) {
+    let benLine4 = '', benLines4 = 1;
+    for (const w of mainText.split(' ')) {
       const test = benLine4 + w + ' ';
       if (ctx.measureText(test).width > textW4 && benLine4 !== '') { benLines4++; benLine4 = w + ' '; } else { benLine4 = test; }
     }
-    const benBlockH4 = benLines4 * benLineH4;
-    const totalH4 = labelBlockH4 + kwBlockH4 + benBlockH4;
+
+    const labelBlockH4 = 28 + 32; // label + divider
+    const kwBlockH4 = kwLines4 * kwLineH4 + 28;
+    const benBlockH4 = benLines4 * benLineH4 + 20;
+    const bulletsBlockH4 = bulletPool4.length > 0 ? bulletPool4.length * (bulletFontSize4 * 1.6) + 16 : 0;
+    const totalH4 = labelBlockH4 + kwBlockH4 + benBlockH4 + bulletsBlockH4;
     let ry4 = Math.max(80, (H - totalH4) / 2);
 
     // Label
-    ctx.font = '600 22px system-ui, -apple-system, sans-serif';
-    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.font = '700 24px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.65)';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
     ctx.fillText(label4.toUpperCase(), rx4, ry4);
-    ry4 += labelBlockH4;
+    ry4 += 28;
+
+    // Divider accent
+    ctx.fillStyle = primaryColor;
+    ctx.fillRect(rx4, ry4, 56, 3);
+    ry4 += 32;
 
     // Keyword
     ctx.font = `900 ${kwFontSizeCanvas}px system-ui, -apple-system, sans-serif`;
     ctx.fillStyle = '#ffffff';
     ctx.textBaseline = 'top';
-    ry4 = wrapText(ctx, keyword, rx4, ry4, textW4, kwLineH4) + 24;
+    ry4 = wrapText(ctx, keyword, rx4, ry4, textW4, kwLineH4) + 28;
 
-    // Benefit
+    // Main text (salesPitch / description)
     ctx.font = `400 ${benFontSizeCanvas}px system-ui, -apple-system, sans-serif`;
-    ctx.fillStyle = '#e0e0e0';
-    ctx.globalAlpha = 0.9;
-    wrapText(ctx, benefit, rx4, ry4, textW4, benLineH4);
+    ctx.fillStyle = '#d8d8d8';
+    ctx.globalAlpha = 1;
+    ry4 = wrapText(ctx, mainText, rx4, ry4, textW4, benLineH4) + 20;
+
+    // Bullets complementares
+    if (bulletPool4.length > 0) {
+      ctx.font = `500 ${bulletFontSize4}px system-ui, -apple-system, sans-serif`;
+      ctx.fillStyle = '#c8c8c8';
+      const bulletLineH = bulletFontSize4 * 1.6;
+      for (const item of bulletPool4) {
+        // Dot
+        ctx.beginPath();
+        ctx.arc(rx4 + 8, ry4 + bulletFontSize4 * 0.5, 6, 0, Math.PI * 2);
+        ctx.fillStyle = primaryColor;
+        ctx.fill();
+        // Text
+        ctx.fillStyle = '#c8c8c8';
+        wrapText(ctx, item, rx4 + 24, ry4, textW4 - 24, bulletLineH);
+        ry4 += bulletLineH;
+      }
+    }
+
     ctx.globalAlpha = 1;
 
   } else if (slideNum === 5) {

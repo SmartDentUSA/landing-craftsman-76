@@ -748,6 +748,7 @@ export function ModernProductCard({
         productFeatures={product.features}
         technicalSpecs={product.technical_specifications}
         productSalesPitch={product.sales_pitch}
+        productDescription={product.description}
       />
 
       {/* Modal de Geração TikTok */}
