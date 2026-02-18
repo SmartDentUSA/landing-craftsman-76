@@ -77,6 +77,7 @@ interface InstagramCopyGeneratorProps {
   productBenefits?: string[];
   productFeatures?: string[];
   technicalSpecs?: Array<{ label: string; value: string }>;
+  productSalesPitch?: string;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -88,7 +89,7 @@ const REELS_SCRIPT_LABELS: Record<string, { label: string; description: string }
   demonstration: { label: '🎯 Demonstração', description: 'Mostra o produto em ação' }
 };
 
-export function InstagramCopyGenerator({ productId, productName, productPrice, productCategory, productImages = [], productUrl, productBenefits, productFeatures, technicalSpecs, isOpen, onClose }: InstagramCopyGeneratorProps) {
+export function InstagramCopyGenerator({ productId, productName, productPrice, productCategory, productImages = [], productUrl, productBenefits, productFeatures, technicalSpecs, productSalesPitch, isOpen, onClose }: InstagramCopyGeneratorProps) {
   // === Estados existentes (Copies de texto) ===
   const [feedCopies, setFeedCopies] = useState<CopyVariation[]>([
     { variation: 1, approach: 'storytelling', copy: '', link: '' },
@@ -153,16 +154,33 @@ export function InstagramCopyGenerator({ productId, productName, productPrice, p
   const [fontSize, setFontSize] = useState<number>(100);
   const [savingVisualCarousel, setSavingVisualCarousel] = useState(false);
 
-  function buildSmartHook(name: string, benefits: string[], features: string[]): string {
-    // 1. Feature curta em forma de pergunta (≤ 35 chars)
+  function extractHookFromSalesPitch(pitch: string): string | null {
+    if (!pitch || pitch.length < 10) return null;
+    const sentences = pitch.split(/[.!]/);
+    const firstSentence = sentences[0]?.trim();
+    if (!firstSentence || firstSentence.length < 15) return null;
+    if (firstSentence.length <= 90) return firstSentence;
+    const firstClause = firstSentence.split(',')[0]?.trim();
+    if (firstClause && firstClause.length >= 20 && firstClause.length <= 90) return firstClause;
+    const truncated = firstSentence.slice(0, 80).split(' ').slice(0, -1).join(' ');
+    return truncated.length >= 20 ? truncated + '...' : null;
+  }
+
+  function buildSmartHook(name: string, benefits: string[], features: string[], pitch?: string): string {
+    // 1. PRIORIDADE: Extrair da primeira frase do sales_pitch (fonte mais estratégica)
+    if (pitch) {
+      const pitchHook = extractHookFromSalesPitch(pitch);
+      if (pitchHook) return pitchHook;
+    }
+    // 2. Feature curta em forma de pergunta (≤ 35 chars)
     const shortFeature = (features || []).find(f => f && f.length <= 35);
     if (shortFeature) return `Você já ouviu falar em ${shortFeature}?`;
-    // 2. Benefício curto como headline impactante (≤ 45 chars)
+    // 3. Benefício curto como headline impactante (≤ 45 chars)
     const shortBenefit = (benefits || []).find(b => b && b.length <= 45);
     if (shortBenefit) return shortBenefit.charAt(0).toUpperCase() + shortBenefit.slice(1);
-    // 3. Gancho direto com nome do produto
+    // 4. Gancho direto com nome do produto
     if (name) return `${name}: a escolha que muda tudo`;
-    // 4. Fallback genérico
+    // 5. Fallback genérico
     return 'Descubra o segredo por trás do melhor resultado';
   }
 
@@ -170,7 +188,7 @@ export function InstagramCopyGenerator({ productId, productName, productPrice, p
     const b = productBenefits || [];
     const f = productFeatures || [];
     return {
-      1: { hook: buildSmartHook(productName, b, f), productName },
+      1: { hook: buildSmartHook(productName, b, f, productSalesPitch), productName },
       2: { category: productCategory || '', productName },
       3: { title: 'Por que confiar?' },
       4: { label: 'EXPERIÊNCIA', keyword: f[0] || 'Excelência', benefit: b[2] || b[1] || b[0] || 'Resultados excepcionais em cada uso' },
@@ -1866,6 +1884,7 @@ ${slide.text}`;
                         features: productFeatures,
                         technicalSpecs: technicalSpecs,
                         productUrl: productUrl,
+                        salesPitch: productSalesPitch,
                       }}
                       slideTexts={slideTexts}
                       onSlideTextChange={(slideNum, key, value) =>
