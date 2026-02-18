@@ -16,7 +16,8 @@ serve(async (req) => {
       format = 'webp', 
       quality = 85, 
       maxWidth = 1920,
-      responsive = false // Gerar múltiplas resoluções
+      responsive = false, // Gerar múltiplas resoluções
+      returnBase64 = false // Retornar data: URL para uso seguro no Canvas
     } = await req.json();
 
     if (!imageUrl) {
@@ -39,8 +40,28 @@ serve(async (req) => {
 
     const imageBuffer = await imageResponse.arrayBuffer();
     const originalSize = imageBuffer.byteLength;
+    const contentType = imageResponse.headers.get('content-type') || 'image/jpeg';
 
     console.log('✅ Imagem baixada:', { originalSize, sizeKB: (originalSize / 1024).toFixed(2) });
+
+    // OPÇÃO BASE64: Retornar data: URL para uso seguro no Canvas (sem CORS)
+    if (returnBase64) {
+      const uint8 = new Uint8Array(imageBuffer);
+      let binary = '';
+      const chunkSize = 8192;
+      for (let i = 0; i < uint8.length; i += chunkSize) {
+        const chunk = uint8.subarray(i, i + chunkSize);
+        binary += String.fromCharCode(...chunk);
+      }
+      const base64 = btoa(binary);
+      const dataUrl = `data:${contentType};base64,${base64}`;
+
+      console.log('✅ Retornando Base64 data: URL');
+      return new Response(
+        JSON.stringify({ dataUrl, originalSize, contentType }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // OPÇÃO 1: Usar Cloudflare Images API (se configurado)
     const cloudflareAccountHash = Deno.env.get('CLOUDFLARE_ACCOUNT_HASH');
