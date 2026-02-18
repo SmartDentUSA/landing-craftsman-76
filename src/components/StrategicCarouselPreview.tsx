@@ -373,7 +373,7 @@ function Slide1Hook({ image, primaryColor, productData, texts }: { image: string
       <div style={{ position: 'absolute', top: 60, left: 60, width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <span style={{ color: textColor, fontWeight: 900, fontSize: 36 }}>1</span>
       </div>
-      <div style={{ position: 'absolute', top: '12%', left: 80, right: 80, textAlign: 'center', maxHeight: '30%', overflow: 'hidden' }}>
+      <div style={{ position: 'absolute', top: '8%', bottom: '48%', left: 80, right: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
         <p style={{ color: textColor, fontWeight: 400, fontSize: 52, lineHeight: 1.25, margin: 0, textShadow: '0 2px 20px rgba(0,0,0,0.3)' }}>{hook}</p>
       </div>
       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 200, background: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent)' }} />
