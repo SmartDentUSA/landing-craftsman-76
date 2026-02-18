@@ -9,6 +9,11 @@ interface TechnicalSpec {
   value: string;
 }
 
+interface FAQ {
+  question: string;
+  answer: string;
+}
+
 interface ProductData {
   name: string;
   price?: number;
@@ -21,6 +26,8 @@ interface ProductData {
   salesPitch?: string;
   targetAudience?: string[];
   applications?: string;
+  faq?: FAQ[];
+  ecommerceHtmlText?: string;
 }
 
 // ========================= SlideTexts Types =========================
@@ -514,6 +521,8 @@ function buildImpactNarrative(productData: ProductData): {
   proofBullets: string[];
   label: string;
 } {
+  const faqs = productData.faq || [];
+  const ecommerceText = productData.ecommerceHtmlText || '';
   const benefits = (productData.benefits as string[]) || [];
   const features = (productData.features as string[]) || [];
   const specs = productData.technicalSpecs || [];
@@ -523,11 +532,30 @@ function buildImpactNarrative(productData: ProductData): {
   const targetAudience = (productData.targetAudience as string[]) || [];
   const name = productData.name || '';
 
-  // 1. Headline — benefício mais estratégico/impactante
-  const headline = benefits[0] || features[0] || name || 'Resultados que transformam';
-
-  // 2. Texto de impacto: síntese da dor → resolução
+  let headline = '';
   let impactText = '';
+  let proofBullets: string[] = [];
+
+  if (faqs.length > 0) {
+    // Prioridade 1: FAQs — headline = 1ª pergunta, texto = 1ª resposta, bullets = próximas perguntas
+    headline = faqs[0].question;
+    impactText = faqs[0].answer.slice(0, 250);
+    const faqBullets = faqs.slice(1, 4).map(f => f.question).filter(q => q.length < 90);
+    proofBullets = faqBullets.slice(0, 3);
+    return { headline, impactText, proofBullets, label: 'Perguntas & Respostas' };
+  }
+
+  if (ecommerceText) {
+    // Prioridade 2: HTML E-commerce extraído
+    headline = benefits[0] || features[0] || name;
+    impactText = ecommerceText.slice(0, 250);
+    proofBullets = [benefits[1], benefits[2], features[0]].filter(Boolean).slice(0, 3) as string[];
+    return { headline, impactText, proofBullets, label: 'Impacto Real' };
+  }
+
+  // Prioridade 3: Fallback — salesPitch → description → benefits
+  headline = benefits[0] || features[0] || name || 'Resultados que transformam';
+
   if (salesPitch) {
     impactText = salesPitch.slice(0, 220);
   } else if (description && benefits[1]) {
@@ -546,22 +574,15 @@ function buildImpactNarrative(productData: ProductData): {
     impactText = 'Solução desenvolvida para resultados reais e consistentes.';
   }
 
-  // 3. Bullets de prova técnica: specs prioritários, depois features curtas, depois benefits restantes
   const specBullets = specs.slice(0, 3).map(s => `${s.label}: ${s.value}`);
   const featureBullets = features.filter(f => f !== headline && f.length < 80);
   const benefitBullets = benefits.filter(b => b !== headline).slice(1);
-
-  const allBullets = [...specBullets, ...featureBullets, ...benefitBullets]
+  proofBullets = [...specBullets, ...featureBullets, ...benefitBullets]
     .filter(Boolean)
     .filter(b => b.length < 80)
     .slice(0, 3);
 
-  return {
-    headline,
-    impactText,
-    proofBullets: allBullets,
-    label: 'Impacto Real',
-  };
+  return { headline, impactText, proofBullets, label: 'Impacto Real' };
 }
 
 // ==================== SLIDE 4 — EXPERIÊNCIA ====================

@@ -81,6 +81,8 @@ interface InstagramCopyGeneratorProps {
   productDescription?: string;
   productTargetAudience?: string[];
   productApplications?: string;
+  productFaq?: Array<{ question: string; answer: string }>;
+  productEcommerceHtml?: string;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -92,7 +94,16 @@ const REELS_SCRIPT_LABELS: Record<string, { label: string; description: string }
   demonstration: { label: '🎯 Demonstração', description: 'Mostra o produto em ação' }
 };
 
-export function InstagramCopyGenerator({ productId, productName, productPrice, productCategory, productImages = [], productUrl, productBenefits, productFeatures, technicalSpecs, productSalesPitch, productDescription, productTargetAudience, productApplications, isOpen, onClose }: InstagramCopyGeneratorProps) {
+function stripHtmlToText(html: string): string {
+  return html
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+export function InstagramCopyGenerator({ productId, productName, productPrice, productCategory, productImages = [], productUrl, productBenefits, productFeatures, technicalSpecs, productSalesPitch, productDescription, productTargetAudience, productApplications, productFaq, productEcommerceHtml, isOpen, onClose }: InstagramCopyGeneratorProps) {
   // === Estados existentes (Copies de texto) ===
   const [feedCopies, setFeedCopies] = useState<CopyVariation[]>([
     { variation: 1, approach: 'storytelling', copy: '', link: '' },
@@ -1968,6 +1979,8 @@ ${slide.text}`;
                          salesPitch: productSalesPitch,
                          targetAudience: productTargetAudience,
                          applications: productApplications,
+                         faq: productFaq,
+                         ecommerceHtmlText: productEcommerceHtml ? stripHtmlToText(productEcommerceHtml).slice(0, 300) : undefined,
                        }}
                       slideTexts={slideTexts}
                       onSlideTextChange={(slideNum, key, value) =>

@@ -752,6 +752,8 @@ export function ModernProductCard({
         productDescription={product.description}
         productTargetAudience={product.target_audience as string[] | undefined}
         productApplications={product.applications}
+        productFaq={product.faq}
+        productEcommerceHtml={product.ecommerce_html?.html_content}
       />
 
       {/* Modal de Geração TikTok */}
