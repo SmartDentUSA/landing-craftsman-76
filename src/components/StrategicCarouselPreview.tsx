@@ -763,7 +763,7 @@ function buildImpactNarrative(productData: ProductData): {
       headline,
       impactText: body || copy.slice(0, 250),
       proofBullets: bulletLines,
-      label: 'Problema & Solução',
+      label: 'Experiência / Fluxo',
     };
   }
 
@@ -1423,7 +1423,8 @@ export async function generateSlidePNG(
     const { headline: narHeadline, impactText: narImpact, proofBullets: narBullets, label: narLabel } = buildImpactNarrative(productData);
     const keyword = texts?.keyword || narHeadline;
     const mainText = texts?.benefit || narImpact;
-    const label4 = texts?.label || narLabel;
+    const rawLabel4 = texts?.label || narLabel;
+    const label4 = isVisualDescriptionLine(rawLabel4) ? 'Experiência / Fluxo' : rawLabel4;
     const bulletPool4 = narBullets;
 
     const kwFontSizeCanvas = keyword.length > 30 ? 52 : keyword.length > 20 ? 62 : keyword.length > 15 ? 70 : 78;
@@ -1488,7 +1489,7 @@ export async function generateSlidePNG(
     ctx.fillStyle = 'rgba(255,255,255,0.65)';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    ctx.fillText(label4.toUpperCase(), rx4, ry4);
+    ctx.fillText(label4.slice(0, 40).toUpperCase(), rx4, ry4);
     ry4 += 28;
 
     // Divider accent
@@ -1635,11 +1636,15 @@ export async function generateSlidePNG(
     ctx.fillStyle = accentColor;
     ctx.fill();
     ctx.shadowBlur = 0;
-    ctx.font = '900 52px system-ui, -apple-system, sans-serif';
+    const ctaBtnFontSize = ctaBtn.length > 30 ? 36 : ctaBtn.length > 20 ? 44 : 52;
+    ctx.font = `900 ${ctaBtnFontSize}px system-ui, -apple-system, sans-serif`;
     ctx.fillStyle = textOnAccent;
     ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(ctaBtn, W / 2, btnY + btnH / 2);
+    ctx.textBaseline = 'top';
+    const ctaBtnLineH = ctaBtnFontSize * 1.2;
+    const ctaBtnLines = Math.max(1, Math.ceil(ctx.measureText(ctaBtn).width / (btnW - 80)));
+    const ctaBtnBlockH = ctaBtnLines * ctaBtnLineH;
+    wrapText(ctx, ctaBtn, W / 2, btnY + (btnH - ctaBtnBlockH) / 2, btnW - 80, ctaBtnLineH, 'center');
     ctx.font = '400 44px system-ui, -apple-system, sans-serif';
     ctx.fillStyle = textOnPrimary;
     ctx.globalAlpha = 0.85;
