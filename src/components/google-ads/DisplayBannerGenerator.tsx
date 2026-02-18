@@ -72,6 +72,22 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
     setSelectedFormats(prev => prev.length === DISPLAY_FORMATS.length ? [] : [...DISPLAY_FORMATS]);
   };
 
+  const imageUrlToBase64 = async (url: string): Promise<string> => {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Failed to fetch image');
+      const blob = await res.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch {
+      return url; // fallback to original URL if conversion fails
+    }
+  };
+
   const handleGenerate = useCallback(async () => {
     if (!selectedImage) {
       toast({ title: 'Selecione uma foto do produto', variant: 'destructive' });
@@ -84,12 +100,16 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
 
     setIsGenerating(true);
     try {
+      // Convert image to Base64 once for preview embedding
+      const imageBase64 = await imageUrlToBase64(selectedImage);
+
       const { data, error } = await supabase.functions.invoke('generate-display-banners', {
         body: {
           productId: product.id,
           productName: product.name,
           productDescription: product.description || '',
           productImageUrl: selectedImage,
+          productImageBase64: imageBase64,
           primaryColor,
           secondaryColor,
           ctaText,
@@ -105,7 +125,7 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
         setBanners(data.banners);
         toast({ title: `${data.banners.length} banners gerados com sucesso!` });
       } else {
-        // Fallback: generate locally without AI copy
+        // Fallback: generate locally with Base64 image
         const localBanners: DisplayBanner[] = selectedFormats.map(format => {
           const html = generateBannerHTML({
             width: format.width,
@@ -116,7 +136,7 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
             headline: product.name,
             description: product.description?.substring(0, 80) || '',
             ctaText,
-            productImageUrl: selectedImage,
+            productImageUrl: imageBase64,
             finalUrl: finalUrl || '#',
           });
           return { format, html, sizeKB: new Blob([html]).size / 1024 };
@@ -126,7 +146,7 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
       }
     } catch (err) {
       console.error('Error generating banners:', err);
-      // Fallback local
+      // Fallback local with original URL
       const localBanners: DisplayBanner[] = selectedFormats.map(format => {
         const html = generateBannerHTML({
           width: format.width,

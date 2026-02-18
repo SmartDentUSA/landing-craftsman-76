@@ -11,11 +11,8 @@ interface DisplayBannerPreviewProps {
   onDownload: (banner: DisplayBanner) => void;
 }
 
-export function DisplayBannerPreview({ banner, onDownload }: DisplayBannerPreviewProps) {
+function BannerIframe({ html, width, height, scale }: { html: string; width: number; height: number; scale: number }) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const [fullscreen, setFullscreen] = useState(false);
-  const { format, html, sizeKB } = banner;
-  const scale = Math.min(280 / format.width, 200 / format.height, 1);
 
   useEffect(() => {
     if (iframeRef.current) {
@@ -27,6 +24,28 @@ export function DisplayBannerPreview({ banner, onDownload }: DisplayBannerPrevie
       }
     }
   }, [html]);
+
+  return (
+    <iframe
+      ref={iframeRef}
+      sandbox="allow-same-origin"
+      scrolling="no"
+      style={{
+        width,
+        height,
+        transform: `scale(${scale})`,
+        transformOrigin: 'top left',
+        border: 'none',
+      }}
+      title={`Banner ${width}x${height}`}
+    />
+  );
+}
+
+export function DisplayBannerPreview({ banner, onDownload }: DisplayBannerPreviewProps) {
+  const [fullscreen, setFullscreen] = useState(false);
+  const { format, html, sizeKB } = banner;
+  const scale = Math.min(280 / format.width, 200 / format.height, 1);
 
   return (
     <>
@@ -45,19 +64,7 @@ export function DisplayBannerPreview({ banner, onDownload }: DisplayBannerPrevie
             className="mx-auto bg-muted/50 rounded border flex items-center justify-center overflow-hidden"
             style={{ width: format.width * scale + 4, height: format.height * scale + 4 }}
           >
-            <iframe
-              ref={iframeRef}
-              sandbox="allow-same-origin"
-              scrolling="no"
-              style={{
-                width: format.width,
-                height: format.height,
-                transform: `scale(${scale})`,
-                transformOrigin: 'top left',
-                border: 'none',
-              }}
-              title={`Banner ${format.width}x${format.height}`}
-            />
+            <BannerIframe html={html} width={format.width} height={format.height} scale={scale} />
           </div>
           <div className="flex gap-1">
             <Button variant="ghost" size="sm" className="flex-1 text-xs h-7" onClick={() => setFullscreen(true)}>
@@ -73,7 +80,12 @@ export function DisplayBannerPreview({ banner, onDownload }: DisplayBannerPrevie
       <Dialog open={fullscreen} onOpenChange={setFullscreen}>
         <DialogContent className="max-w-fit max-h-[90vh] overflow-auto">
           <DialogTitle>{format.name} — {format.width}×{format.height}</DialogTitle>
-          <div dangerouslySetInnerHTML={{ __html: html }} />
+          <div
+            className="flex items-center justify-center overflow-hidden"
+            style={{ width: format.width + 4, height: format.height + 4 }}
+          >
+            <BannerIframe html={html} width={format.width} height={format.height} scale={1} />
+          </div>
         </DialogContent>
       </Dialog>
     </>
