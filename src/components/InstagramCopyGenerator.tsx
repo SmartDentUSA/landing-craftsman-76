@@ -153,11 +153,24 @@ export function InstagramCopyGenerator({ productId, productName, productPrice, p
   const [fontSize, setFontSize] = useState<number>(100);
   const [savingVisualCarousel, setSavingVisualCarousel] = useState(false);
 
+  function buildSmartHook(name: string, benefits: string[], features: string[]): string {
+    // 1. Feature curta em forma de pergunta (≤ 35 chars)
+    const shortFeature = (features || []).find(f => f && f.length <= 35);
+    if (shortFeature) return `Você já ouviu falar em ${shortFeature}?`;
+    // 2. Benefício curto como headline impactante (≤ 45 chars)
+    const shortBenefit = (benefits || []).find(b => b && b.length <= 45);
+    if (shortBenefit) return shortBenefit.charAt(0).toUpperCase() + shortBenefit.slice(1);
+    // 3. Gancho direto com nome do produto
+    if (name) return `${name}: a escolha que muda tudo`;
+    // 4. Fallback genérico
+    return 'Descubra o segredo por trás do melhor resultado';
+  }
+
   function buildDefaultSlideTexts(): Partial<SlideTextsType> {
     const b = productBenefits || [];
     const f = productFeatures || [];
     return {
-      1: { hook: b[0] ? `Você sabia que ${b[0].toLowerCase()}?` : `Descubra o segredo por trás de ${productName}`, productName },
+      1: { hook: buildSmartHook(productName, b, f), productName },
       2: { category: productCategory || '', productName },
       3: { title: 'Por que confiar?' },
       4: { label: 'EXPERIÊNCIA', keyword: f[0] || 'Excelência', benefit: b[2] || b[1] || b[0] || 'Resultados excepcionais em cada uso' },

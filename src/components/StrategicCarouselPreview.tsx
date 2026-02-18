@@ -242,9 +242,15 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
 // ==================== SLIDE 1 — HOOK / GANCHO ====================
 function Slide1Hook({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; productData: ProductData; texts?: { hook?: string; productName?: string } }) {
   const textColor = getLuminance(primaryColor) > 0.5 ? '#000000' : '#ffffff';
-  const hook = texts?.hook || (productData.benefits?.[0]
-    ? `Você sabia que ${productData.benefits[0].toLowerCase()}?`
-    : `Descubra o segredo por trás de ${productData.name}`);
+  const hook = texts?.hook || (() => {
+    const features = productData.features || [];
+    const benefits = productData.benefits || [];
+    const shortFeature = features.find(f => f && f.length <= 35);
+    if (shortFeature) return `Você já ouviu falar em ${shortFeature}?`;
+    const shortBenefit = benefits.find(b => b && b.length <= 45);
+    if (shortBenefit) return shortBenefit.charAt(0).toUpperCase() + shortBenefit.slice(1);
+    return `${productData.name}: a escolha que muda tudo`;
+  })();
   const name = texts?.productName || productData.name;
 
   return (
@@ -683,7 +689,13 @@ export async function generateSlidePNG(
   const ICONS_CANVAS = ['⚡', '🛡', '⭐', '✅', '🔬'];
 
   if (slideNum === 1) {
-    const hookText = texts?.hook || (benefits[0] ? `Você sabia que ${benefits[0].toLowerCase()}?` : `Descubra o segredo por trás de ${productData.name}`);
+    const hookText = texts?.hook || (() => {
+      const shortFeature = (productData.features || []).find(f => f && f.length <= 35);
+      if (shortFeature) return `Você já ouviu falar em ${shortFeature}?`;
+      const shortBenefit = (benefits || []).find(b => b && b.length <= 45);
+      if (shortBenefit) return shortBenefit.charAt(0).toUpperCase() + shortBenefit.slice(1);
+      return `${productData.name}: a escolha que muda tudo`;
+    })();
     const productName = texts?.productName || productData.name;
 
     ctx.fillStyle = primaryColor;
@@ -992,8 +1004,16 @@ export function generateSlideHTML(slideNum: number, imageUrl: string, primaryCol
     ? specs.map(s => `<div style="display:flex;align-items:flex-start;gap:24px;"><div style="width:56px;height:56px;border-radius:12px;background:${primaryColor};flex-shrink:0;"></div><div><p style="color:#e0e0e0;font-weight:700;font-size:36px;margin:0;">${s.label}</p>${s.value ? `<p style="color:#aaa;font-size:30px;margin:6px 0 0 0;">${s.value}</p>` : ''}</div></div>`)
     : features.map(f => `<div style="display:flex;align-items:flex-start;gap:24px;"><div style="width:56px;height:56px;border-radius:12px;background:${primaryColor};flex-shrink:0;"></div><div><p style="color:#e0e0e0;font-weight:700;font-size:36px;margin:0;">${f}</p></div></div>`);
 
+  const smartHook = (() => {
+    const shortFeature = features.find(f => f && f.length <= 35);
+    if (shortFeature) return `Você já ouviu falar em ${shortFeature}?`;
+    const shortBenefit = benefits.find(b => b && b.length <= 45);
+    if (shortBenefit) return shortBenefit.charAt(0).toUpperCase() + shortBenefit.slice(1);
+    return `${productData.name}: a escolha que muda tudo`;
+  })();
+
   const slideBodies: Record<number, string> = {
-    1: `<div style="position:absolute;top:0;left:0;right:0;height:55%;background:${primaryColor};"></div>${imageUrl ? `<img src="${imageUrl}" style="position:absolute;bottom:0;left:0;right:0;height:60%;width:100%;object-fit:cover;object-position:center top;">` : ''}<div style="position:absolute;top:15%;left:80px;right:80px;text-align:center;"><p style="color:${textOnPrimary};font-weight:900;font-size:80px;line-height:1.1;margin:0;">${benefits[0] ? `Você sabia que ${benefits[0].toLowerCase()}?` : `Descubra ${productData.name}`}</p></div><p style="position:absolute;bottom:60px;left:80px;right:80px;color:#fff;font-size:44px;font-weight:600;margin:0;text-align:center;">${productData.name}</p>`,
+    1: `<div style="position:absolute;top:0;left:0;right:0;height:55%;background:${primaryColor};"></div>${imageUrl ? `<img src="${imageUrl}" style="position:absolute;bottom:0;left:0;right:0;height:60%;width:100%;object-fit:cover;object-position:center top;">` : ''}<div style="position:absolute;top:15%;left:80px;right:80px;text-align:center;"><p style="color:${textOnPrimary};font-weight:900;font-size:80px;line-height:1.1;margin:0;">${smartHook}</p></div><p style="position:absolute;bottom:60px;left:80px;right:80px;color:#fff;font-size:44px;font-weight:600;margin:0;text-align:center;">${productData.name}</p>`,
     2: `<div style="width:100%;height:100%;background:#f8f8f8;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:80px;box-sizing:border-box;">${productData.category ? `<div style="background:${primaryColor};color:${textOnPrimary};border-radius:50px;padding:16px 48px;font-size:36px;font-weight:700;letter-spacing:2px;text-transform:uppercase;">${productData.category}</div>` : '<div></div>'}${imageUrl ? `<img src="${imageUrl}" style="max-width:70%;max-height:600px;object-fit:contain;filter:drop-shadow(0 30px 60px rgba(0,0,0,0.2));">` : '<div style="width:500px;height:500px;background:#e0e0e0;border-radius:20px;"></div>'}<div style="text-align:center;"><h2 style="margin:0;font-size:68px;font-weight:900;color:#111;line-height:1.1;">${productData.name}</h2></div></div>`,
     3: `<div style="width:100%;height:100%;display:flex;"><div style="width:42%;position:relative;overflow:hidden;">${imageUrl ? `<img src="${imageUrl}" style="width:100%;height:100%;object-fit:cover;">` : ''}<div style="position:absolute;top:0;right:0;bottom:0;width:120px;background:linear-gradient(to right,transparent,#0f0f14);"></div></div><div style="flex:1;padding:100px 60px 80px 40px;display:flex;flex-direction:column;justify-content:center;background:#0f0f14;"><h2 style="color:#fff;font-size:52px;font-weight:900;margin:0 0 60px 0;">Por que confiar?</h2><div style="display:flex;flex-direction:column;gap:36px;">${items.join('')}</div></div></div>`,
     4: `<div style="width:100%;height:100%;display:flex;"><div style="width:50%;position:relative;overflow:hidden;">${imageUrl ? `<img src="${imageUrl}" style="width:100%;height:100%;object-fit:cover;">` : '<div style="width:100%;height:100%;background:#ccc;"></div>'}</div><div style="width:50%;background:${primaryColor};display:flex;flex-direction:column;justify-content:center;padding:80px 70px;box-sizing:border-box;"><p style="color:${textOnPrimary};opacity:0.7;font-size:36px;font-weight:600;margin:0 0 20px 0;text-transform:uppercase;letter-spacing:4px;">Experiência</p><h2 style="color:${textOnPrimary};font-size:${(features[0] || 'Excelência').length > 15 ? 65 : 90}px;font-weight:900;margin:0 0 40px 0;line-height:1;word-break:break-word;">${features[0] || 'Excelência'}</h2><p style="color:${textOnPrimary};opacity:0.9;font-size:38px;line-height:1.5;margin:0;">${benefits[1] || benefits[0] || 'Resultados excepcionais em cada uso'}</p></div></div>`,
