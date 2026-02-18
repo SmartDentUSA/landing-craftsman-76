@@ -98,7 +98,7 @@ Slide 2 — SOLUÇÃO: Apresente o produto como a solução ideal. Destaque a pr
 Slide 3 — DIFERENCIAL TÉCNICO: Use dados técnicos reais para explicar por que o produto funciona. Foco no benefício técnico real, não em promessas genéricas.
 Slide 4 — EXPERIÊNCIA/FLUXO: Descreva como a vida do técnico/dentista fica mais fácil com o produto no dia a dia.
 Slide 5 — AUTORIDADE SMART DENT: Reforce que é tecnologia Smart Dent e mencione a categoria do produto.
-Slide 6 — CTA: Chamada para ação clara (Link na Bio ou Comentário). NUNCA inclua valores monetários.
+Slide 6 — CTA: Chamada para ação clara (Link na Bio ou Comentário). NUNCA inclua valores monetários. O campo cta_label deve ter no máximo 6 palavras e é o texto do botão (ex: 'Conheça no Link da Bio', 'Acesse pelo Link', 'Saiba Mais').
 
 ANTI-ALUCINAÇÃO (OBRIGATÓRIO):
 - Use APENAS dados presentes abaixo
@@ -132,7 +132,7 @@ Retorne APENAS este JSON (sem markdown, sem explicações):
     { "position": 3, "title": "Diferencial Técnico", "text": "...", "image_suggestion": "..." },
     { "position": 4, "title": "Experiência / Fluxo", "text": "...", "image_suggestion": "..." },
     { "position": 5, "title": "Autoridade Smart Dent", "text": "...", "image_suggestion": "..." },
-    { "position": 6, "title": "CTA", "text": "...", "image_suggestion": "..." }
+    { "position": 6, "title": "CTA", "text": "...", "cta_label": "...", "image_suggestion": "..." }
   ]
 }`;
 
