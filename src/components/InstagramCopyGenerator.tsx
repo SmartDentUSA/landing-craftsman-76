@@ -855,31 +855,56 @@ ${slide.text}`;
           const prevTexts = prev as any;
           return {
             ...prev,
-            // Slide 1: Usar IA para gancho criativo e único (chamada assíncrona à edge function)
-            1: {
-              hook: buildSmartHook(productName, productBenefits || [], productFeatures || [], productSalesPitch),
-              productName: prevTexts[1]?.productName || productName,
-            },
+            // Slide 1: Priorizar gancho da IA, fallback para buildSmartHook local
+            1: (() => {
+              const aiHook = s[0]?.text?.split('\n')[0]?.trim();
+              return {
+                hook: (aiHook && aiHook.length >= 10 && aiHook.length <= 120)
+                  ? aiHook
+                  : buildSmartHook(productName, productBenefits || [], productFeatures || [], productSalesPitch),
+                productName: prevTexts[1]?.productName || productName,
+              };
+            })(),
             3: {
               title: s[2]?.title || 'Por que confiar?',
             },
             4: {
-              label: s[3]?.image_suggestion || prevTexts[4]?.label || 'EXPERIÊNCIA',
+              // label fixo — nunca usar image_suggestion da IA
+              label: prevTexts[4]?.label || 'EXPERIÊNCIA / FLUXO',
               keyword: s[3]?.title || prevTexts[4]?.keyword || '',
               benefit: s[3]?.text || prevTexts[4]?.benefit || '',
             },
-            5: {
-              title: s[4]?.title || prevTexts[5]?.title || 'Você pode confiar',
-              badge1: prevTexts[5]?.badge1 || '',
-              badge2: prevTexts[5]?.badge2 || '',
-              badge3: prevTexts[5]?.badge3 || '',
-            },
-            6: {
-              productName: prevTexts[6]?.productName || productName,
-              ctaButton: s[5]?.text?.split('\n')[0] || s[6]?.text?.split('\n')[0] || '🛒 Comprar Agora',
-              linkLabel: prevTexts[6]?.linkLabel || '🔗 Link na Bio',
-              footer: prevTexts[6]?.footer || 'Direct para mais informações',
-            },
+            5: (() => {
+              // Extrair badges do text do Slide 5 (linhas separadas por \n)
+              const slide5Lines = (s[4]?.text || '')
+                .split('\n')
+                .map((l: string) => l.replace(/^[-•*✅🔬🦷]\s*/, '').trim())
+                .filter(Boolean);
+              return {
+                title: s[4]?.title || prevTexts[5]?.title || 'Tecnologia Smart Dent',
+                badge1: slide5Lines[0] || prevTexts[5]?.badge1 || '',
+                badge2: slide5Lines[1] || prevTexts[5]?.badge2 || '',
+                badge3: slide5Lines[2] || prevTexts[5]?.badge3 || '',
+              };
+            })(),
+            6: (() => {
+              // Priorizar cta_label explícito da IA; fallback para primeira linha curta do text
+              const ctaLabelAI = (s[5] as any)?.cta_label?.trim();
+              const slide6Lines = (s[5]?.text || '')
+                .split('\n')
+                .map((l: string) => l.trim())
+                .filter(Boolean);
+              const ctaCandidate = slide6Lines.find((l: string) => l.length >= 5 && l.length <= 55);
+              const ctaButton = ctaLabelAI
+                ? ctaLabelAI
+                : (ctaCandidate && ctaCandidate.length <= 55 ? ctaCandidate : '💡 Saiba Mais');
+              return {
+                productName: prevTexts[6]?.productName || productName,
+                ctaButton,
+                linkLabel: prevTexts[6]?.linkLabel || '🔗 Link na Bio',
+                footer: prevTexts[6]?.footer || 'Direct para mais informações',
+              };
+            })(),
           };
         });
         toast({ title: "✨ Textos gerados!", description: "Slides 1, 3, 4, 5 e 6 atualizados com IA." });
