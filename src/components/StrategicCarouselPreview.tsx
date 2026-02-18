@@ -23,7 +23,7 @@ interface ProductData {
 // ========================= SlideTexts Types =========================
 export interface SlideTextsType {
   1: { hook: string; productName: string };
-  2: { category: string; productName: string };
+  2: { category: string; productName: string; imageScale?: string };
   3: { title: string };
   4: { label: string; keyword: string; benefit: string };
   5: { title: string; badge1: string; badge2: string; badge3: string };
@@ -60,7 +60,7 @@ const SLIDE_W = 1080;
 const SLIDE_H = 1350;
 
 // ========================= Per-slide editor configs =========================
-const SLIDE_EDITOR_FIELDS: Record<number, Array<{ key: string; label: string; type: 'input' | 'textarea' }>> = {
+const SLIDE_EDITOR_FIELDS: Record<number, Array<{ key: string; label: string; type: 'input' | 'textarea' | 'slider' }>> = {
   1: [
     { key: 'hook', label: 'Texto do Gancho', type: 'textarea' },
     { key: 'productName', label: 'Nome do produto', type: 'input' },
@@ -68,6 +68,7 @@ const SLIDE_EDITOR_FIELDS: Record<number, Array<{ key: string; label: string; ty
   2: [
     { key: 'category', label: 'Categoria', type: 'input' },
     { key: 'productName', label: 'Nome do produto', type: 'input' },
+    { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
   ],
   3: [
     { key: 'title', label: 'Título da seção', type: 'input' },
@@ -106,6 +107,7 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
   const containerW = SLIDE_W * SLIDE_SCALE;
   const containerH = SLIDE_H * SLIDE_SCALE;
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
   const [editorOpen, setEditorOpen] = useState(false);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -117,8 +119,42 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
       onImageChange(slideNum, dataUrl);
     };
     reader.readAsDataURL(file);
-    // reset so same file can be re-uploaded
     e.target.value = '';
+  };
+
+  const insertFormat = (key: string, prefix: string, suffix: string) => {
+    if (!onSlideTextChange) return;
+    const ta = textareaRefs.current[key];
+    const currentVal = slideTexts?.[key] || '';
+    if (ta) {
+      const start = ta.selectionStart ?? 0;
+      const end = ta.selectionEnd ?? 0;
+      const selected = currentVal.slice(start, end);
+      const newVal = currentVal.slice(0, start) + prefix + selected + suffix + currentVal.slice(end);
+      onSlideTextChange(key, newVal);
+      setTimeout(() => {
+        ta.focus();
+        ta.setSelectionRange(start + prefix.length, end + prefix.length);
+      }, 0);
+    } else {
+      onSlideTextChange(key, currentVal + prefix + suffix);
+    }
+  };
+
+  const applyUppercase = (key: string) => {
+    if (!onSlideTextChange) return;
+    const ta = textareaRefs.current[key];
+    const currentVal = slideTexts?.[key] || '';
+    if (ta) {
+      const start = ta.selectionStart ?? 0;
+      const end = ta.selectionEnd ?? 0;
+      if (start !== end) {
+        const newVal = currentVal.slice(0, start) + currentVal.slice(start, end).toUpperCase() + currentVal.slice(end);
+        onSlideTextChange(key, newVal);
+        return;
+      }
+    }
+    onSlideTextChange(key, currentVal.toUpperCase());
   };
 
   const fields = SLIDE_EDITOR_FIELDS[slideNum] || [];
@@ -153,7 +189,6 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
 
       {/* Action row: thumbnails + upload + edit */}
       <div className="flex items-center gap-1 flex-wrap justify-center" style={{ maxWidth: containerW + 40 }}>
-        {/* Image thumbnails */}
         {productImages.slice(0, 5).map((img, idx) => (
           <button
             key={idx}
@@ -179,7 +214,6 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
           </button>
         ))}
 
-        {/* Upload button */}
         <button
           onClick={() => fileInputRef.current?.click()}
           title="Upload nova imagem"
@@ -191,7 +225,6 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
         </button>
         <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
 
-        {/* Editor toggle */}
         {onSlideTextChange && (
           <button
             onClick={() => setEditorOpen(!editorOpen)}
@@ -211,12 +244,50 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
           {fields.map((field) => (
             <div key={field.key} className="space-y-1">
               <Label className="text-xs text-muted-foreground">{field.label}</Label>
-              {field.type === 'textarea' ? (
-                <Textarea
-                  value={slideTexts?.[field.key] || ''}
-                  onChange={(e) => onSlideTextChange(field.key, e.target.value)}
-                  className="text-xs min-h-[50px] resize-none"
-                />
+              {field.type === 'slider' ? (
+                <div className="flex items-center gap-2 pt-1">
+                  <input
+                    type="range"
+                    min={50}
+                    max={150}
+                    step={5}
+                    value={Number(slideTexts?.[field.key]) || 100}
+                    onChange={(e) => onSlideTextChange(field.key, e.target.value)}
+                    className="flex-1 h-2 rounded cursor-pointer accent-primary"
+                  />
+                  <span className="text-xs font-mono text-muted-foreground w-10 text-right">
+                    {slideTexts?.[field.key] || '100'}%
+                  </span>
+                </div>
+              ) : field.type === 'textarea' ? (
+                <div>
+                  <div className="flex gap-1 mb-1">
+                    <button
+                      type="button"
+                      className="text-xs px-2 py-0.5 border border-border rounded font-bold hover:bg-muted bg-background cursor-pointer"
+                      onClick={() => insertFormat(field.key, '**', '**')}
+                      title="Negrito"
+                    >B</button>
+                    <button
+                      type="button"
+                      className="text-xs px-2 py-0.5 border border-border rounded italic hover:bg-muted bg-background cursor-pointer"
+                      onClick={() => insertFormat(field.key, '_', '_')}
+                      title="Itálico"
+                    >I</button>
+                    <button
+                      type="button"
+                      className="text-xs px-2 py-0.5 border border-border rounded hover:bg-muted bg-background cursor-pointer font-semibold"
+                      onClick={() => applyUppercase(field.key)}
+                      title="MAIÚSCULAS"
+                    >AA</button>
+                  </div>
+                  <Textarea
+                    ref={(el) => { textareaRefs.current[field.key] = el; }}
+                    value={slideTexts?.[field.key] || ''}
+                    onChange={(e) => onSlideTextChange(field.key, e.target.value)}
+                    className="text-xs min-h-[50px] resize-none"
+                  />
+                </div>
               ) : (
                 <Input
                   value={slideTexts?.[field.key] || ''}
@@ -283,10 +354,11 @@ function Slide1Hook({ image, primaryColor, productData, texts }: { image: string
 }
 
 // ==================== SLIDE 2 — SOLUÇÃO ====================
-function Slide2Solution({ image, primaryColor, accentColor, productData, texts }: { image: string; primaryColor: string; accentColor: string; productData: ProductData; texts?: { category?: string; productName?: string } }) {
+function Slide2Solution({ image, primaryColor, accentColor, productData, texts }: { image: string; primaryColor: string; accentColor: string; productData: ProductData; texts?: { category?: string; productName?: string; imageScale?: string } }) {
   const textOnPrimary = getLuminance(primaryColor) > 0.5 ? '#000000' : '#ffffff';
   const category = texts?.category !== undefined ? texts.category : (productData.category || '');
   const name = texts?.productName || productData.name;
+  const imageScale = Number(texts?.imageScale) || 100;
 
   return (
     <div style={{ width: SLIDE_W, height: SLIDE_H, background: '#f8f8f8', fontFamily: 'system-ui, -apple-system, sans-serif', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', padding: '80px 80px 100px' }}>
@@ -298,9 +370,23 @@ function Slide2Solution({ image, primaryColor, accentColor, productData, texts }
           {category}
         </div>
       )}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 0', minHeight: 0, overflow: 'hidden' }}>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px 0', minHeight: 0, overflow: 'hidden' }}>
         {image ? (
-          <img src={image} alt="produto" style={{ maxWidth: '70%', maxHeight: '100%', height: 'auto', width: 'auto', objectFit: 'contain', filter: 'drop-shadow(0 30px 60px rgba(0,0,0,0.2))' }} />
+          <img
+            src={image}
+            alt="produto"
+            style={{
+              maxWidth: '88%',
+              maxHeight: '85%',
+              height: 'auto',
+              width: 'auto',
+              objectFit: 'contain',
+              transform: `scale(${imageScale / 100})`,
+              transformOrigin: 'center center',
+              filter: 'drop-shadow(0 30px 60px rgba(0,0,0,0.2))',
+              transition: 'transform 0.2s ease',
+            }}
+          />
         ) : (
           <div style={{ width: 500, height: 500, background: '#e0e0e0', borderRadius: 20 }} />
         )}
@@ -421,7 +507,7 @@ function Slide5Security({ image, primaryColor, productData, texts }: { image: st
                   {badge.icon === 'check' && <><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>}
                 </svg>
               </div>
-              <span style={{ color: '#ffffff', fontSize: 40, fontWeight: 700, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any, lineHeight: 1.3, wordBreak: 'break-word' as const }}>{badge.label}</span>
+              <span style={{ color: '#ffffff', fontSize: 40, fontWeight: 700, display: 'block', wordBreak: 'break-word' as const, lineHeight: 1.3 }}>{badge.label}</span>
             </div>
           ))}
         </div>
@@ -782,11 +868,12 @@ export async function generateSlidePNG(
       yOffset += 120;
     }
     if (img) {
-      const maxW = W * 0.70;
-      const maxH = 600;
+      const imageScale2 = Number(texts?.imageScale) || 100;
+      const maxW = W * 0.88;
+      const maxH = 800;
       let dw = img.naturalWidth || img.width;
       let dh = img.naturalHeight || img.height;
-      const scale = Math.min(maxW / dw, maxH / dh, 1);
+      const scale = Math.min(maxW / dw, maxH / dh, 1) * (imageScale2 / 100);
       dw *= scale;
       dh *= scale;
       const ix = (W - dw) / 2;
@@ -938,23 +1025,26 @@ export async function generateSlidePNG(
     const maxBadgeTextW = W - 160 - 130 - 60;
     let by = 520;
     for (const badge of badges5) {
+      // Measure how many lines this badge will take so we can size the box
+      ctx.font = '700 40px system-ui, -apple-system, sans-serif';
+      const badgeLines = Math.ceil(ctx.measureText(badge).width / maxBadgeTextW) || 1;
+      const badgeBoxH = Math.max(130, 30 + badgeLines * 52);
       ctx.fillStyle = 'rgba(255,255,255,0.12)';
-      roundRect(80, by, W - 160, 130, 20);
+      roundRect(80, by, W - 160, badgeBoxH, 20);
       ctx.fill();
       ctx.strokeStyle = 'rgba(255,255,255,0.2)';
       ctx.lineWidth = 1;
       ctx.stroke();
       ctx.beginPath();
-      ctx.arc(80 + 72, by + 65, 36, 0, Math.PI * 2);
+      ctx.arc(80 + 72, by + badgeBoxH / 2, 36, 0, Math.PI * 2);
       ctx.fillStyle = primaryColor;
       ctx.fill();
       ctx.font = '700 40px system-ui, -apple-system, sans-serif';
       ctx.fillStyle = '#ffffff';
       ctx.textAlign = 'left';
-      ctx.textBaseline = 'middle';
-      const truncatedBadge = truncateToWidth(ctx, badge, maxBadgeTextW);
-      ctx.fillText(truncatedBadge, 80 + 130, by + 65);
-      by += 155;
+      ctx.textBaseline = 'top';
+      wrapText(ctx, badge, 80 + 130, by + (badgeBoxH / 2) - (badgeLines * 52) / 2, maxBadgeTextW, 52);
+      by += badgeBoxH + 25;
     }
 
   } else if (slideNum === 6) {
