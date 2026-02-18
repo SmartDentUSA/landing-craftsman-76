@@ -507,15 +507,17 @@ function Slide3Technical({ image, primaryColor, productData, texts }: { image: s
 // ==================== SLIDE 4 — EXPERIÊNCIA ====================
 function Slide4Experience({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; productData: ProductData; texts?: { label?: string; keyword?: string; benefit?: string } }) {
   const textOnPrimary = getLuminance(primaryColor) > 0.5 ? '#000000' : '#ffffff';
-  const benefit = texts?.benefit || productData.benefits?.[2] || productData.benefits?.[1] || 'Resultados excepcionais em cada uso';
-  const keyword = texts?.keyword || productData.features?.[0] || 'Excelência';
-  const label = texts?.label || 'Experiência';
+  const salesPitch = productData.salesPitch || '';
+  const name = productData.name || '';
+  const benefit = texts?.benefit || salesPitch || productData.benefits?.[0] || productData.benefits?.[1] || 'Resultados excepcionais em cada uso';
+  const keyword = texts?.keyword || productData.features?.[0] || name || 'Excelência';
+  const label = texts?.label || (name ? `Experiência com ${name}` : 'Experiência');
   // Auto-sizing: keyword
   const kwFontSize = keyword.length > 30 ? 44 : keyword.length > 20 ? 55 : keyword.length > 15 ? 65 : 90;
   // Auto-sizing: label (truncate visually if too long)
-  const labelFontSize = label.length > 30 ? 26 : label.length > 20 ? 30 : 36;
-  // Auto-sizing: benefit
-  const benefitFontSize = benefit.length > 120 ? 24 : benefit.length > 80 ? 28 : benefit.length > 60 ? 32 : 38;
+  const labelFontSize = label.length > 40 ? 20 : label.length > 30 ? 24 : label.length > 20 ? 28 : 34;
+  // Auto-sizing: benefit — sales_pitch pode ser mais longo
+  const benefitFontSize = benefit.length > 200 ? 22 : benefit.length > 120 ? 26 : benefit.length > 80 ? 30 : benefit.length > 60 ? 34 : 38;
 
   return (
     <div style={{ width: SLIDE_W, height: SLIDE_H, fontFamily: 'system-ui, -apple-system, sans-serif', position: 'relative', overflow: 'hidden', background: '#0f0f14' }}>
@@ -607,8 +609,8 @@ function Slide6CTA({ image, primaryColor, accentColor, productData, texts }: { i
   const textOnPrimary = getLuminance(primaryColor) > 0.5 ? '#000000' : '#ffffff';
   const textOnAccent = getLuminance(accentColor) > 0.5 ? '#000000' : '#ffffff';
   const name = texts?.productName || productData.name;
-  const ctaButton = texts?.ctaButton || '🛒 Comprar Agora';
-  const linkLabel = texts?.linkLabel || '🔗 Link na Bio';
+  const ctaButton = texts?.ctaButton || '💡 Saiba Mais';
+  const linkLabel = texts?.linkLabel || '🔗 Saiba Mais';
   const footer = texts?.footer || 'Direct para mais informações';
 
   return (
@@ -1229,8 +1231,8 @@ export async function generateSlidePNG(
 
   } else if (slideNum === 6) {
     const name6 = texts?.productName || productData.name;
-    const ctaBtn = texts?.ctaButton || '🛒 Comprar Agora';
-    const linkLbl = texts?.linkLabel || '🔗 Link na Bio';
+    const ctaBtn = texts?.ctaButton || '💡 Saiba Mais';
+    const linkLbl = texts?.linkLabel || '🔗 Saiba Mais';
     const ftr = texts?.footer || 'Direct para mais informações';
 
     ctx.fillStyle = primaryColor;
