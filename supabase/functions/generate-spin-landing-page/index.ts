@@ -975,7 +975,8 @@ serve(async (req) => {
       systemBResources, // 🆕 Adicionar recursos do Sistema B
       productVideos, // 🎬 Adicionar vídeos dos produtos vinculados
       productPublications, // 📰 Adicionar publicações dos produtos
-      authorKOL // ✅ FASE 3: Adicionar dados do KOL para Person Schema
+      authorKOL, // ✅ FASE 3: Adicionar dados do KOL para Person Schema
+      productComparisonTables: enrichedProductContext.competitorComparisons // 🆕 Tabelas de comparação dos produtos
     };
 
     // ✅ MERGE CORRETO: Passar separadamente IA e customText

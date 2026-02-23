@@ -2673,6 +2673,63 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
   ` : ''}
 
   ${(() => {
+    // 🆕 TABELAS DE COMPARAÇÃO POR PRODUTO (vindas do products_repository)
+    const productComparisons = aiContent?.productComparisonTables || [];
+    const validComparisons = productComparisons.filter((item: any) => 
+      item?.comparison?.enabled && 
+      item?.comparison?.table_headers?.length > 0 && 
+      item?.comparison?.table_data?.length > 0
+    );
+    
+    if (validComparisons.length === 0) return '';
+    
+    console.log(`📊 [HTML] Renderizando ${validComparisons.length} tabelas de comparação de produtos`);
+    
+    return `
+  <!-- ========== SEÇÃO: TABELAS DE COMPARAÇÃO POR PRODUTO ========== -->
+  <div class="container section-padding">
+    <section class="comparison-section">
+      <h2>Comparativo Detalhado por Produto</h2>
+      <p class="subtitle">Veja como cada produto se destaca frente aos concorrentes</p>
+      
+      ${validComparisons.map((item: any) => `
+        <div style="margin-top: 3rem;">
+          <h3 style="font-size: 24px; font-weight: 700; color: var(--text); margin-bottom: 1rem;">
+            Comparativo: ${escapeHtml(item.productName)}
+          </h3>
+          ${item.comparison.subtitle ? `<p style="color: var(--muted); margin-bottom: 1.5rem;">${escapeHtml(item.comparison.subtitle)}</p>` : ''}
+          <div class="desktop-table">
+            <table>
+              <thead>
+                <tr>
+                  ${item.comparison.table_headers.map((header: string) => `
+                    <th>${escapeHtml(header)}</th>
+                  `).join('')}
+                </tr>
+              </thead>
+              <tbody>
+                ${item.comparison.table_data.map((row: any) => `
+                  <tr>
+                    ${item.comparison.table_headers.map((header: string) => {
+                      const cellValue = row[header];
+                      const displayValue = (cellValue !== undefined && cellValue !== null && cellValue !== '') 
+                        ? cellValue 
+                        : '-';
+                      return `<td>${escapeHtml(displayValue)}</td>`;
+                    }).join('')}
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `).join('')}
+    </section>
+  </div>
+    `;
+  })()}
+
+  ${(() => {
     // 🔗 INTEGRAÇÃO SISTEMA B: Seção de Recursos Técnicos (Vídeos + Documentos)
     const systemBResources: SystemBEnrichment | undefined = aiContent?.systemBResources;
     const hasVideos = systemBResources?.videos?.length > 0;
