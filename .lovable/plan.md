@@ -1,25 +1,28 @@
 
 
-# Importacao CSV para Tabela de Concorrentes
+# Importacao CSV e DOCX para Tabela de Concorrentes
 
 ## Objetivo
-Adicionar funcionalidade de importacao e exportacao CSV na tabela de comparacao com concorrentes (`CompetitorComparisonTable`), seguindo o mesmo padrao ja existente na importacao de especificacoes tecnicas (`ProductTechnicalSpecsModal`).
+Adicionar botoes de importacao de dados na Tabela de Comparacao com Concorrentes, suportando **CSV** (igual ao padrao do projeto) e **DOCX** (nova funcionalidade usando a biblioteca `mammoth`).
 
 ## O que sera feito
 
-### 1. Adicionar botoes de Import/Export CSV ao `CompetitorComparisonTable`
-- Botao **"Importar CSV"** com icone Upload
-- Botao **"Baixar Template"** com icone Download
-- Input hidden de file para selecao do arquivo CSV
+### 1. Instalar dependencia `mammoth`
+- Biblioteca leve para extrair conteudo de arquivos `.docx` no browser
+- Converte DOCX para HTML, de onde extraimos as tabelas automaticamente
 
-### 2. Logica de importacao CSV
-- Usar `papaparse` (ja instalado no projeto) para parsear o CSV
-- A primeira linha do CSV define os **headers da tabela** (colunas)
-- As linhas seguintes definem os **dados** (rows)
-- Deteccao inteligente: se ja existem headers, os dados importados sao mesclados (append); se nao existem, substitui tudo
+### 2. Adicionar botoes ao componente `CompetitorComparisonTable`
+- **"Importar CSV"** -- usa `papaparse` (ja instalado)
+- **"Importar DOCX"** -- usa `mammoth` para extrair a primeira tabela do documento
+- **"Baixar Template CSV"** -- gera um CSV de exemplo para download
 
-### 3. Template CSV para download
-- Gerar um CSV de exemplo com formato:
+### 3. Logica de importacao
+
+**CSV:** A primeira linha do arquivo define os headers (colunas), as demais linhas sao os dados.
+
+**DOCX:** O sistema procura a primeira tabela no documento Word, extrai a primeira linha como headers e as demais como dados. Se nao encontrar tabela, exibe erro.
+
+### 4. Template CSV para download
 ```
 Caracteristica,Nossa Solucao,Concorrente A,Concorrente B
 Precisao,Alta (50um),Media (100um),Baixa (200um)
@@ -27,21 +30,29 @@ Velocidade,Rapida,Media,Lenta
 Suporte Tecnico,24/7,Horario comercial,Email apenas
 ```
 
-### 4. Arquivo alterado
-- `src/components/CompetitorComparisonTable.tsx` - Adicionar imports (Upload, Download, FileSpreadsheet, useRef), input file hidden, funcoes `handleCSVImport` e `downloadTemplate`, e botoes na UI ao lado de "Adicionar Coluna"
-
 ## Secao Tecnica
 
-### Fluxo de importacao
-1. Usuario clica em "Importar CSV"
-2. Seleciona arquivo `.csv`
-3. `papaparse` faz o parse com `header: true`
-4. Headers do CSV viram `table_headers`
-5. Cada linha vira um objeto em `table_data` mapeando header -> valor
-6. Chama `handleChange()` para atualizar estado e propagar via `onChange`
+### Arquivo alterado
+- `src/components/CompetitorComparisonTable.tsx`
 
-### Formato esperado do CSV
-- Primeira coluna = nome da caracteristica/criterio
-- Demais colunas = competidores (incluindo a propria solucao)
-- Primeira linha = nomes das colunas (headers)
+### Dependencia adicionada
+- `mammoth` (parse de DOCX no browser)
+
+### Fluxo DOCX
+1. Usuario clica "Importar DOCX"
+2. Seleciona arquivo `.docx`
+3. `mammoth.convertToHtml()` converte para HTML
+4. Parser DOM busca o primeiro `<table>` no HTML
+5. Primeira `<tr>` vira `table_headers`
+6. Demais `<tr>` viram objetos em `table_data`
+7. `handleChange()` atualiza estado e propaga via `onChange`
+
+### Fluxo CSV
+1. Usuario clica "Importar CSV"
+2. `papaparse` faz parse com `header: true`
+3. `meta.fields` vira `table_headers`
+4. `data` vira `table_data`
+
+### Posicionamento na UI
+Os botoes serao adicionados logo abaixo do switch "Ativar", numa linha horizontal com os 3 botoes: `Importar CSV`, `Importar DOCX`, `Baixar Template`.
 
