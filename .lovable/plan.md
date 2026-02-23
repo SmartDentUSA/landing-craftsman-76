@@ -1,102 +1,88 @@
 
-# Corrigir Resolucao de HTML da Landing Page SPIN
+# Corrigir Renderizacao de Tabelas de Concorrentes na Landing Page SPIN
 
 ## Problema
-O HTML da landing page esta sendo salvo no Storage (bucket `landing-pages-html`) quando e grande (>500KB), e o banco de dados armazena apenas uma referencia como `__storage__:spin-lps/uuid.html`. Porem, em varios pontos do codigo, essa referencia nao e resolvida antes de ser usada, resultando em:
+A geracao de Landing Page SPIN processa corretamente 3 tabelas de comparacao de concorrentes (Rayshape, Resina e NanoClean PoD), mas o HTML final renderiza apenas 2 (NanoClean PoD esta ausente). O log da edge function confirma `competitorComparisons: 3`, porem o HTML gerado contem somente 2 blocos `<div style="margin-top: 3rem">`.
 
-1. **Download/Preview** exibem apenas o texto `__storage__:spin-lps/...` em vez do HTML real
-2. **formData** carrega a referencia crua do banco e nunca resolve para o HTML real
-3. **Salvar edicoes** tenta gravar HTML grande diretamente no banco, causando erro `PGRST102`
+## Causa Raiz
+Duas fraquezas no pipeline:
 
-## Arquivos Alterados
+1. **Filtro frouxo no `index.ts` (linha 806):** O filtro `.filter((p: any) => p.competitor_comparison)` inclui qualquer produto com o campo preenchido, mesmo com `enabled: false` ou dados parciais. Isso causa inconsistencia entre a contagem logada e os itens que realmente passam a validacao no `generateHTML.ts`.
 
-### 1. `src/components/SpinSolutionEditModal.tsx`
+2. **Ausencia de logging no `generateHTML.ts`:** A funcao IIFE que renderiza as tabelas nao loga quais itens passaram pelo filtro `validComparisons`, dificultando o debug.
 
-**Problema A - Carga inicial (linha 359):**
-O `formData.landing_page_html` recebe o valor cru do banco (`__storage__:spin-lps/...`). Precisa resolver a referencia de storage ao carregar a solucao.
+3. **Potencial falha silenciosa:** Se o `.map()` falhar para um item especifico (ex: caractere especial no header como `(>90%)` ou `™`), a excecao pode corromper a saida sem mensagem de erro.
 
-**Correcao:** No `useEffect` que carrega `existingSolution` (linha 332-389), apos setar o formData, verificar se `landing_page_html` comeca com `__storage__:` e, se sim, chamar `resolveStorageHtml()` para buscar o HTML real e atualizar o formData.
+## Correcoes
 
-**Problema B - Preview e Download (linhas 1202-1225):**
-As funcoes `handlePreviewLandingPage` e `handleDownloadLandingPage` usam `formData.landing_page_html` diretamente, que pode conter a referencia de storage.
+### 1. `supabase/functions/generate-spin-landing-page/index.ts`
+- Refinar o filtro de `competitorComparisons` para validar `enabled`, `table_headers.length > 0` e `table_data.length > 0` ja na coleta
+- Logar os nomes dos produtos cujas tabelas foram incluidas
 
-**Correcao:** Tornar essas funcoes `async` e chamar `resolveStorageHtml()` antes de criar o Blob. Se o valor ja for HTML real, a funcao retorna como esta (sem overhead).
-
-### 2. `src/components/SpinLandingPageEditablePreview.tsx`
-
-**Problema C - Salvar edicoes (linhas 444-455):**
-A funcao `saveChanges` grava o HTML editado diretamente no banco via `supabase.update()`. Para HTMLs grandes (>500KB), isso causa erro PGRST102.
-
-**Correcao:** Adicionar logica de verificacao de tamanho. Se o HTML for >500KB:
-1. Upload para o bucket `landing-pages-html` no path `spin-lps/{solutionId}.html`
-2. Salvar a referencia `__storage__:spin-lps/{solutionId}.html` no banco
-Se for <=500KB, salvar normalmente no banco (comportamento atual).
+### 2. `supabase/functions/generate-spin-landing-page/generateHTML.ts`
+- Adicionar logging detalhado: nomes dos produtos que passaram pelo filtro `validComparisons`
+- Envolver o `.map()` de cada item em try/catch para evitar que um erro em uma tabela impeca a renderizacao das demais
+- Logar erros especificos por produto para facilitar debug
 
 ## Secao Tecnica
 
-### Mudanca 1 - Resolver storage na carga inicial
-
+### Mudanca 1 - index.ts (filtro robusto)
 ```typescript
-// No useEffect que carrega existingSolution (SpinSolutionEditModal.tsx)
-useEffect(() => {
-  if (existingSolution) {
-    // ... setFormData existente ...
+// ANTES (linha 805-807):
+competitorComparisons: (products || [])
+  .filter((p: any) => p.competitor_comparison)
+  .map((p: any) => ({ productName: p.name, comparison: p.competitor_comparison })),
 
-    // Resolver referencia de storage se necessario
-    if (existingSolution.landing_page_html?.startsWith('__storage__:')) {
-      import('@/lib/resolve-storage-html').then(({ resolveStorageHtml }) => {
-        resolveStorageHtml(existingSolution.landing_page_html).then(resolved => {
-          if (resolved) {
-            setFormData(prev => ({ ...prev, landing_page_html: resolved }));
-          }
-        });
-      });
-    }
-  }
-}, [existingSolution]);
+// DEPOIS:
+competitorComparisons: (products || [])
+  .filter((p: any) => 
+    p.competitor_comparison?.enabled === true && 
+    p.competitor_comparison?.table_headers?.length > 0 && 
+    p.competitor_comparison?.table_data?.length > 0
+  )
+  .map((p: any) => ({ productName: p.name, comparison: p.competitor_comparison })),
 ```
 
-### Mudanca 2 - Preview e Download com resolucao
-
+### Mudanca 2 - generateHTML.ts (try/catch + logging)
 ```typescript
-const handlePreviewLandingPage = async () => {
-  if (!formData.landing_page_html) return;
-  const { resolveStorageHtml } = await import('@/lib/resolve-storage-html');
-  const html = await resolveStorageHtml(formData.landing_page_html) || formData.landing_page_html;
-  const blob = new Blob([html], { type: 'text/html' });
-  window.open(URL.createObjectURL(blob), '_blank');
-};
+// Na IIFE das tabelas de comparacao por produto (linha 2685+):
+const productComparisons = aiContent?.productComparisonTables || [];
+const validComparisons = productComparisons.filter((item: any) => 
+  item?.comparison?.enabled && 
+  item?.comparison?.table_headers?.length > 0 && 
+  item?.comparison?.table_data?.length > 0
+);
+
+if (validComparisons.length === 0) return '';
+
+console.log(`[HTML] Tabelas de comparacao validas:`, 
+  validComparisons.map((item: any) => item.productName));
+
+return `
+<!-- TABELAS DE COMPARACAO POR PRODUTO -->
+<div class="container section-padding">
+  <section class="comparison-section">
+    <h2>Comparativo Detalhado por Produto</h2>
+    <p class="subtitle">Veja como cada produto se destaca frente aos concorrentes</p>
+    
+    ${validComparisons.map((item: any) => {
+      try {
+        return `
+          <div style="margin-top: 3rem;">
+            <h3>Comparativo: ${escapeHtml(item.productName)}</h3>
+            <!-- ... tabela ... -->
+          </div>
+        `;
+      } catch (err) {
+        console.error(`Erro ao renderizar tabela de ${item.productName}:`, err);
+        return `<!-- Erro ao renderizar tabela: ${item.productName} -->`;
+      }
+    }).join('')}
+  </section>
+</div>
+`;
 ```
 
-### Mudanca 3 - Salvar com storage para HTMLs grandes
-
-```typescript
-// Em SpinLandingPageEditablePreview.tsx, saveChanges:
-const finalHtml = '<!DOCTYPE html>\n' + clone.documentElement.outerHTML;
-
-if (finalHtml.length > 500 * 1024) {
-  // Upload para Storage
-  const storagePath = `spin-lps/${solutionId}.html`;
-  const blob = new Blob([finalHtml], { type: 'text/html; charset=utf-8' });
-  await supabase.storage.from('landing-pages-html').upload(storagePath, blob, { upsert: true });
-
-  // Salvar referencia no banco
-  await supabase.from('spin_selling_solutions').update({
-    landing_page_html: `__storage__:${storagePath}`,
-    landing_page_generated_at: newTimestamp
-  }).eq('id', solutionId);
-} else {
-  // Salvar direto no banco (pequeno)
-  await supabase.from('spin_selling_solutions').update({
-    landing_page_html: finalHtml,
-    landing_page_generated_at: newTimestamp
-  }).eq('id', solutionId);
-}
-
-// Manter HTML real no estado local para preview
-setHtml(finalHtml);
-```
-
-### Resumo das correcoes
-1. **SpinSolutionEditModal.tsx** - Resolver `__storage__:` ao carregar solucao e antes de preview/download
-2. **SpinLandingPageEditablePreview.tsx** - Usar Storage para salvar HTMLs grandes editados (>500KB)
+### Deploy
+- Fazer deploy da edge function `generate-spin-landing-page` apos as alteracoes
+- Re-gerar a landing page para validar que as 3 tabelas aparecem
