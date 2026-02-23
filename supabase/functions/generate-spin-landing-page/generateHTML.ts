@@ -2634,6 +2634,18 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
   </div>
   ` : ''}
 
+  ${solution.competitor_comparison?.enabled && 
+    (!solution.competitor_comparison.table_headers?.length || !solution.competitor_comparison.table_data?.length) ? `
+  <!-- AVISO: Tabela de comparação habilitada mas sem dados -->
+  <div class="container section-padding">
+    <section class="comparison-section">
+      <p style="color: #999; font-style: italic; text-align: center;">
+        ⚠️ Tabela de comparação habilitada mas sem dados preenchidos. Preencha os headers e dados da tabela no editor.
+      </p>
+    </section>
+  </div>
+  ` : ''}
+
   ${solution.competitor_comparison?.enabled && solution.competitor_comparison.table_headers?.length > 0 && solution.competitor_comparison.table_data?.length > 0 ? `
   <!-- ========== SEÇÃO: TABELA DE COMPARAÇÃO COM CONCORRENTES ========== -->
   <div class="container section-padding">
@@ -2658,8 +2670,6 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
                   const displayValue = (cellValue !== undefined && cellValue !== null && cellValue !== '') 
                     ? cellValue 
                     : '-';
-                  
-                  console.log(`🔍 Cell [${rowIndex}, ${colIndex}] header="${header}" value="${cellValue}" display="${displayValue}"`);
                   
                   return `<td data-editable="true" data-field="comparison_cell_${rowIndex}_${colIndex}">${escapeHtml(displayValue)}</td>`;
                 }).join('')}
