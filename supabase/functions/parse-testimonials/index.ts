@@ -63,9 +63,11 @@ serve(async (req) => {
                           description: "Área de atuação mapeada para o enum"
                         },
                         results_achieved: { type: "string", description: "Texto completo do depoimento, sem aspas" },
-                        clinic_name: { type: "string", description: "Nome da clínica se mencionado, senão string vazia" }
+                        clinic_name: { type: "string", description: "Nome da clínica se mencionado, senão string vazia" },
+                        city: { type: "string", description: "Cidade da pessoa, ex: Recife, Curitiba" },
+                        state: { type: "string", description: "Sigla do estado (UF), ex: PE, PR, SP" }
                       },
-                      required: ["client_name", "specialty", "area", "results_achieved", "clinic_name"],
+                      required: ["client_name", "specialty", "area", "results_achieved", "clinic_name", "city", "state"],
                       additionalProperties: false
                     }
                   }
