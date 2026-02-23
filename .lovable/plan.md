@@ -1,31 +1,24 @@
 
 
-# Filtrar apenas videos tecnicos na secao "Veja como funciona na pratica"
+# Documentacao Tecnica em formato Acordeao
 
 ## O que sera feito
 
-Alteracao simples: na secao "Veja como funciona na pratica", filtrar `productVideos` para exibir **apenas** os videos com `type === 'technical'`. O layout e os cards continuam exatamente como estao hoje, sem mudancas visuais.
+Transformar a secao "Documentacao Tecnica" (downloads de PDFs/documentos) dentro de "Veja como funciona na pratica" para usar o formato acordeao (`<details>/<summary>`), igual ao usado na secao FAQ.
 
 ## Alteracao
 
-### Arquivo: `supabase/functions/generate-spin-landing-page/generateHTML.ts` (~linha 2844)
+### Arquivo: `supabase/functions/generate-spin-landing-page/generateHTML.ts` (~linhas 2899-2933)
 
-Adicionar uma linha de filtro logo apos obter o array de videos:
+Envolver cada documento em um `<details>/<summary>` em vez do layout de lista tabular atual.
 
-**Antes:**
-```
-const productVideos = aiContent?.productVideos || [];
-if (productVideos.length === 0) return '';
-```
+**Antes:** Lista com header + items em formato de tabela (colunas: icone, nome, produto, tamanho, download).
 
-**Depois:**
-```
-const allProductVideos = aiContent?.productVideos || [];
-const productVideos = allProductVideos.filter((v: any) => v.type === 'technical');
-if (productVideos.length === 0) return '';
-```
+**Depois:** Cada documento renderizado como um acordeao:
+- `<summary>` mostra o icone do arquivo + nome do documento + badge do produto
+- Conteudo expandido mostra descricao completa, tamanho e botao de download
 
-Isso remove youtube, instagram, testimonial e tiktok da secao, mantendo apenas os videos tecnicos. Todo o restante (cards, thumbnails, badges, grid) permanece identico.
+A estrutura visual segue o mesmo padrao `<details>/<summary>` ja usado na FAQ (linha 2957), mantendo consistencia.
 
 ### Deploy
 
