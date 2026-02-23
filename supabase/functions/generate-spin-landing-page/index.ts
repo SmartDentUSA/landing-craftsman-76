@@ -1002,6 +1002,10 @@ serve(async (req) => {
 
     console.log('✅ Checkpoint 4: HTML gerado:', html.length, 'caracteres');
     
+    // Verificacao diagnostica de tabelas comparativas
+    const compTableCount = (html.match(/Comparativo:/g) || []).length;
+    console.log('[DIAG] Tabelas "Comparativo:" encontradas no HTML final:', compTableCount);
+    
     // Verificar tamanho do HTML (limite de 10MB para segurança)
     const htmlSizeKB = Math.round(html.length / 1024);
     const htmlSizeMB = (html.length / (1024 * 1024)).toFixed(2);

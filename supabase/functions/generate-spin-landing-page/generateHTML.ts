@@ -2745,16 +2745,19 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
       }
     }).join('\n');
 
-    return `
-  <!-- ========== SEÇÃO: TABELAS DE COMPARAÇÃO POR PRODUTO ========== -->
-  <div class="container section-padding">
-    <section class="comparison-section">
-      <h2>Comparativo Detalhado por Produto</h2>
-      <p class="subtitle">Veja como cada produto se destaca frente aos concorrentes</p>
-      ${renderedTables}
-    </section>
-  </div>
-    `;
+    const sectionHtml = [
+      '<!-- ========== SEÇÃO: TABELAS DE COMPARAÇÃO POR PRODUTO ========== -->',
+      '<div class="container section-padding">',
+      '  <section class="comparison-section">',
+      '    <h2>Comparativo Detalhado por Produto</h2>',
+      '    <p class="subtitle">Veja como cada produto se destaca frente aos concorrentes</p>',
+      renderedTables,
+      '  </section>',
+      '</div>'
+    ].join('\n');
+    
+    console.log('[HTML] Secao completa de tabelas por produto: ' + sectionHtml.length + ' chars');
+    return sectionHtml;
   })()}
 
   ${(() => {
