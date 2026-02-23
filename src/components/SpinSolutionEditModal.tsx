@@ -28,6 +28,7 @@ import {
   Trash2, 
   Package,
   Download,
+  BookOpen,
   MessageCircle,
   Copy,
   Check,
@@ -248,6 +249,7 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
   const [importText, setImportText] = useState('');
   const [isParsingTestimonials, setIsParsingTestimonials] = useState(false);
   const [isGeneratingPhotos, setIsGeneratingPhotos] = useState(false);
+  const [isGeneratingApostila, setIsGeneratingApostila] = useState(false);
   const [photoGenerationProgress, setPhotoGenerationProgress] = useState({ current: 0, total: 0 });
   
   // Filtrar apenas landing pages aprovadas
@@ -3127,6 +3129,63 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
 
             {/* Actions */}
             <div className="flex justify-end gap-2 pt-4 border-t">
+              {solutionId && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isGeneratingApostila}
+                  onClick={async () => {
+                    setIsGeneratingApostila(true);
+                    try {
+                      const { data, error } = await supabase.functions.invoke('export-spin-apostila', {
+                        body: { solution_id: solutionId }
+                      });
+                      if (error) throw error;
+                      if (data?.error) throw new Error(data.error);
+                      
+                      const markdown = data.markdown;
+                      const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `apostila-spin-${(formData.title || 'solucao').replace(/\s+/g, '-').toLowerCase()}.md`;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      URL.revokeObjectURL(url);
+                      
+                      // Atualizar metadata local
+                      setFormData(prev => ({
+                        ...prev,
+                        metadata: {
+                          ...(prev.metadata as any || {}),
+                          apostila_content: markdown,
+                          apostila_generated_at: new Date().toISOString(),
+                        }
+                      }));
+                      
+                      toast({
+                        title: "✅ Apostila gerada com sucesso!",
+                        description: `${data.stats?.products_count || 0} produtos incluídos. Conteúdo salvo na base de conhecimento.`,
+                      });
+                    } catch (error: any) {
+                      toast({
+                        title: "Erro ao gerar apostila",
+                        description: extractEdgeError(error),
+                        variant: "destructive"
+                      });
+                    } finally {
+                      setIsGeneratingApostila(false);
+                    }
+                  }}
+                >
+                  {isGeneratingApostila ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Gerando...</>
+                  ) : (
+                    <><BookOpen className="w-4 h-4 mr-2" /> Gerar Apostila</>
+                  )}
+                </Button>
+              )}
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancelar
               </Button>

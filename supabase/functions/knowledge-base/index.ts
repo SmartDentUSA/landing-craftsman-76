@@ -978,6 +978,24 @@ function formatForAITraining(data: any): string {
         }
       }
       
+      // ✅ SOLUÇÕES SPIN RELACIONADAS (cross-reference)
+      if (data.spin_solutions && Array.isArray(data.spin_solutions)) {
+        const relatedSpins = data.spin_solutions.filter(
+          (sol: any) => sol.product_ids?.includes(p.id)
+        );
+        if (relatedSpins.length > 0) {
+          text += `\n### SOLUÇÕES SPIN RELACIONADAS\n`;
+          relatedSpins.forEach((sol: any) => {
+            text += `- **${sol.title}** (Dor: ${sol.pain_type})\n`;
+            if (sol.sales_pitch) text += `  Pitch: ${sol.sales_pitch}\n`;
+            if (sol.spin_journey) {
+              text += `  Jornada: ${JSON.stringify(sol.spin_journey)}\n`;
+            }
+          });
+          text += `\n`;
+        }
+      }
+      
       text += `\n---\n\n`;
     });
   }
@@ -1168,6 +1186,13 @@ function formatForAITraining(data: any): string {
       }
       if (solution.google_ads_campaign) {
         text += `**Campanha Google Ads:** Gerada com ${solution.google_ads_campaign.keywords?.length || 0} keywords\n`;
+      }
+      
+      // ✅ APOSTILA COMPLETA (se gerada)
+      if (solution.metadata?.apostila_content) {
+        text += `\n### APOSTILA COMPLETA DA SOLUÇÃO\n`;
+        text += solution.metadata.apostila_content;
+        text += `\n`;
       }
       
       text += `\n---\n\n`;
