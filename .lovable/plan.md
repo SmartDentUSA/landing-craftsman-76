@@ -1,37 +1,67 @@
 
 
-# Extrair Cidade e Estado nos Depoimentos SPIN
+# Correcao: Tabela Comparativa no HTML SPIN Selling
 
-## Problema
+## Diagnostico
 
-A edge function `parse-testimonials` nao extrai os campos `city` e `state` do texto, mesmo quando estao presentes (ex: "Recife (PE)", "Curitiba (PR)"). O frontend tambem ignora esses campos, setando-os como strings vazias.
+Apos analise detalhada do banco de dados e do codigo, identifiquei os seguintes problemas:
 
-## Correcao
+### 1. Dados vazios no banco de dados
+A solucao "Atos Unichroma" tem `competitor_comparison.enabled = true`, porem `table_headers` e `table_data` estao como arrays vazios `[]`. Isso faz com que a condicao de renderizacao no HTML (`table_headers.length > 0 && table_data.length > 0`) seja `false` e a tabela nao apareca.
 
-### 1. Edge Function: `supabase/functions/parse-testimonials/index.ts`
+### 2. console.log dentro do template literal (bug potencial)
+Na linha 2662 do `generateHTML.ts`, ha um `console.log()` dentro do `.map()` que gera as celulas da tabela. Embora nao quebre o retorno diretamente, gera lixo de log desnecessario e pode causar problemas de performance.
 
-Adicionar `city` e `state` no schema da tool de extracao:
+### 3. Tabelas de produtos tambem vazias
+Nenhum produto no `products_repository` tem `competitor_comparison.enabled = true` com dados preenchidos, entao a secao de "Tabelas de Comparacao por Produto" tambem nao renderiza.
 
+## Correcoes Propostas
+
+### Arquivo: `supabase/functions/generate-spin-landing-page/generateHTML.ts`
+
+**A. Remover `console.log` de dentro do template literal (linha 2662)**
+
+Remover a linha de debug que pode poluir o HTML ou causar efeitos colaterais:
+
+```typescript
+// REMOVER esta linha:
+console.log(`Cell [${rowIndex}, ${colIndex}] header="${header}" value="${cellValue}" display="${displayValue}"`);
 ```
-// Adicionar dentro de "properties" do item:
-city: { type: "string", description: "Cidade da pessoa, ex: Recife, Curitiba" },
-state: { type: "string", description: "Sigla do estado (UF), ex: PE, PR, SP" }
+
+**B. Adicionar fallback visual quando `enabled = true` mas dados estao vazios**
+
+Quando `competitor_comparison.enabled` for `true` mas nao houver dados, exibir uma mensagem no HTML informando que a tabela esta habilitada mas sem dados, para que o usuario perceba o problema:
+
+```typescript
+// Se enabled=true mas sem dados, renderizar aviso
+${solution.competitor_comparison?.enabled && 
+  (!solution.competitor_comparison.table_headers?.length || !solution.competitor_comparison.table_data?.length) ? `
+  <!-- AVISO: Tabela de comparacao habilitada mas sem dados -->
+  <div class="container section-padding">
+    <section class="comparison-section">
+      <p style="color: #999; font-style: italic;">
+        Tabela de comparacao habilitada mas sem dados preenchidos.
+      </p>
+    </section>
+  </div>
+` : ''}
 ```
 
-Adicionar ambos ao array `required`.
+### Arquivo: `src/components/SpinSolutionEditModal.tsx`
 
-### 2. Frontend: `src/components/SpinSolutionEditModal.tsx`
+**C. Garantir que o pre-save antes de gerar HTML inclui TODOS os campos**
 
-Atualizar o mapeamento (linhas 585-596) para usar os campos extraidos:
+Verificar que a linha 1101-1112 salva `competitor_comparison` corretamente (ja faz isso, mas adicionar log de confirmacao para debug).
 
-```
-city: t.city || '',
-state: t.state || '',
-```
+## Resultado Esperado
 
-Em vez dos valores hardcoded vazios atuais.
+- Se a tabela tem dados preenchidos: renderiza normalmente
+- Se a tabela esta habilitada mas sem dados: mostra aviso visual no HTML
+- Logs de debug removidos do template para HTML limpo
 
-## Resultado
+## Secao Tecnica
 
-Os 10 depoimentos serao importados com cidade e estado preenchidos automaticamente pela IA (ex: city="Recife", state="PE").
+Arquivos alterados:
+1. `supabase/functions/generate-spin-landing-page/generateHTML.ts` - Remover console.log interno e adicionar fallback visual
+2. Redeploy da edge function `generate-spin-landing-page`
 
