@@ -1323,22 +1323,6 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
       border-radius: 12px;
       text-align: center;
     }
-
-    .spin-narrative {
-      font-size: 1.15rem;
-      line-height: 1.9;
-      color: #495057;
-      text-align: justify;
-      max-width: 900px;
-      margin: 0 auto;
-      font-weight: 400;
-    }
-
-    .spin-narrative strong {
-      color: #007bff;
-      font-weight: 600;
-    }
-
     /* ===== SEÇÃO DE MÉTRICAS ===== */
     .metrics-section {
       text-align: center;
@@ -2532,16 +2516,6 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
     </div>
   </div>
 
-  ${aiContent?.spinNarrative ? `
-  <!-- Contexto Narrativo SPIN -->
-  <div class="container section-padding">
-    <section class="spin-context">
-      <p class="spin-narrative" data-editable="true" data-field="spin_narrative">
-        ${escapeHtml(aiContent.spinNarrative)}
-      </p>
-    </section>
-  </div>
-  ` : ''}
 
   <!-- ═══════════════════════════════════════════════════════════ -->
   <!-- 📝 SEÇÃO DE CONTEÚDO INDEXÁVEL (GEO/SGE) -->
