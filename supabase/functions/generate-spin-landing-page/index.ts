@@ -1003,44 +1003,31 @@ serve(async (req) => {
       throw new Error(`HTML muito grande: ${htmlSizeMB} MB (limite: 10MB)`);
     }
 
-    // Salvar no banco usando fetch direto para evitar limite de payload do PostgREST client
+    // Salvar no banco usando Supabase client (suporta payloads grandes)
     console.log('💾 Salvando landing page no banco...');
+    console.log(`📦 Payload size: ${htmlSizeKB} KB`);
     
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
     
-    const updateBody = JSON.stringify({
-      landing_page_html: html,
-      landing_page_generated_at: new Date().toISOString()
-    });
-    
-    console.log(`📦 Payload size: ${Math.round(updateBody.length / 1024)} KB`);
-    
-    const updateResponse = await fetch(
-      `${supabaseUrl}/rest/v1/spin_selling_solutions?id=eq.${solutionId}`,
-      {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseServiceKey}`,
-          'apikey': supabaseServiceKey,
-          'Prefer': 'return=minimal',
-        },
-        body: updateBody,
-      }
-    );
+    const { error: updateError } = await serviceClient
+      .from('spin_selling_solutions')
+      .update({
+        landing_page_html: html,
+        landing_page_generated_at: new Date().toISOString()
+      })
+      .eq('id', solutionId);
 
-    if (!updateResponse.ok) {
-      const errorText = await updateResponse.text();
+    if (updateError) {
       console.error('❌ Erro ao salvar landing page:', {
-        status: updateResponse.status,
-        error: errorText,
+        error: updateError,
         htmlSize: htmlSizeKB + ' KB'
       });
-      throw new Error(`Erro ao salvar landing page: ${errorText}`);
+      throw new Error(`Erro ao salvar landing page: ${JSON.stringify(updateError)}`);
     }
     
-    console.log('✅ Landing page salva com sucesso (status:', updateResponse.status, ')');
+    console.log('✅ Landing page salva com sucesso');
 
     return new Response(
       JSON.stringify({
