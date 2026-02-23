@@ -1,66 +1,66 @@
 
-# Diagnosticar e Corrigir Tabela NanoClean PoD Ausente
 
-## Diagnostico Atual
+# Corrigir Cache CDN na Busca do HTML do Storage
 
-Os logs confirmam que todas as 3 tabelas sao renderizadas individualmente com sucesso:
-- Rayshape: 1083 chars
-- Resina: 1477 chars
-- NanoClean PoD: 1820 chars
+## Problema Confirmado
 
-Porem o HTML final nao contem a tabela NanoClean. A unica parte do codigo que ainda usa template literal para montar a secao de tabelas e o `return` da IIFE (linhas 2748-2757), onde `${renderedTables}` e interpolado.
+O log diagnostico confirma: **3 tabelas "Comparativo:" estao presentes no HTML final** antes do upload ao Storage. O upload com `upsert: true` funciona corretamente. Porem, o HTML exibido no frontend mostra apenas 2 tabelas.
 
-## Causa Provavel
+**Causa raiz:** O Supabase Storage usa CDN com cache agressivo para URLs publicas. Quando o arquivo e atualizado via `upsert`, o CDN continua servindo a versao anterior (cacheada) que continha apenas 2 tabelas. O `resolveStorageHtml` busca a URL publica sem nenhum mecanismo de cache-busting.
 
-Apesar de `renderedTables` ser uma string ja resolvida, o `return` da IIFE (linha 2748) ainda usa template literal. Essa string e entao interpolada na template literal PRINCIPAL do `generateHTML`, criando uma cadeia de interpolacao de 3 niveis. Embora isso devesse funcionar em teoria, a evidencia empirica mostra que o conteudo esta sendo perdido nessa cadeia.
+## Solucao
 
-## Solucao (2 mudancas)
+### 1. `src/lib/resolve-storage-html.ts` - Adicionar cache-busting
 
-### 1. `generateHTML.ts` - Eliminar template literal na IIFE (linhas 2748-2757)
-
-Substituir o `return` com template literal por concatenacao de strings:
+Adicionar um parametro `?t=<timestamp>` na URL publica para forcar o CDN a buscar a versao mais recente:
 
 ```typescript
-// ANTES (linha 2748-2757):
-return `
-  <!-- TABELAS DE COMPARACAO POR PRODUTO -->
-  <div class="container section-padding">
-    <section class="comparison-section">
-      ...
-      ${renderedTables}
-    </section>
-  </div>
-`;
+const publicUrl = data.publicUrl + '?t=' + Date.now();
+const response = await fetch(publicUrl);
+```
+
+### 2. `supabase/functions/generate-spin-landing-page/index.ts` - Adicionar cache-control no upload
+
+Configurar o header `cacheControl` no upload para reduzir o TTL do cache:
+
+```typescript
+const { error: storageError } = await serviceClient.storage
+  .from('landing-pages-html')
+  .upload(storagePath, htmlBlob, {
+    contentType: 'text/html; charset=utf-8',
+    upsert: true,
+    cacheControl: '0',  // Sem cache no CDN
+  });
+```
+
+## Secao Tecnica
+
+### Mudanca 1 - resolve-storage-html.ts (linha 29)
+```typescript
+// ANTES:
+const response = await fetch(data.publicUrl);
 
 // DEPOIS:
-const sectionHtml = [
-  '<!-- TABELAS DE COMPARACAO POR PRODUTO -->',
-  '<div class="container section-padding">',
-  '  <section class="comparison-section">',
-  '    <h2>Comparativo Detalhado por Produto</h2>',
-  '    <p class="subtitle">...</p>',
-  renderedTables,
-  '  </section>',
-  '</div>'
-].join('\n');
-
-console.log('[HTML] Secao completa de tabelas por produto: ' + sectionHtml.length + ' chars');
-return sectionHtml;
+const publicUrl = data.publicUrl + '?t=' + Date.now();
+console.log('🔗 Buscando HTML com cache-bust:', publicUrl);
+const response = await fetch(publicUrl);
 ```
 
-### 2. `index.ts` - Adicionar log diagnostico antes do upload (apos linha 1003)
-
-Adicionar verificacao especifica para confirmar se todas as tabelas estao no HTML final:
-
+### Mudanca 2 - index.ts (upload com cacheControl)
 ```typescript
-// Verificacao diagnostica
-const compTableCount = (html.match(/Comparativo:/g) || []).length;
-console.log('[DIAG] Tabelas "Comparativo:" encontradas no HTML final:', compTableCount);
+// ANTES:
+.upload(storagePath, htmlBlob, {
+  contentType: 'text/html; charset=utf-8',
+  upsert: true,
+});
+
+// DEPOIS:
+.upload(storagePath, htmlBlob, {
+  contentType: 'text/html; charset=utf-8',
+  upsert: true,
+  cacheControl: '0',
+});
 ```
 
-### Deploy
-- Fazer deploy da edge function `generate-spin-landing-page`
-- Re-gerar a landing page
-- Verificar nos logs se `compTableCount` e 3
-
-Se o log mostrar 3 mas o HTML baixado tiver 2, o problema esta no Storage upload. Se mostrar 2, o problema esta na interpolacao da IIFE no template principal.
+### Resultado esperado
+Apos essas 2 mudancas, ao re-gerar a landing page, o frontend buscara a versao mais recente do HTML do Storage, incluindo todas as 3 tabelas comparativas.
