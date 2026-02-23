@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { marked } from 'marked';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -3144,11 +3145,32 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
                       if (data?.error) throw new Error(data.error);
                       
                       const markdown = data.markdown;
-                      const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
+                      const htmlContent = await marked.parse(markdown);
+                      const docContent = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="utf-8">
+<style>
+  body { font-family: Calibri, sans-serif; font-size: 11pt; line-height: 1.6; margin: 2cm; }
+  h1 { font-size: 18pt; color: #1a1a2e; margin-top: 24pt; }
+  h2 { font-size: 14pt; color: #16213e; border-bottom: 1px solid #ccc; padding-bottom: 4pt; margin-top: 18pt; }
+  h3 { font-size: 12pt; color: #0f3460; margin-top: 14pt; }
+  table { border-collapse: collapse; width: 100%; margin: 8pt 0; }
+  td, th { border: 1px solid #ddd; padding: 6px 8px; font-size: 10pt; }
+  th { background-color: #f0f0f0; font-weight: bold; }
+  blockquote { border-left: 3px solid #ccc; padding-left: 10px; color: #555; margin: 8pt 0; }
+  code { background: #f4f4f4; padding: 2px 4px; font-family: Consolas, monospace; font-size: 10pt; }
+  ul, ol { margin: 6pt 0; }
+  li { margin-bottom: 3pt; }
+  hr { border: none; border-top: 1px solid #ddd; margin: 12pt 0; }
+  strong { color: #1a1a2e; }
+</style>
+</head>
+<body>${htmlContent}</body>
+</html>`;
+                      const blob = new Blob(['\ufeff' + docContent], { type: 'application/msword' });
                       const url = URL.createObjectURL(blob);
                       const a = document.createElement('a');
                       a.href = url;
-                      a.download = `apostila-spin-${(formData.title || 'solucao').replace(/\s+/g, '-').toLowerCase()}.md`;
+                      a.download = `apostila-spin-${(formData.title || 'solucao').replace(/\s+/g, '-').toLowerCase()}.doc`;
                       document.body.appendChild(a);
                       a.click();
                       document.body.removeChild(a);
