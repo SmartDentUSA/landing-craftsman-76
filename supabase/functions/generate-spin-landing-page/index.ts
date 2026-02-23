@@ -901,7 +901,9 @@ serve(async (req) => {
       clientPhoto: testimonial.photo_url || null,
       location: testimonial.location || null,
       profession: testimonial.profession || null,
-      specialty: testimonial.specialty || null
+      specialty: testimonial.specialty || null,
+      youtube_url: testimonial.youtube_url || null,
+      instagram_url: testimonial.instagram_url || null
     }));
 
     console.log('✅ Depoimentos reais encontrados:', realTestimonials.length);

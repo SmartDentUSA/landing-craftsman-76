@@ -1316,6 +1316,39 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
       font-size: 18px;
     }
 
+    .testimonial-video-links {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .video-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.35rem 0.75rem;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: opacity 0.2s;
+    }
+
+    .video-link:hover {
+      opacity: 0.85;
+    }
+
+    .video-link-youtube {
+      background: #FF0000;
+      color: #fff;
+    }
+
+    .video-link-instagram {
+      background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
+      color: #fff;
+    }
+
     /* ===== NARRATIVA SPIN CONTEXTUAL ===== */
     .spin-context {
       background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
@@ -3075,6 +3108,12 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
                       : ''
                     }
                   </div>
+                  ${(testimonial.youtube_url || testimonial.instagram_url) ? `
+                  <div class="testimonial-video-links">
+                    ${testimonial.youtube_url ? `<a href="${escapeHtml(testimonial.youtube_url)}" target="_blank" rel="noopener noreferrer" class="video-link video-link-youtube"><i class="fab fa-youtube"></i> Ver depoimento</a>` : ''}
+                    ${testimonial.instagram_url ? `<a href="${escapeHtml(testimonial.instagram_url)}" target="_blank" rel="noopener noreferrer" class="video-link video-link-instagram"><i class="fab fa-instagram"></i> Ver no Instagram</a>` : ''}
+                  </div>
+                  ` : ''}
                 </div>
               `;
             }).join('');
