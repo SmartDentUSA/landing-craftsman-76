@@ -22,6 +22,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Progress } from '@/components/ui/progress';
 import { 
   Plus, 
   Trash2, 
@@ -39,7 +40,9 @@ import {
   RefreshCw,
   AlertCircle,
   Video,
-  Info
+  Info,
+  FileText,
+  Camera
 } from 'lucide-react';
 import { 
   useSpinSellingSolutions, 
@@ -241,6 +244,11 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
   const [pitchConfidenceScore, setPitchConfidenceScore] = useState<number | null>(null);
   const [isGeneratingJourney, setIsGeneratingJourney] = useState(false);
   const [isGeneratingMetrics, setIsGeneratingMetrics] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [importText, setImportText] = useState('');
+  const [isParsingTestimonials, setIsParsingTestimonials] = useState(false);
+  const [isGeneratingPhotos, setIsGeneratingPhotos] = useState(false);
+  const [photoGenerationProgress, setPhotoGenerationProgress] = useState({ current: 0, total: 0 });
   
   // Filtrar apenas landing pages aprovadas
   const approvedLandingPages = landingPages.filter(lp => lp.status === 'approved');
@@ -555,6 +563,91 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
         variant: "destructive"
       });
     }
+  };
+
+  // ===== IMPORTAÇÃO DE DEPOIMENTOS E GERAÇÃO DE FOTOS =====
+  const handleImportTestimonials = async () => {
+    if (!importText.trim()) return;
+    setIsParsingTestimonials(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('parse-testimonials', {
+        body: { text: importText }
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      const testimonials = data.testimonials || [];
+      if (testimonials.length === 0) {
+        toast({ title: "Nenhum depoimento encontrado", description: "A IA não conseguiu extrair depoimentos do texto.", variant: "destructive" });
+        return;
+      }
+
+      const newCases: SuccessCase[] = testimonials.map((t: any) => ({
+        client_name: t.client_name || '',
+        specialty: t.specialty || 'OUTRO',
+        area: t.area || 'CLINICA_CONSULTORIO',
+        city: '',
+        state: '',
+        instagram: '',
+        clinic_name: t.clinic_name || '',
+        usage_time: '',
+        results_achieved: t.results_achieved || '',
+        client_photo: null,
+      }));
+
+      setFormData(prev => ({
+        ...prev,
+        success_cases: [...(prev.success_cases || []), ...newCases]
+      }));
+
+      setShowImportDialog(false);
+      setImportText('');
+      toast({ title: "✅ Depoimentos importados!", description: `${newCases.length} casos de sucesso adicionados.` });
+    } catch (err: any) {
+      console.error('Import error:', err);
+      toast({ title: "Erro ao importar", description: err.message || 'Erro desconhecido', variant: "destructive" });
+    } finally {
+      setIsParsingTestimonials(false);
+    }
+  };
+
+  const handleGeneratePhotos = async () => {
+    const casesWithoutPhoto = formData.success_cases
+      ?.map((c, i) => ({ ...c, _index: i }))
+      .filter(c => !c.client_photo && c.client_name) || [];
+    
+    if (casesWithoutPhoto.length === 0) return;
+    
+    setIsGeneratingPhotos(true);
+    setPhotoGenerationProgress({ current: 0, total: casesWithoutPhoto.length });
+
+    for (let i = 0; i < casesWithoutPhoto.length; i++) {
+      const c = casesWithoutPhoto[i];
+      setPhotoGenerationProgress({ current: i + 1, total: casesWithoutPhoto.length });
+      try {
+        const { data, error } = await supabase.functions.invoke('generate-client-photo', {
+          body: { client_name: c.client_name, specialty: c.specialty, area: c.area }
+        });
+        if (error) { console.error(`Photo error for ${c.client_name}:`, error); continue; }
+        if (data?.error) { console.error(`Photo error for ${c.client_name}:`, data.error); continue; }
+
+        setFormData(prev => ({
+          ...prev,
+          success_cases: prev.success_cases?.map((sc, idx) =>
+            idx === c._index ? { ...sc, client_photo: data } : sc
+          ) || []
+        }));
+      } catch (err) {
+        console.error(`Photo generation failed for ${c.client_name}:`, err);
+      }
+      // Small delay between requests to avoid rate limiting
+      if (i < casesWithoutPhoto.length - 1) {
+        await new Promise(r => setTimeout(r, 2000));
+      }
+    }
+
+    setIsGeneratingPhotos(false);
+    toast({ title: "📸 Fotos geradas!", description: `Fotos criadas para os casos de sucesso.` });
   };
 
   // Success Cases Handlers
@@ -1584,11 +1677,36 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
             <Card className="p-4">
               <div className="flex items-center justify-between mb-3">
                 <Label className="text-lg font-semibold">✅ Casos de Sucesso</Label>
-                <Button type="button" variant="outline" size="sm" onClick={addSuccessCase}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Adicionar Caso
-                </Button>
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" size="sm" onClick={() => setShowImportDialog(true)}>
+                    <FileText className="w-4 h-4 mr-2" />
+                    Importar Depoimentos
+                  </Button>
+                  {formData.success_cases?.some(c => !c.client_photo) && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleGeneratePhotos}
+                      disabled={isGeneratingPhotos}
+                    >
+                      {isGeneratingPhotos ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Camera className="w-4 h-4 mr-2" />}
+                      {isGeneratingPhotos ? `Gerando ${photoGenerationProgress.current}/${photoGenerationProgress.total}` : 'Gerar Fotos com IA'}
+                    </Button>
+                  )}
+                  <Button type="button" variant="outline" size="sm" onClick={addSuccessCase}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Adicionar Caso
+                  </Button>
+                </div>
               </div>
+
+              {isGeneratingPhotos && (
+                <div className="mb-3">
+                  <Progress value={(photoGenerationProgress.current / photoGenerationProgress.total) * 100} className="h-2" />
+                  <p className="text-xs text-muted-foreground mt-1">Gerando foto {photoGenerationProgress.current} de {photoGenerationProgress.total}...</p>
+                </div>
+              )}
               
               {formData.success_cases?.map((successCase, index) => (
                 <Card key={index} className="p-4 mb-3 bg-muted/30">
@@ -3038,6 +3156,44 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
           }}
         />
       )}
+
+      {/* ===== DIALOG DE IMPORTAÇÃO DE DEPOIMENTOS ===== */}
+      <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              Importar Depoimentos em Massa
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Cole o texto com os depoimentos abaixo. A IA irá extrair automaticamente nome, especialidade, área e texto de cada depoimento.
+            </p>
+            <Textarea
+              value={importText}
+              onChange={(e) => setImportText(e.target.value)}
+              placeholder={`Exemplo:\n\n1. Dr. Ricardo Arcas – Reabilitação Oral\n"O que mais me impressionou foi a previsibilidade..."\n\n2. Dra. Beatriz Cavalcanti – Especialista em Estética\n"Eu tinha receio da curva de aprendizado..."`}
+              className="min-h-[300px] font-mono text-sm"
+            />
+            <div className="flex justify-between items-center">
+              <p className="text-xs text-muted-foreground">
+                {importText.length > 0 ? `${importText.length} caracteres` : 'Aguardando texto...'}
+              </p>
+              <Button
+                onClick={handleImportTestimonials}
+                disabled={isParsingTestimonials || importText.trim().length < 20}
+              >
+                {isParsingTestimonials ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Processando com IA...</>
+                ) : (
+                  <><Sparkles className="w-4 h-4 mr-2" /> Processar com IA</>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

@@ -215,3 +215,9 @@ verify_jwt = false
 
 [functions.import-systemb-authors]
 verify_jwt = false
+
+[functions.parse-testimonials]
+verify_jwt = false
+
+[functions.generate-client-photo]
+verify_jwt = false
