@@ -441,20 +441,43 @@ export function SpinLandingPageEditablePreview({
       // Serializar HTML limpo
       const finalHtml = '<!DOCTYPE html>\n' + clone.documentElement.outerHTML;
       
-      // Salvar diretamente no banco de dados
+      // Salvar com lógica de storage para HTMLs grandes (>500KB)
       const newTimestamp = new Date().toISOString();
-      
-      const { error: updateError } = await supabase
-        .from('spin_selling_solutions')
-        .update({
-          landing_page_html: finalHtml,
-          landing_page_generated_at: newTimestamp
-        })
-        .eq('id', solutionId);
 
-      if (updateError) throw updateError;
+      if (finalHtml.length > 500 * 1024) {
+        // Upload para Storage
+        const storagePath = `spin-lps/${solutionId}.html`;
+        const blob = new Blob([finalHtml], { type: 'text/html; charset=utf-8' });
+        const { error: uploadError } = await supabase.storage
+          .from('landing-pages-html')
+          .upload(storagePath, blob, { upsert: true });
 
-      // Atualizar estado local
+        if (uploadError) throw uploadError;
+
+        // Salvar referência no banco
+        const { error: updateError } = await supabase
+          .from('spin_selling_solutions')
+          .update({
+            landing_page_html: `__storage__:${storagePath}`,
+            landing_page_generated_at: newTimestamp
+          })
+          .eq('id', solutionId);
+
+        if (updateError) throw updateError;
+      } else {
+        // Salvar direto no banco (pequeno)
+        const { error: updateError } = await supabase
+          .from('spin_selling_solutions')
+          .update({
+            landing_page_html: finalHtml,
+            landing_page_generated_at: newTimestamp
+          })
+          .eq('id', solutionId);
+
+        if (updateError) throw updateError;
+      }
+
+      // Manter HTML real no estado local para preview
       setHtml(finalHtml);
       setLastGeneratedAt(newTimestamp);
       setHasChanges(false);

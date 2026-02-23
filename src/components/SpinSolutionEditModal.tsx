@@ -385,6 +385,17 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
       
       // Reset confidence score ao carregar solução existente
       setPitchConfidenceScore(null);
+
+      // Resolver referência de storage se necessário
+      if (existingSolution.landing_page_html?.startsWith('__storage__:')) {
+        import('@/lib/resolve-storage-html').then(({ resolveStorageHtml }) => {
+          resolveStorageHtml(existingSolution.landing_page_html).then(resolved => {
+            if (resolved) {
+              setFormData(prev => ({ ...prev, landing_page_html: resolved }));
+            }
+          });
+        });
+      }
     }
   }, [existingSolution]);
 
@@ -1199,18 +1210,20 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
     }
   };
 
-  const handlePreviewLandingPage = () => {
+  const handlePreviewLandingPage = async () => {
     if (!formData.landing_page_html) return;
-    
-    const blob = new Blob([formData.landing_page_html], { type: 'text/html' });
+    const { resolveStorageHtml } = await import('@/lib/resolve-storage-html');
+    const html = await resolveStorageHtml(formData.landing_page_html) || formData.landing_page_html;
+    const blob = new Blob([html], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     window.open(url, '_blank');
   };
 
-  const handleDownloadLandingPage = () => {
+  const handleDownloadLandingPage = async () => {
     if (!formData.landing_page_html) return;
-    
-    const blob = new Blob([formData.landing_page_html], { type: 'text/html' });
+    const { resolveStorageHtml } = await import('@/lib/resolve-storage-html');
+    const html = await resolveStorageHtml(formData.landing_page_html) || formData.landing_page_html;
+    const blob = new Blob([html], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
