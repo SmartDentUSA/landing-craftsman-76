@@ -190,7 +190,7 @@ function generateSPINSchemas(
         '.content-block h3',
         '.content-block p',
         '.faq-item summary',
-        '.entity-definition p'
+        '.content-block p'
       ]
     },
     
@@ -2500,10 +2500,6 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
       color: var(--text-color);
     }
 
-    .entity-definition {
-      background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-      border-left-color: var(--primary-dark);
-    }
   </style>
 </head>
 <body>
@@ -2611,14 +2607,6 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
         </div>
         ` : ''}
         
-        <div class="content-block entity-definition">
-          <h3>Sobre ${escapeHtml(sanitizeCompanyName(company?.company_name))}</h3>
-          <p>
-            ${escapeHtml(company?.seo_technical_expertise || 
-              `${sanitizeCompanyName(company?.company_name)} é especialista em ${painTypeLabels[solution.pain_type] || 'soluções odontológicas'}, oferecendo produtos de alta qualidade para profissionais da odontologia.`)}
-          </p>
-          ${company?.mission_statement ? `<p><strong>Missão:</strong> ${escapeHtml(company.mission_statement)}</p>` : ''}
-        </div>
       </section>
       
       <meta itemprop="author" content="${escapeHtml(sanitizeCompanyName(company?.company_name))}">
