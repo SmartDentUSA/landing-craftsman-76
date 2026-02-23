@@ -1,66 +1,35 @@
 
 
-# Corrigir Cache CDN na Busca do HTML do Storage
+## Remover a Secao "Narrativa SPIN" da Landing Page
 
-## Problema Confirmado
+A secao que aparece na imagem e o bloco de texto narrativo SPIN (classe `spin-narrative`), que exibe um paragrafo longo gerado pela IA sobre o contexto do problema/solucao.
 
-O log diagnostico confirma: **3 tabelas "Comparativo:" estao presentes no HTML final** antes do upload ao Storage. O upload com `upsert: true` funciona corretamente. Porem, o HTML exibido no frontend mostra apenas 2 tabelas.
+### O que sera feito
 
-**Causa raiz:** O Supabase Storage usa CDN com cache agressivo para URLs publicas. Quando o arquivo e atualizado via `upsert`, o CDN continua servindo a versao anterior (cacheada) que continha apenas 2 tabelas. O `resolveStorageHtml` busca a URL publica sem nenhum mecanismo de cache-busting.
+Remover completamente a renderizacao dessa secao no HTML gerado, para que ela nao apareca mais nas landing pages SPIN Selling.
 
-## Solucao
+### Detalhes tecnicos
 
-### 1. `src/lib/resolve-storage-html.ts` - Adicionar cache-busting
+**Arquivo: `supabase/functions/generate-spin-landing-page/generateHTML.ts`**
 
-Adicionar um parametro `?t=<timestamp>` na URL publica para forcar o CDN a buscar a versao mais recente:
+Remover o bloco nas linhas 2535-2544 que renderiza a secao `spin-narrative`:
 
-```typescript
-const publicUrl = data.publicUrl + '?t=' + Date.now();
-const response = await fetch(publicUrl);
+```
+${aiContent?.spinNarrative ? `
+<!-- Contexto Narrativo SPIN -->
+<div class="container section-padding">
+  <section class="spin-context">
+    <p class="spin-narrative" ...>
+      ${escapeHtml(aiContent.spinNarrative)}
+    </p>
+  </section>
+</div>
+` : ''}
 ```
 
-### 2. `supabase/functions/generate-spin-landing-page/index.ts` - Adicionar cache-control no upload
+Tambem remover os estilos CSS associados (`.spin-narrative` e `.spin-narrative strong`) para manter o codigo limpo.
 
-Configurar o header `cacheControl` no upload para reduzir o TTL do cache:
+**Deploy:** Re-deploy da edge function `generate-spin-landing-page` apos a mudanca.
 
-```typescript
-const { error: storageError } = await serviceClient.storage
-  .from('landing-pages-html')
-  .upload(storagePath, htmlBlob, {
-    contentType: 'text/html; charset=utf-8',
-    upsert: true,
-    cacheControl: '0',  // Sem cache no CDN
-  });
-```
+**Nota:** A geracao do conteudo `spinNarrative` pela IA no `index.ts` sera mantida para nao quebrar a estrutura de dados, mas simplesmente nao sera renderizada no HTML.
 
-## Secao Tecnica
-
-### Mudanca 1 - resolve-storage-html.ts (linha 29)
-```typescript
-// ANTES:
-const response = await fetch(data.publicUrl);
-
-// DEPOIS:
-const publicUrl = data.publicUrl + '?t=' + Date.now();
-console.log('🔗 Buscando HTML com cache-bust:', publicUrl);
-const response = await fetch(publicUrl);
-```
-
-### Mudanca 2 - index.ts (upload com cacheControl)
-```typescript
-// ANTES:
-.upload(storagePath, htmlBlob, {
-  contentType: 'text/html; charset=utf-8',
-  upsert: true,
-});
-
-// DEPOIS:
-.upload(storagePath, htmlBlob, {
-  contentType: 'text/html; charset=utf-8',
-  upsert: true,
-  cacheControl: '0',
-});
-```
-
-### Resultado esperado
-Apos essas 2 mudancas, ao re-gerar a landing page, o frontend buscara a versao mais recente do HTML do Storage, incluindo todas as 3 tabelas comparativas.
