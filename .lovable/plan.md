@@ -1,67 +1,47 @@
 
 
-# Correcao: Tabela Comparativa no HTML SPIN Selling
+# Importacao CSV para Tabela de Concorrentes
 
-## Diagnostico
+## Objetivo
+Adicionar funcionalidade de importacao e exportacao CSV na tabela de comparacao com concorrentes (`CompetitorComparisonTable`), seguindo o mesmo padrao ja existente na importacao de especificacoes tecnicas (`ProductTechnicalSpecsModal`).
 
-Apos analise detalhada do banco de dados e do codigo, identifiquei os seguintes problemas:
+## O que sera feito
 
-### 1. Dados vazios no banco de dados
-A solucao "Atos Unichroma" tem `competitor_comparison.enabled = true`, porem `table_headers` e `table_data` estao como arrays vazios `[]`. Isso faz com que a condicao de renderizacao no HTML (`table_headers.length > 0 && table_data.length > 0`) seja `false` e a tabela nao apareca.
+### 1. Adicionar botoes de Import/Export CSV ao `CompetitorComparisonTable`
+- Botao **"Importar CSV"** com icone Upload
+- Botao **"Baixar Template"** com icone Download
+- Input hidden de file para selecao do arquivo CSV
 
-### 2. console.log dentro do template literal (bug potencial)
-Na linha 2662 do `generateHTML.ts`, ha um `console.log()` dentro do `.map()` que gera as celulas da tabela. Embora nao quebre o retorno diretamente, gera lixo de log desnecessario e pode causar problemas de performance.
+### 2. Logica de importacao CSV
+- Usar `papaparse` (ja instalado no projeto) para parsear o CSV
+- A primeira linha do CSV define os **headers da tabela** (colunas)
+- As linhas seguintes definem os **dados** (rows)
+- Deteccao inteligente: se ja existem headers, os dados importados sao mesclados (append); se nao existem, substitui tudo
 
-### 3. Tabelas de produtos tambem vazias
-Nenhum produto no `products_repository` tem `competitor_comparison.enabled = true` com dados preenchidos, entao a secao de "Tabelas de Comparacao por Produto" tambem nao renderiza.
-
-## Correcoes Propostas
-
-### Arquivo: `supabase/functions/generate-spin-landing-page/generateHTML.ts`
-
-**A. Remover `console.log` de dentro do template literal (linha 2662)**
-
-Remover a linha de debug que pode poluir o HTML ou causar efeitos colaterais:
-
-```typescript
-// REMOVER esta linha:
-console.log(`Cell [${rowIndex}, ${colIndex}] header="${header}" value="${cellValue}" display="${displayValue}"`);
+### 3. Template CSV para download
+- Gerar um CSV de exemplo com formato:
+```
+Caracteristica,Nossa Solucao,Concorrente A,Concorrente B
+Precisao,Alta (50um),Media (100um),Baixa (200um)
+Velocidade,Rapida,Media,Lenta
+Suporte Tecnico,24/7,Horario comercial,Email apenas
 ```
 
-**B. Adicionar fallback visual quando `enabled = true` mas dados estao vazios**
-
-Quando `competitor_comparison.enabled` for `true` mas nao houver dados, exibir uma mensagem no HTML informando que a tabela esta habilitada mas sem dados, para que o usuario perceba o problema:
-
-```typescript
-// Se enabled=true mas sem dados, renderizar aviso
-${solution.competitor_comparison?.enabled && 
-  (!solution.competitor_comparison.table_headers?.length || !solution.competitor_comparison.table_data?.length) ? `
-  <!-- AVISO: Tabela de comparacao habilitada mas sem dados -->
-  <div class="container section-padding">
-    <section class="comparison-section">
-      <p style="color: #999; font-style: italic;">
-        Tabela de comparacao habilitada mas sem dados preenchidos.
-      </p>
-    </section>
-  </div>
-` : ''}
-```
-
-### Arquivo: `src/components/SpinSolutionEditModal.tsx`
-
-**C. Garantir que o pre-save antes de gerar HTML inclui TODOS os campos**
-
-Verificar que a linha 1101-1112 salva `competitor_comparison` corretamente (ja faz isso, mas adicionar log de confirmacao para debug).
-
-## Resultado Esperado
-
-- Se a tabela tem dados preenchidos: renderiza normalmente
-- Se a tabela esta habilitada mas sem dados: mostra aviso visual no HTML
-- Logs de debug removidos do template para HTML limpo
+### 4. Arquivo alterado
+- `src/components/CompetitorComparisonTable.tsx` - Adicionar imports (Upload, Download, FileSpreadsheet, useRef), input file hidden, funcoes `handleCSVImport` e `downloadTemplate`, e botoes na UI ao lado de "Adicionar Coluna"
 
 ## Secao Tecnica
 
-Arquivos alterados:
-1. `supabase/functions/generate-spin-landing-page/generateHTML.ts` - Remover console.log interno e adicionar fallback visual
-2. Redeploy da edge function `generate-spin-landing-page`
+### Fluxo de importacao
+1. Usuario clica em "Importar CSV"
+2. Seleciona arquivo `.csv`
+3. `papaparse` faz o parse com `header: true`
+4. Headers do CSV viram `table_headers`
+5. Cada linha vira um objeto em `table_data` mapeando header -> valor
+6. Chama `handleChange()` para atualizar estado e propagar via `onChange`
+
+### Formato esperado do CSV
+- Primeira coluna = nome da caracteristica/criterio
+- Demais colunas = competidores (incluindo a propria solucao)
+- Primeira linha = nomes das colunas (headers)
 
