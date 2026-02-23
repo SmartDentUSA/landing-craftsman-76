@@ -495,12 +495,16 @@ export function SpinLandingPageEditablePreview({
       if (error) throw error;
       
       if (solution?.landing_page_html) {
-        setHtml(solution.landing_page_html);
-        setLastGeneratedAt(solution.landing_page_generated_at);
-        toast({
-          title: '✅ HTML recarregado',
-          description: 'Preview atualizado com a versão mais recente',
-        });
+        const { resolveStorageHtml } = await import('@/lib/resolve-storage-html');
+        const resolvedHtml = await resolveStorageHtml(solution.landing_page_html);
+        if (resolvedHtml) {
+          setHtml(resolvedHtml);
+          setLastGeneratedAt(solution.landing_page_generated_at);
+          toast({
+            title: '✅ HTML recarregado',
+            description: 'Preview atualizado com a versão mais recente',
+          });
+        }
       }
     } catch (error: any) {
       console.error('Erro ao recarregar HTML:', error);

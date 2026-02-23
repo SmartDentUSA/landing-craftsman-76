@@ -1003,42 +1003,62 @@ serve(async (req) => {
       throw new Error(`HTML muito grande: ${htmlSizeMB} MB (limite: 10MB)`);
     }
 
-    // Salvar no banco usando fetch direto (evita PGRST102 com payloads grandes)
+    // Salvar HTML grande via Storage + referência no banco
     console.log('💾 Salvando landing page no banco...');
     console.log(`📦 Payload size: ${htmlSizeKB} KB`);
     
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
 
-    const updateBody = JSON.stringify({
-      landing_page_html: html,
-      landing_page_generated_at: new Date().toISOString()
-    });
+    // Para payloads grandes (>500KB), usar Storage
+    if (html.length > 500 * 1024) {
+      console.log('📦 HTML grande detectado, usando Storage...');
+      
+      const storagePath = `spin-lps/${solutionId}.html`;
+      const htmlBlob = new Blob([html], { type: 'text/html; charset=utf-8' });
+      
+      const { error: storageError } = await serviceClient.storage
+        .from('landing-pages-html')
+        .upload(storagePath, htmlBlob, {
+          contentType: 'text/html; charset=utf-8',
+          upsert: true,
+        });
 
-    console.log(`📦 JSON body size: ${Math.round(updateBody.length / 1024)} KB`);
-
-    const saveResponse = await fetch(
-      `${supabaseUrl}/rest/v1/spin_selling_solutions?id=eq.${solutionId}`,
-      {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseServiceKey}`,
-          'apikey': supabaseServiceKey,
-          'Prefer': 'return=minimal',
-        },
-        body: updateBody,
+      if (storageError) {
+        console.error('❌ Erro ao salvar HTML no Storage:', storageError);
+        throw new Error(`Erro ao salvar HTML no Storage: ${storageError.message}`);
       }
-    );
 
-    if (!saveResponse.ok) {
-      const errText = await saveResponse.text();
-      console.error('❌ Erro ao salvar landing page:', {
-        status: saveResponse.status,
-        error: errText,
-        htmlSize: htmlSizeKB + ' KB'
-      });
-      throw new Error(`Erro ao salvar landing page: ${errText}`);
+      console.log('✅ HTML salvo no Storage:', storagePath);
+
+      // Salvar referência no banco (payload pequeno)
+      const { error: updateError } = await serviceClient
+        .from('spin_selling_solutions')
+        .update({
+          landing_page_html: `__storage__:${storagePath}`,
+          landing_page_generated_at: new Date().toISOString()
+        })
+        .eq('id', solutionId);
+
+      if (updateError) {
+        console.error('❌ Erro ao atualizar referência:', updateError);
+        throw new Error(`Erro ao atualizar referência: ${JSON.stringify(updateError)}`);
+      }
+    } else {
+      // Payload pequeno: salvar direto no banco
+      const { error: updateError } = await serviceClient
+        .from('spin_selling_solutions')
+        .update({
+          landing_page_html: html,
+          landing_page_generated_at: new Date().toISOString()
+        })
+        .eq('id', solutionId);
+
+      if (updateError) {
+        console.error('❌ Erro ao salvar landing page:', updateError);
+        throw new Error(`Erro ao salvar landing page: ${JSON.stringify(updateError)}`);
+      }
     }
     
     console.log('✅ Landing page salva com sucesso');

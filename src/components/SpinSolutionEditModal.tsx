@@ -1170,15 +1170,19 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
         .single();
 
       if (updatedSolution) {
+        // Resolver referência de Storage se necessário
+        const { resolveStorageHtml } = await import('@/lib/resolve-storage-html');
+        const resolvedHtml = await resolveStorageHtml(updatedSolution.landing_page_html);
+        
         setFormData(prev => ({
           ...prev,
-          landing_page_html: updatedSolution.landing_page_html,
+          landing_page_html: resolvedHtml,
           landing_page_generated_at: updatedSolution.landing_page_generated_at
         }));
         
         // Abrir preview automaticamente com o HTML atualizado
-        if (updatedSolution.landing_page_html) {
-          setGeneratedHTML(updatedSolution.landing_page_html);
+        if (resolvedHtml) {
+          setGeneratedHTML(resolvedHtml);
           setShowEditablePreview(true);
         }
       }
@@ -1361,8 +1365,12 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
         .single();
 
       if (solution?.landing_page_html) {
-        setGeneratedHTML(solution.landing_page_html);
-        setShowEditablePreview(true);
+        const { resolveStorageHtml } = await import('@/lib/resolve-storage-html');
+        const resolvedHtml = await resolveStorageHtml(solution.landing_page_html);
+        if (resolvedHtml) {
+          setGeneratedHTML(resolvedHtml);
+          setShowEditablePreview(true);
+        }
 
         toast({
           title: '✅ Landing page gerada',
