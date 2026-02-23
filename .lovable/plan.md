@@ -1,30 +1,37 @@
 
 
-# Fix: Pitch de Vendas SPIN ignorando produtos selecionados no body
+# Extrair Cidade e Estado nos Depoimentos SPIN
 
 ## Problema
 
-Quando o usuario seleciona 3 produtos na UI e clica "Gerar Pitch", o frontend envia os 3 `product_ids` no body da requisicao. Porem, a edge function `generate-spin-sales-pitch` ignora esses IDs quando o `solutionId` ja existe no banco -- ela usa apenas os IDs armazenados na tabela `spin_selling_solutions`, que pode estar desatualizado (com apenas 2 produtos).
-
-**Evidencia:** Request enviou 3 IDs, mas `artifact_chain.source_data_ids` retornou apenas 2.
+A edge function `parse-testimonials` nao extrai os campos `city` e `state` do texto, mesmo quando estao presentes (ex: "Recife (PE)", "Curitiba (PR)"). O frontend tambem ignora esses campos, setando-os como strings vazias.
 
 ## Correcao
 
-### Arquivo: `supabase/functions/generate-spin-sales-pitch/index.ts`
+### 1. Edge Function: `supabase/functions/parse-testimonials/index.ts`
 
-Na secao onde `solutionId` existe (linha 41-53), priorizar os `product_ids` vindos do body sobre os armazenados no banco:
+Adicionar `city` e `state` no schema da tool de extracao:
 
 ```
-// ANTES (bug):
-productIds = solution.selected_product_ids || solution.product_ids || [];
-
-// DEPOIS (fix):
-productIds = bodyProductIds?.length > 0 
-  ? bodyProductIds 
-  : (solution.selected_product_ids || solution.product_ids || []);
+// Adicionar dentro de "properties" do item:
+city: { type: "string", description: "Cidade da pessoa, ex: Recife, Curitiba" },
+state: { type: "string", description: "Sigla do estado (UF), ex: PE, PR, SP" }
 ```
 
-Isso garante que, se o frontend enviar `product_ids`, eles serao usados. Caso contrario, cai no fallback dos IDs do banco.
+Adicionar ambos ao array `required`.
 
-Nenhuma outra mudanca necessaria. Apenas 1 linha alterada + redeploy da edge function.
+### 2. Frontend: `src/components/SpinSolutionEditModal.tsx`
+
+Atualizar o mapeamento (linhas 585-596) para usar os campos extraidos:
+
+```
+city: t.city || '',
+state: t.state || '',
+```
+
+Em vez dos valores hardcoded vazios atuais.
+
+## Resultado
+
+Os 10 depoimentos serao importados com cidade e estado preenchidos automaticamente pela IA (ex: city="Recife", state="PE").
 
