@@ -1003,28 +1003,42 @@ serve(async (req) => {
       throw new Error(`HTML muito grande: ${htmlSizeMB} MB (limite: 10MB)`);
     }
 
-    // Salvar no banco usando Supabase client (suporta payloads grandes)
+    // Salvar no banco usando fetch direto (evita PGRST102 com payloads grandes)
     console.log('💾 Salvando landing page no banco...');
     console.log(`📦 Payload size: ${htmlSizeKB} KB`);
     
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
-    
-    const { error: updateError } = await serviceClient
-      .from('spin_selling_solutions')
-      .update({
-        landing_page_html: html,
-        landing_page_generated_at: new Date().toISOString()
-      })
-      .eq('id', solutionId);
 
-    if (updateError) {
+    const updateBody = JSON.stringify({
+      landing_page_html: html,
+      landing_page_generated_at: new Date().toISOString()
+    });
+
+    console.log(`📦 JSON body size: ${Math.round(updateBody.length / 1024)} KB`);
+
+    const saveResponse = await fetch(
+      `${supabaseUrl}/rest/v1/spin_selling_solutions?id=eq.${solutionId}`,
+      {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseServiceKey}`,
+          'apikey': supabaseServiceKey,
+          'Prefer': 'return=minimal',
+        },
+        body: updateBody,
+      }
+    );
+
+    if (!saveResponse.ok) {
+      const errText = await saveResponse.text();
       console.error('❌ Erro ao salvar landing page:', {
-        error: updateError,
+        status: saveResponse.status,
+        error: errText,
         htmlSize: htmlSizeKB + ' KB'
       });
-      throw new Error(`Erro ao salvar landing page: ${JSON.stringify(updateError)}`);
+      throw new Error(`Erro ao salvar landing page: ${errText}`);
     }
     
     console.log('✅ Landing page salva com sucesso');
