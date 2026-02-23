@@ -19,7 +19,8 @@ import {
   RefreshCw,
   Clock,
   RotateCcw,
-  Download
+  Download,
+  Rocket
 } from 'lucide-react';
 
 interface SpinLandingPageEditablePreviewProps {
@@ -62,6 +63,7 @@ export function SpinLandingPageEditablePreview({
   });
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSendingToLibrary, setIsSendingToLibrary] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [currentEditingField, setCurrentEditingField] = useState<string | null>(null);
   const [lastGeneratedAt, setLastGeneratedAt] = useState(generatedAt);
@@ -667,6 +669,92 @@ export function SpinLandingPageEditablePreview({
     }
   };
 
+  // Helper para obter HTML sanitizado do iframe
+  const getSanitizedHtml = (): string => {
+    const doc = iframeRef.current?.contentDocument;
+    if (!doc) return html;
+    
+    const clone = doc.cloneNode(true) as Document;
+    clone.head.querySelector('style[data-editable-injected]')?.remove();
+    clone.querySelectorAll('[contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
+    clone.querySelectorAll('[data-prev-user-select]').forEach(el => el.removeAttribute('data-prev-user-select'));
+    clone.querySelectorAll('[style]').forEach(el => {
+      const element = el as HTMLElement;
+      const style = element.style;
+      if (style.userSelect || (style as any).webkitUserSelect || 
+          (style as any).mozUserSelect || (style as any).msUserSelect) {
+        style.userSelect = '';
+        (style as any).webkitUserSelect = '';
+        (style as any).mozUserSelect = '';
+        (style as any).msUserSelect = '';
+        if (!element.getAttribute('style')?.trim()) {
+          element.removeAttribute('style');
+        }
+      }
+    });
+    return '<!DOCTYPE html>\n' + clone.documentElement.outerHTML;
+  };
+
+  const sendToLibrary = async () => {
+    setIsSendingToLibrary(true);
+    try {
+      const finalHtml = getSanitizedHtml();
+      
+      // Buscar título da solução
+      const { data: solution } = await supabase
+        .from('spin_selling_solutions')
+        .select('title')
+        .eq('id', solutionId)
+        .single();
+      
+      const title = solution?.title || `SPIN LP ${solutionId.slice(0, 8)}`;
+      
+      // Obter user_id
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Usuário não autenticado');
+      
+      // Gerar page_path a partir do título
+      const pagePath = '/' + title
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 60);
+      
+      const { error } = await supabase
+        .from('cloned_landing_pages')
+        .insert([{
+          name: `SPIN - ${title}`,
+          original_html: finalHtml,
+          transformed_html: finalHtml,
+          cta_url: '#',
+          status: 'draft',
+          publish_status: 'draft',
+          user_id: user.id,
+          product: title,
+          page_path: pagePath,
+          captured_images: [],
+          seo_config: {},
+        }]);
+      
+      if (error) throw error;
+      
+      toast({
+        title: '🚀 Enviado para Biblioteca!',
+        description: `"${title}" está disponível em LP Clone & Blogs para publicação`,
+      });
+    } catch (error: any) {
+      toast({
+        title: '❌ Erro ao enviar',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSendingToLibrary(false);
+    }
+  };
+
   return (
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-[95vw] h-[90vh] flex flex-col">
@@ -807,6 +895,22 @@ export function SpinLandingPageEditablePreview({
               >
                 <Download className="h-4 w-4 mr-2" />
                 Exportar HTML
+              </Button>
+
+              <Button
+                variant="default"
+                size="sm"
+                onClick={sendToLibrary}
+                disabled={isSendingToLibrary}
+                title="Enviar HTML para LP Clone & Blogs para publicação"
+                className="bg-primary hover:bg-primary/90"
+              >
+                {isSendingToLibrary ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Rocket className="h-4 w-4 mr-2" />
+                )}
+                Enviar para Biblioteca
               </Button>
               
               <Button
