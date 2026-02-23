@@ -1035,6 +1035,7 @@ serve(async (req) => {
         .upload(storagePath, htmlBlob, {
           contentType: 'text/html; charset=utf-8',
           upsert: true,
+          cacheControl: '0',
         });
 
       if (storageError) {

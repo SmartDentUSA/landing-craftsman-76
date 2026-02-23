@@ -26,7 +26,9 @@ export async function resolveStorageHtml(value: string | null): Promise<string |
     return null;
   }
 
-  const response = await fetch(data.publicUrl);
+  const publicUrl = data.publicUrl + '?t=' + Date.now();
+  console.log('🔗 Buscando HTML com cache-bust:', publicUrl);
+  const response = await fetch(publicUrl);
   if (!response.ok) {
     console.error('❌ Erro ao buscar HTML do Storage:', response.status);
     return null;
