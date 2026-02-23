@@ -1,133 +1,104 @@
 
-# Importação Automática Mensal de KOLs do Sistema B
 
-## Estratégia: pg_cron + Nova Edge Function
+# Tabelas de Comparação dos Produtos na SPIN Selling
 
-Sem nenhuma UI nova. A solução é 100% backend:
+## Objetivo
 
-1. **Nova edge function** `import-systemb-authors` — busca o payload do Sistema B, localiza os autores/especialistas e faz upsert na tabela `key_opinion_leaders`
-2. **pg_cron job** agendado para rodar no **1º dia de cada mês às 03:00** — chama a edge function automaticamente via HTTP
+Quando o usuario clicar em "Buscar tabelas de comparacao dos produtos selecionados", o sistema vai:
+1. Consultar `products_repository` para cada `product_id` selecionado
+2. Extrair o campo `competitor_comparison` de cada produto
+3. Exibir as tabelas lado a lado no editor, separadas por produto
+4. Ao gerar a Landing Page, inserir essas tabelas no HTML final
 
-O pg_cron já está habilitado no projeto (confirmado: tabela `cron.job` existe). Não há nenhum job cadastrado ainda.
+---
 
-## Descoberta da Estrutura do Sistema B
+## O que existe hoje
 
-Com base nos logs existentes em `sync-system-b-documents/index.ts`, o payload do Sistema B tem as seguintes chaves confirmadas na raiz:
-- `produtos.resinas`
-- `documentos_catalogo`
-- `avaliacoes_google`
-- `perfil_empresa` → contém `reputacao_google`
+- Cada produto no `products_repository` ja tem campo `competitor_comparison` (JSONB) com `enabled`, `title`, `table_headers`, `table_data`
+- O `SpinSolutionEditModal` tem um unico `CompetitorComparisonTable` para a solucao SPIN (dados manuais)
+- O `generateHTML.ts` ja renderiza a tabela de comparacao da solucao SPIN
+- O `index.ts` ja coleta `competitorComparisons` dos produtos e passa para o contexto de IA, mas NAO renderiza no HTML
 
-Os autores/KOLs provavelmente estão em:
-- `perfil_empresa.equipe`
-- `perfil_empresa.profissionais`
-- `autores`
-- `key_opinion_leaders`
-- `profissionais`
+---
 
-A edge function tentará **todos esses caminhos** e usará o primeiro que retornar dados. Também logará as chaves raiz do payload para diagnóstico nos logs do Supabase.
+## Mudancas
 
-## Arquivos a Criar/Modificar
+### 1. SpinSolutionEditModal.tsx
 
-### 1. `supabase/functions/import-systemb-authors/index.ts` (NOVO)
+**Adicionar botao + lista de tabelas dos produtos:**
 
-Estrutura da função:
+Logo acima (ou abaixo) do `CompetitorComparisonTable` existente, adicionar:
 
-```
-POST/GET → busca payload Sistema B
-  ↓
-Loga chaves raiz para diagnóstico
-  ↓
-Tenta localizar autores em múltiplos caminhos:
-  - payload.autores
-  - payload.profissionais
-  - payload.key_opinion_leaders
-  - payload.perfil_empresa.equipe
-  - payload.perfil_empresa.profissionais
-  ↓
-Para cada autor encontrado:
-  - Mapeia campos para o formato key_opinion_leaders
-  - upsert por full_name (evitar duplicatas)
-  - approved: false por padrão (requer revisão manual do admin)
-  ↓
-Retorna summary: { encontrados, importados, ignorados }
-```
+- Um botao "Buscar Tabelas dos Produtos Selecionados"
+- Ao clicar, faz query no Supabase: `SELECT id, name, competitor_comparison FROM products_repository WHERE id IN (product_ids)`
+- Filtra apenas os que tem `competitor_comparison.enabled = true` e dados validos
+- Renderiza uma lista de Cards com preview de cada tabela (read-only), separadas por nome do produto
+- Estado local `productComparisonTables` para guardar os dados buscados
 
-Mapeamento de campos (tentativa de múltiplos nomes de campo):
-| Campo Sistema B | Campo Destino |
-|---|---|
-| `nome` / `name` / `nome_completo` | `full_name` |
-| `foto` / `photo_url` / `foto_url` / `imagem` | `photo_url` |
-| `bio` / `mini_cv` / `descricao` / `biografia` | `mini_cv` |
-| `especialidade` / `specialty` / `cargo` | `specialty` |
-| `instagram` / `instagram_url` | `instagram_url` |
-| `youtube` / `youtube_url` | `youtube_url` |
-| `lattes` / `lattes_url` / `curriculo_lattes` | `lattes_url` |
-| `site` / `website` / `website_url` / `url` | `website_url` |
-| `ordem` / `display_order` | `display_order` |
+Isso e apenas para **visualizacao** no editor. Os dados continuam vindo dos produtos e nao sao duplicados na solucao SPIN.
 
-### 2. `supabase/config.toml` (MODIFICAR)
+### 2. generateHTML.ts
 
-Adicionar ao final:
-```toml
-[functions.import-systemb-authors]
-verify_jwt = false
-```
+**Adicionar secao de tabelas por produto apos a tabela da solucao:**
 
-### 3. SQL via Insert Tool (NÃO é migration — é dado de configuração do cron)
+Apos a secao existente da tabela de comparacao da solucao (linha ~2673), adicionar um novo bloco que itera sobre `enrichedProductContext.competitorComparisons` (ja disponivel via `aiContent`).
 
-Cadastrar o job no pg_cron para executar **no 1º dia de cada mês às 03:00 UTC**:
+Para cada produto com `comparison.enabled && comparison.table_headers.length > 0`:
+- Renderizar um `<h3>` com o nome do produto
+- Renderizar a tabela HTML usando os mesmos estilos da tabela existente (`.comparison-section table`)
+- Separar cada tabela visualmente com margem
 
-```sql
-SELECT cron.schedule(
-  'import-systemb-authors-monthly',
-  '0 3 1 * *',
-  $$
-  SELECT net.http_post(
-    url := 'https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/import-systemb-authors',
-    headers := '{"Content-Type": "application/json", "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBnZmdyaXB1YW51d3dvbG10a25uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYxNDkxNzMsImV4cCI6MjA3MTcyNTE3M30.ibYoIlzxAFoXjFCAy7WrKKixiDcG318dxEm8gqGKOjk"}'::jsonb,
-    body := '{"source": "cron"}'::jsonb
-  ) AS request_id;
-  $$
-);
-```
+O `enrichedProductContext.competitorComparisons` ja e montado no `index.ts` (linha 805-807) e passado para `generateHTML`. Basta usar esses dados na renderizacao.
 
-Nota: usa `pg_net` (já disponível via Supabase) para fazer o HTTP POST. O cron schedule `0 3 1 * *` significa: minuto 0, hora 3, dia 1 do mês, todo mês.
+### 3. index.ts (generate-spin-landing-page)
 
-## Fluxo Completo
+Garantir que `enrichedProductContext.competitorComparisons` chegue ao `generateHTML` como parte do `aiContent`. Verificar se ja esta sendo passado -- se nao, adicionar ao objeto que e enviado para `generateHTML()`.
+
+---
+
+## Fluxo Visual no Editor
 
 ```text
-1º dia do mês às 03:00 UTC
-  ↓
-pg_cron dispara → net.http_post → /import-systemb-authors
-  ↓
-Edge function acorda e busca:
-  https://okeogjgqijbfkudfjadz.supabase.co/functions/v1/data-export?format=ai_ready
-  ↓
-Analisa payload → localiza lista de autores/especialistas
-  ↓
-Para cada autor:
-  upsert key_opinion_leaders (deduplicação por full_name)
-  approved = false (aguarda revisão manual)
-  ↓
-Loga resultado nos Edge Function Logs do Supabase
-  ↓
-Admin pode ver os novos KOLs importados no mês seguinte
-e aprovar individualmente na tela de KOLs
+[Secao: Tabela de Comparacao com Concorrentes]
+  - CompetitorComparisonTable (tabela manual da solucao SPIN - ja existe)
+  
+[NOVO - Botao: "Buscar Tabelas dos Produtos Selecionados"]
+  - Ao clicar, carrega dados dos produtos
+  - Exibe preview read-only de cada tabela, separada por produto:
+    
+    Produto: "Atos Resina Composta"
+    | Caracteristica | Nossa Solucao | Concorrente A |
+    |...             |...            |...            |
+    
+    Produto: "SmartMake Resina 3D"
+    | Caracteristica | Nossa Solucao | Concorrente B |
+    |...             |...            |...            |
 ```
 
-## Segurança e Resiliência
+---
 
-- `AbortController` com timeout de 30s para o fetch do Sistema B
-- Tratamento de erro individual por autor (falha em um não para a importação)
-- `upsert` por `full_name` — re-executar não cria duplicatas
-- `approved: false` por padrão — nenhum KOL não revisado aparece nos endpoints públicos
-- Caso o Sistema B esteja fora do ar, a função retorna erro e o pg_cron registra na tabela `cron.job_run_details` para diagnóstico posterior
+## Fluxo na Landing Page Gerada
+
+```text
+[Tabela de Comparacao da Solucao SPIN] (ja existe)
+
+[NOVO - Tabelas por Produto]
+  <h3>Comparativo: Atos Resina Composta</h3>
+  <table>...</table>
+  
+  <h3>Comparativo: SmartMake Resina 3D</h3>
+  <table>...</table>
+```
+
+---
 
 ## Arquivos Modificados
 
-| Arquivo | Tipo | Mudança |
-|---|---|---|
-| `supabase/functions/import-systemb-authors/index.ts` | NOVO | Edge function de importação |
-| `supabase/config.toml` | MODIFICAR | Registrar nova função |
-| SQL via Insert Tool | DADO | Cadastrar job no pg_cron |
+| Arquivo | Mudanca |
+|---|---|
+| `src/components/SpinSolutionEditModal.tsx` | Botao de busca + estado + preview read-only das tabelas dos produtos |
+| `supabase/functions/generate-spin-landing-page/generateHTML.ts` | Renderizar tabelas por produto usando `competitorComparisons` do contexto |
+| `supabase/functions/generate-spin-landing-page/index.ts` | Verificar/garantir que `competitorComparisons` chega ao `generateHTML` |
+
+Nenhuma tabela nova no banco. Nenhuma migracao SQL. Os dados ja existem nos produtos.
+
