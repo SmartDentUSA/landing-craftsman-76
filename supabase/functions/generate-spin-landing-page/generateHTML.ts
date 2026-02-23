@@ -2841,7 +2841,8 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
       
       ${(() => {
         // 🎬 Usar vídeos dos produtos selecionados (productVideos) em vez do Sistema B
-        const productVideos = aiContent?.productVideos || [];
+        const allProductVideos = aiContent?.productVideos || [];
+        const productVideos = allProductVideos.filter((v: any) => v.type === 'technical');
         if (productVideos.length === 0) return '';
         
         // Função para obter badge por tipo
