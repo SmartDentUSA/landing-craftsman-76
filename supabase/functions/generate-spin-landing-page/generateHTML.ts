@@ -3018,7 +3018,7 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
     `;
   })()}
 
-  ${successCases.length > 0 ? `
+  ${(successCases.length > 0 || (aiContent?.testimonials && aiContent.testimonials.length > 0)) ? `
   <!-- Seção de Depoimentos com Carrossel -->
   <section class="testimonials-section">
     <div class="container">
