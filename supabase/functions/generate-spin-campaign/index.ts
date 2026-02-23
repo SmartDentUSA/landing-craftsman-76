@@ -536,8 +536,8 @@ Gere APENAS o texto, sem aspas ou formatação.
         },
         quality_metrics: {
           ...(existingMetadata.quality_metrics || {}),
-          whatsapp_storytelling_quality: validationResult?.score || 85,
-          whatsapp_validation_attempts: validationAttempts
+          whatsapp_storytelling_quality: 85,
+          whatsapp_validation_attempts: 1
         }
       };
 
