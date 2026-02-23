@@ -1,41 +1,70 @@
 
-## Corrigir Videos de Depoimentos Ausentes na Landing Page
 
-### Problema Identificado
+# Exibir Videos de Depoimentos dos Produtos na Landing Page
 
-A secao de depoimentos (linha 3021 do `generateHTML.ts`) so e renderizada quando `successCases.length > 0`:
+## Problema Identificado
+
+Os depoimentos da tabela `video_testimonials` possuem campos `youtube_url` e `instagram_url` com links para videos reais dos clientes, mas esses campos sao **descartados** no mapeamento (linha 898-905 do `index.ts`):
 
 ```text
-${successCases.length > 0 ? `
-  <!-- Seção de Depoimentos com Carrossel -->
-  ...
-` : ''}
+const realTestimonials = (videoTestimonials || []).map((testimonial) => ({
+  quote: testimonial.testimonial_text,
+  clientName: testimonial.client_name,
+  clientPhoto: testimonial.photo_url || null,
+  location: testimonial.location || null,
+  profession: testimonial.profession || null,
+  specialty: testimonial.specialty || null
+  // youtube_url e instagram_url NAO sao incluidos!
+}));
 ```
 
-Internamente (linhas 3029-3033), o codigo ja sabe usar `aiContent.testimonials` (depoimentos da tabela `video_testimonials`) como fallback quando nao ha `success_cases`. Porem, a condicao externa impede a secao inteira de aparecer quando `successCases` esta vazio.
+No HTML (linha 3056-3079), os cards de depoimento mostram apenas texto e foto, sem nenhum link ou embed de video.
 
-Resultado: se a solucao SPIN nao tem `success_cases` cadastrados, os depoimentos reais do banco de dados (`video_testimonials`) nunca sao exibidos.
+## Solucao
 
-### Solucao
+### 1. Incluir URLs de video no mapeamento
 
-**Arquivo:** `supabase/functions/generate-spin-landing-page/generateHTML.ts`
+**Arquivo:** `supabase/functions/generate-spin-landing-page/index.ts` (linhas 898-905)
 
-Alterar a condicao externa da secao de depoimentos (linha 3021) de:
+Adicionar `youtube_url` e `instagram_url` ao objeto mapeado:
 
+```typescript
+const realTestimonials = (videoTestimonials || []).map((testimonial: any) => ({
+  quote: testimonial.testimonial_text,
+  clientName: testimonial.client_name,
+  clientPhoto: testimonial.photo_url || null,
+  location: testimonial.location || null,
+  profession: testimonial.profession || null,
+  specialty: testimonial.specialty || null,
+  youtube_url: testimonial.youtube_url || null,
+  instagram_url: testimonial.instagram_url || null
+}));
 ```
-${successCases.length > 0 ? `
+
+### 2. Renderizar links de video nos cards de depoimento
+
+**Arquivo:** `supabase/functions/generate-spin-landing-page/generateHTML.ts` (secao de testimonials, ~linha 3070)
+
+Apos o bloco `.profile-info`, adicionar botoes com links para YouTube e Instagram quando disponiveis:
+
+```html
+<div class="testimonial-video-links">
+  <!-- Link YouTube (se existir) -->
+  <a href="..." target="_blank">
+    <i class="fab fa-youtube"></i> Ver depoimento
+  </a>
+  <!-- Link Instagram (se existir) -->
+  <a href="..." target="_blank">
+    <i class="fab fa-instagram"></i> Ver no Instagram
+  </a>
+</div>
 ```
 
-Para:
+### 3. Adicionar CSS para os botoes de video
 
-```
-${(successCases.length > 0 || (aiContent?.testimonials && aiContent.testimonials.length > 0)) ? `
-```
-
-Isso garante que a secao apareca quando existirem:
-- `success_cases` especificos da solucao, **OU**
-- depoimentos reais vindos da tabela `video_testimonials`
+Estilizar `.testimonial-video-links` com botoes pequenos e discretos dentro dos cards de depoimento, usando as cores do YouTube (vermelho) e Instagram (gradiente).
 
 ### Deploy
 - Re-deploy da edge function `generate-spin-landing-page`
-- Re-gerar a landing page para confirmar que os depoimentos aparecem
+- Re-gerar a landing page para confirmar que os links de video aparecem nos cards
+
