@@ -1,83 +1,66 @@
 
-# Corrigir Tabela NanoClean PoD Ausente na Landing Page SPIN
+# Diagnosticar e Corrigir Tabela NanoClean PoD Ausente
 
-## Diagnostico
+## Diagnostico Atual
 
-Apesar dos logs confirmarem que 3 tabelas sao identificadas e processadas (Rayshape, Resina, NanoClean PoD), o HTML final contem apenas 2. O `try/catch` adicionado na correcao anterior nao registrou nenhum erro, indicando que a falha ocorre silenciosamente dentro da avaliacao do template literal.
+Os logs confirmam que todas as 3 tabelas sao renderizadas individualmente com sucesso:
+- Rayshape: 1083 chars
+- Resina: 1477 chars
+- NanoClean PoD: 1820 chars
 
-**Causa provavel:** O template literal aninhado (`.map()` dentro de `.map()` dentro de template literal) pode falhar silenciosamente no Deno quando os dados contem caracteres especiais como `™`, `®`, ou parenteses desbalanceados nos headers longos do NanoClean PoD. Isso ocorre porque o erro pode ser engolido pelo JavaScript engine durante a interpolacao de strings.
+Porem o HTML final nao contem a tabela NanoClean. A unica parte do codigo que ainda usa template literal para montar a secao de tabelas e o `return` da IIFE (linhas 2748-2757), onde `${renderedTables}` e interpolado.
 
-**Evidencia:** O HTML gerado (1,495,120 chars) vs HTML recuperado do Storage (1,488,877 chars) mostra uma diferenca de ~6KB - exatamente o tamanho estimado de uma tabela de comparacao com 8 linhas e 4 colunas.
+## Causa Provavel
 
-## Solucao
+Apesar de `renderedTables` ser uma string ja resolvida, o `return` da IIFE (linha 2748) ainda usa template literal. Essa string e entao interpolada na template literal PRINCIPAL do `generateHTML`, criando uma cadeia de interpolacao de 3 niveis. Embora isso devesse funcionar em teoria, a evidencia empirica mostra que o conteudo esta sendo perdido nessa cadeia.
 
-Reescrever a renderizacao de tabelas para usar concatenacao explicita de strings em vez de template literals aninhados, e adicionar logging granular por produto.
+## Solucao (2 mudancas)
 
-## Secao Tecnica
+### 1. `generateHTML.ts` - Eliminar template literal na IIFE (linhas 2748-2757)
 
-### Arquivo: `supabase/functions/generate-spin-landing-page/generateHTML.ts`
-
-**Mudanca no bloco de renderizacao (linhas 2699-2737):**
-
-Substituir o template literal aninhado por construcao imperativa de strings:
+Substituir o `return` com template literal por concatenacao de strings:
 
 ```typescript
-const renderedTables = validComparisons.map((item: any, idx: number) => {
-  try {
-    console.log(`📊 [HTML] Renderizando tabela ${idx + 1}/${validComparisons.length}: ${item.productName}`);
-    
-    // Construir headers
-    const headerCells = (item.comparison.table_headers || []).map((header: string) => {
-      return '<th>' + escapeHtml(String(header || '')) + '</th>';
-    }).join('');
-    
-    // Construir linhas do body
-    const bodyRows = (item.comparison.table_data || []).map((row: any, rowIdx: number) => {
-      const cells = (item.comparison.table_headers || []).map((header: string) => {
-        const cellValue = row[header];
-        const displayValue = (cellValue !== undefined && cellValue !== null && String(cellValue).trim() !== '')
-          ? String(cellValue)
-          : '-';
-        return '<td>' + escapeHtml(displayValue) + '</td>';
-      }).join('');
-      return '<tr>' + cells + '</tr>';
-    }).join('\n');
-    
-    // Construir subtitulo
-    const subtitleHtml = item.comparison.subtitle 
-      ? '<p style="color: var(--muted); margin-bottom: 1.5rem;">' + escapeHtml(String(item.comparison.subtitle)) + '</p>'
-      : '';
-    
-    const tableHtml = [
-      '<div style="margin-top: 3rem;">',
-      '  <h3 style="font-size: 24px; font-weight: 700; color: var(--text); margin-bottom: 1rem;">',
-      '    Comparativo: ' + escapeHtml(String(item.productName || '')),
-      '  </h3>',
-      subtitleHtml,
-      '  <div class="desktop-table">',
-      '    <table>',
-      '      <thead><tr>' + headerCells + '</tr></thead>',
-      '      <tbody>' + bodyRows + '</tbody>',
-      '    </table>',
-      '  </div>',
-      '</div>'
-    ].join('\n');
-    
-    console.log(`✅ [HTML] Tabela ${item.productName} renderizada: ${tableHtml.length} chars`);
-    return tableHtml;
-  } catch (err) {
-    console.error(`❌ [HTML] ERRO ao renderizar tabela ${idx + 1} (${item.productName}):`, String(err));
-    return '<!-- Erro ao renderizar tabela: ' + String(item.productName || 'desconhecido') + ' -->';
-  }
-}).join('\n');
+// ANTES (linha 2748-2757):
+return `
+  <!-- TABELAS DE COMPARACAO POR PRODUTO -->
+  <div class="container section-padding">
+    <section class="comparison-section">
+      ...
+      ${renderedTables}
+    </section>
+  </div>
+`;
+
+// DEPOIS:
+const sectionHtml = [
+  '<!-- TABELAS DE COMPARACAO POR PRODUTO -->',
+  '<div class="container section-padding">',
+  '  <section class="comparison-section">',
+  '    <h2>Comparativo Detalhado por Produto</h2>',
+  '    <p class="subtitle">...</p>',
+  renderedTables,
+  '  </section>',
+  '</div>'
+].join('\n');
+
+console.log('[HTML] Secao completa de tabelas por produto: ' + sectionHtml.length + ' chars');
+return sectionHtml;
 ```
 
-### Mudancas chave:
-1. **String concatenation** em vez de template literals aninhados - evita problemas com caracteres especiais do Deno
-2. **`String()` defensivo** em todos os valores antes de passar para `escapeHtml`
-3. **Logging por produto** - cada tabela loga inicio e fim com tamanho, facilitando debug
-4. **`.join('\n')` entre tabelas** - separa com newline para evitar problemas de concatenacao
+### 2. `index.ts` - Adicionar log diagnostico antes do upload (apos linha 1003)
+
+Adicionar verificacao especifica para confirmar se todas as tabelas estao no HTML final:
+
+```typescript
+// Verificacao diagnostica
+const compTableCount = (html.match(/Comparativo:/g) || []).length;
+console.log('[DIAG] Tabelas "Comparativo:" encontradas no HTML final:', compTableCount);
+```
 
 ### Deploy
-- Fazer deploy da edge function `generate-spin-landing-page` apos as alteracoes
-- Re-gerar a landing page e verificar nos logs se as 3 tabelas sao renderizadas com seus tamanhos
+- Fazer deploy da edge function `generate-spin-landing-page`
+- Re-gerar a landing page
+- Verificar nos logs se `compTableCount` e 3
+
+Se o log mostrar 3 mas o HTML baixado tiver 2, o problema esta no Storage upload. Se mostrar 2, o problema esta na interpolacao da IIFE no template principal.
