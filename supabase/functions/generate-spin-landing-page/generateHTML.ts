@@ -2696,45 +2696,54 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
     console.log(`📊 [HTML] Renderizando ${validComparisons.length} tabelas de comparação de produtos:`, 
       validComparisons.map((item: any) => item.productName));
     
-    const renderedTables = validComparisons.map((item: any) => {
+    const renderedTables = validComparisons.map((item: any, idx: number) => {
       try {
-        return `
-        <div style="margin-top: 3rem;">
-          <h3 style="font-size: 24px; font-weight: 700; color: var(--text); margin-bottom: 1rem;">
-            Comparativo: ${escapeHtml(item.productName)}
-          </h3>
-          ${item.comparison.subtitle ? `<p style="color: var(--muted); margin-bottom: 1.5rem;">${escapeHtml(item.comparison.subtitle)}</p>` : ''}
-          <div class="desktop-table">
-            <table>
-              <thead>
-                <tr>
-                  ${item.comparison.table_headers.map((header: string) => `
-                    <th>${escapeHtml(header)}</th>
-                  `).join('')}
-                </tr>
-              </thead>
-              <tbody>
-                ${item.comparison.table_data.map((row: any) => `
-                  <tr>
-                    ${item.comparison.table_headers.map((header: string) => {
-                      const cellValue = row[header];
-                      const displayValue = (cellValue !== undefined && cellValue !== null && cellValue !== '') 
-                        ? String(cellValue)
-                        : '-';
-                      return `<td>${escapeHtml(displayValue)}</td>`;
-                    }).join('')}
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-        </div>
-        `;
+        console.log('📊 [HTML] Renderizando tabela ' + (idx + 1) + '/' + validComparisons.length + ': ' + String(item.productName));
+        
+        // Construir headers com concatenação explícita
+        const headerCells = (item.comparison.table_headers || []).map((header: string) => {
+          return '<th>' + escapeHtml(String(header || '')) + '</th>';
+        }).join('');
+        
+        // Construir linhas do body com concatenação explícita
+        const bodyRows = (item.comparison.table_data || []).map((row: any) => {
+          const cells = (item.comparison.table_headers || []).map((header: string) => {
+            const cellValue = row[header];
+            const displayValue = (cellValue !== undefined && cellValue !== null && String(cellValue).trim() !== '')
+              ? String(cellValue)
+              : '-';
+            return '<td>' + escapeHtml(displayValue) + '</td>';
+          }).join('');
+          return '<tr>' + cells + '</tr>';
+        }).join('\n');
+        
+        // Construir subtitulo
+        const subtitleHtml = item.comparison.subtitle 
+          ? '<p style="color: var(--muted); margin-bottom: 1.5rem;">' + escapeHtml(String(item.comparison.subtitle)) + '</p>'
+          : '';
+        
+        const tableHtml = [
+          '<div style="margin-top: 3rem;">',
+          '  <h3 style="font-size: 24px; font-weight: 700; color: var(--text); margin-bottom: 1rem;">',
+          '    Comparativo: ' + escapeHtml(String(item.productName || '')),
+          '  </h3>',
+          subtitleHtml,
+          '  <div class="desktop-table">',
+          '    <table>',
+          '      <thead><tr>' + headerCells + '</tr></thead>',
+          '      <tbody>' + bodyRows + '</tbody>',
+          '    </table>',
+          '  </div>',
+          '</div>'
+        ].join('\n');
+        
+        console.log('✅ [HTML] Tabela ' + String(item.productName) + ' renderizada: ' + tableHtml.length + ' chars');
+        return tableHtml;
       } catch (err) {
-        console.error(`❌ [HTML] Erro ao renderizar tabela de comparação: ${item.productName}`, err);
-        return `<!-- Erro ao renderizar tabela: ${item.productName} -->`;
+        console.error('❌ [HTML] ERRO ao renderizar tabela ' + (idx + 1) + ' (' + String(item.productName) + '):', String(err));
+        return '<!-- Erro ao renderizar tabela: ' + String(item.productName || 'desconhecido') + ' -->';
       }
-    }).join('');
+    }).join('\n');
 
     return `
   <!-- ========== SEÇÃO: TABELAS DE COMPARAÇÃO POR PRODUTO ========== -->
