@@ -1,24 +1,41 @@
 
-# Remover Secao "Sobre Smart Dent" da Landing Page
+## Corrigir Videos de Depoimentos Ausentes na Landing Page
 
-## O que sera feito
+### Problema Identificado
 
-Remover o bloco `entity-definition` (linhas 2614-2621) do arquivo `generateHTML.ts` que renderiza a secao "Sobre [Empresa]" com a descricao tecnica e a missao.
+A secao de depoimentos (linha 3021 do `generateHTML.ts`) so e renderizada quando `successCases.length > 0`:
 
-## Detalhes tecnicos
+```text
+${successCases.length > 0 ? `
+  <!-- Seção de Depoimentos com Carrossel -->
+  ...
+` : ''}
+```
+
+Internamente (linhas 3029-3033), o codigo ja sabe usar `aiContent.testimonials` (depoimentos da tabela `video_testimonials`) como fallback quando nao ha `success_cases`. Porem, a condicao externa impede a secao inteira de aparecer quando `successCases` esta vazio.
+
+Resultado: se a solucao SPIN nao tem `success_cases` cadastrados, os depoimentos reais do banco de dados (`video_testimonials`) nunca sao exibidos.
+
+### Solucao
 
 **Arquivo:** `supabase/functions/generate-spin-landing-page/generateHTML.ts`
 
-Remover as linhas 2614-2621:
+Alterar a condicao externa da secao de depoimentos (linha 3021) de:
 
 ```
-<div class="content-block entity-definition">
-  <h3>Sobre ${escapeHtml(sanitizeCompanyName(company?.company_name))}</h3>
-  <p>${escapeHtml(company?.seo_technical_expertise || ...)}</p>
-  ${company?.mission_statement ? `<p><strong>Missão:</strong> ...` : ''}
-</div>
+${successCases.length > 0 ? `
 ```
 
-Tambem remover os estilos CSS associados a `.entity-definition` para manter o codigo limpo.
+Para:
 
-**Deploy:** Re-deploy da edge function `generate-spin-landing-page` e re-gerar a landing page para confirmar.
+```
+${(successCases.length > 0 || (aiContent?.testimonials && aiContent.testimonials.length > 0)) ? `
+```
+
+Isso garante que a secao apareca quando existirem:
+- `success_cases` especificos da solucao, **OU**
+- depoimentos reais vindos da tabela `video_testimonials`
+
+### Deploy
+- Re-deploy da edge function `generate-spin-landing-page`
+- Re-gerar a landing page para confirmar que os depoimentos aparecem
