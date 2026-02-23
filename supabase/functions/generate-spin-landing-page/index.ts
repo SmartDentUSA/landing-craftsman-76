@@ -802,9 +802,17 @@ serve(async (req) => {
       salesPitches: (products || [])
         .filter((p: any) => p.sales_pitch)
         .map((p: any) => ({ productName: p.name, pitch: p.sales_pitch })),
-      competitorComparisons: (products || [])
-        .filter((p: any) => p.competitor_comparison)
-        .map((p: any) => ({ productName: p.name, comparison: p.competitor_comparison })),
+      competitorComparisons: (() => {
+        const valid = (products || [])
+          .filter((p: any) => 
+            p.competitor_comparison?.enabled === true && 
+            p.competitor_comparison?.table_headers?.length > 0 && 
+            p.competitor_comparison?.table_data?.length > 0
+          )
+          .map((p: any) => ({ productName: p.name, comparison: p.competitor_comparison }));
+        console.log(`📊 [INDEX] Tabelas de comparação válidas: ${valid.length}`, valid.map((v: any) => v.productName));
+        return valid;
+      })(),
       technicalSpecs: (products || [])
         .filter((p: any) => p.technical_specifications?.length)
         .map((p: any) => ({ productName: p.name, specs: p.technical_specifications }))

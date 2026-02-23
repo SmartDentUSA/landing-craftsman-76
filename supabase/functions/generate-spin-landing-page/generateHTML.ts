@@ -2693,16 +2693,12 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
     
     if (validComparisons.length === 0) return '';
     
-    console.log(`📊 [HTML] Renderizando ${validComparisons.length} tabelas de comparação de produtos`);
+    console.log(`📊 [HTML] Renderizando ${validComparisons.length} tabelas de comparação de produtos:`, 
+      validComparisons.map((item: any) => item.productName));
     
-    return `
-  <!-- ========== SEÇÃO: TABELAS DE COMPARAÇÃO POR PRODUTO ========== -->
-  <div class="container section-padding">
-    <section class="comparison-section">
-      <h2>Comparativo Detalhado por Produto</h2>
-      <p class="subtitle">Veja como cada produto se destaca frente aos concorrentes</p>
-      
-      ${validComparisons.map((item: any) => `
+    const renderedTables = validComparisons.map((item: any) => {
+      try {
+        return `
         <div style="margin-top: 3rem;">
           <h3 style="font-size: 24px; font-weight: 700; color: var(--text); margin-bottom: 1rem;">
             Comparativo: ${escapeHtml(item.productName)}
@@ -2723,7 +2719,7 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
                     ${item.comparison.table_headers.map((header: string) => {
                       const cellValue = row[header];
                       const displayValue = (cellValue !== undefined && cellValue !== null && cellValue !== '') 
-                        ? cellValue 
+                        ? String(cellValue)
                         : '-';
                       return `<td>${escapeHtml(displayValue)}</td>`;
                     }).join('')}
@@ -2733,7 +2729,20 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
             </table>
           </div>
         </div>
-      `).join('')}
+        `;
+      } catch (err) {
+        console.error(`❌ [HTML] Erro ao renderizar tabela de comparação: ${item.productName}`, err);
+        return `<!-- Erro ao renderizar tabela: ${item.productName} -->`;
+      }
+    }).join('');
+
+    return `
+  <!-- ========== SEÇÃO: TABELAS DE COMPARAÇÃO POR PRODUTO ========== -->
+  <div class="container section-padding">
+    <section class="comparison-section">
+      <h2>Comparativo Detalhado por Produto</h2>
+      <p class="subtitle">Veja como cada produto se destaca frente aos concorrentes</p>
+      ${renderedTables}
     </section>
   </div>
     `;
