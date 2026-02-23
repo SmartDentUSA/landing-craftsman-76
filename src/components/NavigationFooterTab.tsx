@@ -344,8 +344,8 @@ export function NavigationFooterTab({ config = defaultConfig, onChange }: Naviga
                     onChange={(e) => updateLocation(index, 'title', e.target.value)}
                   />
                   <Select
-                    value={location.country || ''}
-                    onValueChange={(value) => updateLocation(index, 'country', value)}
+                    value={location.country || 'none'}
+                    onValueChange={(value) => updateLocation(index, 'country', value === 'none' ? '' : value)}
                   >
                     <SelectTrigger className="bg-background">
                       <SelectValue placeholder="País">
@@ -355,7 +355,7 @@ export function NavigationFooterTab({ config = defaultConfig, onChange }: Naviga
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent className="bg-popover">
-                      <SelectItem value="">🌎 Nenhum</SelectItem>
+                      <SelectItem value="none">🌎 Nenhum</SelectItem>
                       <SelectItem value="Brazil">🇧🇷 Brasil</SelectItem>
                       <SelectItem value="USA">🇺🇸 USA</SelectItem>
                     </SelectContent>
