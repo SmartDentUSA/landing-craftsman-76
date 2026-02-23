@@ -2982,24 +2982,32 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
       <div class="testimonials-carousel">
         <div class="testimonials-track">
           ${(() => {
-            const testimonials = aiContent?.testimonials || successCases;
-            // ✅ Limitar a máximo 6 depoimentos para evitar carrossel infinito
-            const limitedTestimonials = testimonials.slice(0, 6);
+            // ✅ CORREÇÃO: Priorizar success_cases da solução (específicos) sobre video_testimonials (genéricos)
+            const useSuccessCases = successCases.length > 0;
+            const limitedTestimonials = useSuccessCases 
+              ? successCases.slice(0, 6) 
+              : (aiContent?.testimonials || []).slice(0, 6);
+            
+            if (limitedTestimonials.length === 0) return '';
+            
             // ✅ DUPLICAR ARRAY para efeito seamless (igual InfinitePartnersCarousel)
             const duplicatedTestimonials = [...limitedTestimonials, ...limitedTestimonials];
             
             return duplicatedTestimonials.map((testimonial, idx) => {
               const originalIndex = idx % limitedTestimonials.length;
-              const originalCase = successCases[originalIndex] || {};
               
-              // ✅ Truncar texto em 300 caracteres para evitar cards gigantes
-              const rawQuote = testimonial.quote || originalCase.result_achieved || 'Resultado não especificado';
+              // ✅ Mapear campos conforme a fonte de dados
+              const rawQuote = useSuccessCases 
+                ? (testimonial.results_achieved || testimonial.result_achieved || 'Resultado não especificado')
+                : (testimonial.quote || 'Resultado não especificado');
               const quote = rawQuote.length > 300 
                 ? rawQuote.substring(0, 300) + '...' 
                 : rawQuote;
               
-              const clientName = testimonial.clientName || originalCase.client_name;
-              const clientPhoto = originalCase.client_photo;
+              const clientName = useSuccessCases 
+                ? testimonial.client_name 
+                : testimonial.clientName;
+              const clientPhoto = testimonial.client_photo;
               
               return `
                 <div class="testimonial-card">
@@ -3014,10 +3022,10 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
                     }
                     <div class="details">
                       <strong>${escapeHtml(clientName)}</strong>
-                      <small>${escapeHtml(originalCase.specialty || 'Cliente')}${originalCase.city ? ' | ' + escapeHtml(originalCase.city) + '/' + escapeHtml(originalCase.state) : ''}</small>
+                      <small>${escapeHtml(testimonial.specialty || testimonial.profession || 'Cliente')}${testimonial.city ? ' | ' + escapeHtml(testimonial.city) + '/' + escapeHtml(testimonial.state) : (testimonial.location ? ' | ' + escapeHtml(testimonial.location) : '')}</small>
                     </div>
-                    ${originalCase.instagram 
-                      ? `<a href="https://instagram.com/${escapeHtml(originalCase.instagram.replace('@', ''))}" target="_blank" class="instagram-link">
+                    ${testimonial.instagram 
+                      ? `<a href="https://instagram.com/${escapeHtml(testimonial.instagram.replace('@', ''))}" target="_blank" class="instagram-link">
                            <i class="fab fa-instagram"></i>
                          </a>` 
                       : ''
