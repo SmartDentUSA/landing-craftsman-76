@@ -1786,19 +1786,45 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
       margin-right: 0.5rem;
     }
 
+    .video-card-link {
+      display: block;
+      text-decoration: none;
+      color: inherit;
+      height: 100%;
+    }
+
+    .video-card-link:hover {
+      text-decoration: none;
+      color: inherit;
+    }
+
     .videos-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      grid-template-columns: repeat(3, 1fr);
       gap: 1.5rem;
+    }
+
+    @media (max-width: 992px) {
+      .videos-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 576px) {
+      .videos-grid {
+        grid-template-columns: 1fr;
+      }
     }
 
     .video-card {
       background: var(--card-bg);
       border-radius: 12px;
       overflow: hidden;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
       transition: transform 0.3s ease, box-shadow 0.3s ease;
       text-align: left;
+      display: flex;
+      flex-direction: column;
     }
 
     .video-card:hover {
@@ -1809,13 +1835,19 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
     .video-thumbnail-wrapper {
       position: relative;
       aspect-ratio: 16/9;
-      background: #000;
+      background: #1a1a2e;
+      overflow: hidden;
     }
 
     .video-thumbnail {
       width: 100%;
       height: 100%;
       object-fit: cover;
+      transition: transform 0.3s ease;
+    }
+
+    .video-card:hover .video-thumbnail {
+      transform: scale(1.05);
     }
 
     .video-duration {
@@ -1845,34 +1877,63 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
       transform: translate(-50%, -50%) scale(1.1);
     }
 
+    .video-type-badge {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      color: white;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 20px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      z-index: 2;
+    }
+
     .video-info {
-      padding: 1rem;
+      padding: 1rem 1.2rem;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
     }
 
     .video-info h4 {
-      font-size: 16px;
-      font-weight: 700;
-      margin-bottom: 0.5rem;
+      font-size: 15px;
+      font-weight: 600;
       color: var(--primary-dark);
-      line-height: 1.3;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
     }
 
     .video-info p {
-      font-size: 14px;
+      font-size: 13px;
       color: var(--muted);
-      margin-bottom: 0.75rem;
-      line-height: 1.4;
+      line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      margin: 0;
     }
 
     .product-badge {
       display: inline-flex;
       align-items: center;
-      gap: 0.25rem;
-      font-size: 12px;
+      gap: 0.3rem;
+      font-size: 11px;
+      font-weight: 600;
       color: var(--accent-tech);
-      background: rgba(238, 122, 62, 0.1);
-      padding: 4px 8px;
-      border-radius: 4px;
+      background: rgba(238, 122, 62, 0.08);
+      padding: 4px 10px;
+      border-radius: 20px;
+      margin-top: auto;
+      width: fit-content;
     }
 
     /* ===== DOCUMENTOS EM LISTA COMPACTA ===== */
@@ -2786,7 +2847,7 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
             
             return `
           <div class="video-card" data-index="${index}">
-            <a href="${escapeHtml(video.url)}" target="_blank" rel="noopener noreferrer" class="video-link">
+            <a href="${escapeHtml(video.url)}" target="_blank" rel="noopener noreferrer" class="video-card-link">
               <div class="video-thumbnail-wrapper">
                 ${video.thumbnail 
                   ? `<img src="${escapeHtml(video.thumbnail)}" alt="${escapeHtml(video.title)}" loading="lazy" decoding="async" class="video-thumbnail">`
