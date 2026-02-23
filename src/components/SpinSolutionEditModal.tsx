@@ -135,6 +135,97 @@ function extractEdgeError(error: any, data?: any): string {
   return error?.message || 'Erro desconhecido';
 }
 
+// 🆕 Componente para buscar e exibir tabelas de comparação dos produtos selecionados
+function ProductComparisonTablesSection({ productIds }: { productIds: string[] }) {
+  const [tables, setTables] = useState<Array<{ productName: string; comparison: any }>>([]);
+  const [loading, setLoading] = useState(false);
+  const [fetched, setFetched] = useState(false);
+
+  const fetchTables = async () => {
+    if (!productIds || productIds.length === 0) return;
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('products_repository')
+        .select('id, name, competitor_comparison')
+        .in('id', productIds);
+      
+      if (error) throw error;
+      
+      const valid = (data || [])
+        .filter((p: any) => 
+          p.competitor_comparison?.enabled && 
+          p.competitor_comparison?.table_headers?.length > 0 && 
+          p.competitor_comparison?.table_data?.length > 0
+        )
+        .map((p: any) => ({ productName: p.name, comparison: p.competitor_comparison }));
+      
+      setTables(valid);
+      setFetched(true);
+    } catch (err: any) {
+      console.error('Erro ao buscar tabelas:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!productIds || productIds.length === 0) return null;
+
+  return (
+    <Card className="p-4">
+      <div className="flex items-center justify-between mb-3">
+        <Label className="text-lg font-semibold flex items-center gap-2">
+          <Search className="w-5 h-5" />
+          Tabelas de Comparação dos Produtos
+        </Label>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={fetchTables}
+          disabled={loading}
+        >
+          {loading ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <RefreshCw className="w-4 h-4 mr-1" />}
+          Buscar Tabelas dos Produtos Selecionados
+        </Button>
+      </div>
+      
+      {fetched && tables.length === 0 && (
+        <p className="text-sm text-muted-foreground">Nenhum produto selecionado possui tabela de comparação ativada.</p>
+      )}
+
+      {tables.map((item, idx) => (
+        <div key={idx} className="mt-4 border rounded-lg p-3">
+          <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+            <Package className="w-4 h-4" />
+            {item.productName}
+          </h4>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs border-collapse">
+              <thead>
+                <tr>
+                  {item.comparison.table_headers.map((h: string, i: number) => (
+                    <th key={i} className="border px-2 py-1 bg-muted text-left font-medium">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {item.comparison.table_data.map((row: any, ri: number) => (
+                  <tr key={ri}>
+                    {item.comparison.table_headers.map((h: string, ci: number) => (
+                      <td key={ci} className="border px-2 py-1">{row[h] || '-'}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ))}
+    </Card>
+  );
+}
+
 export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditModalProps) {
   const { createSolution, updateSolution } = useSpinSellingSolutions();
   const { toast } = useToast();
@@ -2215,6 +2306,9 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
               }}
               onChange={(value) => setFormData(prev => ({ ...prev, competitor_comparison: value }))}
             />
+
+            {/* ===== SEÇÃO: TABELAS DE COMPARAÇÃO DOS PRODUTOS SELECIONADOS ===== */}
+            <ProductComparisonTablesSection productIds={formData.product_ids || []} />
 
             {/* ===== SEÇÃO: URL PERSONALIZADA ===== */}
             <Card className="p-4">
