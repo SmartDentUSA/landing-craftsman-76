@@ -50,7 +50,9 @@ serve(async (req) => {
       }
 
       solution = existingSolution;
-      productIds = solution.selected_product_ids || solution.product_ids || [];
+      productIds = bodyProductIds?.length > 0 
+        ? bodyProductIds 
+        : (solution.selected_product_ids || solution.product_ids || []);
     } else {
       // Para novas soluções, usar dados do body
       if (!bodyProductIds || bodyProductIds.length === 0) {
