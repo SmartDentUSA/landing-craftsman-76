@@ -1,12 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Plus, Trash2, Table } from 'lucide-react';
+import { Plus, Trash2, Table, Upload, Download, FileSpreadsheet } from 'lucide-react';
 import { CompetitorComparison } from '@/hooks/useSpinSellingSolutions';
 import { Badge } from '@/components/ui/badge';
+import Papa from 'papaparse';
+import mammoth from 'mammoth';
+import { toast } from '@/hooks/use-toast';
 
 interface CompetitorComparisonTableProps {
   value: CompetitorComparison;
@@ -15,6 +18,8 @@ interface CompetitorComparisonTableProps {
 
 export function CompetitorComparisonTable({ value, onChange }: CompetitorComparisonTableProps) {
   const [localValue, setLocalValue] = useState<CompetitorComparison>(value);
+  const csvInputRef = useRef<HTMLInputElement>(null);
+  const docxInputRef = useRef<HTMLInputElement>(null);
 
   // Sincroniza o estado local com os dados vindos do banco
   // ✅ CORRIGIDO: Só atualiza se os dados são realmente diferentes (comparação profunda)
@@ -87,7 +92,75 @@ export function CompetitorComparisonTable({ value, onChange }: CompetitorCompari
     if (e.key === 'Enter') e.preventDefault();
   };
 
-   return (
+  const handleCSVImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      const results = Papa.parse(text, { header: true, skipEmptyLines: true });
+      const headers = results.meta.fields || [];
+      const data = (results.data as Record<string, string>[]).map(row => {
+        const clean: Record<string, string> = {};
+        headers.forEach(h => { clean[h] = row[h] || ''; });
+        return clean;
+      });
+      if (headers.length === 0) {
+        toast({ title: 'Erro', description: 'CSV vazio ou sem cabeçalhos válidos.', variant: 'destructive' });
+        return;
+      }
+      handleChange({ table_headers: headers, table_data: data });
+      toast({ title: 'CSV importado', description: `${headers.length} colunas e ${data.length} linhas importadas.` });
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  const handleDOCXImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const result = await mammoth.convertToHtml({ arrayBuffer });
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(result.value, 'text/html');
+      const table = doc.querySelector('table');
+      if (!table) {
+        toast({ title: 'Erro', description: 'Nenhuma tabela encontrada no documento DOCX.', variant: 'destructive' });
+        return;
+      }
+      const rows = Array.from(table.querySelectorAll('tr'));
+      if (rows.length < 2) {
+        toast({ title: 'Erro', description: 'Tabela precisa ter ao menos 2 linhas (cabeçalho + dados).', variant: 'destructive' });
+        return;
+      }
+      const headers = Array.from(rows[0].querySelectorAll('th, td')).map(c => c.textContent?.trim() || '');
+      const data = rows.slice(1).map(row => {
+        const cells = Array.from(row.querySelectorAll('td, th'));
+        const obj: Record<string, string> = {};
+        headers.forEach((h, i) => { obj[h] = cells[i]?.textContent?.trim() || ''; });
+        return obj;
+      });
+      handleChange({ table_headers: headers, table_data: data });
+      toast({ title: 'DOCX importado', description: `${headers.length} colunas e ${data.length} linhas importadas.` });
+    } catch (err) {
+      toast({ title: 'Erro ao ler DOCX', description: 'Arquivo inválido ou corrompido.', variant: 'destructive' });
+    }
+    e.target.value = '';
+  };
+
+  const downloadTemplate = () => {
+    const csv = `Caracteristica,Nossa Solucao,Concorrente A,Concorrente B\nPrecisao,Alta (50um),Media (100um),Baixa (200um)\nVelocidade,Rapida,Media,Lenta\nSuporte Tecnico,24/7,Horario comercial,Email apenas`;
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'template-concorrentes.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
@@ -109,6 +182,21 @@ export function CompetitorComparisonTable({ value, onChange }: CompetitorCompari
             />
           </div>
         </div>
+        {localValue.enabled && (
+          <div className="flex flex-wrap gap-2 mt-3">
+            <input ref={csvInputRef} type="file" accept=".csv" className="hidden" onChange={handleCSVImport} />
+            <input ref={docxInputRef} type="file" accept=".docx" className="hidden" onChange={handleDOCXImport} />
+            <Button type="button" variant="outline" size="sm" onClick={() => csvInputRef.current?.click()}>
+              <Upload className="h-4 w-4 mr-1" /> Importar CSV
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => docxInputRef.current?.click()}>
+              <FileSpreadsheet className="h-4 w-4 mr-1" /> Importar DOCX
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={downloadTemplate}>
+              <Download className="h-4 w-4 mr-1" /> Baixar Template
+            </Button>
+          </div>
+        )}
       </CardHeader>
 
       {localValue.enabled && (
