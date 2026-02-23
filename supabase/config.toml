@@ -221,3 +221,6 @@ verify_jwt = false
 
 [functions.generate-client-photo]
 verify_jwt = false
+
+[functions.export-spin-apostila]
+verify_jwt = false
