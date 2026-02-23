@@ -69,11 +69,13 @@ function generateYouTubeThumbnail(videoId: string): string {
 }
 
 function collectProductVideos(products: any[]): ProductVideo[] {
-  const videos: ProductVideo[] = [];
+  // Collect videos PER product first, then distribute fairly (round-robin)
+  const videosByProduct: Map<string, ProductVideo[]> = new Map();
   
   products.forEach(product => {
     const productName = product.name || 'Produto';
     const productId = product.id || '';
+    const productVideos: ProductVideo[] = [];
     
     // 1. YouTube Videos
     if (product.youtube_videos && Array.isArray(product.youtube_videos)) {
@@ -82,7 +84,7 @@ function collectProductVideos(products: any[]): ProductVideo[] {
         if (!url) return;
         
         const videoId = extractYouTubeVideoId(url);
-        videos.push({
+        productVideos.push({
           url,
           title: typeof video === 'object' ? (video.title || video.titulo || `Vídeo de ${productName}`) : `Vídeo de ${productName}`,
           description: typeof video === 'object' ? (video.description || video.descricao) : undefined,
@@ -101,7 +103,7 @@ function collectProductVideos(products: any[]): ProductVideo[] {
         if (!url) return;
         
         const videoId = extractYouTubeVideoId(url);
-        videos.push({
+        productVideos.push({
           url,
           title: typeof video === 'object' ? (video.title || video.titulo || `Vídeo Técnico - ${productName}`) : `Vídeo Técnico - ${productName}`,
           description: typeof video === 'object' ? (video.description || video.descricao) : undefined,
@@ -120,7 +122,7 @@ function collectProductVideos(products: any[]): ProductVideo[] {
         if (!url) return;
         
         const videoId = extractYouTubeVideoId(url);
-        videos.push({
+        productVideos.push({
           url,
           title: typeof video === 'object' ? (video.title || video.titulo || `Depoimento - ${productName}`) : `Depoimento - ${productName}`,
           description: typeof video === 'object' ? (video.description || video.descricao) : undefined,
@@ -138,7 +140,7 @@ function collectProductVideos(products: any[]): ProductVideo[] {
         const url = typeof video === 'string' ? video : video.url;
         if (!url) return;
         
-        videos.push({
+        productVideos.push({
           url,
           title: typeof video === 'object' ? (video.title || `Instagram - ${productName}`) : `Instagram - ${productName}`,
           description: typeof video === 'object' ? video.description : undefined,
@@ -156,7 +158,7 @@ function collectProductVideos(products: any[]): ProductVideo[] {
         const url = typeof video === 'string' ? video : video.url;
         if (!url) return;
         
-        videos.push({
+        productVideos.push({
           url,
           title: typeof video === 'object' ? (video.title || `TikTok - ${productName}`) : `TikTok - ${productName}`,
           description: typeof video === 'object' ? video.description : undefined,
@@ -167,14 +169,44 @@ function collectProductVideos(products: any[]): ProductVideo[] {
         });
       });
     }
+    
+    if (productVideos.length > 0) {
+      videosByProduct.set(productId, productVideos);
+    }
   });
   
-  // Remover duplicatas por URL e limitar a 12 vídeos
-  const uniqueVideos = videos.filter((video, index, self) => 
-    index === self.findIndex(v => v.url === video.url)
-  );
+  // Round-robin distribution: take videos from each product in turns
+  const MAX_VIDEOS = 15;
+  const result: ProductVideo[] = [];
+  const seenUrls = new Set<string>();
+  const productEntries = Array.from(videosByProduct.values());
+  const indices = new Array(productEntries.length).fill(0);
   
-  return uniqueVideos.slice(0, 12);
+  let added = true;
+  while (result.length < MAX_VIDEOS && added) {
+    added = false;
+    for (let p = 0; p < productEntries.length; p++) {
+      if (result.length >= MAX_VIDEOS) break;
+      const videos = productEntries[p];
+      while (indices[p] < videos.length) {
+        const video = videos[indices[p]];
+        indices[p]++;
+        if (!seenUrls.has(video.url)) {
+          seenUrls.add(video.url);
+          result.push(video);
+          added = true;
+          break;
+        }
+      }
+    }
+  }
+  
+  console.log(`🎬 Video distribution: ${productEntries.map((vids, i) => {
+    const count = result.filter(v => v.productId === vids[0]?.productId).length;
+    return `${vids[0]?.productName}: ${count}`;
+  }).join(', ')}`);
+  
+  return result;
 }
 
 // ═══════════════════════════════════════════════════════════
