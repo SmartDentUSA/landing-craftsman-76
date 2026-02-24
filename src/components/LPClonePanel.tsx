@@ -946,7 +946,7 @@ export const LPClonePanel = () => {
                   <SelectValue placeholder="Selecionar domínio" />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border shadow-md z-50">
-                  {enabledDomains.map(d => (
+                  {enabledDomains.filter(d => d.domain && d.domain.trim() !== '').map(d => (
                     <SelectItem key={d.domain} value={d.domain}>
                       {d.domain}
                     </SelectItem>
@@ -1128,7 +1128,7 @@ export const LPClonePanel = () => {
                       <SelectValue placeholder="Selecionar domínio" />
                     </SelectTrigger>
                     <SelectContent className="bg-popover border shadow-md z-50">
-                      {enabledDomains.map(d => (
+                      {enabledDomains.filter(d => d.domain && d.domain.trim() !== '').map(d => (
                         <SelectItem key={d.domain} value={d.domain}>
                           {d.domain}
                         </SelectItem>
@@ -1459,7 +1459,7 @@ export const LPClonePanel = () => {
                                 <SelectValue placeholder="Selecionar domínio" />
                               </SelectTrigger>
                               <SelectContent>
-                                {enabledDomains.map(d => (
+                                {enabledDomains.filter(d => d.domain && d.domain.trim() !== '').map(d => (
                                   <SelectItem key={d.domain} value={d.domain}>
                                     <div className="flex items-center gap-2">
                                       <Globe className="h-4 w-4" />

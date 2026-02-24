@@ -190,7 +190,7 @@ export function ProductSelector({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas</SelectItem>
-                  {getUniqueCategories().map(category => (
+                  {getUniqueCategories().filter(category => category && category.trim() !== '').map(category => (
                     <SelectItem key={category} value={category}>{category}</SelectItem>
                   ))}
                 </SelectContent>
