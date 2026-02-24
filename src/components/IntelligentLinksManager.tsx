@@ -344,7 +344,7 @@ export function IntelligentLinksManager({
                       URL personalizada...
                     </div>
                   </SelectItem>
-                  {allLinks.map((link) => (
+                  {allLinks.filter(link => link.url && link.url.trim() !== '').map((link) => (
                     <SelectItem key={link.id} value={link.url}>
                       <div className="flex items-center gap-2">
                         {link.type === 'internal' ? (

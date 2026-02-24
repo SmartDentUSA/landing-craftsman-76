@@ -435,7 +435,7 @@ export const LinksManager = () => {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {dynamicCategories.map(option => (
+                        {dynamicCategories.filter(option => option.value && option.value.trim() !== '').map(option => (
                           <SelectItem key={option.value} value={option.value}>
                             {option.label}
                           </SelectItem>
@@ -547,7 +547,7 @@ export const LinksManager = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas as categorias</SelectItem>
-                  {dynamicCategories.map(option => (
+                  {dynamicCategories.filter(option => option.value && option.value.trim() !== '').map(option => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
                     </SelectItem>
@@ -565,7 +565,7 @@ export const LinksManager = () => {
                 <SelectContent>
                   <SelectItem value="all">Todas as subcategorias</SelectItem>
                   {categoryFilter !== 'all' && 
-                    dynamicSubcategories[categoryFilter]?.map(sub => (
+                    dynamicSubcategories[categoryFilter]?.filter(sub => sub && sub.trim() !== '').map(sub => (
                       <SelectItem key={sub} value={sub}>
                         {sub.charAt(0).toUpperCase() + sub.slice(1)}
                       </SelectItem>
@@ -732,7 +732,7 @@ export const LinksManager = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {dynamicCategories.map(option => (
+                    {dynamicCategories.filter(option => option.value && option.value.trim() !== '').map(option => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
                       </SelectItem>
