@@ -37,7 +37,8 @@ Este Super-Prompt governa TODAS as edge functions:
 ✅ Nunca copiar descrição literal do produto  
 ✅ Nunca inventar números, métricas, resultados ou funcionalidades  
 ✅ Nunca citar concorrentes  
-✅ Nunca usar termos técnicos internos do banco (lab_time → "tempo do laboratório")  
+✅ Nunca usar termos técnicos internos do banco (lab_time → "tempo do laboratório")
+✅ Nunca usar "provisórios" para Vitality — SEMPRE usar "longa duração"
 ✅ Toda saída deve ser final, limpa, revisada, natural e coerente  
 
 --------------------------------------------
