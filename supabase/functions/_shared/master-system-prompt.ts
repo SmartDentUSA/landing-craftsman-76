@@ -59,6 +59,7 @@ As seguintes regras são ABSOLUTAS:
 
 Exemplos aplicados:
 - Vitality ❌ NÃO usa GlazeON (exclusivo para +Flex)
+- Vitality ❌ NUNCA usar o termo "provisórios" — SEMPRE usar "longa duração"
 - +Flex ❌ NUNCA pode ser usado em restaurações rígidas
 - SmartMake só pode aparecer em FINISH
 - NanoClean só pode aparecer em PROCESS
