@@ -1,55 +1,49 @@
 
 
-# Regra Terminológica: Vitality nunca "Provisórios", sempre "Longa duração"
+# Botões individuais "Gerar por IA" para slides do Carrossel Visual
 
-## O que sera feito
+## Contexto
 
-Adicionar uma regra de terminologia obrigatória nos dois system prompts que governam toda a geração de conteúdo por IA, garantindo que nenhuma edge function use "provisórios" ao se referir a Vitality.
+O Carrossel Visual tem 6 slides. O Slide 1 (🎣 Hook) já possui um botão individual "Novo Gancho IA" que chama a edge function `generate-carousel-hook`. Os slides 3 (🔬 Cientificidade), 4 (💫 Experiência) e 5 (🛡️ Segurança) não possuem botões individuais — só podem ser gerados pelo botão geral "🤖 Gerar com IA" que regenera todos os slides de uma vez.
 
-## Alteracoes
+## Plano
 
-### 1. `supabase/functions/_shared/master-system-prompt.ts`
+### 1. Nova Edge Function: `generate-carousel-slide`
 
-**Linha ~63** (seção "Exemplos aplicados" das regras de compatibilidade no prompt):
+Criar uma edge function genérica que receba o tipo do slide (`cientificidade`, `experiencia`, `seguranca`) e gere apenas o conteúdo daquele slide específico, com prompts especializados por tipo:
 
-Adicionar nova regra após a linha do GlazeON:
+- **Cientificidade (Slide 3)**: Gera title, headline, body, bullet1-4 com foco em evidências científicas e dados técnicos
+- **Experiência (Slide 4)**: Gera keyword + benefit com foco em experiência clínica e fluxo de trabalho
+- **Segurança (Slide 5)**: Gera title, badge1-3 com foco em certificações, garantias e confiança
 
-```
-- Vitality ❌ NÃO usa GlazeON (exclusivo para +Flex)
-+ - Vitality ❌ NÃO usa GlazeON (exclusivo para +Flex)
-+ - Vitality ❌ NUNCA usar o termo "provisórios" — SEMPRE usar "longa duração"
-```
+Recebe: `productName`, `salesPitch`, `benefits`, `features`, `slideType`
+Retorna: campos específicos do slide solicitado
 
-**Linha ~157** (objeto `COMPATIBILITY_RULES`, entrada `vitality`):
+### 2. Frontend — Novos estados e handlers (`InstagramCopyGenerator.tsx`)
 
-Adicionar campo de terminologia nos comentários ou na regra `never_claim`:
+- Adicionar 3 estados: `generatingScience`, `generatingExperience`, `generatingSecurity`
+- Criar 3 handlers que chamam `generate-carousel-slide` com o `slideType` correto e atualizam apenas o slide correspondente em `slideTexts`
 
-Não é necessário alterar o objeto TypeScript pois ele trata de compatibilidade de produto, não terminologia. A regra no prompt textual é suficiente.
+### 3. Frontend — 3 novos botões no header do Carrossel Visual
 
-### 2. `supabase/functions/_shared/spin-system-prompt.ts`
+Adicionar ao lado do botão "🎣 Novo Gancho IA" (linha ~1962):
 
-**Linha ~40** (seção "PRINCÍPIOS UNIVERSAIS"):
+- **🔬 Cientificidade IA** — gera apenas Slide 3
+- **💫 Experiência IA** — gera apenas Slide 4
+- **🛡️ Segurança IA** — gera apenas Slide 5
 
-Adicionar nova regra após a linha sobre termos técnicos internos:
+Cada botão com loading state individual, mesmo padrão visual do botão Hook existente.
 
-```
-✅ Nunca usar termos técnicos internos do banco (lab_time → "tempo do laboratório")
-+ ✅ Nunca usar "provisórios" para Vitality — SEMPRE usar "longa duração"
-```
+### Detalhes técnicos
 
-### 3. Re-deploy das edge functions afetadas
+**Edge function `generate-carousel-slide/index.ts`:**
+- Usa Lovable AI Gateway (`google/gemini-2.5-flash`)
+- Prompt especializado por slideType com regras de formatação
+- Temperature 1.0 para variedade
+- Retorna JSON estruturado via tool calling para garantir campos corretos
 
-Todas as edge functions SPIN e Clinical Brain importam desses arquivos shared. Após a alteração, será necessário re-deploy de pelo menos as funções que geram conteúdo textual:
-- `generate-spin-sales-pitch`
-- `generate-spin-journey`
-- `generate-spin-faqs`
-- `generate-spin-campaign`
-- `generate-spin-landing-page`
-- `export-spin-apostila`
-
-## Impacto
-
-- Zero alteração visual ou funcional
-- Toda geração futura de conteúdo IA respeitará a regra
-- Conteúdo já gerado anteriormente não será afetado (precisa ser re-gerado manualmente se necessário)
+**Mapeamento de retorno:**
+- `cientificidade` → `{ title, headline, body, bullet1, bullet2, bullet3, bullet4 }`
+- `experiencia` → `{ keyword, benefit }`
+- `seguranca` → `{ title, badge1, badge2, badge3 }`
 
