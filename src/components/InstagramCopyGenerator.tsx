@@ -172,6 +172,9 @@ export function InstagramCopyGenerator({ productId, productName, productPrice, p
   const [isExportingZip, setIsExportingZip] = useState(false);
   const [generatingVisualCarousel, setGeneratingVisualCarousel] = useState(false);
   const [generatingHook, setGeneratingHook] = useState(false);
+  const [generatingScience, setGeneratingScience] = useState(false);
+  const [generatingExperience, setGeneratingExperience] = useState(false);
+  const [generatingSecurity, setGeneratingSecurity] = useState(false);
   const [slideTexts, setSlideTexts] = useState<Partial<SlideTextsType>>({});
   const [fontFamily, setFontFamily] = useState<string>('system-ui, -apple-system, sans-serif');
   const [fontSize, setFontSize] = useState<number>(100);
@@ -1958,6 +1961,69 @@ ${slide.text}`;
                       >
                         {generatingHook ? <span className="animate-spin mr-1">⏳</span> : '🎣'}
                         {generatingHook ? 'Gerando...' : 'Novo Gancho IA'}
+                      </Button>
+                      <Button
+                        onClick={async () => {
+                          setGeneratingScience(true);
+                          try {
+                            const { data } = await supabase.functions.invoke('generate-carousel-slide', {
+                              body: { productName, salesPitch: productSalesPitch || '', benefits: productBenefits || [], features: productFeatures || [], slideType: 'cientificidade' },
+                            });
+                            if (data?.title) {
+                              setSlideTexts(prev => ({ ...prev, 3: { title: data.title, headline: data.headline || '', body: data.body || '', bullet1: data.bullet1 || '', bullet2: data.bullet2 || '', bullet3: data.bullet3 || '', bullet4: data.bullet4 || '' } }));
+                              toast({ title: '🔬 Cientificidade gerada!', description: data.headline || data.title });
+                            }
+                          } catch { toast({ title: 'Erro', description: 'Falha ao gerar cientificidade.', variant: 'destructive' }); }
+                          finally { setGeneratingScience(false); }
+                        }}
+                        disabled={generatingScience}
+                        size="sm"
+                        variant="outline"
+                      >
+                        {generatingScience ? <span className="animate-spin mr-1">⏳</span> : '🔬'}
+                        {generatingScience ? 'Gerando...' : 'Ciência IA'}
+                      </Button>
+                      <Button
+                        onClick={async () => {
+                          setGeneratingExperience(true);
+                          try {
+                            const { data } = await supabase.functions.invoke('generate-carousel-slide', {
+                              body: { productName, salesPitch: productSalesPitch || '', benefits: productBenefits || [], features: productFeatures || [], slideType: 'experiencia' },
+                            });
+                            if (data?.keyword || data?.benefit) {
+                              setSlideTexts(prev => ({ ...prev, 4: { label: (prev as any)[4]?.label || 'EXPERIÊNCIA / FLUXO', keyword: data.keyword || '', benefit: data.benefit || '' } }));
+                              toast({ title: '💫 Experiência gerada!', description: data.keyword || data.benefit });
+                            }
+                          } catch { toast({ title: 'Erro', description: 'Falha ao gerar experiência.', variant: 'destructive' }); }
+                          finally { setGeneratingExperience(false); }
+                        }}
+                        disabled={generatingExperience}
+                        size="sm"
+                        variant="outline"
+                      >
+                        {generatingExperience ? <span className="animate-spin mr-1">⏳</span> : '💫'}
+                        {generatingExperience ? 'Gerando...' : 'Experiência IA'}
+                      </Button>
+                      <Button
+                        onClick={async () => {
+                          setGeneratingSecurity(true);
+                          try {
+                            const { data } = await supabase.functions.invoke('generate-carousel-slide', {
+                              body: { productName, salesPitch: productSalesPitch || '', benefits: productBenefits || [], features: productFeatures || [], slideType: 'seguranca' },
+                            });
+                            if (data?.title || data?.badge1) {
+                              setSlideTexts(prev => ({ ...prev, 5: { title: data.title || 'Tecnologia Smart Dent', badge1: data.badge1 || '', badge2: data.badge2 || '', badge3: data.badge3 || '' } }));
+                              toast({ title: '🛡️ Segurança gerada!', description: data.badge1 || data.title });
+                            }
+                          } catch { toast({ title: 'Erro', description: 'Falha ao gerar segurança.', variant: 'destructive' }); }
+                          finally { setGeneratingSecurity(false); }
+                        }}
+                        disabled={generatingSecurity}
+                        size="sm"
+                        variant="outline"
+                      >
+                        {generatingSecurity ? <span className="animate-spin mr-1">⏳</span> : '🛡️'}
+                        {generatingSecurity ? 'Gerando...' : 'Segurança IA'}
                       </Button>
                       <Button
                         onClick={handleExportZip}
