@@ -1,49 +1,44 @@
 
 
-# Botões individuais "Gerar por IA" para slides do Carrossel Visual
+# Auditoria de Microdata Schema.org — Resultado
 
-## Contexto
+## Status atual
 
-O Carrossel Visual tem 6 slides. O Slide 1 (🎣 Hook) já possui um botão individual "Novo Gancho IA" que chama a edge function `generate-carousel-hook`. Os slides 3 (🔬 Cientificidade), 4 (💫 Experiência) e 5 (🛡️ Segurança) não possuem botões individuais — só podem ser gerados pelo botão geral "🤖 Gerar com IA" que regenera todos os slides de uma vez.
+A correção anterior (Reviews Seção 4 e Video Testimonials Seção 9) já está aplicada e correta.
 
-## Plano
+## Problema encontrado
 
-### 1. Nova Edge Function: `generate-carousel-slide`
+**1 issue restante** em `supabase/functions/_shared/authority-data-helper.ts`:
 
-Criar uma edge function genérica que receba o tipo do slide (`cientificidade`, `experiencia`, `seguranca`) e gere apenas o conteúdo daquele slide específico, com prompts especializados por tipo:
+### Seção 8 — Videoteca (linha 896)
 
-- **Cientificidade (Slide 3)**: Gera title, headline, body, bullet1-4 com foco em evidências científicas e dados técnicos
-- **Experiência (Slide 4)**: Gera keyword + benefit com foco em experiência clínica e fluxo de trabalho
-- **Segurança (Slide 5)**: Gera title, badge1-3 com foco em certificações, garantias e confiança
+`<section itemscope itemtype="https://schema.org/VideoGallery">` — **`VideoGallery` NÃO é um tipo válido do schema.org**. O Google reportará erro de tipo desconhecido. O JSON-LD `ItemList` já cobre esses vídeos via `generateVideoGallerySchema()`.
 
-Recebe: `productName`, `salesPitch`, `benefits`, `features`, `slideType`
-Retorna: campos específicos do slide solicitado
+**Correção:** Remover microdata inválido, manter apenas HTML semântico:
+```html
+<!-- Antes -->
+<section itemscope itemtype="https://schema.org/VideoGallery">
 
-### 2. Frontend — Novos estados e handlers (`InstagramCopyGenerator.tsx`)
+<!-- Depois -->
+<section>
+```
 
-- Adicionar 3 estados: `generatingScience`, `generatingExperience`, `generatingSecurity`
-- Criar 3 handlers que chamam `generate-carousel-slide` com o `slideType` correto e atualizam apenas o slide correspondente em `slideTexts`
+## Demais geradores — OK
 
-### 3. Frontend — 3 novos botões no header do Carrossel Visual
+| Gerador | Microdata | Status |
+|---------|-----------|--------|
+| `authority-data-helper.ts` — Reviews | `LocalBusiness` + `AggregateRating` | ✅ Corrigido |
+| `authority-data-helper.ts` — Testimonials | Sem microdata (JSON-LD cobre) | ✅ Corrigido |
+| `authority-data-helper.ts` — Partnerships | `Organization` + `member` | ✅ Válido |
+| `authority-data-helper.ts` — Videoteca | `VideoGallery` (inválido) | ❌ Corrigir |
+| `generate-ecommerce-html` — GEO block | `Organization` (hidden) | ✅ OK |
+| `clone-landing-page` — GEO block | `Organization` (hidden) | ✅ OK |
+| `generate-spin-landing-page` — Content | `Article` | ✅ Válido |
+| `publish-product-blog-cloudflare` — FAQ | `FAQPage` + `Question/Answer` | ✅ Válido |
+| `authority-data-helper.ts` — Founder | `Person` | ✅ Válido |
 
-Adicionar ao lado do botão "🎣 Novo Gancho IA" (linha ~1962):
+## Alteração
 
-- **🔬 Cientificidade IA** — gera apenas Slide 3
-- **💫 Experiência IA** — gera apenas Slide 4
-- **🛡️ Segurança IA** — gera apenas Slide 5
-
-Cada botão com loading state individual, mesmo padrão visual do botão Hook existente.
-
-### Detalhes técnicos
-
-**Edge function `generate-carousel-slide/index.ts`:**
-- Usa Lovable AI Gateway (`google/gemini-2.5-flash`)
-- Prompt especializado por slideType com regras de formatação
-- Temperature 1.0 para variedade
-- Retorna JSON estruturado via tool calling para garantir campos corretos
-
-**Mapeamento de retorno:**
-- `cientificidade` → `{ title, headline, body, bullet1, bullet2, bullet3, bullet4 }`
-- `experiencia` → `{ keyword, benefit }`
-- `seguranca` → `{ title, badge1, badge2, badge3 }`
+**1 arquivo**, **1 linha**:
+- `supabase/functions/_shared/authority-data-helper.ts` linha 896: remover `itemscope itemtype="https://schema.org/VideoGallery"` e `itemprop="video"` dos links internos (linha 902)
 
