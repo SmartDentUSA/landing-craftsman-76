@@ -1,60 +1,49 @@
 
 
-# Correção de Microdata Schema.org para Reviews (Erros Google)
+# Botões individuais "Gerar por IA" para slides do Carrossel Visual
 
-## Problemas identificados
+## Contexto
 
-Arquivo único: `supabase/functions/_shared/authority-data-helper.ts` — 2 seções com microdata inválido.
+O Carrossel Visual tem 6 slides. O Slide 1 (🎣 Hook) já possui um botão individual "Novo Gancho IA" que chama a edge function `generate-carousel-hook`. Os slides 3 (🔬 Cientificidade), 4 (💫 Experiência) e 5 (🛡️ Segurança) não possuem botões individuais — só podem ser gerados pelo botão geral "🤖 Gerar com IA" que regenera todos os slides de uma vez.
 
-### Seção 4 (Reviews, linhas 759-772)
+## Plano
 
-1. **`<section itemscope itemtype="Organization">`** — wrapper errado. Google espera que `review` esteja dentro de `LocalBusiness` ou `Product`, não `Organization` genérico sem propriedades obrigatórias (name, etc.)
-2. **`<meta itemprop="reviewRating" itemscope itemtype="Rating" content="...">`** — `<meta>` não suporta `itemscope`. Precisa ser `<div>` ou `<span>` com `ratingValue` interno
-3. Falta `aggregateRating` no container
+### 1. Nova Edge Function: `generate-carousel-slide`
 
-### Seção 9 (Video Testimonials, linhas 898-914)
+Criar uma edge function genérica que receba o tipo do slide (`cientificidade`, `experiencia`, `seguranca`) e gere apenas o conteúdo daquele slide específico, com prompts especializados por tipo:
 
-4. **`<li itemscope itemtype="Review">`** — Review sem `@context` implícito e sem `reviewRating`, gera warnings no Google
+- **Cientificidade (Slide 3)**: Gera title, headline, body, bullet1-4 com foco em evidências científicas e dados técnicos
+- **Experiência (Slide 4)**: Gera keyword + benefit com foco em experiência clínica e fluxo de trabalho
+- **Segurança (Slide 5)**: Gera title, badge1-3 com foco em certificações, garantias e confiança
 
-## Correções
+Recebe: `productName`, `salesPitch`, `benefits`, `features`, `slideType`
+Retorna: campos específicos do slide solicitado
 
-### 1. Seção 4 — Reviews (linhas 759-772)
+### 2. Frontend — Novos estados e handlers (`InstagramCopyGenerator.tsx`)
 
-Trocar wrapper de `Organization` para `LocalBusiness` com `name` e `aggregateRating`, e corrigir `reviewRating`:
+- Adicionar 3 estados: `generatingScience`, `generatingExperience`, `generatingSecurity`
+- Criar 3 handlers que chamam `generate-carousel-slide` com o `slideType` correto e atualizam apenas o slide correspondente em `slideTexts`
 
-```html
-<section itemscope itemtype="https://schema.org/LocalBusiness">
-  <meta itemprop="name" content="${companyName}">
-  <div itemprop="aggregateRating" itemscope itemtype="https://schema.org/AggregateRating">
-    <meta itemprop="ratingValue" content="${avgRating}">
-    <meta itemprop="reviewCount" content="${reviews.length}">
-  </div>
-  <h4>Avaliações de Clientes Verificados</h4>
-  ${reviews.map(r => `
-    <article itemprop="review" itemscope itemtype="https://schema.org/Review">
-      <blockquote itemprop="reviewBody">...</blockquote>
-      <cite itemprop="author" itemscope itemtype="https://schema.org/Person">
-        <span itemprop="name">...</span>
-      </cite>
-      <div itemprop="reviewRating" itemscope itemtype="https://schema.org/Rating">
-        <meta itemprop="ratingValue" content="${r.rating}">
-        <meta itemprop="bestRating" content="5">
-      </div>
-    </article>
-  `)}
-</section>
-```
+### 3. Frontend — 3 novos botões no header do Carrossel Visual
 
-- Calcular `avgRating` como média dos ratings dos reviews
-- Adicionar `companyName` (já disponível como parâmetro da função)
+Adicionar ao lado do botão "🎣 Novo Gancho IA" (linha ~1962):
 
-### 2. Seção 9 — Video Testimonials (linhas 898-914)
+- **🔬 Cientificidade IA** — gera apenas Slide 3
+- **💫 Experiência IA** — gera apenas Slide 4
+- **🛡️ Segurança IA** — gera apenas Slide 5
 
-Remover microdata `itemscope itemtype="Review"` dos `<li>` de vídeo testimonials — esses já são cobertos pelo JSON-LD `@graph`. Microdata duplicado sem campos obrigatórios gera erros. Manter apenas HTML semântico sem microdata.
+Cada botão com loading state individual, mesmo padrão visual do botão Hook existente.
 
-### Resumo
+### Detalhes técnicos
 
-- **1 arquivo** modificado: `authority-data-helper.ts`
-- **2 seções** corrigidas
-- Elimina erros Google de microdata inválido em todas as páginas geradas
+**Edge function `generate-carousel-slide/index.ts`:**
+- Usa Lovable AI Gateway (`google/gemini-2.5-flash`)
+- Prompt especializado por slideType com regras de formatação
+- Temperature 1.0 para variedade
+- Retorna JSON estruturado via tool calling para garantir campos corretos
+
+**Mapeamento de retorno:**
+- `cientificidade` → `{ title, headline, body, bullet1, bullet2, bullet3, bullet4 }`
+- `experiencia` → `{ keyword, benefit }`
+- `seguranca` → `{ title, badge1, badge2, badge3 }`
 
