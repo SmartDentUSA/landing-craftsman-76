@@ -756,16 +756,31 @@ export function generateAuthorityContextHTML(
   // ═══════════════════════════════════════════════════════════
   // SEÇÃO 4: Reviews
   // ═══════════════════════════════════════════════════════════
+  const reviewsSlice = reviews.slice(0, 5);
+  const avgRating = reviewsSlice.length > 0
+    ? (reviewsSlice.reduce((sum, r) => sum + (r.rating || 5), 0) / reviewsSlice.length).toFixed(1)
+    : '5.0';
+
   const reviewsHtml = reviews.length > 0 ? `
-    <section itemscope itemtype="https://schema.org/Organization">
+    <section itemscope itemtype="https://schema.org/LocalBusiness">
+      <meta itemprop="name" content="${escapeHtml(companyName)}">
+      <div itemprop="aggregateRating" itemscope itemtype="https://schema.org/AggregateRating">
+        <meta itemprop="ratingValue" content="${avgRating}">
+        <meta itemprop="reviewCount" content="${reviews.length}">
+        <meta itemprop="bestRating" content="5">
+        <meta itemprop="worstRating" content="1">
+      </div>
       <h4>Avaliações de Clientes Verificados</h4>
-      ${reviews.slice(0, 5).map(r => `
+      ${reviewsSlice.map(r => `
         <article itemprop="review" itemscope itemtype="https://schema.org/Review">
           <blockquote itemprop="reviewBody">"${escapeHtml(r.review_text?.substring(0, 150))}"</blockquote>
           <cite itemprop="author" itemscope itemtype="https://schema.org/Person">
             — <span itemprop="name">${escapeHtml(r.author_name)}</span>
           </cite>
-          <meta itemprop="reviewRating" itemscope itemtype="https://schema.org/Rating" content="${r.rating}">
+          <div itemprop="reviewRating" itemscope itemtype="https://schema.org/Rating">
+            <meta itemprop="ratingValue" content="${r.rating || 5}">
+            <meta itemprop="bestRating" content="5">
+          </div>
           ${r.source === 'google' ? '<meta itemprop="publisher" content="Google Reviews">' : ''}
         </article>
       `).join('')}
