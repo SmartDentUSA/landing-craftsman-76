@@ -916,13 +916,13 @@ export function generateAuthorityContextHTML(
       <p>Clientes reais compartilham suas experiências com ${escapeHtml(companyName)}:</p>
       <ul>
         ${videoTestimonials.slice(0, 20).map(t => `
-          <li itemscope itemtype="https://schema.org/Review">
-            <a href="${sanitizeUrl(t.youtube_url)}" rel="noopener" itemprop="video">
-              <span itemprop="author">${escapeHtml(t.client_name)}</span>
+          <li>
+            <a href="${sanitizeUrl(t.youtube_url)}" rel="noopener">
+              <strong>${escapeHtml(t.client_name)}</strong>
               ${t.profession ? `- ${escapeHtml(t.profession)}` : ''}
               ${t.city ? `(${escapeHtml(t.city)})` : ''}
             </a>
-            ${t.testimonial_text ? `<blockquote itemprop="reviewBody">${escapeHtml(t.testimonial_text.substring(0, 100))}...</blockquote>` : ''}
+            ${t.testimonial_text ? `<blockquote>${escapeHtml(t.testimonial_text.substring(0, 100))}...</blockquote>` : ''}
           </li>
         `).join('')}
       </ul>
