@@ -893,13 +893,13 @@ export function generateAuthorityContextHTML(
   ].filter(v => v.url);
   
   const videosHtml = allCompanyVideos.length > 0 ? `
-    <section itemscope itemtype="https://schema.org/VideoGallery">
+    <section>
       <h4>Videoteca Oficial ${escapeHtml(companyName)}</h4>
       <p>${allCompanyVideos.length} vídeos oficiais disponíveis:</p>
       <ul>
         ${allCompanyVideos.slice(0, 15).map(v => `
           <li>
-            <a href="${sanitizeUrl(v.url)}" rel="noopener" itemprop="video">${escapeHtml(v.title || 'Vídeo')}</a>
+            <a href="${sanitizeUrl(v.url)}" rel="noopener">${escapeHtml(v.title || 'Vídeo')}</a>
             ${v.description ? `<span>${escapeHtml(v.description.substring(0, 80))}</span>` : ''}
           </li>
         `).join('')}
