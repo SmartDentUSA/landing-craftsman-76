@@ -211,6 +211,7 @@ Analise o produto e retorne o JSON conforme especificado.`;
     }
 
     const aiData = await aiResponse.json();
+    await trackFromResponse(aiData, 'generate-clinical-brain', 'Cérebro Clínico');
     const aiContent = aiData.choices?.[0]?.message?.content;
 
     if (!aiContent) {

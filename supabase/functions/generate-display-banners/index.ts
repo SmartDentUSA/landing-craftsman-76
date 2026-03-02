@@ -110,6 +110,8 @@ Retorne usando a tool generate_banner_copy.`;
 
         if (response.ok) {
           const data = await response.json();
+          await trackFromResponse(data, 'generate-display-banners', 'Banners Display');
+          const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
           const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
           if (toolCall?.function?.arguments) {
             const parsed = JSON.parse(toolCall.function.arguments);

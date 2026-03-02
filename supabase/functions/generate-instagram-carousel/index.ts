@@ -169,6 +169,7 @@ Retorne APENAS este JSON (sem markdown, sem explicações):
 
       if (response.ok) {
         aiData = await response.json();
+        await trackFromResponse(aiData, 'generate-instagram-carousel', 'Carrossel Instagram');
         console.log(`✅ AI response received on attempt ${attempt} with model ${model}`);
         break;
       }

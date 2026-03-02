@@ -389,6 +389,7 @@ Gere APENAS o texto, sem aspas ou formatação.
         }
 
         const aiData = await aiResponse.json();
+        await trackFromResponse(aiData, 'generate-spin-campaign', 'Campanha SPIN');
         return aiData.choices[0].message.content.trim();
       };
 

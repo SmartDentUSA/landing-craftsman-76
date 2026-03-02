@@ -544,6 +544,7 @@ IMPORTANTE FINAL:
     }
 
     const aiData = await aiResponse.json();
+    await trackFromResponse(aiData, 'generate-spin-faqs', 'FAQs SPIN');
     console.log('📥 Resposta completa da API:', JSON.stringify(aiData, null, 2).substring(0, 500));
 
     if (!aiData.choices || !Array.isArray(aiData.choices) || aiData.choices.length === 0) {

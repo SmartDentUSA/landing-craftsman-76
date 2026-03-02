@@ -95,6 +95,7 @@ serve(async (req) => {
     }
 
     const data = await response.json();
+    await trackFromResponse(data, 'parse-testimonials', 'Extração Depoimentos');
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
     
     if (!toolCall?.function?.arguments) {

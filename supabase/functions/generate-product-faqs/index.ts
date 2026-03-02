@@ -277,6 +277,7 @@ OBRIGATÓRIO:
     }
 
     const data = await response.json();
+    await trackFromResponse(data, 'generate-product-faqs', 'FAQs Produto');
     let generatedText = data.choices[0].message.content;
     console.log('[generate-product-faqs] Resposta bruta da IA:', generatedText.substring(0, 200) + '...');
 
