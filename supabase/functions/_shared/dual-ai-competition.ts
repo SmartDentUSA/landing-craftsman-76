@@ -67,7 +67,8 @@ export async function generateWithLovableAI(
 
 export async function generateWithDeepSeek(
   systemPrompt: string,
-  userPrompt: string
+  userPrompt: string,
+  trackingContext?: { edgeFunctionId: string; actionName: string; productName?: string }
 ): Promise<string> {
   const deepseekApiKey = Deno.env.get('DEEPSEEK_API_KEY');
   if (!deepseekApiKey) throw new Error('DEEPSEEK_API_KEY not configured');
@@ -95,6 +96,12 @@ export async function generateWithDeepSeek(
   }
 
   const data = await response.json();
+
+  // Track token usage
+  if (trackingContext) {
+    await trackFromResponse(data, trackingContext.edgeFunctionId, trackingContext.actionName, trackingContext.productName);
+  }
+
   return data.choices?.[0]?.message?.content || '';
 }
 
