@@ -27,7 +27,8 @@ interface CompetitionResult {
 
 export async function generateWithLovableAI(
   systemPrompt: string,
-  userPrompt: string
+  userPrompt: string,
+  trackingContext?: { edgeFunctionId: string; actionName: string; productName?: string }
 ): Promise<string> {
   const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
   if (!lovableApiKey) throw new Error('LOVABLE_API_KEY not configured');
@@ -55,6 +56,12 @@ export async function generateWithLovableAI(
   }
 
   const data = await response.json();
+
+  // Track token usage
+  if (trackingContext) {
+    await trackFromResponse(data, trackingContext.edgeFunctionId, trackingContext.actionName, trackingContext.productName);
+  }
+
   return data.choices?.[0]?.message?.content || '';
 }
 
