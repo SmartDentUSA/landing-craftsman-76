@@ -9,6 +9,7 @@ import { SystemMonitoringDashboard } from './SystemMonitoringDashboard';
 import { usePromptsConfiguration } from '@/hooks/usePromptsConfiguration';
 import sistemaPromptsAI from '@/assets/sistema-prompts-ai.png';
 import { TikTokIcon } from './icons/TikTokIcon';
+import { AITokenDashboard } from './AITokenDashboard';
 
 const EDGE_FUNCTIONS = [
   {
