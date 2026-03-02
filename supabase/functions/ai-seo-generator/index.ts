@@ -559,6 +559,11 @@ CRÍTICO: Retorne APENAS o conteúdo HTML do artigo, sem tags <html>, <head> ou 
       }
 
       const data = await response.json();
+      
+      // Track AI token usage
+      const { trackFromResponse } = await import('../_shared/track-ai-usage.ts');
+      await trackFromResponse(data, 'ai-seo-generator', `SEO ${type}`);
+      
       let generatedContent = data.choices[0].message.content.trim();
 
     // Parse JSON para keywords e video testimonial analysis com limpeza robusta

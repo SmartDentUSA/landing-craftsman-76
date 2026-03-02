@@ -645,7 +645,7 @@ Gere o blog post completo agora:`;
     minLength: 1200,
     maxLength: 2500,
     requiredKeywords: Array.isArray(product.keywords) ? product.keywords : []
-  });
+  }, { edgeFunctionId: 'generate-product-blog', actionName: `Blog ${blogType === 'commercial' ? 'Comercial' : 'Técnico'}`, productName: product.name });
   
   console.log(`✅ Product blog winner: ${result.winner} (score: ${result.score.toFixed(1)})`);
   

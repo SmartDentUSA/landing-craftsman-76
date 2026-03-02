@@ -124,7 +124,7 @@ serve(async (req) => {
       minLength: 300,
       maxLength: 1500,
       requiredKeywords: Array.isArray(product.bot_trigger_words) ? product.bot_trigger_words : []
-    });
+    }, { edgeFunctionId: 'generate-instagram-reels-script', actionName: 'Roteiro Reels', productName: product.name });
     
     console.log(`✅ Reels Script winner: ${result.winner} (score: ${result.score.toFixed(1)})`);
     

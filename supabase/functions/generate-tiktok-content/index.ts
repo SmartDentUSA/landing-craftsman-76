@@ -137,7 +137,7 @@ serve(async (req) => {
       minLength: 150,
       maxLength: 500,
       requiredKeywords: Array.isArray(product.bot_trigger_words) ? product.bot_trigger_words : []
-    });
+    }, { edgeFunctionId: 'generate-tiktok-content', actionName: 'Script TikTok', productName: product.name });
     
     console.log(`✅ TikTok winner: ${result.winner} (score: ${result.score.toFixed(1)})`);
     

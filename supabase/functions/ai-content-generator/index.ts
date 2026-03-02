@@ -842,6 +842,10 @@ Retorne APENAS JSON válido:
     throw new Error(`DeepSeek API error: ${data.error?.message || 'Unknown error'}`);
   }
 
+  // Track AI token usage
+  const { trackFromResponse } = await import('../_shared/track-ai-usage.ts');
+  await trackFromResponse(data, 'ai-content-generator', 'Google Ads');
+
   const content = data.choices[0].message.content;
   
   try {

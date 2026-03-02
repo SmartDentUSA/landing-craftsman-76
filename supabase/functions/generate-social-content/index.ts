@@ -1018,7 +1018,7 @@ async function generateWithDualAI(apiKey: string, prompt: string, type: 'whatsap
     minLength: type === 'whatsapp' ? 100 : 200,
     maxLength: type === 'whatsapp' ? 300 : 1500,
     requiredKeywords: Array.isArray(product?.keywords) ? product.keywords : []
-  });
+  }, { edgeFunctionId: 'generate-social-content', actionName: `Conteúdo ${type}`, productName: product?.name });
   
   console.log(`✅ Social ${type} winner: ${result.winner} (score: ${result.score.toFixed(1)})`);
   
