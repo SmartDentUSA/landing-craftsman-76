@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { trackFromResponse } from '../_shared/track-ai-usage.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -155,6 +156,7 @@ ${clippedText}`;
     }
 
     const aiResult = await response.json();
+    await trackFromResponse(aiResult, 'generate-landing-page-faqs', 'FAQs Landing Page');
     const toolCall = aiResult.choices?.[0]?.message?.tool_calls?.[0];
     if (!toolCall?.function?.arguments) {
       throw new Error('AI não retornou dados estruturados');

@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { trackFromResponse } from '../_shared/track-ai-usage.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -471,6 +472,7 @@ Retorne um JSON estruturado com os 13 campos. Use este schema exato:
     }
 
     const aiData = await aiResponse.json();
+    await trackFromResponse(aiData, 'generate-product-card-from-transcription', 'Card Produto');
     console.log('🎉 Resposta da IA recebida');
 
     // Extrair dados do tool call

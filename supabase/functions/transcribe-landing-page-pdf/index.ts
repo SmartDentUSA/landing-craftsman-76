@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { trackFromResponse } from '../_shared/track-ai-usage.ts';
 import { getDocument } from "https://esm.sh/pdfjs-serverless@0.3.2";
 
 const corsHeaders = {
@@ -305,6 +306,7 @@ ${clippedText}`;
     }
 
     const aiResult = await response.json();
+    await trackFromResponse(aiResult, 'transcribe-landing-page-pdf', 'Transcrição PDF');
     console.log('✅ AI response received');
 
     // Extract tool call result

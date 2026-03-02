@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { trackFromResponse } from '../_shared/track-ai-usage.ts';
 import { encode as b64encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 import { getDocument } from "https://esm.sh/pdfjs-serverless@0.3.2";
 
@@ -456,6 +457,7 @@ REGRAS OBRIGATÓRIAS:
     }
 
     const aiResponse = await response.json();
+    await trackFromResponse(aiResponse, 'transcribe-product-document', 'Transcrição Documento');
     console.log('✅ Resposta da IA recebida');
 
     // Extrair dados da tool call

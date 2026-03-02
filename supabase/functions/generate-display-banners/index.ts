@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { trackFromResponse } from '../_shared/track-ai-usage.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -109,6 +110,8 @@ Retorne usando a tool generate_banner_copy.`;
 
         if (response.ok) {
           const data = await response.json();
+          await trackFromResponse(data, 'generate-display-banners', 'Banners Display');
+          const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
           const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
           if (toolCall?.function?.arguments) {
             const parsed = JSON.parse(toolCall.function.arguments);

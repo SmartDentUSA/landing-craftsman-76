@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.3.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
+import { trackFromResponse } from '../_shared/track-ai-usage.ts';
 import { fetchAggregateRating, type AggregateRatingData } from "../_shared/aggregate-rating-helper.ts";
 import { fetchLocalBusinessData, generateLocalBusinessSchema, generateGeoContextHTML, type LocalBusinessData } from "../_shared/local-business-helper.ts";
 import { generateHowToSchema, generateHowToMicrodataHTML, type ProductWithWorkflow } from "../_shared/howto-schema-helper.ts";
@@ -477,6 +478,7 @@ Retorne APENAS o texto reescrito, sem títulos, markdown, ou JSON. O texto deve 
         }
         
         const data = await response.json();
+        await trackFromResponse(data, 'generate-ecommerce-html', 'HTML E-commerce');
         return data.choices?.[0]?.message?.content?.trim() || '';
       } catch (error) {
         clearTimeout(timeoutId);

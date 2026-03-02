@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { trackFromResponse } from '../_shared/track-ai-usage.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -210,6 +211,7 @@ Analise o produto e retorne o JSON conforme especificado.`;
     }
 
     const aiData = await aiResponse.json();
+    await trackFromResponse(aiData, 'generate-clinical-brain', 'Cérebro Clínico');
     const aiContent = aiData.choices?.[0]?.message?.content;
 
     if (!aiContent) {

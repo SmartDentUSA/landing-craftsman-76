@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.56.0";
+import { trackFromResponse } from '../_shared/track-ai-usage.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -53,6 +54,7 @@ serve(async (req) => {
     }
 
     const data = await response.json();
+    await trackFromResponse(data, 'generate-client-photo', 'Foto Cliente', client_name);
     const imageData = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
 
     if (!imageData) {

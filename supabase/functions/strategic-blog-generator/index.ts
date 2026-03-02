@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
+import { trackFromResponse } from '../_shared/track-ai-usage.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -1029,6 +1030,9 @@ IMPORTANTE:
 
   const data = await response.json();
   const content = data.choices[0]?.message?.content;
+
+  // Track token usage
+  await trackFromResponse(data, 'strategic-blog-generator', 'Artigo Estratégico');
   
   if (!content) {
     throw new Error('Resposta vazia da Lovable AI');

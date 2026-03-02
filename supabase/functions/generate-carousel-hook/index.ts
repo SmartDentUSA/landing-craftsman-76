@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { trackFromResponse } from '../_shared/track-ai-usage.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -103,6 +104,7 @@ Retorne APENAS o texto do gancho (40-80 caracteres):`;
     }
 
     const aiData = await response.json();
+    await trackFromResponse(aiData, 'generate-carousel-hook', 'Hook Carrossel');
     const hook = aiData.choices?.[0]?.message?.content?.trim();
 
     if (!hook) {

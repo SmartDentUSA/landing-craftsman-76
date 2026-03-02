@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.56.0";
+import { trackFromResponse } from '../_shared/track-ai-usage.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -196,6 +197,7 @@ Retorne APENAS o array JSON, sem markdown.`;
     }
 
     const aiData = await aiResponse.json();
+    await trackFromResponse(aiData, 'generate-content-from-interests', action);
     const content = aiData.choices[0].message.content;
 
     // Parse JSON response

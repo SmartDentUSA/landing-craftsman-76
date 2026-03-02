@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { trackFromResponse } from '../_shared/track-ai-usage.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -168,6 +169,7 @@ Retorne APENAS este JSON (sem markdown, sem explicações):
 
       if (response.ok) {
         aiData = await response.json();
+        await trackFromResponse(aiData, 'generate-instagram-carousel', 'Carrossel Instagram');
         console.log(`✅ AI response received on attempt ${attempt} with model ${model}`);
         break;
       }

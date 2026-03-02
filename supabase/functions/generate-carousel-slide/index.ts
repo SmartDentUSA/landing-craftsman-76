@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { trackFromResponse } from '../_shared/track-ai-usage.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -115,6 +116,7 @@ Campos esperados: ${config.outputDescription}`;
 
       if (response.ok) {
         aiData = await response.json();
+        await trackFromResponse(aiData, 'generate-carousel-slide', 'Slide Carrossel');
         console.log(`✅ AI OK on attempt ${attempt} (${model})`);
         break;
       }

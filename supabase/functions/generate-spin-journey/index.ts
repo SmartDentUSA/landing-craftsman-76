@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { trackFromResponse } from '../_shared/track-ai-usage.ts';
 import { SPIN_SYSTEM_PROMPT } from "../_shared/spin-system-prompt.ts";
 import {
   validateSpinJourney,
@@ -166,6 +167,7 @@ ${sc.instagram ? `Instagram: @${sc.instagram}` : ''}
       }
 
       const aiData = await aiResponse.json();
+      await trackFromResponse(aiData, 'generate-spin-journey', 'Jornada SPIN');
       const content = aiData.choices[0].message.content;
       
       const jsonMatch = content.match(/\{[\s\S]*\}/);

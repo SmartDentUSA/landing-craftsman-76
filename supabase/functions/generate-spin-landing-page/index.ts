@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { trackFromResponse } from '../_shared/track-ai-usage.ts';
 import { generateLandingPageHTML } from "./generateHTML.ts";
 import { fetchSystemBResourcesForProducts } from "./systemBIntegration.ts";
 import { fetchAggregateRating, type AggregateRatingData } from "../_shared/aggregate-rating-helper.ts";
@@ -647,6 +648,7 @@ Retorne APENAS JSON puro, sem markdown:
   }
 
   const aiData = await aiResponse.json();
+  await trackFromResponse(aiData, 'generate-spin-landing-page', 'Landing Page SPIN');
   console.log('📥 Resposta completa da API:', JSON.stringify(aiData, null, 2));
 
   const content = aiData.choices?.[0]?.message?.content;

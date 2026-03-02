@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { trackFromResponse } from '../_shared/track-ai-usage.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -543,6 +544,7 @@ IMPORTANTE FINAL:
     }
 
     const aiData = await aiResponse.json();
+    await trackFromResponse(aiData, 'generate-spin-faqs', 'FAQs SPIN');
     console.log('📥 Resposta completa da API:', JSON.stringify(aiData, null, 2).substring(0, 500));
 
     if (!aiData.choices || !Array.isArray(aiData.choices) || aiData.choices.length === 0) {

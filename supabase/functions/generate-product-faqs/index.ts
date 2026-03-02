@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { trackFromResponse } from '../_shared/track-ai-usage.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -276,6 +277,7 @@ OBRIGATÓRIO:
     }
 
     const data = await response.json();
+    await trackFromResponse(data, 'generate-product-faqs', 'FAQs Produto');
     let generatedText = data.choices[0].message.content;
     console.log('[generate-product-faqs] Resposta bruta da IA:', generatedText.substring(0, 200) + '...');
 
