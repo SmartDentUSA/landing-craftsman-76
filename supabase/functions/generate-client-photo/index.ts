@@ -54,6 +54,7 @@ serve(async (req) => {
     }
 
     const data = await response.json();
+    await trackFromResponse(data, 'generate-client-photo', 'Foto Cliente', client_name);
     const imageData = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
 
     if (!imageData) {

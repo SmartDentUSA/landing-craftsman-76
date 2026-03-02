@@ -478,6 +478,7 @@ Retorne APENAS o texto reescrito, sem títulos, markdown, ou JSON. O texto deve 
         }
         
         const data = await response.json();
+        await trackFromResponse(data, 'generate-ecommerce-html', 'HTML E-commerce');
         return data.choices?.[0]?.message?.content?.trim() || '';
       } catch (error) {
         clearTimeout(timeoutId);

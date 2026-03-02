@@ -167,6 +167,7 @@ ${sc.instagram ? `Instagram: @${sc.instagram}` : ''}
       }
 
       const aiData = await aiResponse.json();
+      await trackFromResponse(aiData, 'generate-spin-journey', 'Jornada SPIN');
       const content = aiData.choices[0].message.content;
       
       const jsonMatch = content.match(/\{[\s\S]*\}/);

@@ -116,6 +116,7 @@ Campos esperados: ${config.outputDescription}`;
 
       if (response.ok) {
         aiData = await response.json();
+        await trackFromResponse(aiData, 'generate-carousel-slide', 'Slide Carrossel');
         console.log(`✅ AI OK on attempt ${attempt} (${model})`);
         break;
       }
