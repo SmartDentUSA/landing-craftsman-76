@@ -161,6 +161,7 @@ Em vez disso, explique:
     }
 
     const aiData = await aiResponse.json();
+    await trackFromResponse(aiData, 'generate-spin-metrics', 'Métricas SPIN');
     const content = aiData.choices[0].message.content;
     
     // Parse JSON array

@@ -310,6 +310,7 @@ Retorne APENAS o JSON, sem markdown.`;
 
         if (aiResponse.ok) {
           const aiData = await aiResponse.json();
+          await trackFromResponse(aiData, 'process-nps-csv', 'NPS Insights');
           const content = aiData.choices[0].message.content;
           try {
             insights = JSON.parse(content.replace(/```json\n?/g, '').replace(/```\n?/g, ''));

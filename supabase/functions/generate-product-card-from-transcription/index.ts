@@ -472,6 +472,7 @@ Retorne um JSON estruturado com os 13 campos. Use este schema exato:
     }
 
     const aiData = await aiResponse.json();
+    await trackFromResponse(aiData, 'generate-product-card-from-transcription', 'Card Produto');
     console.log('🎉 Resposta da IA recebida');
 
     // Extrair dados do tool call

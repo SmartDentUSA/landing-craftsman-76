@@ -316,6 +316,7 @@ Estruture obrigatoriamente em 4 fases:
     }
 
     const aiData = await aiResponse.json();
+    await trackFromResponse(aiData, 'generate-spin-sales-pitch', 'Pitch SPIN');
     const content = aiData.choices[0].message.content;
     
     // Parse JSON

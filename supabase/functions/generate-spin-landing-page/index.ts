@@ -648,6 +648,7 @@ Retorne APENAS JSON puro, sem markdown:
   }
 
   const aiData = await aiResponse.json();
+  await trackFromResponse(aiData, 'generate-spin-landing-page', 'Landing Page SPIN');
   console.log('📥 Resposta completa da API:', JSON.stringify(aiData, null, 2));
 
   const content = aiData.choices?.[0]?.message?.content;
