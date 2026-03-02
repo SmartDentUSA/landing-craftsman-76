@@ -104,6 +104,39 @@ export async function trackAIUsage(params: TrackAIUsageParams): Promise<void> {
       console.error('[track-ai-usage] Insert error:', error.message);
     } else {
       console.log(`[track-ai-usage] ✅ Logged ${totalTokens} tokens for ${params.edgeFunctionId}/${params.actionName}`);
+
+      // Also update prompts_configuration.performance_metrics for dashboard counters
+      try {
+        const { data: configs } = await supabase
+          .from('prompts_configuration')
+          .select('id, performance_metrics')
+          .eq('edge_function_id', params.edgeFunctionId);
+
+        if (configs && configs.length > 0) {
+          for (const config of configs) {
+            const metrics = (config.performance_metrics as Record<string, any>) || {};
+            const newCount = (metrics.usage_count || 0) + 1;
+            const successCount = (metrics.success_count || 0) + 1;
+            const newRate = Math.round((successCount / newCount) * 1000) / 10;
+
+            await supabase
+              .from('prompts_configuration')
+              .update({
+                performance_metrics: {
+                  ...metrics,
+                  usage_count: newCount,
+                  success_count: successCount,
+                  success_rate: newRate,
+                  last_used: new Date().toISOString(),
+                },
+              })
+              .eq('id', config.id);
+          }
+          console.log(`[track-ai-usage] ✅ Updated prompts_configuration for ${params.edgeFunctionId}`);
+        }
+      } catch (pmErr) {
+        console.warn('[track-ai-usage] Failed to update prompts_configuration:', pmErr);
+      }
     }
   } catch (err) {
     console.error('[track-ai-usage] Unexpected error:', err);

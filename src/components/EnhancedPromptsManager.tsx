@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { usePromptsConfiguration } from '@/hooks/usePromptsConfiguration';
 import sistemaPromptsAI from '@/assets/sistema-prompts-ai.png';
 import { TikTokIcon } from './icons/TikTokIcon';
 import { AITokenDashboard } from './AITokenDashboard';
+import { supabase } from '@/integrations/supabase/client';
 
 const EDGE_FUNCTIONS = [
   {
@@ -208,13 +209,31 @@ SEM TEXTO, SEM MARCAS, SEM OVERLAYS - APENAS FOTOGRAFIA PROFISSIONAL`
     dataSources: ["products_repository", "company_profile"]
   },
   {
-    id: "moderate-reviews",
-    name: "Moderador de Reviews",
-    description: "Analisa sentimento, detecta spam e modera reviews automaticamente",
-    icon: Brain,
+    id: "extract-youtube-captions",
+    name: "Extrator de Legendas YouTube",
+    description: "Extrai e analisa legendas de vídeos do YouTube com IA",
+    icon: Video,
     status: "active" as const,
-    prompts: ["Moderação Automática"],
-    dataSources: ["approved_reviews", "raw_reviews"]
+    prompts: ["Análise de Legendas"],
+    dataSources: ["products_repository", "company_profile"]
+  },
+  {
+    id: "generate-instagram-reels-script",
+    name: "Gerador de Scripts Reels",
+    description: "Gera scripts otimizados para Instagram Reels",
+    icon: Instagram,
+    status: "active" as const,
+    prompts: ["Script Reels"],
+    dataSources: ["products_repository", "company_profile"]
+  },
+  {
+    id: "generate-youtube-script",
+    name: "Gerador de Scripts YouTube",
+    description: "Gera roteiros completos para vídeos do YouTube",
+    icon: PlayCircle,
+    status: "active" as const,
+    prompts: ["Script YouTube"],
+    dataSources: ["products_repository", "company_profile"]
   }
 ];
 
@@ -222,26 +241,35 @@ export const EnhancedPromptsManager = () => {
   const [editingFunction, setEditingFunction] = useState<typeof EDGE_FUNCTIONS[0] | null>(null);
   const { configurations, loading } = usePromptsConfiguration();
 
+  // Fetch real usage counts from ai_token_usage table
+  const [usageCounts, setUsageCounts] = useState<Record<string, number>>({});
+  const [usageLoading, setUsageLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUsage = async () => {
+      setUsageLoading(true);
+      const { data, error } = await supabase
+        .from('ai_token_usage' as any)
+        .select('edge_function_id');
+
+      if (!error && data) {
+        const counts: Record<string, number> = {};
+        (data as any[]).forEach((r: any) => {
+          counts[r.edge_function_id] = (counts[r.edge_function_id] || 0) + 1;
+        });
+        setUsageCounts(counts);
+      }
+      setUsageLoading(false);
+    };
+    fetchUsage();
+  }, []);
+
   const isConfigured = (functionId: string) => {
     return configurations.some(config => config.edge_function_id === functionId);
   };
 
-  const getLastUpdated = (functionId: string) => {
-    const configs = configurations.filter(config => config.edge_function_id === functionId);
-    if (configs.length === 0) return null;
-    
-    const latestConfig = configs.reduce((latest, current) => 
-      new Date(current.updated_at) > new Date(latest.updated_at) ? current : latest
-    );
-    
-    return new Date(latestConfig.updated_at).toLocaleDateString('pt-BR');
-  };
-
   const getUsageCount = (functionId: string) => {
-    const configs = configurations.filter(config => config.edge_function_id === functionId);
-    return configs.reduce((total, config) => 
-      total + (config.performance_metrics?.usage_count || 0), 0
-    );
+    return usageCounts[functionId] || 0;
   };
 
   const getSuccessRate = (functionId: string) => {

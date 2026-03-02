@@ -825,6 +825,14 @@ Extraia e retorne APENAS um JSON válido com:
     throw new Error(`DeepSeek API error: ${data.error?.message || 'Unknown error'}`);
   }
 
+  // Track AI token usage
+  try {
+    const { trackFromResponse } = await import('../_shared/track-ai-usage.ts');
+    await trackFromResponse(data, 'extract-youtube-captions', `Análise ${videoType}`);
+  } catch (trackErr) {
+    console.warn('[extract-youtube-captions] Tracking error:', trackErr);
+  }
+
   const content = data.choices?.[0]?.message?.content ?? '';
   
   let parsed: any;
