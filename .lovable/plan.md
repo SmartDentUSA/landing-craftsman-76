@@ -1,49 +1,55 @@
 
 
-# Botões individuais "Gerar por IA" para slides do Carrossel Visual
+# Diagnóstico: Por que Usos e Taxa de Sucesso não atualizam
 
-## Contexto
+## Problemas encontrados
 
-O Carrossel Visual tem 6 slides. O Slide 1 (🎣 Hook) já possui um botão individual "Novo Gancho IA" que chama a edge function `generate-carousel-hook`. Os slides 3 (🔬 Cientificidade), 4 (💫 Experiência) e 5 (🛡️ Segurança) não possuem botões individuais — só podem ser gerados pelo botão geral "🤖 Gerar com IA" que regenera todos os slides de uma vez.
+### 1. `ai_token_usage` tabela está VAZIA
+A tabela existe mas tem **zero registros**. As edge functions foram editadas com o tracking mas **não foram re-deployadas** — o código no repositório tem `trackFromResponse` mas as versões em produção (no Supabase) não.
 
-## Plano
+### 2. `track-ai-usage.ts` NÃO atualiza `prompts_configuration`
+O helper só faz `INSERT` na tabela `ai_token_usage`. Ele **nunca toca** em `prompts_configuration.performance_metrics` (usage_count, success_rate). Os contadores "Usos" e "Taxa Sucesso" leem de `prompts_configuration`, mas nada os incrementa.
 
-### 1. Nova Edge Function: `generate-carousel-slide`
+### 3. `moderate-reviews` não usa IA
+Esta function não chama nenhuma API de IA (nem Lovable Gateway, nem DeepSeek). Não deveria estar na lista de prompts IA.
 
-Criar uma edge function genérica que receba o tipo do slide (`cientificidade`, `experiencia`, `seguranca`) e gere apenas o conteúdo daquele slide específico, com prompts especializados por tipo:
+### 4. `extract-youtube-captions` não tem tracking
+Usa IA mas não importa `trackFromResponse`.
 
-- **Cientificidade (Slide 3)**: Gera title, headline, body, bullet1-4 com foco em evidências científicas e dados técnicos
-- **Experiência (Slide 4)**: Gera keyword + benefit com foco em experiência clínica e fluxo de trabalho
-- **Segurança (Slide 5)**: Gera title, badge1-3 com foco em certificações, garantias e confiança
+## Situação atual de tracking por function
 
-Recebe: `productName`, `salesPitch`, `benefits`, `features`, `slideType`
-Retorna: campos específicos do slide solicitado
+| Function | Tracking no código | Deployada? | `prompts_configuration` atualizado? |
+|----------|-------------------|------------|-------------------------------------|
+| generate-product-blog | ✅ (via compareAndSelectBest) | ❌ Precisa deploy | ❌ |
+| strategic-blog-generator | ✅ (trackFromResponse direto) | ❌ Precisa deploy | ❌ |
+| generate-product-ai-content | ✅ (via compareAndSelectBest) | ❌ Precisa deploy | ❌ |
+| ai-seo-generator | ✅ (trackFromResponse direto) | ❌ Precisa deploy | ❌ |
+| generate-social-content | ✅ (via compareAndSelectBest) | ❌ Precisa deploy | ❌ |
+| generate-ad-copies | ✅ (trackFromResponse direto) | ❌ Precisa deploy | ❌ |
+| generate-tiktok-content | ✅ (via compareAndSelectBest) | ❌ Precisa deploy | ❌ |
+| generate-product-faqs | ✅ (trackFromResponse direto) | ❌ Precisa deploy | ❌ |
+| generate-spin-* (6 funções) | ✅ (trackFromResponse direto) | ❌ Precisa deploy | ❌ |
+| generate-ecommerce-html | ✅ (trackFromResponse direto) | ❌ Precisa deploy | ❌ |
+| moderate-reviews | N/A (não usa IA) | — | — |
+| extract-youtube-captions | ❌ Sem tracking | — | ❌ |
 
-### 2. Frontend — Novos estados e handlers (`InstagramCopyGenerator.tsx`)
+## Plano de Correção
 
-- Adicionar 3 estados: `generatingScience`, `generatingExperience`, `generatingSecurity`
-- Criar 3 handlers que chamam `generate-carousel-slide` com o `slideType` correto e atualizam apenas o slide correspondente em `slideTexts`
+### Etapa 1 — Atualizar `track-ai-usage.ts` para incrementar `prompts_configuration`
+Após inserir em `ai_token_usage`, o helper deve também fazer um UPDATE em `prompts_configuration` incrementando `usage_count` e setando `last_used` e `success_rate` no campo `performance_metrics`. Isso faz os contadores "Usos" e "Taxa Sucesso" funcionarem automaticamente.
 
-### 3. Frontend — 3 novos botões no header do Carrossel Visual
+### Etapa 2 — Adicionar tracking em `extract-youtube-captions`
+Adicionar `trackFromResponse` após cada chamada de IA nesta function.
 
-Adicionar ao lado do botão "🎣 Novo Gancho IA" (linha ~1962):
+### Etapa 3 — Remover `moderate-reviews` da lista de prompts IA
+Ou substituí-la por uma function que realmente usa IA (ex: `extract-youtube-captions`, `generate-instagram-reels-script`, `generate-youtube-script`).
 
-- **🔬 Cientificidade IA** — gera apenas Slide 3
-- **💫 Experiência IA** — gera apenas Slide 4
-- **🛡️ Segurança IA** — gera apenas Slide 5
+### Etapa 4 — Mudar dashboard "Usos" para ler de `ai_token_usage` em vez de `prompts_configuration`
+Como `ai_token_usage` terá dados reais (pós-deploy), o componente deve contar chamadas diretamente da tabela de tokens — mais confiável que `performance_metrics` manual.
 
-Cada botão com loading state individual, mesmo padrão visual do botão Hook existente.
+### Resumo de arquivos
 
-### Detalhes técnicos
-
-**Edge function `generate-carousel-slide/index.ts`:**
-- Usa Lovable AI Gateway (`google/gemini-2.5-flash`)
-- Prompt especializado por slideType com regras de formatação
-- Temperature 1.0 para variedade
-- Retorna JSON estruturado via tool calling para garantir campos corretos
-
-**Mapeamento de retorno:**
-- `cientificidade` → `{ title, headline, body, bullet1, bullet2, bullet3, bullet4 }`
-- `experiencia` → `{ keyword, benefit }`
-- `seguranca` → `{ title, badge1, badge2, badge3 }`
+- **1 arquivo editado**: `supabase/functions/_shared/track-ai-usage.ts` (adicionar update em prompts_configuration)
+- **1 arquivo editado**: `supabase/functions/extract-youtube-captions/index.ts` (adicionar tracking)
+- **1 arquivo editado**: `src/components/EnhancedPromptsManager.tsx` (trocar moderate-reviews por functions reais + ler contadores de ai_token_usage)
 
