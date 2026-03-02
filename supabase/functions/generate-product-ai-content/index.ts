@@ -728,7 +728,7 @@ RESPOSTA ESPERADA (copie este formato exato):
     contentType: 'product',
     minLength: 100,
     requiredKeywords: []
-  });
+  }, { edgeFunctionId: 'generate-product-ai-content', actionName: 'Características do Produto', productName: product.name });
 
   console.log(`✅ Features winner: ${result.winner} (score: ${result.score.toFixed(1)})`);
 
