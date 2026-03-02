@@ -600,7 +600,7 @@ RESPOSTA ESPERADA (copie este formato exato):
     contentType: 'product',
     minLength: 100,
     requiredKeywords: videoCaptionKeywords
-  });
+  }, { edgeFunctionId: 'generate-product-ai-content', actionName: 'Keywords do Produto', productName: product.name });
 
   console.log(`✅ Keywords winner: ${result.winner} (score: ${result.score.toFixed(1)})`);
 
