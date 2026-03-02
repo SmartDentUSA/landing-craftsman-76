@@ -210,6 +210,11 @@ Retorne APENAS um JSON válido no formato:
     }
 
     const aiResponse = await response.json();
+    
+    // Track AI token usage
+    const { trackFromResponse } = await import('../_shared/track-ai-usage.ts');
+    await trackFromResponse(aiResponse, 'generate-ad-copies', 'Cópias Google Ads');
+    
     const generatedText = aiResponse.choices[0].message.content;
 
     console.log('🤖 Resposta da IA:', generatedText);

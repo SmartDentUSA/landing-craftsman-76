@@ -135,7 +135,7 @@ Sempre retorne APENAS JSON válido, sem markdown ou explicações adicionais.`;
       minLength: 500,
       maxLength: 3000,
       requiredKeywords: Array.isArray(product.keywords) ? product.keywords.slice(0, 5) : []
-    });
+    }, { edgeFunctionId: 'generate-youtube-script', actionName: 'Roteiro YouTube', productName: product.name });
     
     console.log(`✅ YouTube Script winner: ${result.winner} (score: ${result.score.toFixed(1)})`);
     
