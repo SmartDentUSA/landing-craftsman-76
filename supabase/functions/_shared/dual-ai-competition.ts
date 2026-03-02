@@ -230,12 +230,13 @@ export async function compareAndSelectBest(
     maxLength?: number;
     requiredKeywords?: string[];
     contentType: 'blog' | 'social' | 'product' | 'tiktok';
-  }
+  },
+  trackingContext?: { edgeFunctionId: string; actionName: string; productName?: string }
 ): Promise<CompetitionResult> {
   console.log('🤖 Generating with Lovable AI (single model)...');
 
   try {
-    const content = await generateWithLovableAI(systemPrompt, userPrompt);
+    const content = await generateWithLovableAI(systemPrompt, userPrompt, trackingContext);
     
     if (!content) {
       throw new Error('Empty response from AI');
@@ -253,8 +254,7 @@ export async function compareAndSelectBest(
   } catch (lovableError) {
     console.error('❌ Lovable AI failed, trying DeepSeek as fallback:', lovableError);
     
-    // Fallback to DeepSeek only if Lovable fails
-    const content = await generateWithDeepSeek(systemPrompt, userPrompt);
+    const content = await generateWithDeepSeek(systemPrompt, userPrompt, trackingContext);
     
     if (!content) {
       throw new Error('Both AIs failed to generate content');

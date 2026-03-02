@@ -255,10 +255,14 @@ export const EnhancedPromptsManager = () => {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="prompts" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="prompts" className="flex items-center gap-2">
             <Brain className="h-4 w-4" />
             Prompts IA
+          </TabsTrigger>
+          <TabsTrigger value="tokens" className="flex items-center gap-2">
+            <Coins className="h-4 w-4" />
+            💰 Tokens
           </TabsTrigger>
           <TabsTrigger value="monitoring" className="flex items-center gap-2">
             <Activity className="h-4 w-4" />
