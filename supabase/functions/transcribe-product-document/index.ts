@@ -457,6 +457,7 @@ REGRAS OBRIGATÓRIAS:
     }
 
     const aiResponse = await response.json();
+    await trackFromResponse(aiResponse, 'transcribe-product-document', 'Transcrição Documento');
     console.log('✅ Resposta da IA recebida');
 
     // Extrair dados da tool call
