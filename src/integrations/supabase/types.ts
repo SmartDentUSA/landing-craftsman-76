@@ -52,6 +52,51 @@ export type Database = {
           },
         ]
       }
+      ai_token_usage: {
+        Row: {
+          action_name: string
+          completion_tokens: number | null
+          cost_brl: number | null
+          cost_usd: number | null
+          created_at: string | null
+          edge_function_id: string
+          id: string
+          metadata: Json | null
+          model: string | null
+          product_name: string | null
+          prompt_tokens: number | null
+          total_tokens: number | null
+        }
+        Insert: {
+          action_name: string
+          completion_tokens?: number | null
+          cost_brl?: number | null
+          cost_usd?: number | null
+          created_at?: string | null
+          edge_function_id: string
+          id?: string
+          metadata?: Json | null
+          model?: string | null
+          product_name?: string | null
+          prompt_tokens?: number | null
+          total_tokens?: number | null
+        }
+        Update: {
+          action_name?: string
+          completion_tokens?: number | null
+          cost_brl?: number | null
+          cost_usd?: number | null
+          created_at?: string | null
+          edge_function_id?: string
+          id?: string
+          metadata?: Json | null
+          model?: string | null
+          product_name?: string | null
+          prompt_tokens?: number | null
+          total_tokens?: number | null
+        }
+        Relationships: []
+      }
       approved_reviews: {
         Row: {
           ai_keywords: Json | null
