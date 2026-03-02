@@ -209,13 +209,31 @@ SEM TEXTO, SEM MARCAS, SEM OVERLAYS - APENAS FOTOGRAFIA PROFISSIONAL`
     dataSources: ["products_repository", "company_profile"]
   },
   {
-    id: "moderate-reviews",
-    name: "Moderador de Reviews",
-    description: "Analisa sentimento, detecta spam e modera reviews automaticamente",
-    icon: Brain,
+    id: "extract-youtube-captions",
+    name: "Extrator de Legendas YouTube",
+    description: "Extrai e analisa legendas de vídeos do YouTube com IA",
+    icon: Video,
     status: "active" as const,
-    prompts: ["Moderação Automática"],
-    dataSources: ["approved_reviews", "raw_reviews"]
+    prompts: ["Análise de Legendas"],
+    dataSources: ["products_repository", "company_profile"]
+  },
+  {
+    id: "generate-instagram-reels-script",
+    name: "Gerador de Scripts Reels",
+    description: "Gera scripts otimizados para Instagram Reels",
+    icon: Instagram,
+    status: "active" as const,
+    prompts: ["Script Reels"],
+    dataSources: ["products_repository", "company_profile"]
+  },
+  {
+    id: "generate-youtube-script",
+    name: "Gerador de Scripts YouTube",
+    description: "Gera roteiros completos para vídeos do YouTube",
+    icon: PlayCircle,
+    status: "active" as const,
+    prompts: ["Script YouTube"],
+    dataSources: ["products_repository", "company_profile"]
   }
 ];
 
