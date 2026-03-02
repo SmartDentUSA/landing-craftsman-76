@@ -4,6 +4,8 @@
  * Sempre gera com ambas AIs e seleciona automaticamente o melhor resultado
  */
 
+import { trackFromResponse } from './track-ai-usage.ts';
+
 interface ContentEvaluation {
   score: number;
   details: {
@@ -25,7 +27,8 @@ interface CompetitionResult {
 
 export async function generateWithLovableAI(
   systemPrompt: string,
-  userPrompt: string
+  userPrompt: string,
+  trackingContext?: { edgeFunctionId: string; actionName: string; productName?: string }
 ): Promise<string> {
   const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
   if (!lovableApiKey) throw new Error('LOVABLE_API_KEY not configured');
@@ -53,12 +56,19 @@ export async function generateWithLovableAI(
   }
 
   const data = await response.json();
+
+  // Track token usage
+  if (trackingContext) {
+    await trackFromResponse(data, trackingContext.edgeFunctionId, trackingContext.actionName, trackingContext.productName);
+  }
+
   return data.choices?.[0]?.message?.content || '';
 }
 
 export async function generateWithDeepSeek(
   systemPrompt: string,
-  userPrompt: string
+  userPrompt: string,
+  trackingContext?: { edgeFunctionId: string; actionName: string; productName?: string }
 ): Promise<string> {
   const deepseekApiKey = Deno.env.get('DEEPSEEK_API_KEY');
   if (!deepseekApiKey) throw new Error('DEEPSEEK_API_KEY not configured');
@@ -86,6 +96,12 @@ export async function generateWithDeepSeek(
   }
 
   const data = await response.json();
+
+  // Track token usage
+  if (trackingContext) {
+    await trackFromResponse(data, trackingContext.edgeFunctionId, trackingContext.actionName, trackingContext.productName);
+  }
+
   return data.choices?.[0]?.message?.content || '';
 }
 
@@ -214,12 +230,13 @@ export async function compareAndSelectBest(
     maxLength?: number;
     requiredKeywords?: string[];
     contentType: 'blog' | 'social' | 'product' | 'tiktok';
-  }
+  },
+  trackingContext?: { edgeFunctionId: string; actionName: string; productName?: string }
 ): Promise<CompetitionResult> {
   console.log('🤖 Generating with Lovable AI (single model)...');
 
   try {
-    const content = await generateWithLovableAI(systemPrompt, userPrompt);
+    const content = await generateWithLovableAI(systemPrompt, userPrompt, trackingContext);
     
     if (!content) {
       throw new Error('Empty response from AI');
@@ -237,8 +254,7 @@ export async function compareAndSelectBest(
   } catch (lovableError) {
     console.error('❌ Lovable AI failed, trying DeepSeek as fallback:', lovableError);
     
-    // Fallback to DeepSeek only if Lovable fails
-    const content = await generateWithDeepSeek(systemPrompt, userPrompt);
+    const content = await generateWithDeepSeek(systemPrompt, userPrompt, trackingContext);
     
     if (!content) {
       throw new Error('Both AIs failed to generate content');

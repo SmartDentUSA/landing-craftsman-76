@@ -3,12 +3,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Brain, FileText, Search, MessageSquare, Video, Zap, Edit3, Loader2, MessageCircle, PlayCircle, Instagram, Activity, TrendingUp, Users } from 'lucide-react';
+import { Brain, FileText, Search, MessageSquare, Video, Zap, Edit3, Loader2, MessageCircle, PlayCircle, Instagram, Activity, TrendingUp, Users, Coins } from 'lucide-react';
 import { PromptEditModal } from './PromptEditModal';
 import { SystemMonitoringDashboard } from './SystemMonitoringDashboard';
 import { usePromptsConfiguration } from '@/hooks/usePromptsConfiguration';
 import sistemaPromptsAI from '@/assets/sistema-prompts-ai.png';
 import { TikTokIcon } from './icons/TikTokIcon';
+import { AITokenDashboard } from './AITokenDashboard';
 
 const EDGE_FUNCTIONS = [
   {
@@ -254,10 +255,14 @@ export const EnhancedPromptsManager = () => {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="prompts" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="prompts" className="flex items-center gap-2">
             <Brain className="h-4 w-4" />
             Prompts IA
+          </TabsTrigger>
+          <TabsTrigger value="tokens" className="flex items-center gap-2">
+            <Coins className="h-4 w-4" />
+            💰 Tokens
           </TabsTrigger>
           <TabsTrigger value="monitoring" className="flex items-center gap-2">
             <Activity className="h-4 w-4" />
@@ -345,6 +350,10 @@ export const EnhancedPromptsManager = () => {
               className="max-w-sm w-full h-auto"
             />
           </div>
+        </TabsContent>
+
+        <TabsContent value="tokens" className="space-y-6">
+          <AITokenDashboard />
         </TabsContent>
 
         <TabsContent value="monitoring" className="space-y-6">
