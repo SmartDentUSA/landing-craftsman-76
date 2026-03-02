@@ -429,7 +429,7 @@ RESPOSTA ESPERADA (copie este formato exato):
     contentType: 'product',
     minLength: 100,
     requiredKeywords: Array.isArray(product.keywords) ? product.keywords : []
-  });
+  }, { edgeFunctionId: 'generate-product-ai-content', actionName: 'Benefícios do Produto', productName: product.name });
 
   console.log(`✅ Benefits winner: ${result.winner} (score: ${result.score.toFixed(1)})`);
 
