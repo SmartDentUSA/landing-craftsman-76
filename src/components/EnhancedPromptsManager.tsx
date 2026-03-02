@@ -352,6 +352,10 @@ export const EnhancedPromptsManager = () => {
           </div>
         </TabsContent>
 
+        <TabsContent value="tokens" className="space-y-6">
+          <AITokenDashboard />
+        </TabsContent>
+
         <TabsContent value="monitoring" className="space-y-6">
           <SystemMonitoringDashboard />
         </TabsContent>
