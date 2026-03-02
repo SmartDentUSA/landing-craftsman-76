@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { usePromptsConfiguration } from '@/hooks/usePromptsConfiguration';
 import sistemaPromptsAI from '@/assets/sistema-prompts-ai.png';
 import { TikTokIcon } from './icons/TikTokIcon';
 import { AITokenDashboard } from './AITokenDashboard';
+import { supabase } from '@/integrations/supabase/client';
 
 const EDGE_FUNCTIONS = [
   {
