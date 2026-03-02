@@ -241,26 +241,35 @@ export const EnhancedPromptsManager = () => {
   const [editingFunction, setEditingFunction] = useState<typeof EDGE_FUNCTIONS[0] | null>(null);
   const { configurations, loading } = usePromptsConfiguration();
 
+  // Fetch real usage counts from ai_token_usage table
+  const [usageCounts, setUsageCounts] = useState<Record<string, number>>({});
+  const [usageLoading, setUsageLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUsage = async () => {
+      setUsageLoading(true);
+      const { data, error } = await supabase
+        .from('ai_token_usage' as any)
+        .select('edge_function_id');
+
+      if (!error && data) {
+        const counts: Record<string, number> = {};
+        (data as any[]).forEach((r: any) => {
+          counts[r.edge_function_id] = (counts[r.edge_function_id] || 0) + 1;
+        });
+        setUsageCounts(counts);
+      }
+      setUsageLoading(false);
+    };
+    fetchUsage();
+  }, []);
+
   const isConfigured = (functionId: string) => {
     return configurations.some(config => config.edge_function_id === functionId);
   };
 
-  const getLastUpdated = (functionId: string) => {
-    const configs = configurations.filter(config => config.edge_function_id === functionId);
-    if (configs.length === 0) return null;
-    
-    const latestConfig = configs.reduce((latest, current) => 
-      new Date(current.updated_at) > new Date(latest.updated_at) ? current : latest
-    );
-    
-    return new Date(latestConfig.updated_at).toLocaleDateString('pt-BR');
-  };
-
   const getUsageCount = (functionId: string) => {
-    const configs = configurations.filter(config => config.edge_function_id === functionId);
-    return configs.reduce((total, config) => 
-      total + (config.performance_metrics?.usage_count || 0), 0
-    );
+    return usageCounts[functionId] || 0;
   };
 
   const getSuccessRate = (functionId: string) => {
