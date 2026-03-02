@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Brain, FileText, Search, MessageSquare, Video, Zap, Edit3, Loader2, MessageCircle, PlayCircle, Instagram, Activity, TrendingUp, Users } from 'lucide-react';
+import { Brain, FileText, Search, MessageSquare, Video, Zap, Edit3, Loader2, MessageCircle, PlayCircle, Instagram, Activity, TrendingUp, Users, Coins } from 'lucide-react';
 import { PromptEditModal } from './PromptEditModal';
 import { SystemMonitoringDashboard } from './SystemMonitoringDashboard';
 import { usePromptsConfiguration } from '@/hooks/usePromptsConfiguration';
