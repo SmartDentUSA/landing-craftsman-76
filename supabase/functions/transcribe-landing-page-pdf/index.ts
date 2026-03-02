@@ -306,6 +306,7 @@ ${clippedText}`;
     }
 
     const aiResult = await response.json();
+    await trackFromResponse(aiResult, 'transcribe-landing-page-pdf', 'Transcrição PDF');
     console.log('✅ AI response received');
 
     // Extract tool call result
