@@ -4,6 +4,8 @@
  * Sempre gera com ambas AIs e seleciona automaticamente o melhor resultado
  */
 
+import { trackFromResponse } from './track-ai-usage.ts';
+
 interface ContentEvaluation {
   score: number;
   details: {
