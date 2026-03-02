@@ -1030,6 +1030,9 @@ IMPORTANTE:
 
   const data = await response.json();
   const content = data.choices[0]?.message?.content;
+
+  // Track token usage
+  await trackFromResponse(data, 'strategic-blog-generator', 'Artigo Estratégico');
   
   if (!content) {
     throw new Error('Resposta vazia da Lovable AI');

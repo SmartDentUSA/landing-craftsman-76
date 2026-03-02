@@ -197,6 +197,7 @@ Retorne APENAS o array JSON, sem markdown.`;
     }
 
     const aiData = await aiResponse.json();
+    await trackFromResponse(aiData, 'generate-content-from-interests', action);
     const content = aiData.choices[0].message.content;
 
     // Parse JSON response

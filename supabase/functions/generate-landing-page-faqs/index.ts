@@ -156,6 +156,7 @@ ${clippedText}`;
     }
 
     const aiResult = await response.json();
+    await trackFromResponse(aiResult, 'generate-landing-page-faqs', 'FAQs Landing Page');
     const toolCall = aiResult.choices?.[0]?.message?.tool_calls?.[0];
     if (!toolCall?.function?.arguments) {
       throw new Error('AI não retornou dados estruturados');

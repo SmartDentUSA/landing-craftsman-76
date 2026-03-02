@@ -222,6 +222,7 @@ serve(async (req) => {
     }
 
     const aiData = await aiResponse.json();
+    await trackFromResponse(aiData, 'generate-spin-hero-banner', 'Imagem Hero');
     const generationTime = Date.now() - startTime;
 
     const imageBase64 = aiData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
