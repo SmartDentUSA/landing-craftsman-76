@@ -1,72 +1,49 @@
 
 
-# Auditoria Completa: Código Implementado vs. Produção
+# Botões individuais "Gerar por IA" para slides do Carrossel Visual
 
-## Resumo Executivo
+## Contexto
 
-Foram encontrados **3 categorias de problemas** totalizando **9 edge functions sem deploy** e **1 sistema de tracking completamente inoperante**.
+O Carrossel Visual tem 6 slides. O Slide 1 (🎣 Hook) já possui um botão individual "Novo Gancho IA" que chama a edge function `generate-carousel-hook`. Os slides 3 (🔬 Cientificidade), 4 (💫 Experiência) e 5 (🛡️ Segurança) não possuem botões individuais — só podem ser gerados pelo botão geral "🤖 Gerar com IA" que regenera todos os slides de uma vez.
 
----
+## Plano
 
-## 1. EDGE FUNCTIONS SEM DEPLOY (existem no código + são chamadas pelo frontend, mas NÃO estão no `config.toml`)
+### 1. Nova Edge Function: `generate-carousel-slide`
 
-Estas **9 functions** têm código completo no repositório E são invocadas pelo frontend, porém **nunca foram registradas no `config.toml`**, o que significa que nunca foram deployadas e **falham em produção com 404**.
+Criar uma edge function genérica que receba o tipo do slide (`cientificidade`, `experiencia`, `seguranca`) e gere apenas o conteúdo daquele slide específico, com prompts especializados por tipo:
 
-| # | Function | Chamada por (frontend) | Funcionalidade |
-|---|----------|----------------------|----------------|
-| 1 | `consolidate-keywords` | `useKeywordsRepository.ts` | Consolidação de keywords |
-| 2 | `exchange-google-business-code` | `GoogleBusinessOAuthSettings.tsx` | OAuth Google Business |
-| 3 | `exchange-youtube-code` | `YouTubeOAuthSettings.tsx` | OAuth YouTube |
-| 4 | `export-repository-csv` | (provável export UI) | Export CSV repositório |
-| 5 | `export-product-google-ads-csv` | `GoogleAdsProductTab.tsx` | Export CSV Google Ads por produto |
-| 6 | `migrate-external-images` | `ImageMigrationManager.tsx` | Migração de imagens externas |
-| 7 | `optimize-image` | `StrategicCarouselPreview.tsx` | Proxy/otimização de imagens |
-| 8 | `rename-category` | `CategoryManager.tsx` | Renomear categorias/subcategorias |
-| 9 | `save-landing-page` | `useLandingPagesSupabase.ts` | Salvar landing pages (deep merge) |
+- **Cientificidade (Slide 3)**: Gera title, headline, body, bullet1-4 com foco em evidências científicas e dados técnicos
+- **Experiência (Slide 4)**: Gera keyword + benefit com foco em experiência clínica e fluxo de trabalho
+- **Segurança (Slide 5)**: Gera title, badge1-3 com foco em certificações, garantias e confiança
 
-**Impacto:** Todas essas funcionalidades aparecem na UI mas **não funcionam** quando o usuário tenta usá-las.
+Recebe: `productName`, `salesPitch`, `benefits`, `features`, `slideType`
+Retorna: campos específicos do slide solicitado
 
----
+### 2. Frontend — Novos estados e handlers (`InstagramCopyGenerator.tsx`)
 
-## 2. SISTEMA DE TRACKING DE TOKENS IA — 100% INOPERANTE
+- Adicionar 3 estados: `generatingScience`, `generatingExperience`, `generatingSecurity`
+- Criar 3 handlers que chamam `generate-carousel-slide` com o `slideType` correto e atualizam apenas o slide correspondente em `slideTexts`
 
-A tabela `ai_token_usage` tem **ZERO registros**. Todo o sistema de monitoramento de custos IA está morto.
+### 3. Frontend — 3 novos botões no header do Carrossel Visual
 
-**Causa:** As 27+ edge functions que têm `trackFromResponse` no código foram editadas **após o último deploy**. As versões em produção (Supabase) não têm o código de tracking.
+Adicionar ao lado do botão "🎣 Novo Gancho IA" (linha ~1962):
 
-**Functions com tracking no código mas não deployadas (parcial):**
-- `generate-product-blog`, `generate-product-ai-content`, `generate-social-content`
-- `ai-seo-generator`, `generate-ad-copies`, `ai-content-generator`
-- `generate-tiktok-content`, `generate-youtube-script`, `generate-instagram-reels-script`
-- `extract-youtube-captions`, `strategic-blog-generator`
-- `generate-spin-*` (6 functions), `generate-product-faqs`
-- `transcribe-product-document`, `transcribe-landing-page-pdf`
-- `generate-carousel-slide`, `generate-carousel-hook`
-- `parse-testimonials`, `generate-landing-page-faqs`
-- `generate-product-card-from-transcription`, `generate-clinical-brain`
-- `generate-content-from-interests`, `generate-display-banners`
+- **🔬 Cientificidade IA** — gera apenas Slide 3
+- **💫 Experiência IA** — gera apenas Slide 4
+- **🛡️ Segurança IA** — gera apenas Slide 5
 
----
+Cada botão com loading state individual, mesmo padrão visual do botão Hook existente.
 
-## 3. CONFIGURAÇÃO `generate-instagram-copy` ÓRFÃ
+### Detalhes técnicos
 
-A tabela `prompts_configuration` tem 3 registros para `generate-instagram-copy` — mas essa function **não existe** nem no código nem no config.toml. São dados órfãos.
+**Edge function `generate-carousel-slide/index.ts`:**
+- Usa Lovable AI Gateway (`google/gemini-2.5-flash`)
+- Prompt especializado por slideType com regras de formatação
+- Temperature 1.0 para variedade
+- Retorna JSON estruturado via tool calling para garantir campos corretos
 
----
-
-## Plano de Correção
-
-### Etapa 1 — Adicionar as 9 functions ao `config.toml`
-Adicionar entradas para: `consolidate-keywords`, `exchange-google-business-code`, `exchange-youtube-code`, `export-repository-csv`, `export-product-google-ads-csv`, `migrate-external-images`, `optimize-image`, `rename-category`, `save-landing-page`.
-
-### Etapa 2 — Deploy em massa de TODAS as edge functions
-Deployar todas as 80+ functions para que o tracking de tokens, as OAuth functions, e todas as funcionalidades que o frontend já invoca passem a funcionar.
-
-### Etapa 3 — Limpar dados órfãos
-Remover os 3 registros de `generate-instagram-copy` da tabela `prompts_configuration`.
-
-### Resumo de arquivos
-- **1 arquivo editado:** `supabase/config.toml` (9 novas entradas)
-- **Deploy:** ~80 edge functions
-- **1 query SQL:** DELETE dos registros órfãos
+**Mapeamento de retorno:**
+- `cientificidade` → `{ title, headline, body, bullet1, bullet2, bullet3, bullet4 }`
+- `experiencia` → `{ keyword, benefit }`
+- `seguranca` → `{ title, badge1, badge2, badge3 }`
 
