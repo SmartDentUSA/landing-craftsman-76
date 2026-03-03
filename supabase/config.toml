@@ -230,3 +230,30 @@ verify_jwt = false
 
 [functions.export-spin-apostila]
 verify_jwt = false
+
+[functions.consolidate-keywords]
+verify_jwt = true
+
+[functions.exchange-google-business-code]
+verify_jwt = false
+
+[functions.exchange-youtube-code]
+verify_jwt = false
+
+[functions.export-repository-csv]
+verify_jwt = true
+
+[functions.export-product-google-ads-csv]
+verify_jwt = true
+
+[functions.migrate-external-images]
+verify_jwt = true
+
+[functions.optimize-image]
+verify_jwt = false
+
+[functions.rename-category]
+verify_jwt = true
+
+[functions.save-landing-page]
+verify_jwt = true
