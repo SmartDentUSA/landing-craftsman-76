@@ -252,12 +252,29 @@ async function registerEvent(
 
 // ─── EMBEDDING ───
 
-// Use Supabase built-in gte-small model (384 dimensions)
-const embeddingModel = new Supabase.ai.Session('gte-small');
+const GOOGLE_AI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
 
 async function generateEmbedding(text: string): Promise<number[]> {
-  const output = await embeddingModel.run(text, { mean_pool: true, normalize: true });
-  return Array.from(output);
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=${GOOGLE_AI_API_KEY}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'models/gemini-embedding-001',
+        content: { parts: [{ text }] },
+        outputDimensionality: 768,
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Embedding API error: ${error}`);
+  }
+
+  const data = await response.json();
+  return data.embedding.values;
 }
 
 // ─── RAG SEARCH ───

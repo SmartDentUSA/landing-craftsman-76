@@ -9,13 +9,39 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+const GOOGLE_AI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
 
-// Use Supabase built-in gte-small model (384 dimensions)
-const embeddingModel = new Supabase.ai.Session('gte-small');
+async function generateEmbedding(text: string, retries = 3): Promise<number[]> {
+  for (let attempt = 0; attempt < retries; attempt++) {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=${GOOGLE_AI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'models/gemini-embedding-001',
+          content: { parts: [{ text }] },
+          outputDimensionality: 768,
+        }),
+      }
+    );
 
-async function generateEmbedding(text: string): Promise<number[]> {
-  const output = await embeddingModel.run(text, { mean_pool: true, normalize: true });
-  return Array.from(output);
+    if (response.status === 429) {
+      const waitTime = Math.pow(2, attempt + 1) * 5000; // 10s, 20s, 40s
+      console.log(`⏳ Rate limited, waiting ${waitTime/1000}s (attempt ${attempt + 1}/${retries})`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+      continue;
+    }
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Embedding API error: ${error}`);
+    }
+
+    const data = await response.json();
+    return data.embedding.values;
+  }
+  throw new Error('Exceeded max retries due to rate limiting');
 }
 
 // Dividir produto em chunks lógicos
