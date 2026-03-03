@@ -21,7 +21,7 @@ interface ProductChunk {
 
 // Gerar embedding usando Lovable AI (Gemini)
 async function generateEmbedding(text: string): Promise<number[]> {
-  const response = await fetch('https://api.lovable.dev/v1/embeddings', {
+  const response = await fetch('https://ai.gateway.lovable.dev/v1/embeddings', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${LOVABLE_API_KEY}`,
