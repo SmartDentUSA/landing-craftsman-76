@@ -257,3 +257,6 @@ verify_jwt = true
 
 [functions.save-landing-page]
 verify_jwt = true
+
+[functions.evaluate-interaction]
+verify_jwt = false
