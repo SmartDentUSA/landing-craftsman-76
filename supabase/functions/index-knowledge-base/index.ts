@@ -7,39 +7,15 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-interface ProductChunk {
-  product_id: string;
-  product_name: string;
-  chunk_type: string;
-  content: string;
-  metadata: Record<string, any>;
-}
+// Use Supabase built-in gte-small model (384 dimensions)
+const embeddingModel = new Supabase.ai.Session('gte-small');
 
-// Gerar embedding usando Lovable AI (Gemini)
 async function generateEmbedding(text: string): Promise<number[]> {
-  const response = await fetch('https://ai.gateway.lovable.dev/v1/embeddings', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'text-embedding-004',
-      input: text,
-    }),
-  });
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Embedding API error: ${error}`);
-  }
-
-  const data = await response.json();
-  return data.data[0].embedding;
+  const output = await embeddingModel.run(text, { mean_pool: true, normalize: true });
+  return Array.from(output);
 }
 
 // Dividir produto em chunks lógicos
