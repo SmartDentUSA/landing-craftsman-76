@@ -7,39 +7,15 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-interface ProductChunk {
-  product_id: string;
-  product_name: string;
-  chunk_type: string;
-  content: string;
-  metadata: Record<string, any>;
-}
+// Use Supabase built-in gte-small model (384 dimensions)
+const embeddingModel = new Supabase.ai.Session('gte-small');
 
-// Gerar embedding usando Lovable AI (Gemini)
 async function generateEmbedding(text: string): Promise<number[]> {
-  const response = await fetch('https://api.lovable.dev/v1/embeddings', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'text-embedding-004',
-      input: text,
-    }),
-  });
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Embedding API error: ${error}`);
-  }
-
-  const data = await response.json();
-  return data.data[0].embedding;
+  const output = await embeddingModel.run(text, { mean_pool: true, normalize: true });
+  return Array.from(output);
 }
 
 // Dividir produto em chunks lógicos
@@ -166,70 +142,60 @@ serve(async (req) => {
   try {
     console.log('🚀 Starting knowledge base indexing...');
 
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY not configured');
-    }
-
     // Criar cliente Supabase com service role
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
 
-    // Parse opções
-    const { clear_existing = true, product_ids = null } = await req.json().catch(() => ({}));
+    // Parse opções - supports batch_size and offset for incremental processing
+    const { clear_existing = false, product_ids = null, batch_size = 5, offset = 0 } = await req.json().catch(() => ({}));
 
-    // 1. Buscar dados do knowledge-base otimizado para RAG
-    console.log('📚 Fetching RAG-optimized knowledge base...');
-    const kbResponse = await fetch(`${SUPABASE_URL}/functions/v1/knowledge-base`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        format: 'rag',
-        include_products: true,
-        include_company: false,
-        include_categories: false,
-        include_links: false,
-        approved_only: true
-      })
-    });
+    // 1. Fetch products directly from DB (more efficient, avoids knowledge-base function overhead)
+    let query = supabase
+      .from('products_repository')
+      .select('*')
+      .eq('approved', true)
+      .order('created_at', { ascending: true })
+      .range(offset, offset + batch_size - 1);
 
-    if (!kbResponse.ok) {
-      throw new Error(`Failed to fetch knowledge base: ${await kbResponse.text()}`);
+    if (product_ids && product_ids.length > 0) {
+      query = query.in('id', product_ids);
     }
 
-    const kbData = await kbResponse.json();
-    const products = kbData.data?.products || [];
-    
-    console.log(`📦 Found ${products.length} products to index`);
+    const { data: products, error: fetchError } = await query;
 
-    // 2. Limpar embeddings existentes se solicitado
-    if (clear_existing) {
-      console.log('🗑️ Clearing existing embeddings...');
-      if (product_ids && product_ids.length > 0) {
-        await supabase
-          .from('knowledge_vectors')
-          .delete()
-          .in('product_id', product_ids);
-      } else {
-        await supabase
-          .from('knowledge_vectors')
-          .delete()
-          .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
-      }
+    if (fetchError) {
+      throw new Error(`Failed to fetch products: ${fetchError.message}`);
     }
 
-    // 3. Processar cada produto
+    console.log(`📦 Batch: ${products?.length || 0} products (offset: ${offset}, batch_size: ${batch_size})`);
+
+    if (!products || products.length === 0) {
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: 'No more products to index',
+          stats: { products_processed: 0, total_chunks: 0, success_count: 0, error_count: 0, done: true }
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // 2. Clear existing embeddings for these specific products
+    if (clear_existing || product_ids) {
+      const idsToDelete = products.map((p: any) => p.id);
+      console.log(`🗑️ Clearing embeddings for ${idsToDelete.length} products...`);
+      await supabase
+        .from('knowledge_vectors')
+        .delete()
+        .in('product_id', idsToDelete);
+    }
+
+    // 3. Process each product
     let totalChunks = 0;
     let successCount = 0;
     let errorCount = 0;
     const errors: string[] = [];
 
     for (const product of products) {
-      // Filtrar por product_ids se especificado
-      if (product_ids && !product_ids.includes(product.id)) {
-        continue;
-      }
-
       try {
         const chunks = chunkProduct(product);
         totalChunks += chunks.length;
@@ -238,10 +204,8 @@ serve(async (req) => {
 
         for (const chunk of chunks) {
           try {
-            // Gerar embedding
             const embedding = await generateEmbedding(chunk.content);
 
-            // Inserir no banco
             const { error: insertError } = await supabase
               .from('knowledge_vectors')
               .insert({
@@ -253,19 +217,13 @@ serve(async (req) => {
                 metadata: chunk.metadata
               });
 
-            if (insertError) {
-              throw insertError;
-            }
-
+            if (insertError) throw insertError;
             successCount++;
           } catch (chunkError) {
             errorCount++;
             errors.push(`Chunk ${chunk.chunk_type} for ${chunk.product_name}: ${chunkError.message}`);
             console.error(`❌ Error processing chunk:`, chunkError);
           }
-
-          // Rate limiting - pequeno delay entre embeddings
-          await new Promise(resolve => setTimeout(resolve, 100));
         }
       } catch (productError) {
         errorCount++;
@@ -274,18 +232,23 @@ serve(async (req) => {
       }
     }
 
-    console.log(`✅ Indexing complete: ${successCount}/${totalChunks} chunks indexed`);
+    const nextOffset = offset + batch_size;
+    const hasMore = products.length === batch_size;
+
+    console.log(`✅ Batch complete: ${successCount}/${totalChunks} chunks indexed. Has more: ${hasMore}`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: 'Knowledge base indexed successfully',
+        message: `Batch indexed: ${successCount} chunks from ${products.length} products`,
         stats: {
           products_processed: products.length,
           total_chunks: totalChunks,
           success_count: successCount,
           error_count: errorCount,
-          errors: errors.slice(0, 10) // Limitar erros no response
+          errors: errors.slice(0, 10),
+          next_offset: hasMore ? nextOffset : null,
+          done: !hasMore
         }
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
