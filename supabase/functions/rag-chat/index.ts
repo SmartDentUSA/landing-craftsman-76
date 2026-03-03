@@ -252,26 +252,12 @@ async function registerEvent(
 
 // ─── EMBEDDING ───
 
+// Use Supabase built-in gte-small model (384 dimensions)
+const embeddingModel = new Supabase.ai.Session('gte-small');
+
 async function generateEmbedding(text: string): Promise<number[]> {
-  const response = await fetch(`${AI_GATEWAY}/embeddings`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'text-embedding-004',
-      input: text,
-    }),
-  });
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Embedding API error: ${error}`);
-  }
-
-  const data = await response.json();
-  return data.data[0].embedding;
+  const output = await embeddingModel.run(text, { mean_pool: true, normalize: true });
+  return Array.from(output);
 }
 
 // ─── RAG SEARCH ───
