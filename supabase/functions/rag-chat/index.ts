@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { trackAIUsage, extractUsageFromResponse } from '../_shared/track-ai-usage.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -10,6 +11,9 @@ const corsHeaders = {
 const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+const AI_GATEWAY = 'https://ai.gateway.lovable.dev/v1';
+const LLM_MODEL = 'google/gemini-2.5-flash';
+const SESSION_TIMEOUT_HOURS = 2;
 
 interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
@@ -26,9 +30,230 @@ interface RetrievedChunk {
   similarity: number;
 }
 
-// Gerar embedding usando Lovable AI (Gemini)
+// ─── LEAD MANAGEMENT ───
+
+async function findOrCreateLead(
+  supabase: any,
+  identifier: { phone?: string; email?: string; name?: string }
+): Promise<any> {
+  const { phone, email } = identifier;
+  if (!phone && !email) return null;
+
+  // Try to find existing lead
+  let query = supabase.from('lia_leads').select('*');
+  if (phone) query = query.eq('phone', phone);
+  else if (email) query = query.eq('email', email);
+
+  const { data: existing } = await query.limit(1).single();
+  if (existing) {
+    // Update last_seen
+    await supabase.from('lia_leads').update({ last_seen_at: new Date().toISOString() }).eq('id', existing.id);
+    return existing;
+  }
+
+  // Create new lead
+  const { data: newLead, error } = await supabase.from('lia_leads').insert({
+    phone: phone || null,
+    email: email || null,
+    name: identifier.name || null,
+  }).select().single();
+
+  if (error) {
+    console.error('Error creating lead:', error);
+    return null;
+  }
+
+  return newLead;
+}
+
+// ─── SESSION MANAGEMENT ───
+
+async function findOrCreateConversation(
+  supabase: any,
+  leadId: string,
+  channel: string = 'web'
+): Promise<any> {
+  const cutoff = new Date(Date.now() - SESSION_TIMEOUT_HOURS * 60 * 60 * 1000).toISOString();
+
+  // Find active conversation (updated within timeout window)
+  const { data: active } = await supabase
+    .from('lia_conversations')
+    .select('*')
+    .eq('lead_id', leadId)
+    .is('ended_at', null)
+    .gte('updated_at', cutoff)
+    .order('started_at', { ascending: false })
+    .limit(1)
+    .single();
+
+  if (active) return active;
+
+  // Close any stale open conversations
+  await supabase
+    .from('lia_conversations')
+    .update({ ended_at: new Date().toISOString(), outcome: 'timeout' })
+    .eq('lead_id', leadId)
+    .is('ended_at', null)
+    .lt('updated_at', cutoff);
+
+  // Create new conversation
+  const { data: newConv, error } = await supabase
+    .from('lia_conversations')
+    .insert({ lead_id: leadId, channel })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error creating conversation:', error);
+    return null;
+  }
+
+  // Increment total_conversations on lead
+  await supabase.rpc('', {}).catch(() => {}); // fallback: manual increment
+  await supabase
+    .from('lia_leads')
+    .update({ total_conversations: (await supabase.from('lia_leads').select('total_conversations').eq('id', leadId).single()).data?.total_conversations + 1 || 1 })
+    .eq('id', leadId);
+
+  return newConv;
+}
+
+// ─── LONGITUDINAL MEMORY ───
+
+async function loadLongitudinalMemory(
+  supabase: any,
+  leadId: string
+): Promise<string> {
+  // Load last 5 conversations with summaries
+  const { data: pastConversations } = await supabase
+    .from('lia_conversations')
+    .select('started_at, ended_at, current_state, outcome, extracted_entities, cognitive_analysis, message_count')
+    .eq('lead_id', leadId)
+    .not('ended_at', 'is', null)
+    .order('started_at', { ascending: false })
+    .limit(5);
+
+  // Load last 10 events
+  const { data: events } = await supabase
+    .from('lia_lead_events')
+    .select('event_type, event_data, source, created_at')
+    .eq('lead_id', leadId)
+    .order('created_at', { ascending: false })
+    .limit(10);
+
+  // Load lead profile
+  const { data: lead } = await supabase
+    .from('lia_leads')
+    .select('name, company_name, role, total_conversations, lead_score, tags, profile_summary, first_seen_at')
+    .eq('id', leadId)
+    .single();
+
+  if (!lead) return '';
+
+  let memory = '## MEMÓRIA LONGITUDINAL DO LEAD:\n\n';
+
+  // Profile
+  memory += `**Perfil:** ${lead.name || 'Não identificado'}`;
+  if (lead.company_name) memory += ` | ${lead.company_name}`;
+  if (lead.role) memory += ` | ${lead.role}`;
+  memory += `\n**Primeira interação:** ${new Date(lead.first_seen_at).toLocaleDateString('pt-BR')}`;
+  memory += `\n**Total de conversas:** ${lead.total_conversations}`;
+  memory += `\n**Lead Score:** ${lead.lead_score}/100`;
+  if (lead.profile_summary) memory += `\n**Resumo:** ${lead.profile_summary}`;
+  if (lead.tags && lead.tags.length > 0) memory += `\n**Tags:** ${JSON.stringify(lead.tags)}`;
+  memory += '\n\n';
+
+  // Past conversations
+  if (pastConversations && pastConversations.length > 0) {
+    memory += '### Conversas Anteriores:\n';
+    for (const conv of pastConversations) {
+      const date = new Date(conv.started_at).toLocaleDateString('pt-BR');
+      memory += `- **${date}** — Estado final: ${conv.current_state} | Resultado: ${conv.outcome || 'não definido'}`;
+      if (conv.extracted_entities && Object.keys(conv.extracted_entities).length > 0) {
+        memory += ` | Entidades: ${JSON.stringify(conv.extracted_entities)}`;
+      }
+      if (conv.cognitive_analysis?.summary) {
+        memory += `\n  Resumo: ${conv.cognitive_analysis.summary}`;
+      }
+      memory += '\n';
+    }
+    memory += '\n';
+  }
+
+  // Events timeline
+  if (events && events.length > 0) {
+    memory += '### Timeline de Eventos:\n';
+    for (const evt of events) {
+      const date = new Date(evt.created_at).toLocaleDateString('pt-BR');
+      memory += `- **${date}** [${evt.event_type}] ${JSON.stringify(evt.event_data)} (fonte: ${evt.source})\n`;
+    }
+    memory += '\n';
+  }
+
+  return memory;
+}
+
+// ─── PERSISTENCE ───
+
+async function persistMessage(
+  supabase: any,
+  conversationId: string,
+  role: string,
+  content: string,
+  chunksUsed?: any[]
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('lia_messages')
+    .insert({
+      conversation_id: conversationId,
+      role,
+      content,
+      chunks_used: chunksUsed || null,
+    })
+    .select('id')
+    .single();
+
+  if (error) {
+    console.error('Error persisting message:', error);
+    return null;
+  }
+
+  // Increment message count
+  await supabase.rpc('', {}).catch(() => {});
+  
+  return data?.id || null;
+}
+
+async function updateConversationState(
+  supabase: any,
+  conversationId: string,
+  updates: Record<string, any>
+) {
+  await supabase
+    .from('lia_conversations')
+    .update(updates)
+    .eq('id', conversationId);
+}
+
+async function registerEvent(
+  supabase: any,
+  leadId: string,
+  eventType: string,
+  eventData: Record<string, any>,
+  source: string = 'lia_chat'
+) {
+  await supabase.from('lia_lead_events').insert({
+    lead_id: leadId,
+    event_type: eventType,
+    event_data: eventData,
+    source,
+  });
+}
+
+// ─── EMBEDDING ───
+
 async function generateEmbedding(text: string): Promise<number[]> {
-  const response = await fetch('https://api.lovable.dev/v1/embeddings', {
+  const response = await fetch(`${AI_GATEWAY}/embeddings`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${LOVABLE_API_KEY}`,
@@ -49,30 +274,21 @@ async function generateEmbedding(text: string): Promise<number[]> {
   return data.data[0].embedding;
 }
 
-// Buscar chunks similares no banco
+// ─── RAG SEARCH ───
+
 async function searchSimilarChunks(
-  supabase: any, 
-  queryEmbedding: number[], 
-  options: {
-    matchThreshold?: number;
-    matchCount?: number;
-    filterChunkType?: string;
-    filterProductId?: string;
-  } = {}
+  supabase: any,
+  queryEmbedding: number[],
+  options: { matchThreshold?: number; matchCount?: number } = {}
 ): Promise<RetrievedChunk[]> {
-  const { 
-    matchThreshold = 0.6, 
-    matchCount = 8,
-    filterChunkType = null,
-    filterProductId = null
-  } = options;
+  const { matchThreshold = 0.6, matchCount = 8 } = options;
 
   const { data, error } = await supabase.rpc('match_knowledge_chunks', {
     query_embedding: queryEmbedding,
     match_threshold: matchThreshold,
     match_count: matchCount,
-    filter_chunk_type: filterChunkType,
-    filter_product_id: filterProductId
+    filter_chunk_type: null,
+    filter_product_id: null,
   });
 
   if (error) {
@@ -83,49 +299,55 @@ async function searchSimilarChunks(
   return data || [];
 }
 
-// Construir prompt do sistema com regras anti-alucinação
-function buildSystemPrompt(chunks: RetrievedChunk[]): string {
-  // Extrair regras anti-alucinação dos chunks recuperados
+// ─── PROMPT BUILDING ───
+
+function buildSystemPrompt(chunks: RetrievedChunk[], longitudinalMemory: string): string {
   const antiHallucinationChunks = chunks.filter(c => c.chunk_type === 'anti_hallucination');
   const safetyRules = antiHallucinationChunks.map(c => c.content).join('\n\n');
 
-  return `Você é um especialista em vendas e suporte técnico da Smart Dent, uma empresa líder em soluções odontológicas digitais.
+  return `Você é a Dra. L.I.A., especialista em vendas e suporte técnico da Smart Dent, uma empresa líder em soluções odontológicas digitais.
 
 ## DIRETRIZES FUNDAMENTAIS:
 
 1. **RESPONDA APENAS COM BASE NO CONTEXTO FORNECIDO**
-   - Use EXCLUSIVAMENTE as informações dos chunks recuperados
+   - Use EXCLUSIVAMENTE as informações dos chunks recuperados e da memória longitudinal
    - Se a informação não estiver no contexto, diga "Não tenho essa informação específica, mas posso ajudar de outra forma"
    - NUNCA invente especificações, preços ou características
 
 2. **REGRAS DE SEGURANÇA (ANTI-ALUCINAÇÃO)**
 ${safetyRules || '   - Siga rigorosamente as especificações técnicas fornecidas'}
 
-3. **ESTILO DE COMUNICAÇÃO**
-   - Seja profissional, empático e consultivo
+3. **MEMÓRIA LONGITUDINAL — USE ATIVAMENTE**
+   - Você tem acesso ao histórico completo deste lead
+   - Personalize a conversa com base em interações anteriores
+   - Mencione interesses passados, produtos já discutidos, e estágio anterior
+   - Se o lead abandonou antes, ajuste a abordagem para reconquistar
+
+4. **ESTILO DE COMUNICAÇÃO**
+   - Seja profissional, empática e consultiva
    - Use linguagem técnica quando apropriado, mas explique termos complexos
    - Foque em resolver o problema/dúvida do cliente
    - Sugira produtos complementares quando relevante (cross-sell)
 
-4. **FORMATO DAS RESPOSTAS**
-   - Seja conciso mas completo
+5. **FORMATO DAS RESPOSTAS**
+   - Seja concisa mas completa
    - Use bullet points para listas de especificações
    - Destaque preços e disponibilidade quando relevantes
    - Inclua CTAs suaves quando apropriado
 
-5. **QUANDO NÃO SOUBER**
+6. **QUANDO NÃO SOUBER**
    - Admita limitações honestamente
    - Sugira entrar em contato com a equipe comercial
-   - Ofereça alternativas dentro do seu conhecimento`;
+   - Ofereça alternativas dentro do seu conhecimento
+
+${longitudinalMemory}`;
 }
 
-// Construir contexto a partir dos chunks recuperados
 function buildContext(chunks: RetrievedChunk[]): string {
   if (chunks.length === 0) {
     return 'Nenhuma informação relevante encontrada na base de conhecimento.';
   }
 
-  // Agrupar por produto para melhor organização
   const byProduct = chunks.reduce((acc, chunk) => {
     const key = chunk.product_name || 'Geral';
     if (!acc[key]) acc[key] = [];
@@ -146,18 +368,43 @@ function buildContext(chunks: RetrievedChunk[]): string {
   return context;
 }
 
+// ─── FIRE-AND-FORGET: EVALUATE INTERACTION ───
+
+async function triggerEvaluation(messageId: string) {
+  try {
+    await fetch(`${SUPABASE_URL}/functions/v1/evaluate-interaction`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ message_id: messageId }),
+    });
+  } catch (err) {
+    console.warn('Failed to trigger evaluation:', err);
+  }
+}
+
+// ─── MAIN HANDLER ───
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { 
-      query, 
-      messages = [], 
+    const {
+      query,
+      messages = [],
       stream = true,
       match_threshold = 0.6,
-      match_count = 8
+      match_count = 8,
+      // Longitudinal memory fields
+      phone,
+      email,
+      lead_name,
+      channel = 'web',
+      conversation_id: requestConversationId,
     } = await req.json();
 
     if (!query && messages.length === 0) {
@@ -168,154 +415,262 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY not configured');
     }
 
-    console.log('🔍 RAG Chat query:', query || messages[messages.length - 1]?.content);
-
-    // Criar cliente Supabase
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
-
-    // 1. Gerar embedding da pergunta
     const userQuery = query || messages[messages.length - 1]?.content || '';
+
+    console.log('🔍 RAG Chat query:', userQuery);
+
+    // ─── 1. LEAD IDENTIFICATION ───
+    let lead = null;
+    let conversation = null;
+    let longitudinalMemory = '';
+
+    if (phone || email) {
+      lead = await findOrCreateLead(supabase, { phone, email, name: lead_name });
+      console.log(`👤 Lead: ${lead?.id || 'anonymous'} (${lead?.name || phone || email})`);
+
+      if (lead) {
+        // ─── 2. SESSION MANAGEMENT ───
+        conversation = requestConversationId
+          ? (await supabase.from('lia_conversations').select('*').eq('id', requestConversationId).single()).data
+          : await findOrCreateConversation(supabase, lead.id, channel);
+
+        console.log(`💬 Conversation: ${conversation?.id}`);
+
+        // ─── 3. LOAD LONGITUDINAL MEMORY ───
+        longitudinalMemory = await loadLongitudinalMemory(supabase, lead.id);
+        console.log(`🧠 Memory loaded: ${longitudinalMemory.length} chars`);
+
+        // ─── 4. PERSIST USER MESSAGE ───
+        if (conversation) {
+          await persistMessage(supabase, conversation.id, 'user', userQuery);
+        }
+      }
+    }
+
+    // ─── 5. RAG: EMBEDDING + SEARCH ───
     console.log('📊 Generating query embedding...');
     const queryEmbedding = await generateEmbedding(userQuery);
 
-    // 2. Buscar chunks similares
     console.log('🔎 Searching similar chunks...');
     const retrievedChunks = await searchSimilarChunks(supabase, queryEmbedding, {
       matchThreshold: match_threshold,
-      matchCount: match_count
+      matchCount: match_count,
     });
+    console.log(`📚 Retrieved ${retrievedChunks.length} chunks`);
 
-    console.log(`📚 Retrieved ${retrievedChunks.length} relevant chunks`);
-
-    // 3. Construir prompts
-    const systemPrompt = buildSystemPrompt(retrievedChunks);
+    // ─── 6. BUILD PROMPTS ───
+    const systemPrompt = buildSystemPrompt(retrievedChunks, longitudinalMemory);
     const context = buildContext(retrievedChunks);
 
-    // 4. Montar mensagens para o LLM
     const llmMessages: ChatMessage[] = [
       { role: 'system', content: systemPrompt },
-      ...messages.slice(-10), // Últimas 10 mensagens do histórico
-      { 
-        role: 'user', 
-        content: `${context}\n\n---\n\n**PERGUNTA DO CLIENTE:**\n${userQuery}` 
-      }
+      ...messages.slice(-10),
+      { role: 'user', content: `${context}\n\n---\n\n**PERGUNTA DO CLIENTE:**\n${userQuery}` },
     ];
 
-    // 5. Chamar Lovable AI (Gemini) 
+    // ─── 7. CALL LLM ───
     console.log('🤖 Calling LLM...');
-    
+
     if (stream) {
-      // Streaming response
-      const response = await fetch('https://api.lovable.dev/v1/chat/completions', {
+      const response = await fetch(`${AI_GATEWAY}/chat/completions`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${LOVABLE_API_KEY}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gemini-2.0-flash',
+          model: LLM_MODEL,
           messages: llmMessages,
           stream: true,
           max_tokens: 2048,
-          temperature: 0.7
+          temperature: 0.7,
         }),
       });
 
       if (!response.ok) {
         const error = await response.text();
-        throw new Error(`LLM API error: ${error}`);
+        throw new Error(`LLM API error (${response.status}): ${error}`);
       }
 
-      // Retornar stream com metadados
+      // For streaming: collect tokens, persist after stream ends
       const encoder = new TextEncoder();
-      const decoder = new TextDecoder();
-      
+      let fullResponse = '';
+
       const transformStream = new TransformStream({
         start(controller) {
-          // Enviar metadados primeiro
+          // Send metadata first
           const metadata = JSON.stringify({
             type: 'metadata',
+            conversation_id: conversation?.id || null,
+            lead_id: lead?.id || null,
             retrieved_chunks: retrievedChunks.map(c => ({
               product_name: c.product_name,
               chunk_type: c.chunk_type,
-              similarity: c.similarity
-            }))
+              similarity: c.similarity,
+            })),
           });
           controller.enqueue(encoder.encode(`data: ${metadata}\n\n`));
         },
-        async transform(chunk, controller) {
+        transform(chunk, controller) {
+          // Pass through SSE chunks and collect full response
+          const text = new TextDecoder().decode(chunk);
+          const lines = text.split('\n');
+          for (const line of lines) {
+            if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+              try {
+                const parsed = JSON.parse(line.slice(6));
+                const content = parsed.choices?.[0]?.delta?.content;
+                if (content) fullResponse += content;
+              } catch {}
+            }
+          }
           controller.enqueue(chunk);
-        }
+        },
+        async flush() {
+          // Persist assistant response after stream completes
+          if (conversation && fullResponse) {
+            const chunksUsedMeta = retrievedChunks.map(c => ({
+              id: c.id,
+              product_name: c.product_name,
+              chunk_type: c.chunk_type,
+              similarity: c.similarity,
+            }));
+            const msgId = await persistMessage(supabase, conversation.id, 'assistant', fullResponse, chunksUsedMeta);
+
+            // Update conversation state
+            await updateConversationState(supabase, conversation.id, {
+              message_count: (conversation.message_count || 0) + 2,
+            });
+
+            // Fire-and-forget: trigger evaluation
+            if (msgId) {
+              triggerEvaluation(msgId);
+            }
+
+            // Detect product interest and register event
+            const mentionedProducts = retrievedChunks
+              .filter(c => c.product_name && c.similarity > 0.75)
+              .map(c => c.product_name);
+            if (mentionedProducts.length > 0 && lead) {
+              registerEvent(supabase, lead.id, 'interest_shown', {
+                products: [...new Set(mentionedProducts)],
+                query: userQuery,
+              });
+            }
+          }
+
+          // Track AI usage
+          trackAIUsage({
+            edgeFunctionId: 'rag-chat',
+            actionName: 'chat_completion_stream',
+            model: LLM_MODEL,
+            productName: retrievedChunks[0]?.product_name,
+          }).catch(() => {});
+        },
       });
 
-      return new Response(
-        response.body?.pipeThrough(transformStream),
-        { 
-          headers: { 
-            ...corsHeaders, 
-            'Content-Type': 'text/event-stream',
-            'Cache-Control': 'no-cache',
-            'Connection': 'keep-alive'
-          } 
-        }
-      );
+      return new Response(response.body?.pipeThrough(transformStream), {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+        },
+      });
     } else {
       // Non-streaming response
-      const response = await fetch('https://api.lovable.dev/v1/chat/completions', {
+      const response = await fetch(`${AI_GATEWAY}/chat/completions`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${LOVABLE_API_KEY}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gemini-2.0-flash',
+          model: LLM_MODEL,
           messages: llmMessages,
           stream: false,
           max_tokens: 2048,
-          temperature: 0.7
+          temperature: 0.7,
         }),
       });
 
       if (!response.ok) {
         const error = await response.text();
-        throw new Error(`LLM API error: ${error}`);
+        throw new Error(`LLM API error (${response.status}): ${error}`);
       }
 
       const llmData = await response.json();
       const assistantMessage = llmData.choices[0]?.message?.content || 'Desculpe, não consegui gerar uma resposta.';
 
+      // Track usage
+      const usage = extractUsageFromResponse(llmData);
+      trackAIUsage({
+        edgeFunctionId: 'rag-chat',
+        actionName: 'chat_completion',
+        model: usage.model || LLM_MODEL,
+        promptTokens: usage.promptTokens,
+        completionTokens: usage.completionTokens,
+        totalTokens: usage.totalTokens,
+        productName: retrievedChunks[0]?.product_name,
+      }).catch(() => {});
+
+      // Persist messages
+      if (conversation) {
+        const chunksUsedMeta = retrievedChunks.map(c => ({
+          id: c.id,
+          product_name: c.product_name,
+          chunk_type: c.chunk_type,
+          similarity: c.similarity,
+        }));
+        const msgId = await persistMessage(supabase, conversation.id, 'assistant', assistantMessage, chunksUsedMeta);
+
+        await updateConversationState(supabase, conversation.id, {
+          message_count: (conversation.message_count || 0) + 2,
+        });
+
+        if (msgId) triggerEvaluation(msgId);
+
+        // Detect interest
+        const mentionedProducts = retrievedChunks
+          .filter(c => c.product_name && c.similarity > 0.75)
+          .map(c => c.product_name);
+        if (mentionedProducts.length > 0 && lead) {
+          registerEvent(supabase, lead.id, 'interest_shown', {
+            products: [...new Set(mentionedProducts)],
+            query: userQuery,
+          });
+        }
+      }
+
       return new Response(
         JSON.stringify({
           success: true,
           response: assistantMessage,
+          conversation_id: conversation?.id || null,
+          lead_id: lead?.id || null,
           sources: retrievedChunks.map(c => ({
             product_id: c.product_id,
             product_name: c.product_name,
             chunk_type: c.chunk_type,
             similarity: c.similarity,
-            excerpt: c.content.substring(0, 200) + '...'
+            excerpt: c.content.substring(0, 200) + '...',
           })),
           metadata: {
             chunks_retrieved: retrievedChunks.length,
-            model: 'gemini-2.0-flash',
-            threshold: match_threshold
-          }
+            model: LLM_MODEL,
+            threshold: match_threshold,
+            has_memory: longitudinalMemory.length > 0,
+          },
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
   } catch (error) {
     console.error('❌ RAG Chat error:', error);
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error.message 
-      }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
+      JSON.stringify({ success: false, error: error.message }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
