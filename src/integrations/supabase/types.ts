@@ -1221,6 +1221,189 @@ export type Database = {
         }
         Relationships: []
       }
+      lia_conversations: {
+        Row: {
+          channel: string | null
+          cognitive_analysis: Json | null
+          created_at: string
+          current_state: string
+          ended_at: string | null
+          extracted_entities: Json | null
+          id: string
+          lead_id: string
+          message_count: number
+          outcome: string | null
+          started_at: string
+          updated_at: string
+        }
+        Insert: {
+          channel?: string | null
+          cognitive_analysis?: Json | null
+          created_at?: string
+          current_state?: string
+          ended_at?: string | null
+          extracted_entities?: Json | null
+          id?: string
+          lead_id: string
+          message_count?: number
+          outcome?: string | null
+          started_at?: string
+          updated_at?: string
+        }
+        Update: {
+          channel?: string | null
+          cognitive_analysis?: Json | null
+          created_at?: string
+          current_state?: string
+          ended_at?: string | null
+          extracted_entities?: Json | null
+          id?: string
+          lead_id?: string
+          message_count?: number
+          outcome?: string | null
+          started_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lia_conversations_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "lia_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lia_lead_events: {
+        Row: {
+          created_at: string
+          event_data: Json | null
+          event_type: string
+          id: string
+          lead_id: string
+          source: string
+        }
+        Insert: {
+          created_at?: string
+          event_data?: Json | null
+          event_type: string
+          id?: string
+          lead_id: string
+          source?: string
+        }
+        Update: {
+          created_at?: string
+          event_data?: Json | null
+          event_type?: string
+          id?: string
+          lead_id?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lia_lead_events_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "lia_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lia_leads: {
+        Row: {
+          company_name: string | null
+          created_at: string
+          email: string | null
+          external_id: string | null
+          first_seen_at: string
+          id: string
+          last_seen_at: string
+          lead_score: number
+          name: string | null
+          phone: string | null
+          profile_summary: string | null
+          role: string | null
+          tags: Json | null
+          total_conversations: number
+          updated_at: string
+        }
+        Insert: {
+          company_name?: string | null
+          created_at?: string
+          email?: string | null
+          external_id?: string | null
+          first_seen_at?: string
+          id?: string
+          last_seen_at?: string
+          lead_score?: number
+          name?: string | null
+          phone?: string | null
+          profile_summary?: string | null
+          role?: string | null
+          tags?: Json | null
+          total_conversations?: number
+          updated_at?: string
+        }
+        Update: {
+          company_name?: string | null
+          created_at?: string
+          email?: string | null
+          external_id?: string | null
+          first_seen_at?: string
+          id?: string
+          last_seen_at?: string
+          lead_score?: number
+          name?: string | null
+          phone?: string | null
+          profile_summary?: string | null
+          role?: string | null
+          tags?: Json | null
+          total_conversations?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      lia_messages: {
+        Row: {
+          chunks_used: Json | null
+          content: string
+          conversation_id: string
+          created_at: string
+          hallucination_flag: boolean | null
+          id: string
+          quality_score: number | null
+          role: string
+        }
+        Insert: {
+          chunks_used?: Json | null
+          content: string
+          conversation_id: string
+          created_at?: string
+          hallucination_flag?: boolean | null
+          id?: string
+          quality_score?: number | null
+          role: string
+        }
+        Update: {
+          chunks_used?: Json | null
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          hallucination_flag?: boolean | null
+          id?: string
+          quality_score?: number | null
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lia_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "lia_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       manual_reviews: {
         Row: {
           approved: boolean
@@ -2253,6 +2436,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      auto_close_stale_lia_conversations: { Args: never; Returns: undefined }
       calculate_landing_page_score: { Args: { lp_id: string }; Returns: Json }
       calculate_product_score: { Args: { product_id: string }; Returns: Json }
       get_complete_knowledge_base:
