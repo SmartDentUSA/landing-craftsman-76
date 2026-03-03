@@ -1,78 +1,49 @@
 
 
-# Memória Longitudinal Real — Plano de Implementação
+# Botões individuais "Gerar por IA" para slides do Carrossel Visual
 
-## Estado Atual
+## Contexto
 
-- O `rag-chat` é **100% stateless** — nenhuma tabela de sessão, lead ou histórico existe
-- Não há `evaluate-interaction`, `agent_sessions`, nem nenhuma tabela `lia_*` no banco
-- A base vetorial (`knowledge_vectors`) funciona com `match_knowledge_chunks` para RAG
-- O modelo usado é `gemini-2.0-flash` (precisa atualizar para `google/gemini-2.5-flash`)
-- O endpoint de embeddings usa `api.lovable.dev` (precisa migrar para `ai.gateway.lovable.dev`)
+O Carrossel Visual tem 6 slides. O Slide 1 (🎣 Hook) já possui um botão individual "Novo Gancho IA" que chama a edge function `generate-carousel-hook`. Os slides 3 (🔬 Cientificidade), 4 (💫 Experiência) e 5 (🛡️ Segurança) não possuem botões individuais — só podem ser gerados pelo botão geral "🤖 Gerar com IA" que regenera todos os slides de uma vez.
 
----
+## Plano
 
-## O que será implementado
+### 1. Nova Edge Function: `generate-carousel-slide`
 
-### Etapa 1 — Migration SQL: 4 tabelas + RLS + indexes + triggers
+Criar uma edge function genérica que receba o tipo do slide (`cientificidade`, `experiencia`, `seguranca`) e gere apenas o conteúdo daquele slide específico, com prompts especializados por tipo:
 
-**`lia_leads`** — Identidade unificada do lead
-- `id`, `external_id` (Piperun), `phone`, `email`, `name`, `company_name`, `role`
-- `first_seen_at`, `last_seen_at`, `total_conversations`, `lead_score` (0-100)
-- `tags` JSONB, `profile_summary` TEXT
+- **Cientificidade (Slide 3)**: Gera title, headline, body, bullet1-4 com foco em evidências científicas e dados técnicos
+- **Experiência (Slide 4)**: Gera keyword + benefit com foco em experiência clínica e fluxo de trabalho
+- **Segurança (Slide 5)**: Gera title, badge1-3 com foco em certificações, garantias e confiança
 
-**`lia_conversations`** — Sessões com estado
-- `lead_id` FK, `started_at`, `ended_at`
-- `current_state` (greeting/discovery/presentation/objection/closing)
-- `extracted_entities` JSONB, `outcome`, `cognitive_analysis` JSONB, `channel`
+Recebe: `productName`, `salesPitch`, `benefits`, `features`, `slideType`
+Retorna: campos específicos do slide solicitado
 
-**`lia_messages`** — Cada mensagem persistida
-- `conversation_id` FK, `role`, `content`
-- `chunks_used` JSONB, `quality_score` DECIMAL, `hallucination_flag` BOOLEAN
+### 2. Frontend — Novos estados e handlers (`InstagramCopyGenerator.tsx`)
 
-**`lia_lead_events`** — Timeline longitudinal
-- `lead_id` FK, `event_type`, `event_data` JSONB, `source`
+- Adicionar 3 estados: `generatingScience`, `generatingExperience`, `generatingSecurity`
+- Criar 3 handlers que chamam `generate-carousel-slide` com o `slideType` correto e atualizam apenas o slide correspondente em `slideTexts`
 
-**Extras SQL:**
-- RLS: `service_role` only (todas as tabelas)
-- Indexes: `lia_leads(phone)`, `lia_leads(email)`, `lia_conversations(lead_id, started_at DESC)`, `lia_messages(conversation_id, created_at)`, `lia_lead_events(lead_id, created_at DESC)`
-- Trigger: `update_updated_at_column` em todas as tabelas
+### 3. Frontend — 3 novos botões no header do Carrossel Visual
 
-### Etapa 2 — Reescrever `rag-chat/index.ts`
+Adicionar ao lado do botão "🎣 Novo Gancho IA" (linha ~1962):
 
-O fluxo passa a ser:
+- **🔬 Cientificidade IA** — gera apenas Slide 3
+- **💫 Experiência IA** — gera apenas Slide 4
+- **🛡️ Segurança IA** — gera apenas Slide 5
 
-1. **Receber** `phone`/`email` no request (opcionais, para identificação)
-2. **Buscar/criar lead** em `lia_leads` pelo identificador
-3. **Buscar/criar conversação** ativa (sessão < 2h sem `ended_at`)
-4. **Carregar memória longitudinal**: últimas 5 conversas + últimos 10 eventos
-5. **Injetar contexto de memória** no system prompt: "Este lead já interagiu N vezes. Última conversa: [data]. Interesses: [X]. Abandonou no estágio: [Y]."
-6. **RAG normal**: embedding → search chunks → build context
-7. **Chamar LLM** (migrar para `ai.gateway.lovable.dev` + `google/gemini-2.5-flash`)
-8. **Persistir**: salvar mensagem do user e do assistant em `lia_messages`, atualizar `lia_conversations.current_state`
-9. **Fire-and-forget**: registrar `lia_lead_events` quando detectar interesse em produto
+Cada botão com loading state individual, mesmo padrão visual do botão Hook existente.
 
-### Etapa 3 — Criar `evaluate-interaction/index.ts`
+### Detalhes técnicos
 
-Nova edge function que:
-1. Recebe `message_id` de um `lia_messages`
-2. Carrega a mensagem + `chunks_used`
-3. Chama LLM-as-Judge para avaliar fidelidade (0-1) e detectar alucinação
-4. Atualiza `quality_score` e `hallucination_flag` na mensagem
-5. Fire-and-forget (não bloqueia a resposta ao usuário)
+**Edge function `generate-carousel-slide/index.ts`:**
+- Usa Lovable AI Gateway (`google/gemini-2.5-flash`)
+- Prompt especializado por slideType com regras de formatação
+- Temperature 1.0 para variedade
+- Retorna JSON estruturado via tool calling para garantir campos corretos
 
-### Etapa 4 — Registrar no `config.toml`
-
-Adicionar `[functions.evaluate-interaction]` com `verify_jwt = false`.
-
----
-
-## Resumo de arquivos
-
-| Ação | Arquivo |
-|------|---------|
-| **Migration SQL** | 4 tabelas, RLS, indexes, triggers |
-| **Reescrever** | `supabase/functions/rag-chat/index.ts` |
-| **Criar** | `supabase/functions/evaluate-interaction/index.ts` |
-| **Editar** | `supabase/config.toml` (1 nova entrada) |
+**Mapeamento de retorno:**
+- `cientificidade` → `{ title, headline, body, bullet1, bullet2, bullet3, bullet4 }`
+- `experiencia` → `{ keyword, benefit }`
+- `seguranca` → `{ title, badge1, badge2, badge3 }`
 
