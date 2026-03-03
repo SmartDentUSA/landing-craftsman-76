@@ -9,13 +9,28 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-
-// Use Supabase built-in gte-small model (384 dimensions)
-const embeddingModel = new Supabase.ai.Session('gte-small');
+const GOOGLE_AI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
 
 async function generateEmbedding(text: string): Promise<number[]> {
-  const output = await embeddingModel.run(text, { mean_pool: true, normalize: true });
-  return Array.from(output);
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${GOOGLE_AI_API_KEY}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'models/text-embedding-004',
+        content: { parts: [{ text }] },
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Embedding API error: ${error}`);
+  }
+
+  const data = await response.json();
+  return data.embedding.values;
 }
 
 // Dividir produto em chunks lógicos
