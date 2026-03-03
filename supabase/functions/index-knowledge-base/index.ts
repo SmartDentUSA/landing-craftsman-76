@@ -142,10 +142,6 @@ serve(async (req) => {
   try {
     console.log('🚀 Starting knowledge base indexing...');
 
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY not configured');
-    }
-
     // Criar cliente Supabase com service role
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
 
