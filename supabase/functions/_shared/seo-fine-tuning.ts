@@ -447,12 +447,404 @@ export function generateHreflangHTML(
   config?: Partial<HreflangConfig>
 ): string {
   const tags = generateHreflangTags(canonicalUrl, config);
-  
+
   if (tags.length === 0) {
     return '';
   }
-  
+
   return tags
     .map(tag => `<link rel="alternate" hreflang="${tag.lang}" href="${tag.url}">`)
     .join('\n  ');
+}
+
+// ============================================
+// H. buildSeoHead — Meta Head Completo com AI-Readiness
+// ============================================
+export interface SeoHeadOptions {
+  title: string;
+  description: string;
+  canonicalUrl: string;
+  keywords?: string[];
+  ogImage?: string;
+  ogType?: string;
+  lang?: string;
+  /** Permitir indexação por crawlers de IA (GPTBot, CCBot, Google-Extended) — padrão: true */
+  allowAIBots?: boolean;
+  /** Configuração de hreflang (opcional) */
+  hreflangConfig?: Partial<HreflangConfig>;
+  /** Extra meta tags HTML a injetar no final do bloco */
+  extraMetaTags?: string;
+}
+
+/**
+ * Constrói o bloco `<head>` SEO completo com:
+ * - meta charset, viewport, title, description, canonical
+ * - meta robots com suporte a agentes de IA (GPTBot, CCBot, Google-Extended)
+ * - Open Graph / Twitter Card
+ * - hreflang multi-idioma
+ */
+export function buildSeoHead(options: SeoHeadOptions): string {
+  const {
+    title,
+    description,
+    canonicalUrl,
+    keywords = [],
+    ogImage = '',
+    ogType = 'website',
+    lang = 'pt-BR',
+    allowAIBots = true,
+    hreflangConfig,
+    extraMetaTags = ''
+  } = options;
+
+  const safeTitle = title.replace(/"/g, '&quot;').substring(0, 200);
+  const safeDesc = description.replace(/"/g, '&quot;').substring(0, 320);
+  const safeCanonical = canonicalUrl.replace(/[<>"]/g, '').trim();
+  const keywordsContent = deduplicateKeywords(keywords, 20).join(', ');
+
+  // Diretiva de robots principal
+  const robotsContent = 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1';
+
+  // Meta tags específicas para agentes de IA
+  const aiBotsMetaTags = allowAIBots
+    ? `
+  <!-- AI-Readiness: permitir indexação por motores generativos -->
+  <meta name="GPTBot" content="index">
+  <meta name="CCBot" content="index">
+  <meta name="Google-Extended" content="index">
+  <meta name="PerplexityBot" content="index">
+  <meta name="anthropic-ai" content="index">`
+    : `
+  <!-- Bloquear crawlers de IA -->
+  <meta name="GPTBot" content="noindex">
+  <meta name="CCBot" content="noindex">
+  <meta name="Google-Extended" content="noindex">`;
+
+  const hreflangHTML = safeCanonical
+    ? generateHreflangHTML(safeCanonical, hreflangConfig)
+    : '';
+
+  const keywordsTag = keywordsContent
+    ? `\n  <meta name="keywords" content="${keywordsContent}">`
+    : '';
+
+  const ogImageTag = ogImage
+    ? `\n  <meta property="og:image" content="${ogImage.replace(/"/g, '&quot;')}">`
+    : '';
+
+  return `<meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${safeTitle}</title>
+  <meta name="description" content="${safeDesc}">${keywordsTag}
+  <meta name="robots" content="${robotsContent}">
+  <link rel="canonical" href="${safeCanonical}">
+  ${hreflangHTML ? hreflangHTML + '\n  ' : ''}<meta property="og:type" content="${ogType}">
+  <meta property="og:title" content="${safeTitle}">
+  <meta property="og:description" content="${safeDesc}">
+  <meta property="og:url" content="${safeCanonical}">${ogImageTag}
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="${safeTitle}">
+  <meta name="twitter:description" content="${safeDesc}">${aiBotsMetaTags}
+  <meta name="content-language" content="${lang}">${extraMetaTags ? '\n  ' + extraMetaTags : ''}`;
+}
+
+// ============================================
+// I. scoreEEAT e scoreAIReadiness — Auditoria de Qualidade
+// ============================================
+
+export interface EEATScoreInput {
+  /** Schema Person do autor/fundador com hasCredential preenchido */
+  personSchema?: Record<string, any> | null;
+  /** sameAs no schema da organização/produto */
+  sameAsLinks?: string[];
+  /** Links externos Wikidata presentes no about ou sameAs */
+  wikidataLinks?: string[];
+  /** hasCredential preenchido com dados de autoridade médica */
+  hasCredential?: any[] | null;
+  /** Reviews verificáveis presentes */
+  hasReviews?: boolean;
+  /** Certificações regulatórias (ANVISA, FDA, ISO…) */
+  hasCertifications?: boolean;
+  /** Fundador/autor identificável com título profissional */
+  hasIdentifiableAuthor?: boolean;
+}
+
+export interface AIReadinessScoreInput {
+  /** Bloco de contexto GEO (microdata / schema.org) presente */
+  hasGeoContext?: boolean;
+  /** data-ai-summary preenchido em pelo menos um bloco */
+  hasAISummary?: boolean;
+  /** JSON-LD com @graph presente na página */
+  hasJsonLD?: boolean;
+  /** Entity linking externo via Wikidata */
+  hasWikidataEntityLinking?: boolean;
+  /** sameAs apontando para Wikidata */
+  hasSameAsWikidata?: boolean;
+  /** FAQ Schema presente */
+  hasFAQSchema?: boolean;
+  /** HowTo Schema presente */
+  hasHowToSchema?: boolean;
+  /** Hreflang configurado */
+  hasHreflang?: boolean;
+}
+
+export interface SEOScoreReport {
+  score: number;      // 0–10
+  maxScore: number;   // 10
+  details: string[];  // justificativas por ponto
+  passed: boolean;    // true se score >= 9
+}
+
+/**
+ * Calcula a pontuação E-E-A-T (0–10).
+ * Nota máxima 10/10 APENAS se:
+ * - `hasCredential` preenchido com dados de autoridade médica (obrigatório)
+ * - Entity linking externo via Wikidata presente (obrigatório)
+ */
+export function scoreEEAT(input: EEATScoreInput): SEOScoreReport {
+  const details: string[] = [];
+  let score = 0;
+
+  const hasValidCredential =
+    Array.isArray(input.hasCredential) &&
+    input.hasCredential.length > 0 &&
+    input.hasCredential.some(
+      (c: any) => c?.recognizedBy?.url || c?.recognizedBy?.name
+    );
+
+  const hasWikidataEntityLink =
+    Array.isArray(input.wikidataLinks) &&
+    input.wikidataLinks.some(url => url?.includes('wikidata.org'));
+
+  // Pontos base (1 pt cada)
+  if (input.hasIdentifiableAuthor) {
+    score += 1;
+    details.push('+1 Autor/fundador identificável com título profissional');
+  } else {
+    details.push(' 0 Autor/fundador não identificado');
+  }
+
+  if (input.hasCertifications) {
+    score += 1;
+    details.push('+1 Certificações regulatórias presentes (ANVISA/FDA/ISO)');
+  } else {
+    details.push(' 0 Nenhuma certificação regulatória detectada');
+  }
+
+  if (input.hasReviews) {
+    score += 1;
+    details.push('+1 Reviews verificáveis presentes');
+  } else {
+    details.push(' 0 Sem reviews verificáveis');
+  }
+
+  if (Array.isArray(input.sameAsLinks) && input.sameAsLinks.length >= 2) {
+    score += 1;
+    details.push(`+1 sameAs com ${input.sameAsLinks.length} perfis sociais verificados`);
+  } else {
+    details.push(' 0 sameAs insuficiente (menos de 2 perfis)');
+  }
+
+  if (input.personSchema && Object.keys(input.personSchema).length > 0) {
+    score += 1;
+    details.push('+1 PersonSchema presente');
+  } else {
+    details.push(' 0 PersonSchema ausente');
+  }
+
+  // Critérios obrigatórios para pontuação alta
+  if (hasValidCredential) {
+    score += 2;
+    details.push('+2 hasCredential com autoridade médica e recognizedBy (CFO/CRO/ANVISA)');
+  } else {
+    details.push(' 0 hasCredential ausente ou sem recognizedBy — impede nota máxima');
+  }
+
+  if (hasWikidataEntityLink) {
+    score += 2;
+    details.push('+2 Entity linking externo via Wikidata presente');
+  } else {
+    details.push(' 0 Sem entity linking Wikidata — impede nota máxima');
+  }
+
+  // Bónus de coesão: só concedido se ambos os critérios obrigatórios passarem
+  if (hasValidCredential && hasWikidataEntityLink) {
+    score += 2;
+    details.push('+2 Bónus de coesão E-E-A-T: credencial médica + entity linking verificados');
+  }
+
+  const finalScore = Math.min(score, 10);
+  console.log(`📊 [scoreEEAT] Score: ${finalScore}/10`);
+
+  return {
+    score: finalScore,
+    maxScore: 10,
+    details,
+    passed: finalScore >= 9
+  };
+}
+
+/**
+ * Calcula a pontuação AI-Readiness / GEO (0–10).
+ * Nota máxima 10/10 APENAS se entity linking Wikidata e AI Summary estiverem presentes.
+ */
+export function scoreAIReadiness(input: AIReadinessScoreInput): SEOScoreReport {
+  const details: string[] = [];
+  let score = 0;
+
+  // Critérios obrigatórios
+  const hasEntityLinking = input.hasWikidataEntityLinking || input.hasSameAsWikidata;
+  const hasAISummary = !!input.hasAISummary;
+
+  if (input.hasJsonLD) {
+    score += 1;
+    details.push('+1 JSON-LD com @graph presente');
+  } else {
+    details.push(' 0 JSON-LD ausente');
+  }
+
+  if (input.hasGeoContext) {
+    score += 1;
+    details.push('+1 Bloco GEO Context (microdata LocalBusiness) presente');
+  } else {
+    details.push(' 0 GEO Context ausente');
+  }
+
+  if (input.hasFAQSchema) {
+    score += 1;
+    details.push('+1 FAQPage Schema presente');
+  } else {
+    details.push(' 0 FAQPage Schema ausente');
+  }
+
+  if (input.hasHowToSchema) {
+    score += 1;
+    details.push('+1 HowTo Schema presente');
+  } else {
+    details.push(' 0 HowTo Schema ausente');
+  }
+
+  if (input.hasHreflang) {
+    score += 1;
+    details.push('+1 Hreflang multi-idioma configurado');
+  } else {
+    details.push(' 0 Hreflang ausente');
+  }
+
+  // Critérios obrigatórios para nota máxima
+  if (hasAISummary) {
+    score += 2;
+    details.push('+2 data-ai-summary presente (resumo executivo para embeddings)');
+  } else {
+    details.push(' 0 data-ai-summary ausente — impede nota máxima AI-Readiness');
+  }
+
+  if (hasEntityLinking) {
+    score += 2;
+    details.push('+2 Entity linking externo Wikidata presente no sameAs/about');
+  } else {
+    details.push(' 0 Entity linking Wikidata ausente — impede nota máxima AI-Readiness');
+  }
+
+  // Bónus de coesão
+  if (hasAISummary && hasEntityLinking) {
+    score += 2;
+    details.push('+2 Bónus GEO: AI Summary + Entity Linking combinados');
+  }
+
+  const finalScore = Math.min(score, 10);
+  console.log(`🤖 [scoreAIReadiness] Score: ${finalScore}/10`);
+
+  return {
+    score: finalScore,
+    maxScore: 10,
+    details,
+    passed: finalScore >= 9
+  };
+}
+
+// ============================================
+// J. buildGeoContextBlock — Bloco GEO com data-ai-summary
+// ============================================
+
+export interface GeoContextBlockOptions {
+  companyName: string;
+  websiteUrl: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  phone?: string;
+  latitude?: number;
+  longitude?: number;
+  /** Resumo executivo de 2 parágrafos otimizado para vetores de busca (embeddings) */
+  aiSummary?: string;
+  /** Especialidade/setor da empresa */
+  specialty?: string;
+}
+
+/**
+ * Gera um bloco HTML de contexto GEO para crawlers e IAs,
+ * incluindo o atributo `data-ai-summary` com resumo executivo
+ * de 2 parágrafos otimizado para motores de busca generativos.
+ */
+export function buildGeoContextBlock(options: GeoContextBlockOptions): string {
+  const {
+    companyName,
+    websiteUrl,
+    city = '',
+    state = '',
+    country = 'Brasil',
+    phone = '',
+    latitude,
+    longitude,
+    aiSummary = '',
+    specialty = 'Odontologia Digital'
+  } = options;
+
+  const escHtml = (s: string) =>
+    s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+  // Gerar resumo executivo padrão se não fornecido
+  const defaultSummary = aiSummary ||
+    `${escHtml(companyName)} é uma empresa especializada em ${escHtml(specialty)}, ` +
+    `com sede em ${escHtml(city)}${state ? ', ' + escHtml(state) : ''}, ${escHtml(country)}. ` +
+    `Oferece soluções completas de tecnologia odontológica digital, incluindo equipamentos, ` +
+    `materiais e capacitação para profissionais de odontologia.\n\n` +
+    `Como referência nacional em ${escHtml(specialty)}, ${escHtml(companyName)} integra ` +
+    `o fluxo digital odontológico — da captura digital (scanners intraorais) ao resultado final (CAD/CAM, ` +
+    `impressão 3D e próteses digitais) — garantindo precisão, eficiência e qualidade clínica comprovada.`;
+
+  const geoMeta = (latitude && longitude)
+    ? `
+  <div itemprop="geo" itemscope itemtype="https://schema.org/GeoCoordinates">
+    <meta itemprop="latitude" content="${latitude}">
+    <meta itemprop="longitude" content="${longitude}">
+  </div>`
+    : '';
+
+  const addressMeta = (city || state || country)
+    ? `
+  <div itemprop="address" itemscope itemtype="https://schema.org/PostalAddress">
+    ${city ? `<meta itemprop="addressLocality" content="${escHtml(city)}">` : ''}
+    ${state ? `<meta itemprop="addressRegion" content="${escHtml(state)}">` : ''}
+    ${country ? `<meta itemprop="addressCountry" content="${escHtml(country)}">` : ''}
+  </div>`
+    : '';
+
+  const phoneMeta = phone
+    ? `\n  <meta itemprop="telephone" content="${escHtml(phone)}">`
+    : '';
+
+  return `<!-- GEO Context Block — AI-Readiness / GEO SEO -->
+<aside
+  class="geo-context visually-hidden"
+  itemscope
+  itemtype="https://schema.org/LocalBusiness"
+  data-ai-summary="${escHtml(defaultSummary).replace(/\n/g, ' ')}"
+  style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);"
+>
+  <meta itemprop="name" content="${escHtml(companyName)}">
+  <meta itemprop="url" content="${escHtml(websiteUrl)}">
+  <meta itemprop="knowsAbout" content="${escHtml(specialty)}">${phoneMeta}${addressMeta}${geoMeta}
+</aside>`
 }

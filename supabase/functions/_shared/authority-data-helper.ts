@@ -14,6 +14,181 @@ import {
 } from './video-schema-helper.ts';
 
 // ═══════════════════════════════════════════════════════════
+// ENTITY KNOWLEDGE GRAPH — Wikidata IDs para termos de autoridade
+// ═══════════════════════════════════════════════════════════
+
+/**
+ * Dicionário de entidades de domínio odontológico/tecnológico
+ * mapeadas para os seus IDs Wikidata.
+ * Use os valores (URLs) no campo `sameAs` do JSON-LD para entity linking.
+ */
+export const ENTITY_KNOWLEDGE_GRAPH: Record<string, { wikidataId: string; url: string; label_ptBR: string }> = {
+  'Odontologia Digital': {
+    wikidataId: 'Q1023932',
+    url: 'https://www.wikidata.org/wiki/Q1023932',
+    label_ptBR: 'Odontologia Digital'
+  },
+  'Impressão 3D': {
+    wikidataId: 'Q234451',
+    url: 'https://www.wikidata.org/wiki/Q234451',
+    label_ptBR: 'Impressão 3D'
+  },
+  'CAD/CAM': {
+    wikidataId: 'Q306648',
+    url: 'https://www.wikidata.org/wiki/Q306648',
+    label_ptBR: 'Desenho e Fabricação Assistidos por Computador'
+  },
+  'Scanner Intraoral': {
+    wikidataId: 'Q7449228',
+    url: 'https://www.wikidata.org/wiki/Q7449228',
+    label_ptBR: 'Scanner Intraoral'
+  },
+  'Prótese Dentária': {
+    wikidataId: 'Q1188522',
+    url: 'https://www.wikidata.org/wiki/Q1188522',
+    label_ptBR: 'Prótese Dentária'
+  },
+  'Resina Composta': {
+    wikidataId: 'Q415072',
+    url: 'https://www.wikidata.org/wiki/Q415072',
+    label_ptBR: 'Resina Composta'
+  },
+  'Odontologia': {
+    wikidataId: 'Q14565199',
+    url: 'https://www.wikidata.org/wiki/Q14565199',
+    label_ptBR: 'Odontologia'
+  }
+};
+
+/**
+ * Retorna os URLs Wikidata correspondentes a um array de termos.
+ * Útil para popular o campo `sameAs` no JSON-LD.
+ */
+export function getWikidataLinks(terms: string[]): string[] {
+  return terms
+    .map(term => ENTITY_KNOWLEDGE_GRAPH[term]?.url)
+    .filter((url): url is string => !!url);
+}
+
+// ═══════════════════════════════════════════════════════════
+// PERSON SCHEMA — Autoridade Médica com hasCredential obrigatório
+// ═══════════════════════════════════════════════════════════
+
+export interface MedicalCredential {
+  "@type": "EducationalOccupationalCredential";
+  name: string;
+  credentialCategory: string;
+  /** Entidade que reconhece a credencial (CFO, CRO, ANVISA, etc.) — obrigatório para nota máxima E-E-A-T */
+  recognizedBy: {
+    "@type": "GovernmentOrganization" | "Organization";
+    name: string;
+    /** URL do conselho profissional (ex: https://cfo.org.br) */
+    url: string;
+  };
+}
+
+/**
+ * Interface PersonSchema expandida para autoridade médica.
+ * O campo `hasCredential` é obrigatório e deve conter dados
+ * de autoridade com `recognizedBy` apontando para o conselho
+ * profissional (CFO — Conselho Federal de Odontologia,
+ * ou CRO — Conselho Regional de Odontologia).
+ */
+export interface PersonSchema {
+  "@type": "Person";
+  name: string;
+  jobTitle?: string;
+  /** Perfis públicos verificáveis — perfis sociais e Wikidata */
+  sameAs?: string[];
+  /** URL da foto do profissional */
+  image?: string;
+  /** Organização à qual pertence */
+  worksFor?: {
+    "@type": "Organization";
+    name: string;
+    url?: string;
+  };
+  /**
+   * Credenciais de autoridade médica — OBRIGATÓRIO para E-E-A-T de alto nível.
+   * Deve conter pelo menos uma credencial com `recognizedBy.url`
+   * apontando para o site do CFO (https://cfo.org.br) ou CRO regional.
+   */
+  hasCredential: MedicalCredential[];
+  /** Especialidades conhecidas */
+  knowsAbout?: string[];
+  /** Número de inscrição no CRO/CFO (ex: "CRO-SP 12345") */
+  identifier?: string;
+}
+
+/**
+ * Constrói um PersonSchema completo para autoridade médica/odontológica.
+ * Inclui hasCredential com recognizedBy apontando para CFO/CRO.
+ */
+export function buildPersonSchema(
+  name: string,
+  opts: {
+    jobTitle?: string;
+    sameAs?: string[];
+    image?: string;
+    orgName?: string;
+    orgUrl?: string;
+    croNumber?: string;
+    region?: string;
+    additionalCredentials?: Partial<MedicalCredential>[];
+    knowsAbout?: string[];
+  } = {}
+): PersonSchema {
+  const region = opts.region || 'SP';
+  const croUrl = `https://cro${region.toLowerCase()}.org.br`;
+  const cfoUrl = 'https://cfo.org.br';
+
+  const credentials: MedicalCredential[] = [
+    {
+      "@type": "EducationalOccupationalCredential",
+      name: opts.croNumber ? `CRO-${region} ${opts.croNumber}` : `Inscrição CRO-${region}`,
+      credentialCategory: 'license',
+      recognizedBy: {
+        "@type": "GovernmentOrganization",
+        name: `CRO-${region} — Conselho Regional de Odontologia de ${region}`,
+        url: croUrl
+      }
+    },
+    {
+      "@type": "EducationalOccupationalCredential",
+      name: 'Registro no Conselho Federal de Odontologia',
+      credentialCategory: 'license',
+      recognizedBy: {
+        "@type": "GovernmentOrganization",
+        name: 'CFO — Conselho Federal de Odontologia',
+        url: cfoUrl
+      }
+    }
+  ];
+
+  const schema: PersonSchema = {
+    "@type": "Person",
+    name,
+    hasCredential: credentials
+  };
+
+  if (opts.jobTitle) schema.jobTitle = opts.jobTitle;
+  if (opts.sameAs && opts.sameAs.length > 0) schema.sameAs = opts.sameAs;
+  if (opts.image) schema.image = opts.image;
+  if (opts.knowsAbout && opts.knowsAbout.length > 0) schema.knowsAbout = opts.knowsAbout;
+  if (opts.croNumber) schema.identifier = `CRO-${region} ${opts.croNumber}`;
+
+  if (opts.orgName) {
+    schema.worksFor = {
+      "@type": "Organization",
+      name: opts.orgName,
+      ...(opts.orgUrl && { url: opts.orgUrl })
+    };
+  }
+
+  return schema;
+}
+
+// ═══════════════════════════════════════════════════════════
 // INTERFACES EXPANDIDAS
 // ═══════════════════════════════════════════════════════════
 

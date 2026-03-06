@@ -128,6 +128,74 @@ O conteúdo sempre deve ser:
 - Baseado somente nos dados enviados
 
 -------------------------------------------------------------------------------
+📌 SECÇÃO 12 — E-E-A-T (Experience, Expertise, Authoritativeness, Trustworthiness)
+-------------------------------------------------------------------------------
+Ao gerar qualquer JSON-LD de Person, Organization ou Product, OBRIGATORIAMENTE:
+
+12.1 HASREDENTIAL com AUTORIDADE MÉDICA
+   - O campo "hasCredential" do autor/fundador deve estar preenchido.
+   - Cada credencial DEVE conter "recognizedBy" com:
+       * @type: "GovernmentOrganization"
+       * name: nome do conselho (ex: "CFO — Conselho Federal de Odontologia")
+       * url: link do conselho oficial (ex: "https://cfo.org.br" ou "https://crosp.org.br")
+   - Sem hasCredential + recognizedBy → o score E-E-A-T não atinge 10/10.
+
+12.2 SAMEAS COM WIKIDATA (Entity Linking)
+   - O campo "sameAs" da Organization e do Product/about DEVE conter
+     pelo menos uma URL de entidade Wikidata relevante ao domínio.
+   - Use o ENTITY_KNOWLEDGE_GRAPH definido em authority-data-helper.ts:
+       * "Odontologia Digital"  → https://www.wikidata.org/wiki/Q1023932
+       * "Impressão 3D"         → https://www.wikidata.org/wiki/Q234451
+       * "CAD/CAM"              → https://www.wikidata.org/wiki/Q306648
+       * "Scanner Intraoral"    → https://www.wikidata.org/wiki/Q7449228
+       * "Prótese Dentária"     → https://www.wikidata.org/wiki/Q1188522
+   - Sem entity linking Wikidata → o score E-E-A-T não atinge 10/10.
+
+12.3 ABOUT DO PRODUTO
+   - O campo "about" de qualquer Product Schema DEVE sempre conter
+     um objeto com a URL de referência da entidade global do Wikidata.
+   - Exemplo obrigatório:
+       "about": {
+         "@type": "Thing",
+         "name": "Odontologia Digital",
+         "sameAs": "https://www.wikidata.org/wiki/Q1023932"
+       }
+
+-------------------------------------------------------------------------------
+📌 SECÇÃO 13 — AI-READINESS (GEO — Generative Engine Optimization)
+-------------------------------------------------------------------------------
+Para garantir visibilidade máxima em motores de busca generativos
+(Google Gemini, ChatGPT, Perplexity, Claude):
+
+13.1 DATA-AI-SUMMARY
+   - Todo bloco de contexto GEO (buildGeoContextBlock) DEVE ter o
+     atributo "data-ai-summary" com um resumo executivo de 2 parágrafos.
+   - Parágrafo 1: identidade da empresa, especialidade, localização.
+   - Parágrafo 2: proposta de valor e diferenciais competitivos.
+   - Este resumo deve ser escrito em linguagem natural densa e factual,
+     sem jargão de marketing, otimizado para vetores de embedding.
+
+13.2 JSON-LD COM @GRAPH
+   - Todo HTML gerado DEVE conter um <script type="application/ld+json">
+     com "@context": "https://schema.org" e "@graph": [...] agrupando
+     TODOS os schemas da página.
+   - Incluir obrigatoriamente: Organization, Product (ou Service),
+     BreadcrumbList, FAQPage (se aplicável).
+
+13.3 ROBOTS META TAGS PARA IA
+   - O <head> deve incluir meta tags explícitas permitindo crawlers de IA:
+       <meta name="GPTBot" content="index">
+       <meta name="CCBot" content="index">
+       <meta name="Google-Extended" content="index">
+   - Use buildSeoHead() de seo-fine-tuning.ts com allowAIBots: true.
+
+13.4 ENTITY LINKING NO CONTEÚDO
+   - Sempre que mencionar termos do ENTITY_KNOWLEDGE_GRAPH no conteúdo,
+     associe o conceito à entidade global correspondente via sameAs.
+   - Isto sinaliza aos motores generativos que o conteúdo é
+     uma fonte de autoridade verificável para esses tópicos.
+
+-------------------------------------------------------------------------------
 FIM DO MASTER SYSTEM PROMPT
 -------------------------------------------------------------------------------
 `;
