@@ -324,9 +324,10 @@ function generateSchemaGraph(options: {
   companyProfile: any;
   faqs: any[];
   domain: string;
+  content?: string;
   aggregateRatingData?: { ratingValue: string; reviewCount: number; bestRating: number; worstRating: number };
 }): object[] {
-  const { product, blogType, title, description, canonicalUrl, companyProfile, faqs, domain, aggregateRatingData } = options;
+  const { product, blogType, title, description, canonicalUrl, companyProfile, faqs, domain, content, aggregateRatingData } = options;
   
   const companyName = companyProfile?.company_name || 'Smart Dent';
   const websiteUrl = companyProfile?.website_url || `https://${domain}`;
@@ -366,7 +367,17 @@ function generateSchemaGraph(options: {
     "@type": blogType === 'technical' ? 'TechArticle' : 'BlogPosting',
     "headline": title,
     "description": description,
-    "author": {
+    "author": companyProfile?.founder_name ? {
+      "@type": "Person",
+      "name": companyProfile.founder_name,
+      ...(companyProfile?.founder_title && { "jobTitle": companyProfile.founder_title }),
+      ...(companyProfile?.founder_linkedin && { "sameAs": [companyProfile.founder_linkedin] }),
+      "worksFor": {
+        "@type": "Organization",
+        "name": companyName,
+        "url": websiteUrl
+      }
+    } : {
       "@type": "Organization",
       "name": companyName,
       "url": websiteUrl
@@ -403,7 +414,17 @@ function generateSchemaGraph(options: {
     "image": product.image_url,
     "keywords": keywordsArray.join(', '),
     "articleSection": blogType === 'commercial' ? 'Guia de Produtos' : 'Especificações Técnicas',
-    "wordCount": 1500
+    "wordCount": content ? content.replace(/<[^>]*>/g, '').split(/\s+/).filter(Boolean).length : 1500,
+    "speakable": {
+      "@type": "SpeakableSpecification",
+      "cssSelector": [
+        ".hero-info h1",
+        ".lead",
+        ".blog-content h2",
+        ".blog-content p",
+        ".faq-item summary"
+      ]
+    }
   });
   
   // 3. Product
@@ -583,6 +604,19 @@ function generateSchemaGraph(options: {
 // ============================================
 
 const CSS_DESIGN_SYSTEM_V2 = `
+/* =========================
+   ACCESSIBILITY
+   ========================= */
+.sr-only {
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
 /* =========================
    DESIGN SYSTEM V2 (Enterprise SaaS)
    ========================= */
@@ -1394,6 +1428,7 @@ export function generateProductBlogHTMLV2(options: ProductBlogV2Options): string
     companyProfile,
     faqs,
     domain,
+    content,
     aggregateRatingData
   });
   
@@ -1480,6 +1515,9 @@ export function generateProductBlogHTMLV2(options: ProductBlogV2Options): string
   <!-- Resource Hints -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"></noscript>
   ${product.image_url ? `<link rel="preload" as="image" href="${escapeHtml(product.image_url)}" fetchpriority="high">` : ''}
   
   <!-- Schema.org JSON-LD -->

@@ -327,7 +327,7 @@ products.forEach(product => {
       canonicalUrl
     },
     {
-      websiteUrl: company?.website || 'https://smartdent.com.br',
+      websiteUrl: company?.website_url || company?.website || 'https://smartdent.com.br',
       websiteName: 'Home'
     }
   );
@@ -970,7 +970,9 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
   <!-- ═══════════════════════════════════════════════════════════ -->
   <!-- FONTS & ICONS -->
   <!-- ═══════════════════════════════════════════════════════════ -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@800;900&display=swap" rel="stylesheet">
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@800;900&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@800;900&display=swap" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@800;900&display=swap"></noscript>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   
   <!-- ═══════════════════════════════════════════════════════════ -->
@@ -995,7 +997,18 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
     .skip-link:focus {
       top: 0;
     }
-    
+
+    /* ===== ACCESSIBILITY: SCREEN-READER ONLY ===== */
+    .sr-only {
+      clip: rect(0 0 0 0);
+      clip-path: inset(50%);
+      height: 1px;
+      overflow: hidden;
+      position: absolute;
+      white-space: nowrap;
+      width: 1px;
+    }
+
     /* ===== DESIGN SYSTEM GEMINI V4.5 ===== */
     :root {
       /* Cores do Logo Smart Dent */
@@ -3334,7 +3347,7 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
   <!-- ═══════════════════════════════════════════════════════════ -->
   <!-- 🤖 GEO CONTEXT (Contexto para LLMs e Crawlers de IA) -->
   <!-- ═══════════════════════════════════════════════════════════ -->
-  <div class="geo-context" aria-hidden="true" style="position:absolute;left:-9999px;opacity:0;pointer-events:none;">
+  <aside class="geo-context sr-only" role="complementary">
     <p>
       ${escapeHtml(sanitizeCompanyName(company?.company_name))} é especialista em
       ${escapeHtml(painTypeLabels[solution.pain_type] || 'soluções odontológicas')}.
@@ -3348,8 +3361,8 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
     ${company?.seo_competitive_advantages ? `<p>Diferenciais competitivos: ${escapeHtml(company.seo_competitive_advantages)}.</p>` : ''}
     ${company?.seo_technical_expertise ? `<p>Expertise técnica: ${escapeHtml(company.seo_technical_expertise)}.</p>` : ''}
     ${company?.differentiators ? `<p>Diferenciais: ${escapeHtml(company.differentiators)}.</p>` : ''}
-  </div>
-  
+  </aside>
+
   <!-- ✅ FASE 10: Authority Context Completo (Parcerias, NPS, Videos, Testimonials) -->
   ${authorityData ? generateAuthorityContextHTML(authorityData, videoTestimonials || []) : ''}
 </body>

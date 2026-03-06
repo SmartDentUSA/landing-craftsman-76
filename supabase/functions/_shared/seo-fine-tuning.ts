@@ -43,12 +43,16 @@ export function aggregateFAQsFromProducts(products: any[], maxFaqs: number = 10)
   return aggregated;
 }
 
-export function generateFAQPageSchema(faqs: FAQItem[]): object | null {
-  if (!faqs || faqs.length < 2) return null;
-  
+export function generateFAQPageSchema(faqs: FAQItem[], minAnswerLength = 50): object | null {
+  const validFaqs = (faqs || []).filter(f =>
+    f.question?.trim().length > 5 &&
+    f.answer?.trim().length >= minAnswerLength
+  );
+  if (!validFaqs || validFaqs.length < 2) return null;
+
   return {
     "@type": "FAQPage",
-    "mainEntity": faqs.map(faq => ({
+    "mainEntity": validFaqs.map(faq => ({
       "@type": "Question",
       "name": faq.question,
       "acceptedAnswer": {
@@ -444,9 +448,13 @@ export function generateHreflangTags(
  */
 export function generateHreflangHTML(
   canonicalUrl: string,
-  config?: Partial<HreflangConfig>
+  config?: Partial<HreflangConfig>,
+  activeLanguages?: string[]
 ): string {
-  const tags = generateHreflangTags(canonicalUrl, config);
+  const effectiveConfig = activeLanguages
+    ? { ...config, supportedLangs: activeLanguages }
+    : config;
+  const tags = generateHreflangTags(canonicalUrl, effectiveConfig);
   
   if (tags.length === 0) {
     return '';

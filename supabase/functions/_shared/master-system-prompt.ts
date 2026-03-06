@@ -128,6 +128,16 @@ O conteúdo sempre deve ser:
 - Baseado somente nos dados enviados
 
 -------------------------------------------------------------------------------
+📌 HIERARQUIA DE HEADINGS (OBRIGATÓRIO PARA SEO)
+-------------------------------------------------------------------------------
+- NUNCA use # (H1) no corpo do conteúdo. H1 é reservado EXCLUSIVAMENTE para o título principal da página, gerado automaticamente pelo sistema.
+- Use ## (H2) para seções principais do artigo
+- Use ### (H3) para subseções dentro de cada seção H2
+- Use #### (H4) para listas técnicas dentro de subseções H3
+- NUNCA pule níveis: não use H3 sem um H2 acima dele, não use H4 sem um H3 acima dele
+- Exemplo correto: ## Benefícios → ### Benefício 1 → #### Detalhe técnico
+
+-------------------------------------------------------------------------------
 FIM DO MASTER SYSTEM PROMPT
 -------------------------------------------------------------------------------
 `;

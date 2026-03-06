@@ -87,6 +87,9 @@ export interface FounderData {
   name: string;
   title?: string;
   linkedin?: string;
+  instagram?: string;
+  twitter?: string;
+  website?: string;
 }
 
 export interface SocialTags {
@@ -424,13 +427,32 @@ export function generateMemberOfSchema(partnerships: Partnership[]): any[] {
     }));
 }
 
-export function generateFounderSchema(founder: FounderData | null): any | null {
+export function generateFounderSchema(founder: FounderData | null, company?: any): any | null {
   if (!founder) return null;
+  const sameAsLinks: string[] = [];
+  if (founder.linkedin) sameAsLinks.push(founder.linkedin);
+  const founderInstagram = founder.instagram || company?.founder_instagram;
+  if (founderInstagram) {
+    const ig = founderInstagram.startsWith('http')
+      ? founderInstagram
+      : `https://instagram.com/${founderInstagram.replace('@', '')}`;
+    if (!sameAsLinks.includes(ig)) sameAsLinks.push(ig);
+  }
+  const founderTwitter = founder.twitter || company?.founder_twitter;
+  if (founderTwitter) {
+    const tw = founderTwitter.startsWith('http')
+      ? founderTwitter
+      : `https://twitter.com/${founderTwitter.replace('@', '')}`;
+    if (!sameAsLinks.includes(tw)) sameAsLinks.push(tw);
+  }
+  if (founder.website) {
+    if (!sameAsLinks.includes(founder.website)) sameAsLinks.push(founder.website);
+  }
   return {
     "@type": "Person",
     "name": founder.name,
     ...(founder.title && { "jobTitle": founder.title }),
-    ...(founder.linkedin && { "sameAs": founder.linkedin })
+    ...(sameAsLinks.length > 0 && { "sameAs": sameAsLinks })
   };
 }
 
@@ -965,7 +987,7 @@ export function generateAuthorityContextHTML(
 <!-- Visible to Search Engine Crawlers and Generative AI -->
 <!-- Version: COMPLETE with Videos, Identity, SEO Context -->
 <!-- ═══════════════════════════════════════════════════════════ -->
-<aside class="authority-context" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;">
+<aside class="authority-context sr-only" role="complementary">
   <header>
     <h3>Sobre ${escapeHtml(companyName)} - Autoridade em Odontologia Digital</h3>
   </header>
