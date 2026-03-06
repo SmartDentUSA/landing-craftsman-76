@@ -1,34 +1,49 @@
 
 
-# Plano: Documentacao Tecnica Completa do Sistema Smart Dent Content Intelligence Platform
+# Botões individuais "Gerar por IA" para slides do Carrossel Visual
 
-Criar um arquivo `SYSTEM_DOCUMENTATION.md` na raiz do projeto com documentacao tecnica completa cobrindo:
+## Contexto
 
-## Estrutura do Documento
+O Carrossel Visual tem 6 slides. O Slide 1 (🎣 Hook) já possui um botão individual "Novo Gancho IA" que chama a edge function `generate-carousel-hook`. Os slides 3 (🔬 Cientificidade), 4 (💫 Experiência) e 5 (🛡️ Segurança) não possuem botões individuais — só podem ser gerados pelo botão geral "🤖 Gerar com IA" que regenera todos os slides de uma vez.
 
-1. **Visao Geral da Arquitetura** — Stack (React/Supabase/Cloudflare/Gemini), paginas, rotas, modulos
-2. **Repositorio de Produtos** — 150+ campos, scores de completude, importacao CSV/Loja Integrada
-3. **Clinical Brain v2.0** — Anti-alucinacao, forbidden/required products, workflow 6 etapas
-4. **Geracao de Conteudo Multi-Canal** — Dual-AI Competition (Gemini vs DeepSeek), 12+ geradores (Instagram, TikTok, YouTube, WhatsApp, Blog, E-commerce, Google Ads, SPIN)
-5. **SEO/GEO/AI-Readiness** — Schema.org (Product, FAQ, HowTo, VideoObject, LocalBusiness, BreadcrumbList), E-E-A-T, hreflang, geo-context, tracking pixels
-6. **Knowledge Base & RAG** — Exportacao multi-formato (json, ai_training, rag, system_b), embeddings (768d Google), match_knowledge_chunks, Dra. L.I.A. chatbot
-7. **Publicacao** — Cloudflare Pages, LP Clone, Product Blog, SPIN Landing Pages, dominio customizado
-8. **Integracoes Externas** — Loja Integrada (import/export), YouTube OAuth, Google Business, WordPress, FTP
-9. **Quality Gate v2.0** — Score 0-100, auto-approve >= 85, evaluate-interaction (LLM-as-Judge)
-10. **CRM/Leads** — lia_leads, lia_conversations, lia_messages, lia_lead_events, memoria longitudinal
-11. **Checklist de Funcionalidades** — Status real (funcional/parcial/sem funcao) de cada modulo
+## Plano
 
-## Arquivos Afetados
+### 1. Nova Edge Function: `generate-carousel-slide`
 
-- `SYSTEM_DOCUMENTATION.md` (novo, ~800-1000 linhas)
+Criar uma edge function genérica que receba o tipo do slide (`cientificidade`, `experiencia`, `seguranca`) e gere apenas o conteúdo daquele slide específico, com prompts especializados por tipo:
 
-## Fonte de Dados
+- **Cientificidade (Slide 3)**: Gera title, headline, body, bullet1-4 com foco em evidências científicas e dados técnicos
+- **Experiência (Slide 4)**: Gera keyword + benefit com foco em experiência clínica e fluxo de trabalho
+- **Segurança (Slide 5)**: Gera title, badge1-3 com foco em certificações, garantias e confiança
 
-Baseado na analise de:
-- 90+ edge functions
-- 60+ componentes React
-- 60+ hooks
-- 22 shared modules
-- 30+ tabelas Supabase
-- Memorias de arquitetura salvas
+Recebe: `productName`, `salesPitch`, `benefits`, `features`, `slideType`
+Retorna: campos específicos do slide solicitado
+
+### 2. Frontend — Novos estados e handlers (`InstagramCopyGenerator.tsx`)
+
+- Adicionar 3 estados: `generatingScience`, `generatingExperience`, `generatingSecurity`
+- Criar 3 handlers que chamam `generate-carousel-slide` com o `slideType` correto e atualizam apenas o slide correspondente em `slideTexts`
+
+### 3. Frontend — 3 novos botões no header do Carrossel Visual
+
+Adicionar ao lado do botão "🎣 Novo Gancho IA" (linha ~1962):
+
+- **🔬 Cientificidade IA** — gera apenas Slide 3
+- **💫 Experiência IA** — gera apenas Slide 4
+- **🛡️ Segurança IA** — gera apenas Slide 5
+
+Cada botão com loading state individual, mesmo padrão visual do botão Hook existente.
+
+### Detalhes técnicos
+
+**Edge function `generate-carousel-slide/index.ts`:**
+- Usa Lovable AI Gateway (`google/gemini-2.5-flash`)
+- Prompt especializado por slideType com regras de formatação
+- Temperature 1.0 para variedade
+- Retorna JSON estruturado via tool calling para garantir campos corretos
+
+**Mapeamento de retorno:**
+- `cientificidade` → `{ title, headline, body, bullet1, bullet2, bullet3, bullet4 }`
+- `experiencia` → `{ keyword, benefit }`
+- `seguranca` → `{ title, badge1, badge2, badge3 }`
 
