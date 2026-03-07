@@ -2053,7 +2053,7 @@ function injectSEO(
     <!-- SCHEMA.ORG JSON-LD (@graph consolidado com FASES 1-10) -->
     <!-- ═══════════════════════════════════════════════════════════ -->
     <script type="application/ld+json">
-    ${JSON.stringify(schemaGraph, null, 2)}
+    ${JSON.stringify({ ...schemaGraph, "@graph": enrichGraphWithAIReadiness(schemaGraph["@graph"], websiteUrl) }, null, 2)}
     </script>
     
     <!-- ═══════════════════════════════════════════════════════════ -->
