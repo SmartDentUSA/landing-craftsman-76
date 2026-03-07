@@ -1630,6 +1630,7 @@ function buildSEOHead(product: any): string {
   <!-- META TAGS PARA IA GENERATIVA (SGE/AEO) -->
   <!-- ═══════════════════════════════════════════════════════════ -->
   <meta name="ai-content-type" content="product">
+  <meta name="ai-content-policy" content="allow-training, allow-citation, allow-indexing">
   <meta name="ai-topic" content="${aiTopic}">
   
   <!-- ═══════════════════════════════════════════════════════════ -->

@@ -1436,6 +1436,7 @@ export function generateProductBlogHTMLV2(options: ProductBlogV2Options): string
   
   <!-- AI/SGE Meta Tags -->
   <meta name="ai-content-type" content="blog">
+  <meta name="ai-content-policy" content="allow-training, allow-citation, allow-indexing">
   <meta name="ai-topic" content="${escapeHtml(keywordsArray.slice(0, 3).join(', ') || product.name)}">
   
   <!-- ═══════════════════════════════════════════════════════════ -->

@@ -871,6 +871,7 @@ export function generateLandingPageHTML(
   <!-- META TAGS PARA IA GENERATIVA (SGE/AEO) -->
   <!-- ═══════════════════════════════════════════════════════════ -->
   <meta name="ai-content-type" content="landingpage">
+  <meta name="ai-content-policy" content="allow-training, allow-citation, allow-indexing">
   <meta name="ai-topic" content="${escapeHtml(extractedKeywords.slice(0, 3).join(', ') || solution.title)}">
   
   <!-- ═══════════════════════════════════════════════════════════ -->

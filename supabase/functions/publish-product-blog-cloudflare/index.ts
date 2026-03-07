@@ -871,6 +871,7 @@ function generateProductBlogHTML(options: {
   <!-- META TAGS PARA IA GENERATIVA (SGE/AEO) -->
   <!-- ═══════════════════════════════════════════════════════════ -->
   <meta name="ai-content-type" content="blog">
+  <meta name="ai-content-policy" content="allow-training, allow-citation, allow-indexing">
   <meta name="ai-topic" content="${escapeHtml(aiTopic)}">
   
   <!-- Open Graph - Multiple Images for Social Sharing -->
