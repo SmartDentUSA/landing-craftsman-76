@@ -77,6 +77,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     <meta name="generator" content="Smart Dent CMS v3.0">
     
     <!-- AI Content Tags for AI Crawlers -->
+    <meta name="ai-content-policy" content="allow-training, allow-citation, allow-indexing">
     {{#ai_content_type}}<meta name="ai-content-type" content="{{ai_content_type}}">{{/ai_content_type}}
     {{#ai_topic}}<meta name="ai-topic" content="{{ai_topic}}">{{/ai_topic}}
     
