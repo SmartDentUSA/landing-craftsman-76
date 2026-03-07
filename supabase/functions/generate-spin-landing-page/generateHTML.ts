@@ -2645,6 +2645,15 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
   <!-- 📝 SEÇÃO DE CONTEÚDO INDEXÁVEL (GEO/SGE) -->
   <!-- ═══════════════════════════════════════════════════════════ -->
   <main id="main-content" class="indexable-content container section-padding">
+    
+    ${generateAISummaryBlock({
+      productName: solution.title,
+      companyName: sanitizeCompanyName(company?.company_name),
+      category: painTypeLabels[solution.pain_type] || 'odontologia digital',
+      description: solution.pain_description || solution.sales_pitch || '',
+      keyBenefits: products.slice(0, 3).map((p: any) => p.name),
+    })}
+    
     <article itemscope itemtype="https://schema.org/Article">
       <header class="content-header">
         <h2 itemprop="headline">${escapeHtml(solution.title)}</h2>
