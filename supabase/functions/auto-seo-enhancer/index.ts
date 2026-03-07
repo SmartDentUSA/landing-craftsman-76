@@ -118,9 +118,9 @@ serve(async (req) => {
               productResult.actions.push('data_extracted');
               console.log(`✅ Dados extraídos com sucesso`);
             }
-          } catch (extractError) {
+        } catch (extractError: unknown) {
             console.error(`⚠️ Erro na extração (não crítico):`, extractError);
-            productResult.errors.push(`Extração: ${extractError.message}`);
+            productResult.errors.push(`Extração: ${extractError instanceof Error ? extractError.message : String(extractError)}`);
           }
         }
 
