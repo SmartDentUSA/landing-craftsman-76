@@ -3370,6 +3370,8 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
     ${company?.differentiators ? `<p>Diferenciais: ${escapeHtml(company.differentiators)}.</p>` : ''}
   </div>
   
+  ${generateEntityIndexHTML(spinContentText)}
+  
   <!-- ✅ FASE 10: Authority Context Completo (Parcerias, NPS, Videos, Testimonials) -->
   ${authorityData ? generateAuthorityContextHTML(authorityData, videoTestimonials || []) : ''}
 </body>
