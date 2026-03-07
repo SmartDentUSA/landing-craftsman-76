@@ -1914,9 +1914,9 @@ function buildEcommerceHTML(
   // ✅ Iniciar com SPIN Design System CSS
   let html = getSpinStylesCSS();
   
-  // ✅ Conteúdo principal em <section> com classe SPIN
+  // ✅ Conteúdo principal em <article> com classe SPIN (AI-ready semantic wrapper)
   html += `
-<section class="spin-ecom" style="max-width: 1200px; margin: 0 auto; padding: 20px; font-family: Inter, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; color: #333333; line-height: 1.6;">`;
+<article class="indexable-content spin-ecom" itemscope itemtype="https://schema.org/Product" style="max-width: 1200px; margin: 0 auto; padding: 20px; font-family: Inter, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; color: #333333; line-height: 1.6;">`;
 
   // 🗑️ Banner roxo da empresa removido - conteúdo inicia direto no título do produto
   // html += buildCompanyHeader(company);
