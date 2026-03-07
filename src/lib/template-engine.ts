@@ -2015,6 +2015,9 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         <!-- H1 Principal para SEO e Acessibilidade -->
         <h1 class="sr-only">{{seo_title}}</h1>
         
+        <!-- 🤖 AI Summary Block (visually hidden, semantically accessible for LLMs) -->
+        {{{ai_summary_block}}}
+        
         <!-- Banner principal -->
         <header class="main-banner">
         <div class="container banner-content">
