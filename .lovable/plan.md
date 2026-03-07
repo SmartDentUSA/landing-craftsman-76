@@ -1,49 +1,41 @@
 
 
-# Botões individuais "Gerar por IA" para slides do Carrossel Visual
+# Plano: Correcoes E-E-A-T e Qualidade Semantica
 
-## Contexto
+## 3 Fixes identificados pelo usuario
 
-O Carrossel Visual tem 6 slides. O Slide 1 (🎣 Hook) já possui um botão individual "Novo Gancho IA" que chama a edge function `generate-carousel-hook`. Os slides 3 (🔬 Cientificidade), 4 (💫 Experiência) e 5 (🛡️ Segurança) não possuem botões individuais — só podem ser gerados pelo botão geral "🤖 Gerar com IA" que regenera todos os slides de uma vez.
+### Fix A: Unificar Meta Author duplicada (Blog V2)
 
-## Plano
+**Arquivo**: `supabase/functions/_shared/product-blog-html-v2.ts`
+**Problema**: Linha 1433 tem `<meta name="author" content="companyName">` e linha 1453 tem `<meta name="author" content="founder_name">`. A segunda sobrescreve a primeira — duplicacao desnecessaria.
+**Correcao**: Remover a linha 1433 (primeira ocorrencia). Manter apenas a linha 1453 que usa `founder_name` com fallback para `companyName`. O `publisher` ja esta declarado como Organization no JSON-LD `@graph`, entao a empresa nao precisa estar na meta author.
 
-### 1. Nova Edge Function: `generate-carousel-slide`
+### Fix B: Envolver fragmento E-commerce em `<main>`
 
-Criar uma edge function genérica que receba o tipo do slide (`cientificidade`, `experiencia`, `seguranca`) e gere apenas o conteúdo daquele slide específico, com prompts especializados por tipo:
+**Arquivo**: `supabase/functions/generate-ecommerce-html/index.ts`
+**Problema**: A funcao `buildEcommerceHTML()` gera um `<article>` solto. O full page wrapper (funcao na linha ~1560) gera `<head>` + `<body>` mas nao adiciona `<main>` nem `<header>`/`<footer>`. Se o container externo (Loja Integrada) nao tiver `<main>`, o conteudo perde hierarquia semantica.
+**Correcao**: No output da funcao full page (~linha 1689 `<body>`), adicionar `<main id="main-content">` logo apos `<body>` e `</main></body>` no fechamento. O `<article>` do `buildEcommerceHTML` ficara corretamente aninhado dentro de `<main>`.
 
-- **Cientificidade (Slide 3)**: Gera title, headline, body, bullet1-4 com foco em evidências científicas e dados técnicos
-- **Experiência (Slide 4)**: Gera keyword + benefit com foco em experiência clínica e fluxo de trabalho
-- **Segurança (Slide 5)**: Gera title, badge1-3 com foco em certificações, garantias e confiança
+Necessario verificar onde o `</body></html>` e gerado — provavelmente no caller que concatena head + body + close. Vou adicionar o `<main>` wrapper diretamente no body open/close.
 
-Recebe: `productName`, `salesPitch`, `benefits`, `features`, `slideType`
-Retorna: campos específicos do slide solicitado
+### Fix C: Alt Text fallback automatico para imagens
 
-### 2. Frontend — Novos estados e handlers (`InstagramCopyGenerator.tsx`)
+**Arquivo**: `supabase/functions/generate-ecommerce-html/index.ts` (imagens de produto)
+**Arquivo**: `supabase/functions/_shared/product-blog-html-v2.ts` (galeria)
+**Arquivo**: `src/lib/seo-image-helpers.ts` (helper existente)
 
-- Adicionar 3 estados: `generatingScience`, `generatingExperience`, `generatingSecurity`
-- Criar 3 handlers que chamam `generate-carousel-slide` com o `slideType` correto e atualizam apenas o slide correspondente em `slideTexts`
+**Problema**: Imagens podem ter alt vazio se o campo no banco estiver null.
+**Correcao**: Criar uma funcao `getImageAlt(alt, productName, companyName)` que retorna:
+1. Se alt existir e nao for generico → usar alt
+2. Se alt estiver vazio → `"${productName} - Odontologia Digital ${companyName}"`
 
-### 3. Frontend — 3 novos botões no header do Carrossel Visual
+Aplicar essa funcao em todos os pontos onde `<img` e gerado nos 2 geradores.
 
-Adicionar ao lado do botão "🎣 Novo Gancho IA" (linha ~1962):
+---
 
-- **🔬 Cientificidade IA** — gera apenas Slide 3
-- **💫 Experiência IA** — gera apenas Slide 4
-- **🛡️ Segurança IA** — gera apenas Slide 5
+## Arquivos afetados: 3
 
-Cada botão com loading state individual, mesmo padrão visual do botão Hook existente.
-
-### Detalhes técnicos
-
-**Edge function `generate-carousel-slide/index.ts`:**
-- Usa Lovable AI Gateway (`google/gemini-2.5-flash`)
-- Prompt especializado por slideType com regras de formatação
-- Temperature 1.0 para variedade
-- Retorna JSON estruturado via tool calling para garantir campos corretos
-
-**Mapeamento de retorno:**
-- `cientificidade` → `{ title, headline, body, bullet1, bullet2, bullet3, bullet4 }`
-- `experiencia` → `{ keyword, benefit }`
-- `seguranca` → `{ title, badge1, badge2, badge3 }`
+1. `supabase/functions/_shared/product-blog-html-v2.ts` — remover meta author duplicada (1 linha)
+2. `supabase/functions/generate-ecommerce-html/index.ts` — adicionar `<main>` wrapper + alt fallback em imagens
+3. `src/lib/seo-image-helpers.ts` — adicionar funcao `getProductImageAlt()` para reuso
 
