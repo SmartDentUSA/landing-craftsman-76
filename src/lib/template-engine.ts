@@ -2012,6 +2012,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
 
     <!-- Conteúdo Principal -->
     <main id="main-content">
+      <article class="indexable-content">
         <!-- H1 Principal para SEO e Acessibilidade -->
         <h1 class="sr-only">{{seo_title}}</h1>
         
