@@ -2512,8 +2512,13 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     {{/visible_any}}
     {{/knowledge_feed_section}}
 
+    <!-- 🤖 LLM Knowledge Layer (structured knowledge for AI extraction) -->
+    {{{llm_knowledge_block}}}
+    
     <!-- 🤖 AI Entity Index (visually hidden, Wikidata links for crawlers) -->
     {{{entity_index_block}}}
+    
+      </article>
     
     <!-- Footer - Smart Dent SPIN Style with LocalBusiness Microdata -->
     <footer class="footer" role="contentinfo" itemscope itemtype="https://schema.org/LocalBusiness">
