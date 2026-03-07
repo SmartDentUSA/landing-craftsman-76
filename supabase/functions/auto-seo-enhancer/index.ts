@@ -145,9 +145,9 @@ serve(async (req) => {
               productResult.actions.push('seo_title_generated');
               console.log(`✅ SEO Title gerado: ${titleResponse.data.content.substring(0, 50)}...`);
             }
-          } catch (titleError) {
+          } catch (titleError: unknown) {
             console.error(`⚠️ Erro ao gerar título:`, titleError);
-            productResult.errors.push(`Título: ${titleError.message}`);
+            productResult.errors.push(`Título: ${titleError instanceof Error ? titleError.message : String(titleError)}`);
           }
         }
 
