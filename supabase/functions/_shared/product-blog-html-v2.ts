@@ -1569,7 +1569,7 @@ ${(() => {
         <div class="hero-grid">
           <div class="hero-media">
             <div class="main-media">
-              <img src="${escapeHtml(galleryImages[0] || '')}" alt="${escapeHtml(product.name)}" id="main-image" loading="eager" fetchpriority="high">
+              <img src="${escapeHtml(galleryImages[0] || '')}" alt="${escapeHtml(product.name)} - Odontologia Digital ${escapeHtml(companyName)}" id="main-image" loading="eager" fetchpriority="high">
             </div>
             ${galleryImages.length > 1 ? `
             <div class="thumbs" role="listbox" aria-label="Galeria de imagens">
