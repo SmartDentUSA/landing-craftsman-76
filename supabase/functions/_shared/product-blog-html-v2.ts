@@ -1430,7 +1430,7 @@ export function generateProductBlogHTMLV2(options: ProductBlogV2Options): string
   <title>${escapeHtml(title)}</title>
   <meta name="description" content="${escapeHtml(description)}">
   <meta name="keywords" content="${escapeHtml(keywords)}">
-  <meta name="author" content="${escapeHtml(companyName)}">
+  <!-- author: see E-E-A-T Author Tag below -->
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
   <link rel="canonical" href="${escapeHtml(canonicalUrl)}">
   
