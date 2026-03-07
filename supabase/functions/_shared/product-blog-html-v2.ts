@@ -1922,6 +1922,9 @@ ${(() => {
       });
     });
   </script>
+  
+  ${generateEntityIndexHTML([product.name, description, product.category, product.sales_pitch, ...features].filter(Boolean).join(' '))}
+  
 </body>
 </html>`;
 }

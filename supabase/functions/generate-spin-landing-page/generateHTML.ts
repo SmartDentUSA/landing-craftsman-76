@@ -847,9 +847,16 @@ export function generateLandingPageHTML(
   }
   
   // Consolidar schemas em @graph (Google recomenda)
+  // 🤖 AI-Readiness: Add DefinedTermSet if entities detected
+  const spinContentText = `${solution.title || ''} ${solution.pain_description || ''} ${solution.sales_pitch || ''} ${products.map((p: any) => `${p.name} ${p.category || ''} ${p.description || ''}`).join(' ')}`;
+  const spinDefinedTermSet = generateDefinedTermSetSchema(spinContentText, `Termos: ${sanitizeCompanyName(company?.company_name)}`);
+  if (spinDefinedTermSet) {
+    schemas.push(spinDefinedTermSet);
+  }
+  
   const consolidatedSchema = {
     '@context': 'https://schema.org',
-    '@graph': schemas
+    '@graph': enrichGraphWithAIReadiness(schemas, company?.website_url)
   };
 
   return `<!DOCTYPE html>
