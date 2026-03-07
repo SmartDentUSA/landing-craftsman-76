@@ -1713,7 +1713,7 @@ function injectSEO(
       includeSupplies: false,
       includeTips: true,
       companyName: company,
-      companyUrl: websiteUrl
+      websiteUrl: websiteUrl
     });
     if (howToSchema) {
       console.log(`📋 [FASE 4] HowTo Schema gerado para produto com workflow`);

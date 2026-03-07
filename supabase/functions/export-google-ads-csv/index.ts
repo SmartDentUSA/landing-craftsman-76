@@ -519,7 +519,7 @@ async function collectKeywords(supabase: any, landingPageData: any, config: any,
           .filter((word: string) => word.length > 4 && !word.match(/^(muito|sempre|nunca|todos|sobre|para|com|sem)$/))
           .slice(0, 10);
         
-        extractedKeywords.forEach(k => {
+        extractedKeywords.forEach((k: string) => {
           keywords.push({ 
             text: k, 
             match_type: 'PHRASE', 

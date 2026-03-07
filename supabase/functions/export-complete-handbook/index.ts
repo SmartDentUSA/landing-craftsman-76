@@ -667,10 +667,10 @@ ${convertMarkdownToHtml(md)}
       }
     });
     
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ Erro ao gerar apostila:', error);
     return new Response(JSON.stringify({ 
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
       details: 'Erro ao gerar apostila completa'
     }), {
       status: 500,

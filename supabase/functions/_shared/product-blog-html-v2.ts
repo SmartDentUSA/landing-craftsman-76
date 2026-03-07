@@ -1484,7 +1484,7 @@ export function generateProductBlogHTMLV2(options: ProductBlogV2Options): string
   
   <!-- Schema.org JSON-LD -->
   <script type="application/ld+json">
-${JSON.stringify({ "@context": "https://schema.org", "@graph": schemas.map(s => { const { "@context": _, ...rest } = s; return rest; }) }, null, 2)}
+${JSON.stringify({ "@context": "https://schema.org", "@graph": schemas.map(s => { const { "@context": _ctx, ...rest } = s as Record<string, any>; return rest; }) }, null, 2)}
   </script>
   
   ${headScripts}

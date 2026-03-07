@@ -355,7 +355,7 @@ export function generateBreadcrumbSchema(product: ProductTemplateData, company: 
     });
   }
 
-  if (product.subcategory) {
+  if (product.subcategory && product.category) {
     items.push({
       name: product.subcategory,
       url: normalizeSchemaUrl(baseUrl, `categoria/${slugify(product.category)}/${slugify(product.subcategory)}`)

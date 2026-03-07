@@ -251,13 +251,14 @@ serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ Erro geral na automação:', error);
+    const errObj = error instanceof Error ? error : new Error(String(error));
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message,
-        details: error.stack
+        error: errObj.message,
+        details: errObj.stack
       }),
       { 
         status: 500,
