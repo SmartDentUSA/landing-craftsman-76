@@ -44,7 +44,7 @@ import {
 } from '../_shared/seo-fine-tuning.ts';
 
 // 🤖 AI Readiness Helpers
-import { enrichGraphWithAIReadiness, generateAISummaryBlock, generateEntityIndexHTML, generateDefinedTermSetSchema } from '../_shared/ai-readiness-helpers.ts';
+import { enrichGraphWithAIReadiness, generateAISummaryBlock, generateEntityIndexHTML, generateDefinedTermSetSchema, generateLLMKnowledgeLayer } from '../_shared/ai-readiness-helpers.ts';
 
 // ═══════════════════════════════════════════════════════════
 // 🛡️ SANITIZAÇÃO DE NOME DA EMPRESA
