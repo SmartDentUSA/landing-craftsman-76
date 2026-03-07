@@ -37,7 +37,7 @@ serve(async (req) => {
     const videos = await collectVideos(supabase, landingPageId, config);
 
     // Generate ad copies using AI
-    const adCopies = await generateAdCopies(finalLandingPageData, keywords);
+    const adCopies = await generateAdCopies(finalLandingPageData, keywords.map(k => k.text));
 
     // ✅ NOVO: Criar múltiplos Ad Groups por intenção
     const adGroups = createSmartAdGroups(keywords, finalLandingPageData.name);
