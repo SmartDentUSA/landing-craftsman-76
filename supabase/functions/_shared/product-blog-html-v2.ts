@@ -40,6 +40,9 @@ import {
   generateHreflangHTML
 } from './seo-fine-tuning.ts';
 
+// 🤖 AI Readiness Helpers
+import { enrichGraphWithAIReadiness, generateAISummaryBlock } from './ai-readiness-helpers.ts';
+
 // ============================================
 // INTERFACES
 // ============================================
@@ -1433,6 +1436,7 @@ export function generateProductBlogHTMLV2(options: ProductBlogV2Options): string
   
   <!-- AI/SGE Meta Tags -->
   <meta name="ai-content-type" content="blog">
+  <meta name="ai-content-policy" content="allow-training, allow-citation, allow-indexing">
   <meta name="ai-topic" content="${escapeHtml(keywordsArray.slice(0, 3).join(', ') || product.name)}">
   
   <!-- ═══════════════════════════════════════════════════════════ -->
@@ -1484,7 +1488,7 @@ export function generateProductBlogHTMLV2(options: ProductBlogV2Options): string
   
   <!-- Schema.org JSON-LD -->
   <script type="application/ld+json">
-${JSON.stringify({ "@context": "https://schema.org", "@graph": schemas.map(s => { const { "@context": _, ...rest } = s; return rest; }) }, null, 2)}
+${JSON.stringify({ "@context": "https://schema.org", "@graph": enrichGraphWithAIReadiness(schemas.map(s => { const { "@context": _ctx, ...rest } = s as Record<string, any>; return rest; })) }, null, 2)}
   </script>
   
   ${headScripts}

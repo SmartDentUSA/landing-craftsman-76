@@ -77,6 +77,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     <meta name="generator" content="Smart Dent CMS v3.0">
     
     <!-- AI Content Tags for AI Crawlers -->
+    <meta name="ai-content-policy" content="allow-training, allow-citation, allow-indexing">
     {{#ai_content_type}}<meta name="ai-content-type" content="{{ai_content_type}}">{{/ai_content_type}}
     {{#ai_topic}}<meta name="ai-topic" content="{{ai_topic}}">{{/ai_topic}}
     
@@ -106,6 +107,9 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     {{{schema_json_ld}}}
     </script>
     {{/schema_json_ld}}
+    
+    <!-- Hero Image Preload (LCP Optimization) -->
+    {{#banner_first_image}}<link rel="preload" as="image" href="{{banner_first_image}}" fetchpriority="high">{{/banner_first_image}}
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -3613,6 +3617,8 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
   // Processa os dados para adicionar os ícones SVG corretos e lógica de duas colunas
   const processedData = {
     ...data,
+    // 🆕 Hero Image Preload (LCP)
+    banner_first_image: data.banner?.images?.[0]?.src || '',
     // 🔧 CORREÇÃO CRÍTICA: Mapear TODOS os campos SEO para nível raiz onde o template espera
     publish_date: data.seo?.publish_date,
     lastmod: data.seo?.lastmod,

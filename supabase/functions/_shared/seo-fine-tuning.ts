@@ -235,6 +235,15 @@ export function generateHasCredential(
     } else if (lowerCert.includes('iso')) {
       category = 'quality';
       recognizedBy = { "@type": "Organization", name: "ISO" };
+    } else if (lowerCert.includes('cro')) {
+      category = 'professional_license';
+      recognizedBy = { "@type": "GovernmentOrganization", name: "CRO - Conselho Regional de Odontologia" };
+    } else if (lowerCert.includes('cfo')) {
+      category = 'regulatory';
+      recognizedBy = { "@type": "GovernmentOrganization", name: "CFO - Conselho Federal de Odontologia" };
+    } else if (lowerCert.includes('omd')) {
+      category = 'regulatory';
+      recognizedBy = { "@type": "GovernmentOrganization", name: "OMD - Ordem dos Médicos Dentistas" };
     } else if (lowerCert.includes('ce') || lowerCert.includes('inmetro')) {
       category = 'regulatory';
     }

@@ -304,14 +304,14 @@ Deno.serve(async (req) => {
       status: 200
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ Erro na consolidação:', error);
-    
+    const errObj = error instanceof Error ? error : new Error(String(error));
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message,
-        stack: error.stack 
+        error: errObj.message,
+        stack: errObj.stack 
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

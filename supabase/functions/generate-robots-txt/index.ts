@@ -63,7 +63,23 @@ serve(async (req) => {
       allowAll: true,
       disallowPaths: defaultWordPressDisallowPaths,
       crawlDelay: null as number | null,
-      userAgents: ['*', 'Googlebot', 'Bingbot', 'Twitterbot', 'facebookexternalhit']
+      userAgents: [
+        '*', 
+        'Googlebot', 
+        'Bingbot', 
+        'Twitterbot', 
+        'facebookexternalhit',
+        // AI Crawler Bots — Allow indexing for LLM citation
+        'GPTBot',
+        'Google-Extended',
+        'CCBot',
+        'PerplexityBot',
+        'ClaudeBot',
+        'Applebot-Extended',
+        'anthropic-ai',
+        'Bytespider',
+        'cohere-ai'
+      ]
     };
 
     // Override with publication settings if available

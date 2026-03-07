@@ -31,6 +31,9 @@ import {
 // ✅ SEO Fine-Tuning 10/10 - Shared Module
 import { deduplicateKeywords, generateHreflangHTML } from "../_shared/seo-fine-tuning.ts";
 
+// 🤖 AI Readiness Helpers
+import { enrichGraphWithAIReadiness, generateAISummaryBlock } from "../_shared/ai-readiness-helpers.ts";
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -1460,6 +1463,9 @@ function generateProductSchema(product: any): string {
     ].filter(Boolean) // Remove nulls
   };
   
+  // 🤖 Enrich @graph with Wikidata entities and AI readiness
+  schema["@graph"] = enrichGraphWithAIReadiness(schema["@graph"], companyData?.website_url);
+  
   const productSchema = schema["@graph"][0];
 
   // Add GTIN if available
@@ -1624,6 +1630,7 @@ function buildSEOHead(product: any): string {
   <!-- META TAGS PARA IA GENERATIVA (SGE/AEO) -->
   <!-- ═══════════════════════════════════════════════════════════ -->
   <meta name="ai-content-type" content="product">
+  <meta name="ai-content-policy" content="allow-training, allow-citation, allow-indexing">
   <meta name="ai-topic" content="${aiTopic}">
   
   <!-- ═══════════════════════════════════════════════════════════ -->

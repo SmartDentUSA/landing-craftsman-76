@@ -98,6 +98,7 @@ interface ProductData {
   instagram_copies?: {
     copies?: any[];
     last_generated?: string;
+    template_config?: any;
   };
   tiktok_content?: {
     copies?: any[];
@@ -193,6 +194,15 @@ interface ProductData {
 
   // Competitor Comparison
   competitor_comparison?: any[];
+
+  // E-commerce HTML
+  ecommerce_html?: {
+    html_content?: string;
+    generated_at?: string;
+    last_edited_at?: string;
+    version?: number;
+    generated_benefits?: any[];
+  };
 }
 
 /**

@@ -37,7 +37,7 @@ serve(async (req) => {
     const videos = await collectVideos(supabase, landingPageId, config);
 
     // Generate ad copies using AI
-    const adCopies = await generateAdCopies(finalLandingPageData, keywords);
+    const adCopies = await generateAdCopies(finalLandingPageData, keywords.map(k => k.text));
 
     // ✅ NOVO: Criar múltiplos Ad Groups por intenção
     const adGroups = createSmartAdGroups(keywords, finalLandingPageData.name);
@@ -278,17 +278,17 @@ function createSmartAdGroups(keywords: KeywordWithMatchType[], productName: stri
   const adGroups: AdGroup[] = [
     {
       name: `AG_COMERCIAL_${sanitizedName}`.replace(/\s+/g, '_'),
-      theme: 'commercial',
+      theme: 'commercial' as const,
       keywords: keywords.filter(k => k.search_intent === 'commercial')
     },
     {
       name: `AG_INFORMACIONAL_${sanitizedName}`.replace(/\s+/g, '_'),
-      theme: 'informational',
+      theme: 'informational' as const,
       keywords: keywords.filter(k => k.search_intent === 'informational')
     },
     {
       name: `AG_PRODUTO_${sanitizedName}`.replace(/\s+/g, '_'),
-      theme: 'product',
+      theme: 'product' as const,
       keywords: keywords.filter(k => k.search_intent === 'product')
     }
   ].filter(ag => ag.keywords.length > 0);
@@ -297,7 +297,7 @@ function createSmartAdGroups(keywords: KeywordWithMatchType[], productName: stri
   if (adGroups.length === 0) {
     adGroups.push({
       name: `AG_GERAL_${sanitizedName}`.replace(/\s+/g, '_'),
-      theme: 'general',
+      theme: 'general' as const,
       keywords: keywords
     });
   }
@@ -519,7 +519,7 @@ async function collectKeywords(supabase: any, landingPageData: any, config: any,
           .filter((word: string) => word.length > 4 && !word.match(/^(muito|sempre|nunca|todos|sobre|para|com|sem)$/))
           .slice(0, 10);
         
-        extractedKeywords.forEach(k => {
+        extractedKeywords.forEach((k: string) => {
           keywords.push({ 
             text: k, 
             match_type: 'PHRASE', 

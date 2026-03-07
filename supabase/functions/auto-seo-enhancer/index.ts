@@ -118,9 +118,9 @@ serve(async (req) => {
               productResult.actions.push('data_extracted');
               console.log(`✅ Dados extraídos com sucesso`);
             }
-          } catch (extractError) {
+        } catch (extractError: unknown) {
             console.error(`⚠️ Erro na extração (não crítico):`, extractError);
-            productResult.errors.push(`Extração: ${extractError.message}`);
+            productResult.errors.push(`Extração: ${extractError instanceof Error ? extractError.message : String(extractError)}`);
           }
         }
 
@@ -145,9 +145,9 @@ serve(async (req) => {
               productResult.actions.push('seo_title_generated');
               console.log(`✅ SEO Title gerado: ${titleResponse.data.content.substring(0, 50)}...`);
             }
-          } catch (titleError) {
+          } catch (titleError: unknown) {
             console.error(`⚠️ Erro ao gerar título:`, titleError);
-            productResult.errors.push(`Título: ${titleError.message}`);
+            productResult.errors.push(`Título: ${titleError instanceof Error ? titleError.message : String(titleError)}`);
           }
         }
 
@@ -172,9 +172,9 @@ serve(async (req) => {
               productResult.actions.push('meta_description_generated');
               console.log(`✅ Meta Description gerada: ${descResponse.data.content.substring(0, 50)}...`);
             }
-          } catch (descError) {
+          } catch (descError: unknown) {
             console.error(`⚠️ Erro ao gerar descrição:`, descError);
-            productResult.errors.push(`Descrição: ${descError.message}`);
+            productResult.errors.push(`Descrição: ${descError instanceof Error ? descError.message : String(descError)}`);
           }
         }
 
@@ -215,10 +215,10 @@ serve(async (req) => {
           console.log(`⏭️ Produto pulado (já otimizado)`);
         }
 
-      } catch (error) {
+      } catch (error: unknown) {
         results.failed++;
         productResult.status = 'failed';
-        productResult.errors.push(error.message);
+        productResult.errors.push(error instanceof Error ? error.message : String(error));
         console.error(`❌ Erro ao processar produto ${product.name}:`, error);
       }
 
@@ -251,13 +251,14 @@ serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ Erro geral na automação:', error);
+    const errObj = error instanceof Error ? error : new Error(String(error));
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message,
-        details: error.stack
+        error: errObj.message,
+        details: errObj.stack
       }),
       { 
         status: 500,

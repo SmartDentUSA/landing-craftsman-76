@@ -313,14 +313,15 @@ export async function regenerateWithValidation<T>(
 
       config.onFailure(attempts, lastValidation);
 
-    } catch (error) {
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : String(error);
       console.error(`[Regeneration] Error on attempt ${attempts}:`, error);
       config.onFailure(attempts, {
         isValid: false,
         score: 0,
-        errors: [`Generation error: ${error.message}`],
+        errors: [`Generation error: ${errMsg}`],
         warnings: [],
-        metadata: { error: error.toString() }
+        metadata: { error: String(error) }
       });
     }
   }
