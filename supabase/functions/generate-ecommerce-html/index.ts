@@ -1924,6 +1924,27 @@ function buildEcommerceHTML(
   html += `
 <h1 style="color: #3E4B5E; font-size: 2em; font-weight: 800; letter-spacing: -0.8px; text-align: center; margin-bottom: 20px;">${product.name}</h1>`;
 
+  // 🤖 AI Summary Block (visually hidden, semantically accessible for LLMs)
+  const productDescription = product.description || product.sales_pitch || '';
+  const productBenefits = benefits.slice(0, 3);
+  html += generateAISummaryBlock({
+    productName: product.name,
+    companyName: companyName,
+    category: product.category,
+    description: productDescription,
+    keyBenefits: productBenefits,
+    certifications: product.certifications || []
+  });
+  
+  // 🤖 LLM Knowledge Layer (structured knowledge for AI extraction)
+  html += generateLLMKnowledgeLayer({
+    definition: productDescription.replace(/<[^>]*>/g, '').substring(0, 300),
+    technology: (product.features || []).slice(0, 3).join('; '),
+    clinicalApplication: product.applications || '',
+    keyProperties: (product.technical_specifications || []).slice(0, 5).map((s: any) => typeof s === 'string' ? s : `${s.label || s.name}: ${s.value}`),
+    certifications: product.certifications || []
+  });
+
   html += `
 <div style="font-size: 1.05em; margin-bottom: 25px;">${parseRichDescription(enrichedDescription)}</div>`;
 
