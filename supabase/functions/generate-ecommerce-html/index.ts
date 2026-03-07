@@ -1238,7 +1238,7 @@ function buildCompanyHeader(company: any): string {
  * Utiliza sanitização para criar descrições SEO-friendly
  */
 function generateImageAlt(imageUrl: string, productName: string, index: number = 0): string {
-  if (!imageUrl) return productName;
+  if (!imageUrl) return `${productName} - Odontologia Digital ${companyName}`;
   
   // Extrai nome do arquivo da URL
   const fileName = imageUrl.split('/').pop() || '';
@@ -1255,9 +1255,12 @@ function generateImageAlt(imageUrl: string, productName: string, index: number =
     .replace(/\s+/g, ' ')
     .trim();
   
-  // Se o alt gerado estiver vazio ou muito curto, usa o nome do produto
-  if (!alt || alt.length < 3) {
-    alt = index === 0 ? productName : `${productName} - Imagem ${index + 1}`;
+  // ✅ Se o alt gerado estiver vazio, muito curto ou genérico, usar fallback SEO-friendly
+  const badAlts = ['imagem', 'foto', 'image', 'picture', 'img', 'untitled', 'undefined', 'null'];
+  if (!alt || alt.length < 3 || badAlts.includes(alt.toLowerCase())) {
+    alt = index === 0 
+      ? `${productName} - Odontologia Digital ${companyName}` 
+      : `${productName} - Imagem ${index + 1} - Odontologia Digital ${companyName}`;
   }
   
   // Valida comprimento (máximo 125 chars para Google)
