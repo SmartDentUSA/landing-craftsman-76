@@ -2511,6 +2511,9 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     {{/visible_any}}
     {{/knowledge_feed_section}}
 
+    <!-- 🤖 AI Entity Index (visually hidden, Wikidata links for crawlers) -->
+    {{{entity_index_block}}}
+    
     <!-- Footer - Smart Dent SPIN Style with LocalBusiness Microdata -->
     <footer class="footer" role="contentinfo" itemscope itemtype="https://schema.org/LocalBusiness">
         <div class="footer-top-bar"></div>
