@@ -41,7 +41,7 @@ import {
 } from './seo-fine-tuning.ts';
 
 // 🤖 AI Readiness Helpers
-import { enrichGraphWithAIReadiness, generateAISummaryBlock } from './ai-readiness-helpers.ts';
+import { enrichGraphWithAIReadiness, generateAISummaryBlock, generateLLMKnowledgeLayer, generateEntityIndexHTML, generateDefinedTermSetSchema } from './ai-readiness-helpers.ts';
 
 // ============================================
 // INTERFACES
@@ -1488,7 +1488,13 @@ export function generateProductBlogHTMLV2(options: ProductBlogV2Options): string
   
   <!-- Schema.org JSON-LD -->
   <script type="application/ld+json">
-${JSON.stringify({ "@context": "https://schema.org", "@graph": enrichGraphWithAIReadiness(schemas.map(s => { const { "@context": _ctx, ...rest } = s as Record<string, any>; return rest; })) }, null, 2)}
+${(() => {
+  const graph = enrichGraphWithAIReadiness(schemas.map(s => { const { "@context": _ctx, ...rest } = s as Record<string, any>; return rest; }));
+  const blogContentText = [product.name, description, product.category, product.sales_pitch, ...features, ...(product.benefits || []).map((b: any) => typeof b === 'string' ? b : b.title || '')].filter(Boolean).join(' ');
+  const dts = generateDefinedTermSetSchema(blogContentText, 'Termos técnicos: ' + product.name);
+  if (dts) graph.push(dts);
+  return JSON.stringify({ "@context": "https://schema.org", "@graph": graph }, null, 2);
+})()}
   </script>
   
   ${headScripts}
@@ -1583,6 +1589,21 @@ ${JSON.stringify({ "@context": "https://schema.org", "@graph": enrichGraphWithAI
             </div>
             
             <h1>${escapeHtml(product.name)}</h1>
+            
+            ${generateAISummaryBlock({
+              productName: product.name,
+              companyName: companyProfile?.company_name || 'Smart Dent',
+              category: product.category,
+              description: description,
+              keyBenefits: (product.benefits || []).slice(0, 3).map((b: any) => typeof b === 'string' ? b : b.title || b.text || ''),
+              certifications: []
+            })}
+            
+            ${generateLLMKnowledgeLayer({
+              definition: description.replace(/<[^>]*>/g, '').substring(0, 300),
+              technology: features.slice(0, 3).join('; '),
+              clinicalApplication: product.applications || '',
+            })}
             
             <p class="lead">${escapeHtml(description.substring(0, 200))}${description.length > 200 ? '...' : ''}</p>
             
@@ -1901,6 +1922,9 @@ ${JSON.stringify({ "@context": "https://schema.org", "@graph": enrichGraphWithAI
       });
     });
   </script>
+  
+  ${generateEntityIndexHTML([product.name, description, product.category, product.sales_pitch, ...features].filter(Boolean).join(' '))}
+  
 </body>
 </html>`;
 }

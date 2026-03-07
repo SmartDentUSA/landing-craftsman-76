@@ -41,7 +41,7 @@ import {
 } from "../_shared/seo-fine-tuning.ts";
 
 // 🤖 AI Readiness Helpers
-import { enrichGraphWithAIReadiness, generateLandingPageAISummary } from "../_shared/ai-readiness-helpers.ts";
+import { enrichGraphWithAIReadiness, generateLandingPageAISummary, generateEntityIndexHTML, generateDefinedTermSetSchema } from "../_shared/ai-readiness-helpers.ts";
 
 // ✅ FASE 9: Wrapper para manter compatibilidade
 function generateLandingPageBreadcrumbsForClone(
@@ -2066,6 +2066,28 @@ function injectSEO(
   `;
   
   result = result.replace(/<head[^>]*>/i, `$&\n${seoTags}`);
+  
+  // 🤖 AI-Readiness: Inject AI Summary + Entity Index before </body>
+  const aiSummaryHTML = generateLandingPageAISummary({
+    companyName: company,
+    pageTitle: options.name || '',
+    sector: options.businessSector || 'odontologia digital',
+    location: `${options.city || ''}, ${options.state || ''}`.replace(/^, |, $/g, ''),
+    services: options.mainProductsServices || ''
+  });
+  const cloneContentText = `${company} ${options.name || ''} ${options.businessSector || ''} ${options.mainProductsServices || ''} ${result.substring(0, 3000)}`;
+  const entityIndexHTML = generateEntityIndexHTML(cloneContentText);
+  
+  if (aiSummaryHTML || entityIndexHTML) {
+    result = result.replace('</body>', `${aiSummaryHTML}${entityIndexHTML}\n</body>`);
+    console.log('🤖 [AI-Readiness] AI Summary + Entity Index injected in clone-LP');
+  }
+  
+  // 🤖 DefinedTermSet in schema @graph
+  const definedTermSetClone = generateDefinedTermSetSchema(cloneContentText, `Termos: ${company}`);
+  if (definedTermSetClone) {
+    schemaGraph["@graph"].push(definedTermSetClone);
+  }
   
   // ✅ FASE 10: Injetar Authority Context HTML COMPLETO (invisível para usuários, visível para crawlers)
   if (authorityData) {

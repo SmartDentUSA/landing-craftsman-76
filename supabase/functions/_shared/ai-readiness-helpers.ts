@@ -251,18 +251,15 @@ export function generateSearchAction(websiteUrl: string): Record<string, any> {
 
 /**
  * Enriches a full JSON-LD @graph with Wikidata entities and AI readiness
- * This is a safety-net function to be called on any generated schema graph
  */
 export function enrichGraphWithAIReadiness(graph: Record<string, any>[], websiteUrl?: string): Record<string, any>[] {
   return graph.map(schema => {
     let enriched = enrichSchemaEntitiesWithWikidata(schema);
     
-    // Add isAccessibleForFree to Article/BlogPosting
     if (enriched["@type"] === "Article" || enriched["@type"] === "BlogPosting") {
       enriched = addArticleAIReadiness(enriched);
     }
     
-    // Add SearchAction to WebSite
     if (enriched["@type"] === "WebSite" && websiteUrl && !enriched.potentialAction) {
       enriched.potentialAction = generateSearchAction(websiteUrl);
     }
@@ -271,4 +268,123 @@ export function enrichGraphWithAIReadiness(graph: Record<string, any>[], website
   });
 }
 
-console.log('🤖 [AI-Readiness] Helpers loaded: Wikidata entities, AI summary, article enhancements');
+// ============================================
+// K. LLM Knowledge Layer — Structured Knowledge
+// ============================================
+
+const VISUALLY_HIDDEN_STYLE = 'position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;';
+
+/**
+ * Generates an LLM Knowledge Layer HTML block
+ * Structured definition list for AI extraction
+ */
+export function generateLLMKnowledgeLayer(params: {
+  definition?: string;
+  technology?: string;
+  clinicalApplication?: string;
+  keyProperties?: string[];
+  certifications?: string[];
+}): string {
+  const { definition, technology, clinicalApplication, keyProperties, certifications } = params;
+  
+  if (!definition && !technology && !clinicalApplication) return '';
+  
+  const items: string[] = [];
+  
+  if (definition) {
+    items.push(`    <dt>Definição</dt>\n    <dd>${definition}</dd>`);
+  }
+  if (technology) {
+    items.push(`    <dt>Tecnologia</dt>\n    <dd>${technology}</dd>`);
+  }
+  if (clinicalApplication) {
+    items.push(`    <dt>Aplicação clínica</dt>\n    <dd>${clinicalApplication}</dd>`);
+  }
+  if (keyProperties && keyProperties.length > 0) {
+    items.push(`    <dt>Propriedades principais</dt>\n    <dd>${keyProperties.join('; ')}</dd>`);
+  }
+  if (certifications && certifications.length > 0) {
+    items.push(`    <dt>Certificações</dt>\n    <dd>${certifications.join(', ')}</dd>`);
+  }
+  
+  return `
+  <aside class="llm-knowledge" data-ai-hint="knowledge" role="doc-glossary" style="${VISUALLY_HIDDEN_STYLE}">
+    <dl>
+${items.join('\n')}
+    </dl>
+  </aside>`;
+}
+
+// ============================================
+// L. Entity Index — Wikidata Links for Crawlers
+// ============================================
+
+/**
+ * Detects known entities in text content and generates an Entity Index HTML block
+ * with Wikidata links for AI crawlers
+ */
+export function generateEntityIndexHTML(contentText: string): string {
+  if (!contentText) return '';
+  
+  const normalized = contentText.toLowerCase();
+  const matchedEntities: { name: string; qid: string; description: string }[] = [];
+  const seen = new Set<string>();
+  
+  for (const [key, value] of Object.entries(WIKIDATA_ENTITIES)) {
+    if (normalized.includes(key) && !seen.has(value.qid)) {
+      seen.add(value.qid);
+      matchedEntities.push({ name: value.label, qid: value.qid, description: value.description });
+    }
+  }
+  
+  if (matchedEntities.length === 0) return '';
+  
+  const links = matchedEntities
+    .slice(0, 15)
+    .map(e => `    <li><a href="https://www.wikidata.org/entity/${e.qid}" title="${e.description}">${e.name}</a></li>`)
+    .join('\n');
+  
+  return `
+  <nav class="entity-index" data-ai-hint="entities" aria-label="Entidades Relacionadas" style="${VISUALLY_HIDDEN_STYLE}">
+    <ul>
+${links}
+    </ul>
+  </nav>`;
+}
+
+// ============================================
+// M. DefinedTermSet Schema — Mini-Wikipedia for AI
+// ============================================
+
+/**
+ * Generates a DefinedTermSet JSON-LD schema from detected entities in content
+ */
+export function generateDefinedTermSetSchema(contentText: string, setName?: string): Record<string, any> | null {
+  if (!contentText) return null;
+  
+  const normalized = contentText.toLowerCase();
+  const terms: Record<string, any>[] = [];
+  const seen = new Set<string>();
+  
+  for (const [key, value] of Object.entries(WIKIDATA_ENTITIES)) {
+    if (normalized.includes(key) && !seen.has(value.qid)) {
+      seen.add(value.qid);
+      terms.push({
+        "@type": "DefinedTerm",
+        "name": value.label,
+        "description": value.description,
+        "sameAs": `https://www.wikidata.org/entity/${value.qid}`
+      });
+    }
+  }
+  
+  if (terms.length === 0) return null;
+  
+  return {
+    "@type": "DefinedTermSet",
+    "name": setName || "Termos de Odontologia Digital",
+    "hasDefinedTerm": terms.slice(0, 20)
+  };
+}
+
+console.log('🤖 [AI-Readiness] Helpers loaded: Wikidata entities, AI summary, LLM knowledge, entity index, DefinedTermSet');

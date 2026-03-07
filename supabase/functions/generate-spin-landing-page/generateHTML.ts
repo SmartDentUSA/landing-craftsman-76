@@ -43,6 +43,9 @@ import {
   generateHreflangHTML
 } from '../_shared/seo-fine-tuning.ts';
 
+// 🤖 AI Readiness Helpers
+import { enrichGraphWithAIReadiness, generateAISummaryBlock, generateEntityIndexHTML, generateDefinedTermSetSchema } from '../_shared/ai-readiness-helpers.ts';
+
 // ═══════════════════════════════════════════════════════════
 // 🛡️ SANITIZAÇÃO DE NOME DA EMPRESA
 // ═══════════════════════════════════════════════════════════
@@ -847,9 +850,16 @@ export function generateLandingPageHTML(
   }
   
   // Consolidar schemas em @graph (Google recomenda)
+  // 🤖 AI-Readiness: Add DefinedTermSet if entities detected
+  const spinContentText = `${solution.title || ''} ${solution.pain_description || ''} ${solution.sales_pitch || ''} ${products.map((p: any) => `${p.name} ${p.category || ''} ${p.description || ''}`).join(' ')}`;
+  const spinDefinedTermSet = generateDefinedTermSetSchema(spinContentText, `Termos: ${sanitizeCompanyName(company?.company_name)}`);
+  if (spinDefinedTermSet) {
+    schemas.push(spinDefinedTermSet);
+  }
+  
   const consolidatedSchema = {
     '@context': 'https://schema.org',
-    '@graph': schemas
+    '@graph': enrichGraphWithAIReadiness(schemas, company?.website_url)
   };
 
   return `<!DOCTYPE html>
@@ -2635,6 +2645,15 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
   <!-- 📝 SEÇÃO DE CONTEÚDO INDEXÁVEL (GEO/SGE) -->
   <!-- ═══════════════════════════════════════════════════════════ -->
   <main id="main-content" class="indexable-content container section-padding">
+    
+    ${generateAISummaryBlock({
+      productName: solution.title,
+      companyName: sanitizeCompanyName(company?.company_name),
+      category: painTypeLabels[solution.pain_type] || 'odontologia digital',
+      description: solution.pain_description || solution.sales_pitch || '',
+      keyBenefits: products.slice(0, 3).map((p: any) => p.name),
+    })}
+    
     <article itemscope itemtype="https://schema.org/Article">
       <header class="content-header">
         <h2 itemprop="headline">${escapeHtml(solution.title)}</h2>
@@ -3350,6 +3369,8 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
     ${company?.seo_technical_expertise ? `<p>Expertise técnica: ${escapeHtml(company.seo_technical_expertise)}.</p>` : ''}
     ${company?.differentiators ? `<p>Diferenciais: ${escapeHtml(company.differentiators)}.</p>` : ''}
   </div>
+  
+  ${generateEntityIndexHTML(spinContentText)}
   
   <!-- ✅ FASE 10: Authority Context Completo (Parcerias, NPS, Videos, Testimonials) -->
   ${authorityData ? generateAuthorityContextHTML(authorityData, videoTestimonials || []) : ''}

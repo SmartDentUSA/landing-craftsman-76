@@ -1,120 +1,49 @@
 
 
-# Plano: Ativar AI-Readiness no HTML Gerado
+# Botões individuais "Gerar por IA" para slides do Carrossel Visual
 
-## Diagnostico
+## Contexto
 
-O sistema possui helpers prontos em `ai-readiness-helpers.ts` (Wikidata linking, AI Summary Block, Article AI readiness) mas eles sao **codigo morto** — importados mas nunca chamados para injetar HTML. Alem disso, faltam 2 blocos novos que o usuario solicitou: **LLM Knowledge Layer** e **Entity Index**.
+O Carrossel Visual tem 6 slides. O Slide 1 (🎣 Hook) já possui um botão individual "Novo Gancho IA" que chama a edge function `generate-carousel-hook`. Os slides 3 (🔬 Cientificidade), 4 (💫 Experiência) e 5 (🛡️ Segurança) não possuem botões individuais — só podem ser gerados pelo botão geral "🤖 Gerar com IA" que regenera todos os slides de uma vez.
 
-### Status atual por gerador
+## Plano
 
-| Gerador | Wikidata (JSON-LD) | AI Summary (HTML) | Knowledge Layer | Entity Index | DefinedTermSet |
-|---------|--------------------|--------------------|-----------------|--------------|----------------|
-| ecommerce-html | `enrichGraphWithAIReadiness` chamado | importado, nunca chamado | ausente | ausente | ausente |
-| clone-landing-page | `enrichGraphWithAIReadiness` chamado | importado, nunca chamado | ausente | ausente | ausente |
-| product-blog-html-v2 | `enrichGraphWithAIReadiness` chamado | importado, nunca chamado | ausente | ausente | ausente |
-| SPIN landing page | nenhum import | ausente | ausente | ausente | ausente |
-| template-engine.ts (LP) | nenhum (client-side) | ausente | ausente | ausente | ausente |
+### 1. Nova Edge Function: `generate-carousel-slide`
 
----
+Criar uma edge function genérica que receba o tipo do slide (`cientificidade`, `experiencia`, `seguranca`) e gere apenas o conteúdo daquele slide específico, com prompts especializados por tipo:
 
-## Implementacao (7 arquivos)
+- **Cientificidade (Slide 3)**: Gera title, headline, body, bullet1-4 com foco em evidências científicas e dados técnicos
+- **Experiência (Slide 4)**: Gera keyword + benefit com foco em experiência clínica e fluxo de trabalho
+- **Segurança (Slide 5)**: Gera title, badge1-3 com foco em certificações, garantias e confiança
 
-### 1. Expandir `ai-readiness-helpers.ts` com 3 novos blocos
+Recebe: `productName`, `salesPitch`, `benefits`, `features`, `slideType`
+Retorna: campos específicos do slide solicitado
 
-Adicionar funcoes:
-- **`generateLLMKnowledgeLayer()`** — gera bloco HTML semantico `<aside class="llm-knowledge" data-ai-hint="knowledge">` com definicao, tecnologia e aplicacao clinica (visually hidden, semanticamente acessivel)
-- **`generateEntityIndexHTML()`** — gera bloco `<nav class="entity-index" data-ai-hint="entities">` com links Wikidata para entidades detectadas no conteudo
-- **`generateDefinedTermSetSchema()`** — gera JSON-LD `DefinedTermSet` com termos do produto mapeados para Wikidata
+### 2. Frontend — Novos estados e handlers (`InstagramCopyGenerator.tsx`)
 
-### 2. Ativar nos 4 geradores server-side
+- Adicionar 3 estados: `generatingScience`, `generatingExperience`, `generatingSecurity`
+- Criar 3 handlers que chamam `generate-carousel-slide` com o `slideType` correto e atualizam apenas o slide correspondente em `slideTexts`
 
-**`generate-ecommerce-html/index.ts`** (~linha 1925, apos o H1):
-- Chamar `generateAISummaryBlock()` com dados do produto
-- Chamar `generateLLMKnowledgeLayer()` com definicao, tecnologia e aplicacao
-- No final do HTML, chamar `generateEntityIndexHTML()`
-- No schema @graph, adicionar `DefinedTermSet`
+### 3. Frontend — 3 novos botões no header do Carrossel Visual
 
-**`clone-landing-page/index.ts`**:
-- Chamar `generateLandingPageAISummary()` (ja importado, nunca chamado)
-- Adicionar entity index no footer
+Adicionar ao lado do botão "🎣 Novo Gancho IA" (linha ~1962):
 
-**`product-blog-html-v2.ts`**:
-- Chamar `generateAISummaryBlock()` apos o H1 do artigo
-- Adicionar knowledge layer e entity index
+- **🔬 Cientificidade IA** — gera apenas Slide 3
+- **💫 Experiência IA** — gera apenas Slide 4
+- **🛡️ Segurança IA** — gera apenas Slide 5
 
-**`generate-spin-landing-page/generateHTML.ts`**:
-- Importar e chamar `generateAISummaryBlock()` e `generateEntityIndexHTML()`
+Cada botão com loading state individual, mesmo padrão visual do botão Hook existente.
 
-### 3. Template-engine.ts (client-side LP)
+### Detalhes técnicos
 
-Adicionar variaveis Mustache para os blocos AI:
-- `{{ai_summary_block}}` — injetado apos o H1
-- `{{entity_index_block}}` — injetado antes do footer
-- Popular essas variaveis na funcao `generateLandingPage()`
+**Edge function `generate-carousel-slide/index.ts`:**
+- Usa Lovable AI Gateway (`google/gemini-2.5-flash`)
+- Prompt especializado por slideType com regras de formatação
+- Temperature 1.0 para variedade
+- Retorna JSON estruturado via tool calling para garantir campos corretos
 
----
-
-## Detalhes Tecnicos
-
-### AI Summary Block (ja existe, so precisa chamar)
-```html
-<div class="ai-summary" data-ai-hint="summary" role="doc-abstract" 
-     style="position:absolute;width:1px;height:1px;...clip:rect(0,0,0,0);">
-  <p>A Atos Unichroma e uma resina composta unicromatica bulk fill...</p>
-</div>
-```
-
-### LLM Knowledge Layer (novo)
-```html
-<aside class="llm-knowledge" data-ai-hint="knowledge" role="doc-glossary"
-       style="position:absolute;width:1px;height:1px;...clip:rect(0,0,0,0);">
-  <dl>
-    <dt>Definicao</dt>
-    <dd>Resina composta unicromatica bulk fill...</dd>
-    <dt>Tecnologia</dt>
-    <dd>SMART CARE FOTOCROMA...</dd>
-    <dt>Aplicacao clinica</dt>
-    <dd>Restauracoes classes I, II, III, IV e V</dd>
-  </dl>
-</aside>
-```
-
-### Entity Index (novo)
-```html
-<nav class="entity-index" data-ai-hint="entities" aria-label="Entidades Relacionadas"
-     style="position:absolute;width:1px;height:1px;...clip:rect(0,0,0,0);">
-  <ul>
-    <li><a href="https://www.wikidata.org/entity/Q899928">Resina Composta</a></li>
-    <li><a href="https://www.wikidata.org/entity/Q12128">Odontologia</a></li>
-  </ul>
-</nav>
-```
-
-### DefinedTermSet Schema (novo no JSON-LD)
-```json
-{
-  "@type": "DefinedTermSet",
-  "name": "Termos de Odontologia Digital",
-  "hasDefinedTerm": [
-    {
-      "@type": "DefinedTerm",
-      "name": "Scanner Intraoral",
-      "description": "Dispositivo digital...",
-      "sameAs": "https://www.wikidata.org/entity/Q113534653"
-    }
-  ]
-}
-```
-
----
-
-## Ordem de execucao
-
-1. Expandir `ai-readiness-helpers.ts` com as 3 novas funcoes
-2. Ativar em `generate-ecommerce-html/index.ts`
-3. Ativar em `clone-landing-page/index.ts`
-4. Ativar em `product-blog-html-v2.ts`
-5. Ativar em `generate-spin-landing-page/generateHTML.ts`
-6. Ativar em `src/lib/template-engine.ts`
+**Mapeamento de retorno:**
+- `cientificidade` → `{ title, headline, body, bullet1, bullet2, bullet3, bullet4 }`
+- `experiencia` → `{ keyword, benefit }`
+- `seguranca` → `{ title, badge1, badge2, badge3 }`
 
