@@ -2522,9 +2522,20 @@ function buildEcommerceHTML(
     }
   }
   
+  // 🤖 DefinedTermSet Schema (mini-wikipedia for AI)
+  const allContentText = `${product.name} ${product.description || ''} ${product.sales_pitch || ''} ${product.category || ''} ${(product.features || []).join(' ')} ${(product.benefits || []).join(' ')}`;
+  const definedTermSet = generateDefinedTermSetSchema(allContentText, `Termos técnicos: ${product.name}`);
+  if (definedTermSet) {
+    ecommerceSchema["@graph"].push(definedTermSet);
+  }
+  
   html += `\n<script type="application/ld+json">${JSON.stringify(ecommerceSchema)}</script>`;
 
+  // 🤖 Entity Index HTML (Wikidata links for AI crawlers)
+  html += generateEntityIndexHTML(allContentText);
+
   console.log('✅ SPIN Design System aplicado ao HTML final');
-  console.log('✅ [E-commerce] JSON-LD com WebPage + Product + mainEntity/about/mentions injetado');
+  console.log('✅ [E-commerce] JSON-LD com WebPage + Product + mainEntity/about/mentions + DefinedTermSet injetado');
+  console.log('🤖 [AI-Readiness] AI Summary, LLM Knowledge Layer, Entity Index injetados');
   return html;
 }
