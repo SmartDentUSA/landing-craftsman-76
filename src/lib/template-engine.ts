@@ -3620,9 +3620,58 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
     return null;
   };
 
+  // 🤖 AI-Readiness: Generate AI blocks for Mustache template
+  const companyName = data.company_profile?.company_name || 'Smart Dent';
+  const seoTitle = data.seo?.seo_title || data.seo_title || data.name || '';
+  const seoDescription = data.seo?.seo_description || data.seo_description || '';
+  const sector = data.company_profile?.business_sector || 'odontologia digital';
+  const location = [data.company_profile?.city, data.company_profile?.state].filter(Boolean).join(', ');
+  const services = data.company_profile?.main_products_services || '';
+  
+  const aiSummaryParts: string[] = [];
+  if (companyName) aiSummaryParts.push(`${companyName} — especialista em ${sector}.`);
+  if (seoTitle) aiSummaryParts.push(seoTitle + '.');
+  if (location) aiSummaryParts.push(`Localização: ${location}.`);
+  if (services) aiSummaryParts.push(`Serviços: ${services}.`);
+  
+  const aiSummaryBlock = aiSummaryParts.length > 0 
+    ? `<div class="ai-summary" data-ai-hint="summary" role="doc-abstract" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;"><p>${aiSummaryParts.join(' ')}</p></div>`
+    : '';
+  
+  // 🤖 Entity Index: detect known dental entities in content
+  const WIKIDATA_QUICK_MAP: Record<string, { qid: string; label: string }> = {
+    'odontologia digital': { qid: 'Q2915883', label: 'Digital dentistry' },
+    'cad/cam': { qid: 'Q1071923', label: 'CAD/CAM' },
+    'impressão 3d': { qid: 'Q229367', label: '3D printing' },
+    'scanner intraoral': { qid: 'Q113534653', label: 'Intraoral scanner' },
+    'zircônia': { qid: 'Q80235', label: 'Zirconia' },
+    'zirconia': { qid: 'Q80235', label: 'Zirconia' },
+    'implante dentário': { qid: 'Q1667294', label: 'Dental implant' },
+    'resina composta': { qid: 'Q899928', label: 'Dental composite' },
+    'cerâmica dental': { qid: 'Q45621', label: 'Dental ceramic' },
+    'ortodontia': { qid: 'Q181560', label: 'Orthodontics' },
+    'implantodontia': { qid: 'Q1667294', label: 'Dental implant' },
+  };
+  
+  const contentForEntities = `${seoTitle} ${seoDescription} ${services} ${sector}`.toLowerCase();
+  const entityLinks: string[] = [];
+  const seenQids = new Set<string>();
+  for (const [key, val] of Object.entries(WIKIDATA_QUICK_MAP)) {
+    if (contentForEntities.includes(key) && !seenQids.has(val.qid)) {
+      seenQids.add(val.qid);
+      entityLinks.push(`<li><a href="https://www.wikidata.org/entity/${val.qid}">${val.label}</a></li>`);
+    }
+  }
+  const entityIndexBlock = entityLinks.length > 0
+    ? `<nav class="entity-index" data-ai-hint="entities" aria-label="Entidades Relacionadas" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;"><ul>${entityLinks.join('')}</ul></nav>`
+    : '';
+
   // Processa os dados para adicionar os ícones SVG corretos e lógica de duas colunas
   const processedData = {
     ...data,
+    // 🤖 AI-Readiness Blocks
+    ai_summary_block: aiSummaryBlock,
+    entity_index_block: entityIndexBlock,
     // 🆕 Hero Image Preload (LCP)
     banner_first_image: data.banner?.images?.[0]?.src || '',
     // 🔧 CORREÇÃO CRÍTICA: Mapear TODOS os campos SEO para nível raiz onde o template espera
