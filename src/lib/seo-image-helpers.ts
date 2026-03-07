@@ -54,3 +54,28 @@ export const validateAltText = (alt: string): { valid: boolean; message?: string
   
   return { valid: true };
 };
+
+/**
+ * Gera alt text com fallback automático para imagens de produto
+ * 
+ * Prioridade:
+ * 1. Alt text específico fornecido (se não for genérico)
+ * 2. Fallback: "[Nome do Produto] - Odontologia Digital [Empresa]"
+ */
+export const getProductImageAlt = (
+  alt: string | null | undefined,
+  productName: string,
+  companyName: string = 'Smart Dent'
+): string => {
+  // Se alt existe e não é genérico, usar
+  if (alt && alt.trim().length >= 3) {
+    const badAlts = ['imagem', 'foto', 'image', 'picture', 'img', 'untitled', 'undefined', 'null'];
+    if (!badAlts.includes(alt.trim().toLowerCase())) {
+      return alt.trim().substring(0, 125);
+    }
+  }
+  
+  // Fallback SEO-friendly
+  const fallback = `${productName} - Odontologia Digital ${companyName}`;
+  return fallback.substring(0, 125);
+};

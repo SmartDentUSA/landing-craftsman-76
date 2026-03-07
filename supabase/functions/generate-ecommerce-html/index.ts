@@ -1237,8 +1237,9 @@ function buildCompanyHeader(company: any): string {
  * Gera alt text semântico a partir do nome do arquivo ou URL
  * Utiliza sanitização para criar descrições SEO-friendly
  */
-function generateImageAlt(imageUrl: string, productName: string, index: number = 0): string {
-  if (!imageUrl) return productName;
+function generateImageAlt(imageUrl: string, productName: string, index: number = 0, company?: string): string {
+  const brandName = company || 'Smart Dent';
+  if (!imageUrl) return `${productName} - Odontologia Digital ${brandName}`;
   
   // Extrai nome do arquivo da URL
   const fileName = imageUrl.split('/').pop() || '';
@@ -1255,9 +1256,12 @@ function generateImageAlt(imageUrl: string, productName: string, index: number =
     .replace(/\s+/g, ' ')
     .trim();
   
-  // Se o alt gerado estiver vazio ou muito curto, usa o nome do produto
-  if (!alt || alt.length < 3) {
-    alt = index === 0 ? productName : `${productName} - Imagem ${index + 1}`;
+  // ✅ Se o alt gerado estiver vazio, muito curto ou genérico, usar fallback SEO-friendly
+  const badAlts = ['imagem', 'foto', 'image', 'picture', 'img', 'untitled', 'undefined', 'null'];
+  if (!alt || alt.length < 3 || badAlts.includes(alt.toLowerCase())) {
+    alt = index === 0 
+      ? `${productName} - Odontologia Digital ${brandName}` 
+      : `${productName} - Imagem ${index + 1} - Odontologia Digital ${brandName}`;
   }
   
   // Valida comprimento (máximo 125 chars para Google)
@@ -1914,8 +1918,9 @@ function buildEcommerceHTML(
   // ✅ Iniciar com SPIN Design System CSS
   let html = getSpinStylesCSS();
   
-  // ✅ Conteúdo principal em <article> com classe SPIN (AI-ready semantic wrapper)
+  // ✅ Conteúdo principal em <main> + <article> com classe SPIN (AI-ready semantic wrapper)
   html += `
+<main id="main-content">
 <article class="indexable-content spin-ecom" itemscope itemtype="https://schema.org/Product" style="max-width: 1200px; margin: 0 auto; padding: 20px; font-family: Inter, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; color: #333333; line-height: 1.6;">`;
 
   // 🗑️ Banner roxo da empresa removido - conteúdo inicia direto no título do produto
@@ -2534,8 +2539,8 @@ function buildEcommerceHTML(
   // 🤖 Entity Index HTML (Wikidata links for AI crawlers)
   html += generateEntityIndexHTML(allContentText);
 
-  // ✅ Fechar <article> wrapper semântico
-  html += `\n</article>`;
+  // ✅ Fechar <article> + <main> wrapper semântico
+  html += `\n</article>\n</main>`;
 
   console.log('✅ SPIN Design System aplicado ao HTML final');
   console.log('✅ [E-commerce] JSON-LD com WebPage + Product + mainEntity/about/mentions + DefinedTermSet injetado');

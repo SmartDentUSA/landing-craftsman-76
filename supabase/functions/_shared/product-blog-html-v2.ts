@@ -1430,7 +1430,7 @@ export function generateProductBlogHTMLV2(options: ProductBlogV2Options): string
   <title>${escapeHtml(title)}</title>
   <meta name="description" content="${escapeHtml(description)}">
   <meta name="keywords" content="${escapeHtml(keywords)}">
-  <meta name="author" content="${escapeHtml(companyName)}">
+  <!-- author: see E-E-A-T Author Tag below -->
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
   <link rel="canonical" href="${escapeHtml(canonicalUrl)}">
   
@@ -1569,7 +1569,7 @@ ${(() => {
         <div class="hero-grid">
           <div class="hero-media">
             <div class="main-media">
-              <img src="${escapeHtml(galleryImages[0] || '')}" alt="${escapeHtml(product.name)}" id="main-image" loading="eager" fetchpriority="high">
+              <img src="${escapeHtml(galleryImages[0] || '')}" alt="${escapeHtml(product.name)} - Odontologia Digital ${escapeHtml(companyName)}" id="main-image" loading="eager" fetchpriority="high">
             </div>
             ${galleryImages.length > 1 ? `
             <div class="thumbs" role="listbox" aria-label="Galeria de imagens">
