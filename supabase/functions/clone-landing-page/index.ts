@@ -40,6 +40,9 @@ import {
   generateHreflangHTML
 } from "../_shared/seo-fine-tuning.ts";
 
+// 🤖 AI Readiness Helpers
+import { enrichGraphWithAIReadiness, generateLandingPageAISummary } from "../_shared/ai-readiness-helpers.ts";
+
 // ✅ FASE 9: Wrapper para manter compatibilidade
 function generateLandingPageBreadcrumbsForClone(
   data: { name: string; brand?: string; canonicalUrl?: string },
