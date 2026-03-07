@@ -215,10 +215,10 @@ serve(async (req) => {
           console.log(`⏭️ Produto pulado (já otimizado)`);
         }
 
-      } catch (error) {
+      } catch (error: unknown) {
         results.failed++;
         productResult.status = 'failed';
-        productResult.errors.push(error.message);
+        productResult.errors.push(error instanceof Error ? error.message : String(error));
         console.error(`❌ Erro ao processar produto ${product.name}:`, error);
       }
 
