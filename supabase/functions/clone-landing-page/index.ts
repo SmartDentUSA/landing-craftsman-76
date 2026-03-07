@@ -2430,20 +2430,20 @@ function insertSmartDentHeaderFooter(
     <div class="entity-details">
       <p><strong>Setor:</strong> <span itemprop="industry">Odontologia Digital</span></p>
       ${seoTechnicalExpertise ? `<p><strong>Especialidades:</strong> ${seoTechnicalExpertise}</p>` : ''}
-      ${companyProfile?.target_audience ? `<p><strong>Público-alvo:</strong> ${companyProfile.target_audience}</p>` : ''}
+      ${companyData?.target_audience ? `<p><strong>Público-alvo:</strong> ${companyData.target_audience}</p>` : ''}
       <p><strong>Região de atuação:</strong> <span itemprop="areaServed">${city || 'Brasil'}, ${state || 'BR'}</span></p>
       ${seoServiceAreas ? `<p><strong>Áreas de serviço:</strong> ${seoServiceAreas}</p>` : ''}
       ${seoMarketPositioning ? `<p><strong>Posicionamento:</strong> ${seoMarketPositioning}</p>` : ''}
       ${seoCompetitiveAdvantages ? `<p><strong>Diferenciais/Certificações:</strong> ${seoCompetitiveAdvantages}</p>` : ''}
-      ${companyProfile?.founded_year ? `<p><strong>Fundada em:</strong> <span itemprop="foundingDate">${companyProfile.founded_year}</span></p>` : ''}
-      ${companyProfile?.website_url ? `<link itemprop="url" href="${companyProfile.website_url}">` : ''}
-      ${companyProfile?.contact_phone ? `<meta itemprop="telephone" content="${companyProfile.contact_phone}">` : ''}
-      ${companyProfile?.contact_email ? `<meta itemprop="email" content="${companyProfile.contact_email}">` : ''}
+      ${companyData?.founded_year ? `<p><strong>Fundada em:</strong> <span itemprop="foundingDate">${companyData.founded_year}</span></p>` : ''}
+      ${companyData?.website_url ? `<link itemprop="url" href="${companyData.website_url}">` : ''}
+      ${companyData?.contact_phone ? `<meta itemprop="telephone" content="${companyData.contact_phone}">` : ''}
+      ${companyData?.contact_email ? `<meta itemprop="email" content="${companyData.contact_email}">` : ''}
     </div>
     <p class="entity-summary">
       ${company} é uma empresa especializada em Odontologia Digital, atuando em ${city || 'Brasil'}, ${state || 'BR'}.
       ${seoTechnicalExpertise ? `Expertise em: ${seoTechnicalExpertise}.` : ''}
-      ${companyProfile?.target_audience ? `Atendendo: ${companyProfile.target_audience}.` : ''}
+      ${companyData?.target_audience ? `Atendendo: ${companyData.target_audience}.` : ''}
     </p>
   </aside>
   `;
