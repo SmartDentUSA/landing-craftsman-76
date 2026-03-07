@@ -172,9 +172,9 @@ serve(async (req) => {
               productResult.actions.push('meta_description_generated');
               console.log(`✅ Meta Description gerada: ${descResponse.data.content.substring(0, 50)}...`);
             }
-          } catch (descError) {
+          } catch (descError: unknown) {
             console.error(`⚠️ Erro ao gerar descrição:`, descError);
-            productResult.errors.push(`Descrição: ${descError.message}`);
+            productResult.errors.push(`Descrição: ${descError instanceof Error ? descError.message : String(descError)}`);
           }
         }
 
