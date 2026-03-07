@@ -1584,6 +1584,21 @@ ${JSON.stringify({ "@context": "https://schema.org", "@graph": enrichGraphWithAI
             
             <h1>${escapeHtml(product.name)}</h1>
             
+            ${generateAISummaryBlock({
+              productName: product.name,
+              companyName: companyProfile?.company_name || 'Smart Dent',
+              category: product.category,
+              description: description,
+              keyBenefits: (product.benefits || []).slice(0, 3).map((b: any) => typeof b === 'string' ? b : b.title || b.text || ''),
+              certifications: []
+            })}
+            
+            ${generateLLMKnowledgeLayer({
+              definition: description.replace(/<[^>]*>/g, '').substring(0, 300),
+              technology: features.slice(0, 3).join('; '),
+              clinicalApplication: product.applications || '',
+            })}
+            
             <p class="lead">${escapeHtml(description.substring(0, 200))}${description.length > 200 ? '...' : ''}</p>
             
             ${features.length > 0 ? `
