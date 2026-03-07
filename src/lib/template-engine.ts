@@ -3617,6 +3617,8 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
   // Processa os dados para adicionar os ícones SVG corretos e lógica de duas colunas
   const processedData = {
     ...data,
+    // 🆕 Hero Image Preload (LCP)
+    banner_first_image: data.banner?.images?.[0]?.src || '',
     // 🔧 CORREÇÃO CRÍTICA: Mapear TODOS os campos SEO para nível raiz onde o template espera
     publish_date: data.seo?.publish_date,
     lastmod: data.seo?.lastmod,
