@@ -1237,8 +1237,9 @@ function buildCompanyHeader(company: any): string {
  * Gera alt text semântico a partir do nome do arquivo ou URL
  * Utiliza sanitização para criar descrições SEO-friendly
  */
-function generateImageAlt(imageUrl: string, productName: string, index: number = 0): string {
-  if (!imageUrl) return `${productName} - Odontologia Digital ${companyName}`;
+function generateImageAlt(imageUrl: string, productName: string, index: number = 0, company?: string): string {
+  const brandName = company || 'Smart Dent';
+  if (!imageUrl) return `${productName} - Odontologia Digital ${brandName}`;
   
   // Extrai nome do arquivo da URL
   const fileName = imageUrl.split('/').pop() || '';
@@ -1259,8 +1260,8 @@ function generateImageAlt(imageUrl: string, productName: string, index: number =
   const badAlts = ['imagem', 'foto', 'image', 'picture', 'img', 'untitled', 'undefined', 'null'];
   if (!alt || alt.length < 3 || badAlts.includes(alt.toLowerCase())) {
     alt = index === 0 
-      ? `${productName} - Odontologia Digital ${companyName}` 
-      : `${productName} - Imagem ${index + 1} - Odontologia Digital ${companyName}`;
+      ? `${productName} - Odontologia Digital ${brandName}` 
+      : `${productName} - Imagem ${index + 1} - Odontologia Digital ${brandName}`;
   }
   
   // Valida comprimento (máximo 125 chars para Google)
