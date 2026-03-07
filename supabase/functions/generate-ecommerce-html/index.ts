@@ -1463,6 +1463,9 @@ function generateProductSchema(product: any): string {
     ].filter(Boolean) // Remove nulls
   };
   
+  // 🤖 Enrich @graph with Wikidata entities and AI readiness
+  schema["@graph"] = enrichGraphWithAIReadiness(schema["@graph"], companyData?.website_url);
+  
   const productSchema = schema["@graph"][0];
 
   // Add GTIN if available
