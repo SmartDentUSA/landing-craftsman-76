@@ -3672,12 +3672,23 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
     ? `<nav class="entity-index" data-ai-hint="entities" aria-label="Entidades Relacionadas" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;"><ul>${entityLinks.join('')}</ul></nav>`
     : '';
 
+  // 🤖 LLM Knowledge Layer (client-side generation)
+  const VISUALLY_HIDDEN = 'position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;';
+  const knowledgeItems: string[] = [];
+  if (seoDescription) knowledgeItems.push(`<dt>Definição</dt><dd>${seoDescription.replace(/<[^>]*>/g, '').substring(0, 300)}</dd>`);
+  if (sector) knowledgeItems.push(`<dt>Tecnologia</dt><dd>${sector}</dd>`);
+  if (services) knowledgeItems.push(`<dt>Aplicação clínica</dt><dd>${services}</dd>`);
+  const llmKnowledgeBlock = knowledgeItems.length > 0
+    ? `<aside class="llm-knowledge" data-ai-hint="knowledge" role="doc-glossary" style="${VISUALLY_HIDDEN}"><dl>${knowledgeItems.join('')}</dl></aside>`
+    : '';
+
   // Processa os dados para adicionar os ícones SVG corretos e lógica de duas colunas
   const processedData = {
     ...data,
     // 🤖 AI-Readiness Blocks
     ai_summary_block: aiSummaryBlock,
     entity_index_block: entityIndexBlock,
+    llm_knowledge_block: llmKnowledgeBlock,
     // 🆕 Hero Image Preload (LCP)
     banner_first_image: data.banner?.images?.[0]?.src || '',
     // 🔧 CORREÇÃO CRÍTICA: Mapear TODOS os campos SEO para nível raiz onde o template espera
