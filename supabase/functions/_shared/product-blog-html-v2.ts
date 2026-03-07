@@ -1488,7 +1488,13 @@ export function generateProductBlogHTMLV2(options: ProductBlogV2Options): string
   
   <!-- Schema.org JSON-LD -->
   <script type="application/ld+json">
-${JSON.stringify({ "@context": "https://schema.org", "@graph": enrichGraphWithAIReadiness(schemas.map(s => { const { "@context": _ctx, ...rest } = s as Record<string, any>; return rest; })) }, null, 2)}
+${(() => {
+  const graph = enrichGraphWithAIReadiness(schemas.map(s => { const { "@context": _ctx, ...rest } = s as Record<string, any>; return rest; }));
+  const blogContentText = [product.name, description, product.category, product.sales_pitch, ...features, ...(product.benefits || []).map((b: any) => typeof b === 'string' ? b : b.title || '')].filter(Boolean).join(' ');
+  const dts = generateDefinedTermSetSchema(blogContentText, 'Termos técnicos: ' + product.name);
+  if (dts) graph.push(dts);
+  return JSON.stringify({ "@context": "https://schema.org", "@graph": graph }, null, 2);
+})()}
   </script>
   
   ${headScripts}
