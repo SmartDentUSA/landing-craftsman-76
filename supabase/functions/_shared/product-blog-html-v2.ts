@@ -41,7 +41,7 @@ import {
 } from './seo-fine-tuning.ts';
 
 // 🤖 AI Readiness Helpers
-import { enrichGraphWithAIReadiness, generateAISummaryBlock } from './ai-readiness-helpers.ts';
+import { enrichGraphWithAIReadiness, generateAISummaryBlock, generateLLMKnowledgeLayer, generateEntityIndexHTML, generateDefinedTermSetSchema } from './ai-readiness-helpers.ts';
 
 // ============================================
 // INTERFACES

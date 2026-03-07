@@ -32,7 +32,7 @@ import {
 import { deduplicateKeywords, generateHreflangHTML } from "../_shared/seo-fine-tuning.ts";
 
 // 🤖 AI Readiness Helpers
-import { enrichGraphWithAIReadiness, generateAISummaryBlock } from "../_shared/ai-readiness-helpers.ts";
+import { enrichGraphWithAIReadiness, generateAISummaryBlock, generateLLMKnowledgeLayer, generateEntityIndexHTML, generateDefinedTermSetSchema } from "../_shared/ai-readiness-helpers.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
