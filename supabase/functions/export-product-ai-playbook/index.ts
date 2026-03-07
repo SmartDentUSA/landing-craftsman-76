@@ -98,6 +98,7 @@ interface ProductData {
   instagram_copies?: {
     copies?: any[];
     last_generated?: string;
+    template_config?: any;
   };
   tiktok_content?: {
     copies?: any[];

@@ -278,17 +278,17 @@ function createSmartAdGroups(keywords: KeywordWithMatchType[], productName: stri
   const adGroups: AdGroup[] = [
     {
       name: `AG_COMERCIAL_${sanitizedName}`.replace(/\s+/g, '_'),
-      theme: 'commercial',
+      theme: 'commercial' as const,
       keywords: keywords.filter(k => k.search_intent === 'commercial')
     },
     {
       name: `AG_INFORMACIONAL_${sanitizedName}`.replace(/\s+/g, '_'),
-      theme: 'informational',
+      theme: 'informational' as const,
       keywords: keywords.filter(k => k.search_intent === 'informational')
     },
     {
       name: `AG_PRODUTO_${sanitizedName}`.replace(/\s+/g, '_'),
-      theme: 'product',
+      theme: 'product' as const,
       keywords: keywords.filter(k => k.search_intent === 'product')
     }
   ].filter(ag => ag.keywords.length > 0);
@@ -297,7 +297,7 @@ function createSmartAdGroups(keywords: KeywordWithMatchType[], productName: stri
   if (adGroups.length === 0) {
     adGroups.push({
       name: `AG_GERAL_${sanitizedName}`.replace(/\s+/g, '_'),
-      theme: 'general',
+      theme: 'general' as const,
       keywords: keywords
     });
   }
