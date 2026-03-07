@@ -44,7 +44,7 @@ import {
 } from '../_shared/seo-fine-tuning.ts';
 
 // 🤖 AI Readiness Helpers
-import { enrichGraphWithAIReadiness, generateAISummaryBlock, generateEntityIndexHTML, generateDefinedTermSetSchema } from '../_shared/ai-readiness-helpers.ts';
+import { enrichGraphWithAIReadiness, generateAISummaryBlock, generateEntityIndexHTML, generateDefinedTermSetSchema, generateLLMKnowledgeLayer } from '../_shared/ai-readiness-helpers.ts';
 
 // ═══════════════════════════════════════════════════════════
 // 🛡️ SANITIZAÇÃO DE NOME DA EMPRESA
@@ -2685,9 +2685,18 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
         
       </section>
       
+      ${generateLLMKnowledgeLayer({
+        definition: (solution.pain_description || solution.sales_pitch || '').replace(/<[^>]*>/g, '').substring(0, 300),
+        technology: products.slice(0, 3).map((p: any) => p.name).join('; '),
+        clinicalApplication: (solution.sales_pitch || '').replace(/<[^>]*>/g, '').substring(0, 200),
+        keyProperties: products.slice(0, 5).flatMap((p: any) => (p.benefits || []).slice(0, 2)).map((b: any) => typeof b === 'string' ? b : b.title || b.text || ''),
+      })}
+      
       <meta itemprop="author" content="${escapeHtml(sanitizeCompanyName(company?.company_name))}">
       <meta itemprop="datePublished" content="${new Date().toISOString().split('T')[0]}">
     </article>
+    
+    ${generateEntityIndexHTML(`${solution.title} ${solution.pain_description || ''} ${solution.sales_pitch || ''} ${products.map((p: any) => p.name).join(' ')}`)}
   </main>
 
   ${solution.selected_video_url ? `

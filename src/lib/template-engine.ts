@@ -2012,6 +2012,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
 
     <!-- Conteúdo Principal -->
     <main id="main-content">
+      <article class="indexable-content">
         <!-- H1 Principal para SEO e Acessibilidade -->
         <h1 class="sr-only">{{seo_title}}</h1>
         
@@ -2511,8 +2512,13 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     {{/visible_any}}
     {{/knowledge_feed_section}}
 
+    <!-- 🤖 LLM Knowledge Layer (structured knowledge for AI extraction) -->
+    {{{llm_knowledge_block}}}
+    
     <!-- 🤖 AI Entity Index (visually hidden, Wikidata links for crawlers) -->
     {{{entity_index_block}}}
+    
+      </article>
     
     <!-- Footer - Smart Dent SPIN Style with LocalBusiness Microdata -->
     <footer class="footer" role="contentinfo" itemscope itemtype="https://schema.org/LocalBusiness">
@@ -3666,12 +3672,23 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
     ? `<nav class="entity-index" data-ai-hint="entities" aria-label="Entidades Relacionadas" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;"><ul>${entityLinks.join('')}</ul></nav>`
     : '';
 
+  // 🤖 LLM Knowledge Layer (client-side generation)
+  const VISUALLY_HIDDEN = 'position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;';
+  const knowledgeItems: string[] = [];
+  if (seoDescription) knowledgeItems.push(`<dt>Definição</dt><dd>${seoDescription.replace(/<[^>]*>/g, '').substring(0, 300)}</dd>`);
+  if (sector) knowledgeItems.push(`<dt>Tecnologia</dt><dd>${sector}</dd>`);
+  if (services) knowledgeItems.push(`<dt>Aplicação clínica</dt><dd>${services}</dd>`);
+  const llmKnowledgeBlock = knowledgeItems.length > 0
+    ? `<aside class="llm-knowledge" data-ai-hint="knowledge" role="doc-glossary" style="${VISUALLY_HIDDEN}"><dl>${knowledgeItems.join('')}</dl></aside>`
+    : '';
+
   // Processa os dados para adicionar os ícones SVG corretos e lógica de duas colunas
   const processedData = {
     ...data,
     // 🤖 AI-Readiness Blocks
     ai_summary_block: aiSummaryBlock,
     entity_index_block: entityIndexBlock,
+    llm_knowledge_block: llmKnowledgeBlock,
     // 🆕 Hero Image Preload (LCP)
     banner_first_image: data.banner?.images?.[0]?.src || '',
     // 🔧 CORREÇÃO CRÍTICA: Mapear TODOS os campos SEO para nível raiz onde o template espera
@@ -5092,6 +5109,50 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
     // ✅ SAFETY NET: enrichSchemaWithAIContext garante about/mentions/mainEntity/speakable
     const { enrichSchemaWithAIContext } = await import('@/services/seo/advancedSchemaEnhancer');
     const enrichedGraph = enrichSchemaWithAIContext(schemaGraph, companyProfile, data.selectedProductsForSEO || []);
+    
+    // 🤖 AI-Readiness: DefinedTermSet, isAccessibleForFree, SearchAction
+    const definedTerms: any[] = [];
+    const contentForTerms = `${seoTitle} ${seoDescription} ${services} ${sector}`.toLowerCase();
+    for (const [key, val] of Object.entries(WIKIDATA_QUICK_MAP)) {
+      if (contentForTerms.includes(key)) {
+        definedTerms.push({ "@type": "DefinedTerm", "name": val.label, "sameAs": `https://www.wikidata.org/entity/${val.qid}` });
+      }
+    }
+    if (definedTerms.length > 0) {
+      enrichedGraph.push({ "@type": "DefinedTermSet", "name": `Termos: ${companyName}`, "hasDefinedTerm": definedTerms });
+    }
+    
+    // Add isAccessibleForFree to Article schemas
+    enrichedGraph.forEach((s: any) => {
+      if (s['@type'] === 'Article' || s['@type'] === 'BlogPosting') {
+        s.isAccessibleForFree = true;
+      }
+    });
+    
+    // Add SearchAction to WebSite schema
+    const websiteUrl = companyProfile?.website_url || data.seo?.canonical_url || '';
+    const hasWebSite = enrichedGraph.some((s: any) => s['@type'] === 'WebSite');
+    if (!hasWebSite && websiteUrl) {
+      enrichedGraph.push({
+        "@type": "WebSite",
+        "name": companyName,
+        "url": websiteUrl,
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": { "@type": "EntryPoint", "urlTemplate": `${websiteUrl.replace(/\/$/, '')}/busca?q={search_term_string}` },
+          "query-input": "required name=search_term_string"
+        }
+      });
+    } else if (hasWebSite && websiteUrl) {
+      const wsSite = enrichedGraph.find((s: any) => s['@type'] === 'WebSite') as any;
+      if (wsSite && !wsSite.potentialAction) {
+        wsSite.potentialAction = {
+          "@type": "SearchAction",
+          "target": { "@type": "EntryPoint", "urlTemplate": `${websiteUrl.replace(/\/$/, '')}/busca?q={search_term_string}` },
+          "query-input": "required name=search_term_string"
+        };
+      }
+    }
     
     processedData.schema_json_ld = JSON.stringify({
       "@context": "https://schema.org",
