@@ -5110,6 +5110,50 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
     const { enrichSchemaWithAIContext } = await import('@/services/seo/advancedSchemaEnhancer');
     const enrichedGraph = enrichSchemaWithAIContext(schemaGraph, companyProfile, data.selectedProductsForSEO || []);
     
+    // 🤖 AI-Readiness: DefinedTermSet, isAccessibleForFree, SearchAction
+    const definedTerms: any[] = [];
+    const contentForTerms = `${seoTitle} ${seoDescription} ${services} ${sector}`.toLowerCase();
+    for (const [key, val] of Object.entries(WIKIDATA_QUICK_MAP)) {
+      if (contentForTerms.includes(key)) {
+        definedTerms.push({ "@type": "DefinedTerm", "name": val.label, "sameAs": `https://www.wikidata.org/entity/${val.qid}` });
+      }
+    }
+    if (definedTerms.length > 0) {
+      enrichedGraph.push({ "@type": "DefinedTermSet", "name": `Termos: ${companyName}`, "hasDefinedTerm": definedTerms });
+    }
+    
+    // Add isAccessibleForFree to Article schemas
+    enrichedGraph.forEach((s: any) => {
+      if (s['@type'] === 'Article' || s['@type'] === 'BlogPosting') {
+        s.isAccessibleForFree = true;
+      }
+    });
+    
+    // Add SearchAction to WebSite schema
+    const websiteUrl = companyProfile?.website_url || data.seo?.canonical_url || '';
+    const hasWebSite = enrichedGraph.some((s: any) => s['@type'] === 'WebSite');
+    if (!hasWebSite && websiteUrl) {
+      enrichedGraph.push({
+        "@type": "WebSite",
+        "name": companyName,
+        "url": websiteUrl,
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": { "@type": "EntryPoint", "urlTemplate": `${websiteUrl.replace(/\/$/, '')}/busca?q={search_term_string}` },
+          "query-input": "required name=search_term_string"
+        }
+      });
+    } else if (hasWebSite && websiteUrl) {
+      const wsSite = enrichedGraph.find((s: any) => s['@type'] === 'WebSite');
+      if (wsSite && !wsSite.potentialAction) {
+        wsSite.potentialAction = {
+          "@type": "SearchAction",
+          "target": { "@type": "EntryPoint", "urlTemplate": `${websiteUrl.replace(/\/$/, '')}/busca?q={search_term_string}` },
+          "query-input": "required name=search_term_string"
+        };
+      }
+    }
+    
     processedData.schema_json_ld = JSON.stringify({
       "@context": "https://schema.org",
       "@graph": enrichedGraph

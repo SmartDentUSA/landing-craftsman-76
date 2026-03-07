@@ -2078,9 +2078,19 @@ function injectSEO(
   const cloneContentText = `${company} ${options.name || ''} ${options.businessSector || ''} ${options.mainProductsServices || ''} ${result.substring(0, 3000)}`;
   const entityIndexHTML = generateEntityIndexHTML(cloneContentText);
   
-  if (aiSummaryHTML || entityIndexHTML) {
-    result = result.replace('</body>', `${aiSummaryHTML}${entityIndexHTML}\n</body>`);
-    console.log('🤖 [AI-Readiness] AI Summary + Entity Index injected in clone-LP');
+  // 🤖 LLM Knowledge Layer for clone-LP
+  const llmKnowledgeHTML = generateLLMKnowledgeLayer({
+    definition: `${company} — ${options.businessSector || 'odontologia digital'}`,
+    technology: options.mainProductsServices || '',
+    clinicalApplication: options.name || '',
+  });
+  
+  // 🤖 Wrap AI blocks in <article> for semantic structure
+  const aiArticleWrapper = `<article class="indexable-content" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;">${aiSummaryHTML}${llmKnowledgeHTML}${entityIndexHTML}</article>`;
+  
+  if (aiSummaryHTML || entityIndexHTML || llmKnowledgeHTML) {
+    result = result.replace('</body>', `${aiArticleWrapper}\n</body>`);
+    console.log('🤖 [AI-Readiness] AI Summary + LLM Knowledge + Entity Index injected in clone-LP');
   }
   
   // 🤖 DefinedTermSet in schema @graph

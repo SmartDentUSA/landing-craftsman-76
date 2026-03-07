@@ -2534,6 +2534,9 @@ function buildEcommerceHTML(
   // 🤖 Entity Index HTML (Wikidata links for AI crawlers)
   html += generateEntityIndexHTML(allContentText);
 
+  // ✅ Fechar <article> wrapper semântico
+  html += `\n</article>`;
+
   console.log('✅ SPIN Design System aplicado ao HTML final');
   console.log('✅ [E-commerce] JSON-LD com WebPage + Product + mainEntity/about/mentions + DefinedTermSet injetado');
   console.log('🤖 [AI-Readiness] AI Summary, LLM Knowledge Layer, Entity Index injetados');
