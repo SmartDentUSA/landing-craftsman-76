@@ -31,6 +31,9 @@ import {
 // ✅ SEO Fine-Tuning 10/10 - Shared Module
 import { deduplicateKeywords, generateHreflangHTML } from "../_shared/seo-fine-tuning.ts";
 
+// 🤖 AI Readiness Helpers
+import { enrichGraphWithAIReadiness, generateAISummaryBlock } from "../_shared/ai-readiness-helpers.ts";
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
