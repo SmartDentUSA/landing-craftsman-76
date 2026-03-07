@@ -5144,7 +5144,7 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
         }
       });
     } else if (hasWebSite && websiteUrl) {
-      const wsSite = enrichedGraph.find((s: any) => s['@type'] === 'WebSite');
+      const wsSite = enrichedGraph.find((s: any) => s['@type'] === 'WebSite') as any;
       if (wsSite && !wsSite.potentialAction) {
         wsSite.potentialAction = {
           "@type": "SearchAction",
