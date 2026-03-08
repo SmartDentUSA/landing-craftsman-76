@@ -347,6 +347,7 @@ Gere seções em JSON:
 
     const contentHash = await computeSha256(htmlContent);
     results.push({ step: 12, name: 'Compute content hash', success: true, data: { hash: contentHash.slice(0, 16) + '...' } });
+    await logStep(12, 'Compute content hash', 'success');
 
     // ═══════════════════════════════════════════════════════════
     // STEP 13: Check Duplicates
