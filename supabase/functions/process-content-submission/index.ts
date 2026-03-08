@@ -339,6 +339,7 @@ Gere seções em JSON:
 
     const internalLinks = generateInternalLinks(knowledgeGraph, extractedEntities.keywords || []);
     results.push({ step: 11, name: 'Generate internal links', success: true, data: { count: internalLinks.length } });
+    await logStep(11, 'Generate internal links', 'success');
 
     // ═══════════════════════════════════════════════════════════
     // STEP 12: Compute SHA256 Hash
