@@ -115,13 +115,15 @@ Deno.serve(async (req) => {
         if (job.job_type === 'process_submission') {
           await processSubmissionJob(supabase, job, authHeader);
           
-          // Mark as completed
+          // Mark as completed and release lock
           await supabase
             .from('content_jobs')
             .update({ 
               status: 'completed',
               finished_at: new Date().toISOString(),
-              last_error: null
+              last_error: null,
+              locked_by: null,
+              locked_at: null
             })
             .eq('id', job.id);
 
