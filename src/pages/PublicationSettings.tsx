@@ -26,6 +26,7 @@ interface PublicationSettings {
 export default function PublicationSettings() {
   const navigate = useNavigate();
   const [settings, setSettings] = useState<PublicationSettings>({
+    profile_name: "",
     ftp_host: "",
     ftp_user: "",
     ftp_password_encrypted: "",
