@@ -200,7 +200,7 @@ export async function getCompanyProfileForSEO(): Promise<CompanyProfileData | nu
     }
 
     if (data && data.length > 0) {
-      companyProfileCache = data[0] as CompanyProfileData;
+      companyProfileCache = data[0] as unknown as CompanyProfileData;
       cacheTimestamp = now;
       return companyProfileCache;
     }
