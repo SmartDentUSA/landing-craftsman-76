@@ -331,6 +331,7 @@ Gere seções em JSON:
 
     const htmlContent = generateHtmlPage(structuredContent, seoMetadata, schemaJsonLd);
     results.push({ step: 10, name: 'Generate HTML', success: true, data: { length: htmlContent.length } });
+    await logStep(10, 'Generate HTML', 'success', { output_summary: { html_length: htmlContent.length } });
 
     // ═══════════════════════════════════════════════════════════
     // STEP 11: Generate Internal Links
