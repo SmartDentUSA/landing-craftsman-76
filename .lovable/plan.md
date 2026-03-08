@@ -1,28 +1,49 @@
 
 
-## Problema Identificado
+# Botões individuais "Gerar por IA" para slides do Carrossel Visual
 
-A Edge Function `test-ftp-connection` **não faz conexão real** ao servidor FTP. Ela apenas simula com um `setTimeout` e validação regex local. Por isso o KingHost mostra 0 conexões — nenhuma tentativa TCP real é feita.
+## Contexto
 
-Enquanto isso, `publish-ftp-pages` tem um cliente FTP real via `Deno.connect()` que funciona corretamente.
+O Carrossel Visual tem 6 slides. O Slide 1 (🎣 Hook) já possui um botão individual "Novo Gancho IA" que chama a edge function `generate-carousel-hook`. Os slides 3 (🔬 Cientificidade), 4 (💫 Experiência) e 5 (🛡️ Segurança) não possuem botões individuais — só podem ser gerados pelo botão geral "🤖 Gerar com IA" que regenera todos os slides de uma vez.
 
 ## Plano
 
-Reescrever `supabase/functions/test-ftp-connection/index.ts` para usar um cliente FTP real (igual ao de `publish-ftp-pages`):
+### 1. Nova Edge Function: `generate-carousel-slide`
 
-1. **Substituir a classe `SFTPClient` fake** por um mini cliente FTP real usando `Deno.connect()` na porta 21 (TCP)
-2. **Fluxo do teste real**:
-   - `Deno.connect({ hostname, port: 21 })` → esperar resposta `220`
-   - `USER smartdent01` → esperar `331`
-   - `PASS ***` → esperar `230`
-   - `CWD /www/smartdent01` → esperar `250`
-   - `QUIT` → encerrar
-3. **Timeout de 15s** para não travar em conexões lentas
-4. **Manter sanitização** de host (remover `https://`, espaços, barras)
-5. **Retornar resultado real**: sucesso com detalhes do servidor, ou erro com a resposta FTP exata para debug
-6. **Redeploy** da Edge Function
+Criar uma edge function genérica que receba o tipo do slide (`cientificidade`, `experiencia`, `seguranca`) e gere apenas o conteúdo daquele slide específico, com prompts especializados por tipo:
 
-### Detalhes Técnicos
+- **Cientificidade (Slide 3)**: Gera title, headline, body, bullet1-4 com foco em evidências científicas e dados técnicos
+- **Experiência (Slide 4)**: Gera keyword + benefit com foco em experiência clínica e fluxo de trabalho
+- **Segurança (Slide 5)**: Gera title, badge1-3 com foco em certificações, garantias e confiança
 
-O código reutilizará o padrão de `publish-ftp-pages`: `Deno.connect()` + `ReadableStream` reader + encoder/decoder para ler respostas FTP linha a linha. A diferença é que só testa login + CWD, sem upload.
+Recebe: `productName`, `salesPitch`, `benefits`, `features`, `slideType`
+Retorna: campos específicos do slide solicitado
+
+### 2. Frontend — Novos estados e handlers (`InstagramCopyGenerator.tsx`)
+
+- Adicionar 3 estados: `generatingScience`, `generatingExperience`, `generatingSecurity`
+- Criar 3 handlers que chamam `generate-carousel-slide` com o `slideType` correto e atualizam apenas o slide correspondente em `slideTexts`
+
+### 3. Frontend — 3 novos botões no header do Carrossel Visual
+
+Adicionar ao lado do botão "🎣 Novo Gancho IA" (linha ~1962):
+
+- **🔬 Cientificidade IA** — gera apenas Slide 3
+- **💫 Experiência IA** — gera apenas Slide 4
+- **🛡️ Segurança IA** — gera apenas Slide 5
+
+Cada botão com loading state individual, mesmo padrão visual do botão Hook existente.
+
+### Detalhes técnicos
+
+**Edge function `generate-carousel-slide/index.ts`:**
+- Usa Lovable AI Gateway (`google/gemini-2.5-flash`)
+- Prompt especializado por slideType com regras de formatação
+- Temperature 1.0 para variedade
+- Retorna JSON estruturado via tool calling para garantir campos corretos
+
+**Mapeamento de retorno:**
+- `cientificidade` → `{ title, headline, body, bullet1, bullet2, bullet3, bullet4 }`
+- `experiencia` → `{ keyword, benefit }`
+- `seguranca` → `{ title, badge1, badge2, badge3 }`
 
