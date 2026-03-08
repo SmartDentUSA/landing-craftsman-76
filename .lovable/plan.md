@@ -1,49 +1,196 @@
 
+# System A – Knowledge Brain: Job Queue & Enhanced Architecture
 
-# Botões individuais "Gerar por IA" para slides do Carrossel Visual
+## Current State
 
-## Contexto
+| Component | Status |
+|-----------|--------|
+| `fetchKnowledgeGraph()` | ✅ Exists (651 lines) |
+| `buildProductGraph()` | ✅ Exists |
+| `buildBlogGraph()` | ✅ Exists |
+| 80+ Edge Functions | ✅ Deployed |
+| `content_submissions` table | ❌ Missing |
+| `content_jobs` table | ❌ Missing |
+| `generated_pages` table | ❌ Missing |
+| `page_publications` table | ❌ Missing |
+| `content_entity_links` table | ❌ Missing |
 
-O Carrossel Visual tem 6 slides. O Slide 1 (🎣 Hook) já possui um botão individual "Novo Gancho IA" que chama a edge function `generate-carousel-hook`. Os slides 3 (🔬 Cientificidade), 4 (💫 Experiência) e 5 (🛡️ Segurança) não possuem botões individuais — só podem ser gerados pelo botão geral "🤖 Gerar com IA" que regenera todos os slides de uma vez.
+---
 
-## Plano
+## Implementation Plan
 
-### 1. Nova Edge Function: `generate-carousel-slide`
+### Phase 1: Database Schema (5 new tables)
 
-Criar uma edge function genérica que receba o tipo do slide (`cientificidade`, `experiencia`, `seguranca`) e gere apenas o conteúdo daquele slide específico, com prompts especializados por tipo:
+**1. `content_submissions`** — Versioned content inbox
+```sql
+- id, source_system, content_type, title, raw_content
+- tags, metadata, origin, extracted_entities, related_products
+- processing_status, editorial_status
+- version, parent_submission_id (for history)
+- created_at, updated_at
+```
 
-- **Cientificidade (Slide 3)**: Gera title, headline, body, bullet1-4 com foco em evidências científicas e dados técnicos
-- **Experiência (Slide 4)**: Gera keyword + benefit com foco em experiência clínica e fluxo de trabalho
-- **Segurança (Slide 5)**: Gera title, badge1-3 com foco em certificações, garantias e confiança
+**2. `content_jobs`** — Job queue for async processing
+```sql
+- id, submission_id, job_type (process_submission | regenerate_page)
+- status (pending | running | completed | failed)
+- attempts, max_attempts, last_error
+- scheduled_at, started_at, finished_at
+- priority (for ordering)
+```
 
-Recebe: `productName`, `salesPitch`, `benefits`, `features`, `slideType`
-Retorna: campos específicos do slide solicitado
+**3. `generated_pages`** — Final SEO pages
+```sql
+- id, title, slug, path (SEO-friendly URL structure)
+- html_content, structured_content, entities
+- knowledge_graph_snapshot, schema_json_ld
+- content_hash (SHA256 for dedup)
+- embedding VECTOR(768) (for RAG)
+- seo_score, published, regeneration_required
+- source_submission_id
+```
 
-### 2. Frontend — Novos estados e handlers (`InstagramCopyGenerator.tsx`)
+**4. `page_publications`** — Publication history for rollback
+```sql
+- id, page_id, version
+- html_snapshot, published_url, published_domain
+- published_at
+```
 
-- Adicionar 3 estados: `generatingScience`, `generatingExperience`, `generatingSecurity`
-- Criar 3 handlers que chamam `generate-carousel-slide` com o `slideType` correto e atualizam apenas o slide correspondente em `slideTexts`
+**5. `content_entity_links`** — Normalized entity relationships
+```sql
+- id, page_id, entity_type, entity_id
+- relevance_score
+- created_at
+```
 
-### 3. Frontend — 3 novos botões no header do Carrossel Visual
+### Phase 2: Edge Functions (3 new)
 
-Adicionar ao lado do botão "🎣 Novo Gancho IA" (linha ~1962):
+**1. `content-submission`** — POST endpoint for System B
+- Validates `metadata.intent` (seo | education | comparison | commercial)
+- Creates submission record
+- Creates job in `content_jobs` with `job_type: 'process_submission'`
+- Returns submission ID for tracking
 
-- **🔬 Cientificidade IA** — gera apenas Slide 3
-- **💫 Experiência IA** — gera apenas Slide 4
-- **🛡️ Segurança IA** — gera apenas Slide 5
+**2. `process-content-submission`** — Worker function (16-step pipeline)
+```
+1. Load submission
+2. Normalize content
+3. Extract entities (AI)
+4. Fetch Knowledge Graph
+5. Build topic/product graph
+6. Link entities
+7. Generate structured content
+8. Generate SEO metadata
+9. Generate Schema JSON-LD
+10. Generate HTML
+11. Generate internal links
+12. Compute SHA256 hash
+13. Check duplicates
+14. Generate embeddings
+15. Save to generated_pages + entity_links
+16. Create publication record
+```
 
-Cada botão com loading state individual, mesmo padrão visual do botão Hook existente.
+**3. `process-job-queue`** — Cron worker (processes pending jobs)
+- Fetches oldest pending jobs (FIFO with priority)
+- Marks as `running`, calls processor
+- Handles retries (max 3 attempts)
+- Updates status to `completed` or `failed`
 
-### Detalhes técnicos
+### Phase 3: Knowledge Graph Extensions
 
-**Edge function `generate-carousel-slide/index.ts`:**
-- Usa Lovable AI Gateway (`google/gemini-2.5-flash`)
-- Prompt especializado por slideType com regras de formatação
-- Temperature 1.0 para variedade
-- Retorna JSON estruturado via tool calling para garantir campos corretos
+**Add to `fetchKnowledgeGraph.ts`:**
 
-**Mapeamento de retorno:**
-- `cientificidade` → `{ title, headline, body, bullet1, bullet2, bullet3, bullet4 }`
-- `experiencia` → `{ keyword, benefit }`
-- `seguranca` → `{ title, badge1, badge2, badge3 }`
+```typescript
+// buildTopicGraph() — Navigate by topic instead of product
+export function buildTopicGraph(
+  knowledgeGraph: KnowledgeGraph,
+  topic: string  // e.g., "implantodontia", "fluxo-digital"
+)
 
+// generateInternalLinks() — Auto-connect pages by entities
+export function generateInternalLinks(
+  knowledgeGraph: KnowledgeGraph,
+  currentEntities: string[]
+): Array<{ title: string; path: string; relevance: number }>
+```
+
+### Phase 4: Update config.toml
+
+Register 3 new Edge Functions:
+```toml
+[functions.content-submission]
+verify_jwt = false
+
+[functions.process-content-submission]
+verify_jwt = true
+
+[functions.process-job-queue]
+verify_jwt = true
+```
+
+---
+
+## Architecture Flow
+
+```text
+              SYSTEM B (External)
+                     │
+         POST /content-submission
+                     │
+                     ▼
+┌────────────────────────────────────────────────────┐
+│               SYSTEM A – KNOWLEDGE BRAIN           │
+├────────────────────────────────────────────────────┤
+│                                                    │
+│  ┌──────────────┐    ┌──────────────┐             │
+│  │ CONTENT      │───▶│ JOB QUEUE    │             │
+│  │ SUBMISSIONS  │    │ content_jobs │             │
+│  │ (versioned)  │    │ (async)      │             │
+│  └──────────────┘    └──────┬───────┘             │
+│                             │                      │
+│                    ┌────────▼────────┐            │
+│                    │ WORKER          │            │
+│                    │ process-job     │            │
+│                    └────────┬────────┘            │
+│                             │                      │
+│  ┌──────────────────────────▼──────────────────┐  │
+│  │           KNOWLEDGE GRAPH                    │  │
+│  │   fetchKnowledgeGraph()                      │  │
+│  │   buildProductGraph() | buildBlogGraph()    │  │
+│  │   buildTopicGraph()   | generateInternalLinks│ │
+│  └──────────────────────────┬──────────────────┘  │
+│                             │                      │
+│  ┌──────────────────────────▼──────────────────┐  │
+│  │           GENERATED PAGES                    │  │
+│  │   html_content + embeddings + schema        │  │
+│  │   content_entity_links (normalized)         │  │
+│  └──────────────────────────┬──────────────────┘  │
+│                             │                      │
+│  ┌──────────────────────────▼──────────────────┐  │
+│  │         PAGE PUBLICATIONS                    │  │
+│  │   Version history + Rollback support        │  │
+│  └─────────────────────────────────────────────┘  │
+│                                                    │
+└────────────────────────────────────────────────────┘
+                     │
+                     ▼
+              PUBLIC OUTPUT
+        SEO Pages | RAG Chat | APIs
+```
+
+---
+
+## Files to Create/Modify
+
+| File | Action | Purpose |
+|------|--------|---------|
+| SQL Migration | Create | 5 tables + indexes + RLS + triggers |
+| `supabase/functions/content-submission/index.ts` | Create | POST endpoint |
+| `supabase/functions/process-content-submission/index.ts` | Create | Processing pipeline |
+| `supabase/functions/process-job-queue/index.ts` | Create | Cron worker |
+| `supabase/functions/_shared/fetchKnowledgeGraph.ts` | Modify | Add `buildTopicGraph()` + `generateInternalLinks()` |
+| `supabase/config.toml` | Modify | Register 3 new functions |
+
+**Estimated: ~1000 lines of new code**
