@@ -161,13 +161,16 @@ Deno.serve(async (req) => {
         const backoffMinutes = Math.pow(2, newAttempts); // 2, 4, 8 minutes
         const nextScheduledAt = new Date(Date.now() + backoffMinutes * 60 * 1000);
 
+        // Release lock and update status
         await supabase
           .from('content_jobs')
           .update({ 
             status: newStatus,
             last_error: error.message,
             finished_at: newStatus === 'failed' ? new Date().toISOString() : null,
-            scheduled_at: newStatus === 'pending' ? nextScheduledAt.toISOString() : job.scheduled_at
+            scheduled_at: newStatus === 'pending' ? nextScheduledAt.toISOString() : job.scheduled_at,
+            locked_by: null,
+            locked_at: null
           })
           .eq('id', job.id);
 
