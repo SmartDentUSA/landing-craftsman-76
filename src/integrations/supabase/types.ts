@@ -1834,6 +1834,59 @@ export type Database = {
           },
         ]
       }
+      pipeline_audit_logs: {
+        Row: {
+          created_at: string | null
+          duration_ms: number | null
+          error_message: string | null
+          finished_at: string | null
+          id: string
+          input_summary: Json | null
+          output_summary: Json | null
+          started_at: string | null
+          status: string
+          step_name: string
+          step_number: number
+          submission_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          duration_ms?: number | null
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          input_summary?: Json | null
+          output_summary?: Json | null
+          started_at?: string | null
+          status?: string
+          step_name: string
+          step_number: number
+          submission_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          duration_ms?: number | null
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          input_summary?: Json | null
+          output_summary?: Json | null
+          started_at?: string | null
+          status?: string
+          step_name?: string
+          step_number?: number
+          submission_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pipeline_audit_logs_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "content_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_blog_publications: {
         Row: {
           blog_type: string
