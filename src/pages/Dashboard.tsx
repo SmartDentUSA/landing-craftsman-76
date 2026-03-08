@@ -2,7 +2,7 @@ import { ContentQualityDashboard } from "@/components/ContentQualityDashboard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FileText, Copy, Edit, ExternalLink, MoreVertical, Trash2, Shield, PenTool, Database, Globe, Building2 } from "lucide-react";
+import { Plus, FileText, Copy, Edit, ExternalLink, MoreVertical, Trash2, Shield, PenTool, Database, Globe, Building2, Upload } from "lucide-react";
 import { CompanyReviewsManager } from "@/components/CompanyReviewsManager";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
@@ -23,6 +23,7 @@ import { useProductBlogsIntegration } from '@/hooks/useProductBlogsIntegration';
 import { sanitizeBlogContent } from "@/utils/sanitize-html";
 import { ProductMigrationModal } from "@/components/ProductMigrationModal";
 import { useBlogReadMore } from "@/hooks/useBlogReadMore";
+import { LPPublishDialog } from "@/components/LPPublishDialog";
 import { useConsolidatedBlogAutoGenerator } from "@/hooks/useConsolidatedBlogAutoGenerator";
 import { Wand2, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 
@@ -73,6 +74,8 @@ const DashboardContent = () => {
   const [migrationModalOpen, setMigrationModalOpen] = useState(false);
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
   const [trackingConfig, setTrackingConfig] = useState<TrackingConfig | null>(null);
+  const [publishOpen, setPublishOpen] = useState(false);
+  const [publishLP, setPublishLP] = useState<LandingPage | null>(null);
   
   // Ativar funcionalidade "Leia mais" para blogs
   useBlogReadMore();
@@ -1182,6 +1185,15 @@ const DashboardContent = () => {
                           <PenTool className="h-4 w-4 mr-2" />
                           Gerar Blog Post
                         </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => { setPublishLP(landingPage); setPublishOpen(true); }}
+                          className="border-accent/30 text-accent-foreground hover:bg-accent/10"
+                        >
+                          <Upload className="h-4 w-4 mr-2" />
+                          Publicar
+                        </Button>
                       </>
                     )}
                     
@@ -1437,6 +1449,13 @@ const DashboardContent = () => {
       <ProductMigrationModal 
         open={migrationModalOpen} 
         onOpenChange={setMigrationModalOpen} 
+      />
+      
+      {/* LP Publish Dialog */}
+      <LPPublishDialog
+        open={publishOpen}
+        onOpenChange={setPublishOpen}
+        landingPage={publishLP}
       />
     </div>
   );
