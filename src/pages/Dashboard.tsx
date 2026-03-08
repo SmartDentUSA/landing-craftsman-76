@@ -74,6 +74,8 @@ const DashboardContent = () => {
   const [migrationModalOpen, setMigrationModalOpen] = useState(false);
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
   const [trackingConfig, setTrackingConfig] = useState<TrackingConfig | null>(null);
+  const [publishOpen, setPublishOpen] = useState(false);
+  const [publishLP, setPublishLP] = useState<LandingPage | null>(null);
   
   // Ativar funcionalidade "Leia mais" para blogs
   useBlogReadMore();
