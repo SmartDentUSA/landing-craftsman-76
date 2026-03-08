@@ -723,6 +723,7 @@ export type Database = {
         Row: {
           created_at: string | null
           entity_id: string
+          entity_slug: string | null
           entity_type: string
           id: string
           page_id: string | null
@@ -731,6 +732,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           entity_id: string
+          entity_slug?: string | null
           entity_type: string
           id?: string
           page_id?: string | null
@@ -739,6 +741,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           entity_id?: string
+          entity_slug?: string | null
           entity_type?: string
           id?: string
           page_id?: string | null
@@ -762,6 +765,8 @@ export type Database = {
           id: string
           job_type: string
           last_error: string | null
+          locked_at: string | null
+          locked_by: string | null
           max_attempts: number | null
           priority: number | null
           scheduled_at: string | null
@@ -776,6 +781,8 @@ export type Database = {
           id?: string
           job_type: string
           last_error?: string | null
+          locked_at?: string | null
+          locked_by?: string | null
           max_attempts?: number | null
           priority?: number | null
           scheduled_at?: string | null
@@ -790,6 +797,8 @@ export type Database = {
           id?: string
           job_type?: string
           last_error?: string | null
+          locked_at?: string | null
+          locked_by?: string | null
           max_attempts?: number | null
           priority?: number | null
           scheduled_at?: string | null
@@ -818,9 +827,11 @@ export type Database = {
           origin: Json | null
           parent_submission_id: string | null
           processed_at: string | null
+          processed_by: string | null
           processing_notes: string | null
           processing_status: string | null
           raw_content: string | null
+          rejection_reason: string | null
           related_products: string[] | null
           source_system: string
           tags: string[] | null
@@ -838,9 +849,11 @@ export type Database = {
           origin?: Json | null
           parent_submission_id?: string | null
           processed_at?: string | null
+          processed_by?: string | null
           processing_notes?: string | null
           processing_status?: string | null
           raw_content?: string | null
+          rejection_reason?: string | null
           related_products?: string[] | null
           source_system: string
           tags?: string[] | null
@@ -858,9 +871,11 @@ export type Database = {
           origin?: Json | null
           parent_submission_id?: string | null
           processed_at?: string | null
+          processed_by?: string | null
           processing_notes?: string | null
           processing_status?: string | null
           raw_content?: string | null
+          rejection_reason?: string | null
           related_products?: string[] | null
           source_system?: string
           tags?: string[] | null
@@ -1134,7 +1149,9 @@ export type Database = {
       }
       generated_pages: {
         Row: {
+          canonical_url: string | null
           content_hash: string | null
+          content_status: string | null
           created_at: string | null
           embedding: string | null
           entities: Json | null
@@ -1157,7 +1174,9 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          canonical_url?: string | null
           content_hash?: string | null
+          content_status?: string | null
           created_at?: string | null
           embedding?: string | null
           entities?: Json | null
@@ -1180,7 +1199,9 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          canonical_url?: string | null
           content_hash?: string | null
+          content_status?: string | null
           created_at?: string | null
           embedding?: string | null
           entities?: Json | null

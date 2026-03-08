@@ -44,8 +44,12 @@ Deno.serve(async (req) => {
 
     console.log(`[process-job-queue] Starting batch processing (size: ${batchSize})`);
 
+    // Generate unique worker ID for distributed locking
+    const workerId = `worker-${crypto.randomUUID().slice(0, 8)}`;
+    const lockTimeout = 5 * 60 * 1000; // 5 minutes lock timeout
+    
     // ═══════════════════════════════════════════════════════════
-    // FETCH PENDING JOBS
+    // FETCH PENDING JOBS (with distributed lock check)
     // ═══════════════════════════════════════════════════════════
 
     const { data: jobs, error: fetchError } = await supabase
@@ -54,6 +58,7 @@ Deno.serve(async (req) => {
       .eq('status', 'pending')
       .lt('attempts', 3) // Only jobs with < max attempts
       .lte('scheduled_at', new Date().toISOString()) // Scheduled for now or past
+      .is('locked_by', null) // Not locked by another worker
       .order('priority', { ascending: false })
       .order('scheduled_at', { ascending: true })
       .limit(batchSize);
@@ -85,28 +90,40 @@ Deno.serve(async (req) => {
     for (const job of jobs) {
       console.log(`[process-job-queue] Processing job: ${job.id} (type: ${job.job_type})`);
 
-      // Mark as running
-      await supabase
+      // Acquire lock atomically (only if still unlocked)
+      const { data: lockResult, error: lockError } = await supabase
         .from('content_jobs')
         .update({ 
           status: 'running',
           started_at: new Date().toISOString(),
-          attempts: job.attempts + 1
+          attempts: job.attempts + 1,
+          locked_by: workerId,
+          locked_at: new Date().toISOString()
         })
-        .eq('id', job.id);
+        .eq('id', job.id)
+        .is('locked_by', null) // Only lock if not already locked
+        .select();
+
+      // Skip if another worker grabbed this job
+      if (lockError || !lockResult || lockResult.length === 0) {
+        console.log(`[process-job-queue] Job ${job.id} already locked by another worker, skipping`);
+        continue;
+      }
 
       try {
         // Process based on job type
         if (job.job_type === 'process_submission') {
           await processSubmissionJob(supabase, job, authHeader);
           
-          // Mark as completed
+          // Mark as completed and release lock
           await supabase
             .from('content_jobs')
             .update({ 
               status: 'completed',
               finished_at: new Date().toISOString(),
-              last_error: null
+              last_error: null,
+              locked_by: null,
+              locked_at: null
             })
             .eq('id', job.id);
 
@@ -121,7 +138,9 @@ Deno.serve(async (req) => {
             .update({ 
               status: 'completed',
               finished_at: new Date().toISOString(),
-              last_error: null
+              last_error: null,
+              locked_by: null,
+              locked_at: null
             })
             .eq('id', job.id);
 
@@ -142,13 +161,16 @@ Deno.serve(async (req) => {
         const backoffMinutes = Math.pow(2, newAttempts); // 2, 4, 8 minutes
         const nextScheduledAt = new Date(Date.now() + backoffMinutes * 60 * 1000);
 
+        // Release lock and update status
         await supabase
           .from('content_jobs')
           .update({ 
             status: newStatus,
             last_error: error.message,
             finished_at: newStatus === 'failed' ? new Date().toISOString() : null,
-            scheduled_at: newStatus === 'pending' ? nextScheduledAt.toISOString() : job.scheduled_at
+            scheduled_at: newStatus === 'pending' ? nextScheduledAt.toISOString() : job.scheduled_at,
+            locked_by: null,
+            locked_at: null
           })
           .eq('id', job.id);
 
