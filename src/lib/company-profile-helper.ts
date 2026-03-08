@@ -156,8 +156,6 @@ export interface CompanyProfileData {
   number_of_employees?: string;
   google_aggregate_rating?: { ratingValue: string; reviewCount: number };
   target_audience?: string;
-  founder_instagram?: string;
-  founder_twitter?: string;
   
   // Links institucionais
   institutional_links: Array<{
