@@ -24,6 +24,7 @@ import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 import BlogImageTest from "./pages/BlogImageTest";
 import LPClone from "./pages/LPClone";
+import RAGMetricsDashboard from "./pages/RAGMetricsDashboard";
 
 const queryClient = new QueryClient();
 
