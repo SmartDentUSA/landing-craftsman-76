@@ -3741,6 +3741,12 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
     ai_summary_block: aiSummaryBlock,
     entity_index_block: entityIndexBlock,
     llm_knowledge_block: llmKnowledgeBlock,
+    // 🧠 Knowledge System Blocks
+    entity_reference_metas: entityReferenceMetas,
+    definition_paragraph_block: definitionParagraphBlock,
+    expanded_knowledge_block: expandedKnowledgeBlock,
+    citation_block: citationBlock,
+    entity_index_jsonld_block: entityIndexJsonldBlock,
     // 🆕 Hero Image Preload (LCP)
     banner_first_image: data.banner?.images?.[0]?.src || '',
     // 🔧 CORREÇÃO CRÍTICA: Mapear TODOS os campos SEO para nível raiz onde o template espera
