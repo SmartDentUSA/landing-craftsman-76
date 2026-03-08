@@ -1185,6 +1185,15 @@ const DashboardContent = () => {
                           <PenTool className="h-4 w-4 mr-2" />
                           Gerar Blog Post
                         </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => { setPublishLP(landingPage); setPublishOpen(true); }}
+                          className="border-accent/30 text-accent-foreground hover:bg-accent/10"
+                        >
+                          <Upload className="h-4 w-4 mr-2" />
+                          Publicar
+                        </Button>
                       </>
                     )}
                     
