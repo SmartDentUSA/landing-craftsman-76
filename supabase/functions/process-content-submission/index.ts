@@ -244,9 +244,7 @@ Responda APENAS em JSON válido:
       linkedProducts: linkedEntities.products.length,
       linkedExperts: linkedEntities.experts.length 
     }});
-
-    // ═══════════════════════════════════════════════════════════
-    // STEP 7: Generate Structured Content
+    await logStep(6, 'Link entities', 'success');
     // ═══════════════════════════════════════════════════════════
 
     let structuredContent: any = {
