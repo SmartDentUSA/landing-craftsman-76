@@ -291,6 +291,7 @@ export type Database = {
           published_at: string | null
           published_url: string | null
           seo_config: Json | null
+          source_landing_page_id: string | null
           status: string | null
           target_domain: string | null
           transformed_html: string | null
@@ -316,6 +317,7 @@ export type Database = {
           published_at?: string | null
           published_url?: string | null
           seo_config?: Json | null
+          source_landing_page_id?: string | null
           status?: string | null
           target_domain?: string | null
           transformed_html?: string | null
@@ -341,6 +343,7 @@ export type Database = {
           published_at?: string | null
           published_url?: string | null
           seo_config?: Json | null
+          source_landing_page_id?: string | null
           status?: string | null
           target_domain?: string | null
           transformed_html?: string | null
