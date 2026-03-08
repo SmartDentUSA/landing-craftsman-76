@@ -2702,11 +2702,44 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
         keyProperties: products.slice(0, 5).flatMap((p: any) => (p.benefits || []).slice(0, 2)).map((b: any) => typeof b === 'string' ? b : b.title || b.text || ''),
       })}
       
+      ${generateDefinitionParagraph({
+        entityName: solution.title,
+        category: painTypeLabels[solution.pain_type] || 'odontologia digital',
+        definition: solution.pain_description || solution.sales_pitch || '',
+        company: sanitizeCompanyName(company?.company_name)
+      })}
+      
+      ${generateExpandedKnowledgeLayer({
+        entity: solution.title,
+        category: painTypeLabels[solution.pain_type] || 'odontologia digital',
+        company: sanitizeCompanyName(company?.company_name),
+        definition: (solution.pain_description || solution.sales_pitch || '').replace(/<[^>]*>/g, '').substring(0, 300),
+        technology: products.slice(0, 3).map((p: any) => p.name).join('; '),
+        clinicalApplication: (solution.sales_pitch || '').replace(/<[^>]*>/g, '').substring(0, 200),
+        relatedProducts: products.slice(0, 5).map((p: any) => p.name),
+        associatedExperts: authorKOL ? [authorKOL.name] : [],
+      })}
+      
+      ${generateCitationBlock({
+        quote: `${sanitizeCompanyName(company?.company_name)} oferece ${solution.title} como solução para ${painTypeLabels[solution.pain_type] || 'desafios clínicos'} em odontologia digital.`,
+        source: canonicalUrl,
+        expertName: sanitizeCompanyName(company?.company_name),
+        expertRole: 'Fabricante',
+      })}
+      
       <meta itemprop="author" content="${escapeHtml(sanitizeCompanyName(company?.company_name))}">
       <meta itemprop="datePublished" content="${new Date().toISOString().split('T')[0]}">
     </article>
     
     ${generateEntityIndexHTML(`${solution.title} ${solution.pain_description || ''} ${solution.sales_pitch || ''} ${products.map((p: any) => p.name).join(' ')}`)}
+    
+    ${generateEntityIndexJsonLD({
+      entities: [
+        { type: 'Thing', name: solution.title },
+        ...products.slice(0, 5).map((p: any) => ({ type: 'Product', name: p.name })),
+      ],
+      pageName: `Entidades: ${solution.title}`
+    })}
   </main>
 
   ${solution.selected_video_url ? `

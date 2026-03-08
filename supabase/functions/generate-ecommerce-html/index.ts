@@ -2579,6 +2579,26 @@ function buildEcommerceHTML(
   // 🤖 Entity Index HTML (Wikidata links for AI crawlers)
   html += generateEntityIndexHTML(allContentText);
 
+  // 🧠 Entity Index JSON-LD (ItemList of related entities)
+  const entityListItems: Array<{ type: string; name: string; url?: string; description?: string }> = [
+    { type: 'Product', name: product.name, url: product.canonical_url || product.product_url || '', description: (product.description || '').replace(/<[^>]*>/g, '').substring(0, 150) },
+  ];
+  if (product.category) entityListItems.push({ type: 'Thing', name: product.category });
+  if (product.brand) entityListItems.push({ type: 'Brand', name: product.brand });
+  if (product.material) entityListItems.push({ type: 'Thing', name: product.material });
+  html += generateEntityIndexJsonLD({ entities: entityListItems, pageName: `Entidades: ${product.name}` });
+
+  // 🧠 MedicalEntity Schema (if applicable)
+  const medicalEntity = generateMedicalEntitySchema({
+    name: product.name,
+    description: product.description || product.sales_pitch || '',
+    medicalSpecialty: 'Dentistry',
+    recognizingAuthority: ['ANVISA', 'CRO'],
+  });
+  if (medicalEntity) {
+    ecommerceSchema["@graph"].push(medicalEntity);
+  }
+
   // ✅ Fechar <article> + <main> wrapper semântico
   html += `\n</article>\n</main>`;
 

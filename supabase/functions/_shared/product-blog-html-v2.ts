@@ -1960,6 +1960,16 @@ ${(() => {
   
   ${generateEntityIndexHTML([product.name, description, product.category, product.sales_pitch, ...features].filter(Boolean).join(' '))}
   
+  ${generateEntityIndexJsonLD({
+    entities: [
+      { type: 'Product', name: product.name, url: canonicalUrl, description: description.replace(/<[^>]*>/g, '').substring(0, 150) },
+      ...(product.category ? [{ type: 'Thing', name: product.category }] : []),
+      ...(product.brand ? [{ type: 'Brand', name: product.brand }] : []),
+      ...(relatedProducts || []).slice(0, 5).map((p: any) => ({ type: 'Product', name: p.name })),
+    ],
+    pageName: `Entidades: ${product.name}`
+  })}
+  
 </body>
 </html>`;
 }
