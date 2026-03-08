@@ -315,6 +315,7 @@ Gere seções em JSON:
     };
 
     results.push({ step: 8, name: 'Generate SEO metadata', success: true, data: seoMetadata });
+    await logStep(8, 'Generate SEO metadata', 'success');
 
     // ═══════════════════════════════════════════════════════════
     // STEP 9: Generate Schema JSON-LD
