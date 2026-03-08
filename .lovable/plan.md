@@ -1,49 +1,74 @@
 
+# Conectar Landing Pages do Editor ao Publisher FTP/Cloudflare
 
-# Botões individuais "Gerar por IA" para slides do Carrossel Visual
+## Resumo
 
-## Contexto
+Criar um botão "Publicar" na lista de LPs do Dashboard que abre um Dialog com seletor de dominio, categoria, slug e homepage. Ao publicar, gera HTML, insere em `cloned_landing_pages` e chama a edge function correta.
 
-O Carrossel Visual tem 6 slides. O Slide 1 (🎣 Hook) já possui um botão individual "Novo Gancho IA" que chama a edge function `generate-carousel-hook`. Os slides 3 (🔬 Cientificidade), 4 (💫 Experiência) e 5 (🛡️ Segurança) não possuem botões individuais — só podem ser gerados pelo botão geral "🤖 Gerar com IA" que regenera todos os slides de uma vez.
+## Entregas
 
-## Plano
+### 1. Migration SQL: `source_landing_page_id`
+Adicionar coluna `source_landing_page_id text` em `cloned_landing_pages` com index parcial. Isso vincula LPs publicadas a sua origem no editor.
 
-### 1. Nova Edge Function: `generate-carousel-slide`
+### 2. Novo componente: `src/components/LPPublishDialog.tsx`
+Dialog completo com:
+- **Select de dominio** — busca `seo_domains` de `company_profile`, filtra enabled, mostra badge `[FTP]` ou `[Cloudflare]`
+- **Checkbox homepage** — define pagePath como `/`
+- **Select de categoria** — aparece apenas se o dominio selecionado tem `url_structure` (Produtos, Blog, Guias, Compare, SPIN)
+- **Input de slug** — auto-gerado do nome da LP, editavel
+- **Preview da URL** — mostra URL final em tempo real
+- **Botao Publicar** — executa o pipeline completo
 
-Criar uma edge function genérica que receba o tipo do slide (`cientificidade`, `experiencia`, `seguranca`) e gere apenas o conteúdo daquele slide específico, com prompts especializados por tipo:
+Pipeline do handlePublish:
+1. Gera HTML via `generateBlogHTML()` (mesmo gerador usado em `handleCopyCode`)
+2. Insere registro em `cloned_landing_pages` com `source_landing_page_id = lp.id`
+3. Determina method: `domainConfig.publish_method === 'ftp' ? 'publish-ftp-pages' : 'publish-cloudflare-pages'`
+4. Chama `supabase.functions.invoke(functionName, { body: { lpId, domain, pagePath, isHomepage } })`
+5. Atualiza UI com resultado
 
-- **Cientificidade (Slide 3)**: Gera title, headline, body, bullet1-4 com foco em evidências científicas e dados técnicos
-- **Experiência (Slide 4)**: Gera keyword + benefit com foco em experiência clínica e fluxo de trabalho
-- **Segurança (Slide 5)**: Gera title, badge1-3 com foco em certificações, garantias e confiança
+### 3. Modificar: `src/pages/Dashboard.tsx`
+Na seção de LPs aprovadas (linha ~1164), adicionar botao "Publicar" ao lado de "Copiar Codigo":
+```
+{landingPage.status === 'approved' && (
+  <Button onClick={() => { setPublishLP(landingPage); setPublishOpen(true); }}>
+    <Upload /> Publicar
+  </Button>
+)}
+```
 
-Recebe: `productName`, `salesPitch`, `benefits`, `features`, `slideType`
-Retorna: campos específicos do slide solicitado
+State adicional:
+- `publishOpen: boolean`
+- `publishLP: LandingPage | null`
 
-### 2. Frontend — Novos estados e handlers (`InstagramCopyGenerator.tsx`)
+Import e render do `<LPPublishDialog>` no final do JSX.
 
-- Adicionar 3 estados: `generatingScience`, `generatingExperience`, `generatingSecurity`
-- Criar 3 handlers que chamam `generate-carousel-slide` com o `slideType` correto e atualizam apenas o slide correspondente em `slideTexts`
+## Arquivos
 
-### 3. Frontend — 3 novos botões no header do Carrossel Visual
+| Acao | Arquivo |
+|------|---------|
+| Criar | `src/components/LPPublishDialog.tsx` |
+| Modificar | `src/pages/Dashboard.tsx` (add publish button + dialog state) |
+| Migration | ADD COLUMN `source_landing_page_id` to `cloned_landing_pages` |
 
-Adicionar ao lado do botão "🎣 Novo Gancho IA" (linha ~1962):
+## Fluxo final
 
-- **🔬 Cientificidade IA** — gera apenas Slide 3
-- **💫 Experiência IA** — gera apenas Slide 4
-- **🛡️ Segurança IA** — gera apenas Slide 5
-
-Cada botão com loading state individual, mesmo padrão visual do botão Hook existente.
-
-### Detalhes técnicos
-
-**Edge function `generate-carousel-slide/index.ts`:**
-- Usa Lovable AI Gateway (`google/gemini-2.5-flash`)
-- Prompt especializado por slideType com regras de formatação
-- Temperature 1.0 para variedade
-- Retorna JSON estruturado via tool calling para garantir campos corretos
-
-**Mapeamento de retorno:**
-- `cientificidade` → `{ title, headline, body, bullet1, bullet2, bullet3, bullet4 }`
-- `experiencia` → `{ keyword, benefit }`
-- `seguranca` → `{ title, badge1, badge2, badge3 }`
-
+```text
+Dashboard "Suas Landing Pages"
+   │ [Publicar] button (approved only)
+   ▼
+LPPublishDialog
+   │ Select domain → Select category → Slug
+   ▼
+generateBlogHTML() → HTML
+   │
+   ▼
+INSERT cloned_landing_pages
+   │
+   ▼
+supabase.functions.invoke(
+  'publish-ftp-pages' | 'publish-cloudflare-pages'
+)
+   │
+   ▼
+FTP / Cloudflare
+```
