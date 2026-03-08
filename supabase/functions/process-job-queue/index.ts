@@ -138,7 +138,9 @@ Deno.serve(async (req) => {
             .update({ 
               status: 'completed',
               finished_at: new Date().toISOString(),
-              last_error: null
+              last_error: null,
+              locked_by: null,
+              locked_at: null
             })
             .eq('id', job.id);
 
