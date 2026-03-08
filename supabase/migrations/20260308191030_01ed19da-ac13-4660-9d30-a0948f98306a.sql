@@ -1,0 +1,1 @@
+UPDATE publication_settings SET profile_name = 'kinghost_smartdent' WHERE id = '6ea4ddd1-8c18-40ad-80da-3fb26fe4c1a7';
