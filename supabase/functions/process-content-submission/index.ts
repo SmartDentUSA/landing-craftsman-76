@@ -678,9 +678,10 @@ function generateSlug(title: string): string {
 }
 
 function generatePath(contentType: string, slug: string): string {
+  // SEO-optimized URL paths (audit fix: /produtos instead of /produto, landing at root)
   const pathMap: Record<string, string> = {
-    'landing': `/l/${slug}`,
-    'product': `/produto/${slug}`,
+    'landing': `/${slug}`,
+    'product': `/produtos/${slug}`,
     'blog': `/blog/${slug}`,
     'topic': `/topico/${slug}`,
     'guide': `/guia/${slug}`,

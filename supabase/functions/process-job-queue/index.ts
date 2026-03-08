@@ -90,15 +90,25 @@ Deno.serve(async (req) => {
     for (const job of jobs) {
       console.log(`[process-job-queue] Processing job: ${job.id} (type: ${job.job_type})`);
 
-      // Mark as running
-      await supabase
+      // Acquire lock atomically (only if still unlocked)
+      const { data: lockResult, error: lockError } = await supabase
         .from('content_jobs')
         .update({ 
           status: 'running',
           started_at: new Date().toISOString(),
-          attempts: job.attempts + 1
+          attempts: job.attempts + 1,
+          locked_by: workerId,
+          locked_at: new Date().toISOString()
         })
-        .eq('id', job.id);
+        .eq('id', job.id)
+        .is('locked_by', null) // Only lock if not already locked
+        .select();
+
+      // Skip if another worker grabbed this job
+      if (lockError || !lockResult || lockResult.length === 0) {
+        console.log(`[process-job-queue] Job ${job.id} already locked by another worker, skipping`);
+        continue;
+      }
 
       try {
         // Process based on job type
