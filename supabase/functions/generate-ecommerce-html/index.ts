@@ -1960,6 +1960,36 @@ function buildEcommerceHTML(
     certifications: product.certifications || []
   });
 
+  // 🧠 Definition Paragraph (semantic, LLM-priority extraction)
+  html += generateDefinitionParagraph({
+    entityName: product.name,
+    category: product.category,
+    definition: productDescription,
+    company: companyName
+  });
+
+  // 🧠 Expanded Knowledge Layer (full entity context)
+  html += generateExpandedKnowledgeLayer({
+    entity: product.name,
+    category: product.category,
+    company: companyName,
+    definition: productDescription.replace(/<[^>]*>/g, '').substring(0, 300),
+    technology: (product.features || []).slice(0, 3).join('; '),
+    clinicalApplication: product.applications || '',
+    keyProperties: (product.technical_specifications || []).slice(0, 5).map((s: any) => typeof s === 'string' ? s : `${s.label || s.name}: ${s.value}`),
+    certifications: product.certifications || [],
+    applications: product.applications ? [product.applications] : [],
+    relatedProducts: [],
+  });
+
+  // 🧠 Citation Block (expert recommendation for LLM citation)
+  html += generateCitationBlock({
+    quote: `Especialistas da ${companyName} recomendam ${product.name} para aplicações em ${product.category || 'odontologia digital'}.`,
+    source: product.canonical_url || product.product_url || '',
+    expertName: companyName,
+    expertRole: 'Fabricante',
+  });
+
   html += `
 <div style="font-size: 1.05em; margin-bottom: 25px;">${parseRichDescription(enrichedDescription)}</div>`;
 
