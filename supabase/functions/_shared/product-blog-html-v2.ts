@@ -42,6 +42,8 @@ import {
 
 // 🤖 AI Readiness Helpers
 import { enrichGraphWithAIReadiness, generateAISummaryBlock, generateLLMKnowledgeLayer, generateEntityIndexHTML, generateDefinedTermSetSchema } from './ai-readiness-helpers.ts';
+// 🧠 Knowledge System Helpers
+import { generateEntityReferenceMetas, generateAICrawlerPolicyMeta, generateCitationBlock, generateExpandedKnowledgeLayer, generateEntityIndexJsonLD, generateDefinitionParagraph, generateMedicalEntitySchema } from './knowledge-system-helpers.ts';
 
 // ============================================
 // INTERFACES
