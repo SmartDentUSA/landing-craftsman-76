@@ -213,6 +213,7 @@ Responda APENAS em JSON válido:
       reviews: knowledgeGraph.reviews.length,
       experts: knowledgeGraph.experts.length 
     }});
+    await logStep(4, 'Fetch Knowledge Graph', 'success', { output_summary: { products: knowledgeGraph.products.length } });
 
     // ═══════════════════════════════════════════════════════════
     // STEP 5: Build Topic/Product Graph
