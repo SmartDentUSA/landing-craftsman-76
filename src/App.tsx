@@ -55,6 +55,7 @@ const App = () => (
           <Route path="/password-reset" element={<PasswordReset />} />
           <Route path="/blog-image-test" element={<ProtectedRoute><BlogImageTest /></ProtectedRoute>} />
           <Route path="/lp-clone" element={<ProtectedRoute requiredRole="admin"><LPClone /></ProtectedRoute>} />
+          <Route path="/admin/metrics/rag" element={<ProtectedRoute requiredRole="admin"><RAGMetricsDashboard /></ProtectedRoute>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
