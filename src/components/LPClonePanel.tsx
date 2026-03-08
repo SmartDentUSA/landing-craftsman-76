@@ -205,7 +205,12 @@ export const LPClonePanel = () => {
   });
   
   const seoDomains = (companyProfile?.seo_domains as unknown as SEODomain[]) || [];
-  const enabledDomains = seoDomains.filter(d => d.cloudflare_enabled && d.cloudflare_project_name);
+  const enabledDomains = seoDomains.filter(d => 
+    d.enabled !== false && (
+      d.publish_method === 'ftp' ||
+      (d.cloudflare_enabled && d.cloudflare_project_name)
+    )
+  );
   
   // Handle product selection
   const handleProductSelect = (product: ProductWithSEO) => {
