@@ -33,6 +33,8 @@ import { deduplicateKeywords, generateHreflangHTML } from "../_shared/seo-fine-t
 
 // 🤖 AI Readiness Helpers
 import { enrichGraphWithAIReadiness, generateAISummaryBlock, generateLLMKnowledgeLayer, generateEntityIndexHTML, generateDefinedTermSetSchema } from "../_shared/ai-readiness-helpers.ts";
+// 🧠 Knowledge System Helpers
+import { generateEntityReferenceMetas, generateAICrawlerPolicyMeta, generateCitationBlock, generateExpandedKnowledgeLayer, generateEntityIndexJsonLD, generateDefinitionParagraph, generateMedicalEntitySchema } from "../_shared/knowledge-system-helpers.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
