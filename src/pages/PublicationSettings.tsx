@@ -345,6 +345,18 @@ export default function PublicationSettings() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
+              <Label htmlFor="profile_name">Nome do Perfil</Label>
+              <Input
+                id="profile_name"
+                type="text"
+                placeholder="kinghost_smartdent"
+                value={settings.profile_name}
+                onChange={(e) => setSettings(prev => ({ ...prev, profile_name: e.target.value }))}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Identificador único do perfil FTP (usado para lookup de domínio)
+              </p>
+            </div>
               <Label htmlFor="ftp_host">Host SFTP</Label>
               <Input
                 id="ftp_host"
