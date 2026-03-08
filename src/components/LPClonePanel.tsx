@@ -90,6 +90,7 @@ interface SEODomain {
   ftp_profile?: string;
   enabled?: boolean;
   ftp_remote_path?: string;
+  url_structure?: Record<string, string>;
 }
 
 // Product Blog types
