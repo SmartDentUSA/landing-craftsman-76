@@ -1,46 +1,49 @@
 
 
-# Create System A Full Audit Report — `System_A_08_03_2026_Audit.md`
+# Botões individuais "Gerar por IA" para slides do Carrossel Visual
 
-## What
+## Contexto
 
-Create a single comprehensive Markdown file at the project root containing the full system audit covering all 7 architecture layers, 91 Edge Functions, 40+ tables, and all flows from content creation to lead intelligence.
+O Carrossel Visual tem 6 slides. O Slide 1 (🎣 Hook) já possui um botão individual "Novo Gancho IA" que chama a edge function `generate-carousel-hook`. Os slides 3 (🔬 Cientificidade), 4 (💫 Experiência) e 5 (🛡️ Segurança) não possuem botões individuais — só podem ser gerados pelo botão geral "🤖 Gerar com IA" que regenera todos os slides de uma vez.
 
-## File
+## Plano
 
-**`System_A_08_03_2026_Audit.md`** (~800 lines)
+### 1. Nova Edge Function: `generate-carousel-slide`
 
-## Structure
+Criar uma edge function genérica que receba o tipo do slide (`cientificidade`, `experiencia`, `seguranca`) e gere apenas o conteúdo daquele slide específico, com prompts especializados por tipo:
 
-The document consolidates all audit findings into 19 sections:
+- **Cientificidade (Slide 3)**: Gera title, headline, body, bullet1-4 com foco em evidências científicas e dados técnicos
+- **Experiência (Slide 4)**: Gera keyword + benefit com foco em experiência clínica e fluxo de trabalho
+- **Segurança (Slide 5)**: Gera title, badge1-3 com foco em certificações, garantias e confiança
 
-1. **Executive Summary** — Score table (96% complete, 68/71 implemented)
-2. **Architecture Overview** — ASCII diagram of all 7 layers
-3. **Database Schema Audit** — All 5 Knowledge Brain tables with column-by-column verification
-4. **Vector Search** — pgvector v0.8.0, HNSW index, VECTOR(768)
-5. **Edge Functions Inventory** — All 91 functions organized by category (Ingestion, Generation, Knowledge Brain, RAG, Publication, SEO, Export, OAuth, Utilities)
-6. **Shared Modules** — 25 shared modules with consumers
-7. **Knowledge Graph Functions** — 6 functions, 8 parallel table queries, entity coverage
-8. **AI Processing Pipeline** — 20-step pipeline verification
-9. **Job Queue System** — Distributed locking, retry logic, worker ID
-10. **Lead Intelligence (Dra. L.I.A.)** — Full RAG pipeline, 4 tables, LLM-as-Judge
-11. **SEO System** — URL structure, Schema.org, sitemaps, canonical
-12. **Security Audit** — RLS policies, JWT, CORS, SQL security functions
-13. **Data Ingestion Flows** — User-initiated (11) and system-initiated (6)
-14. **Content Generation Channels** — 10 channels, 28 generators
-15. **External Service Integrations** — 10 services with auth methods
-16. **Monitoring & Quality** — 6 monitoring systems
-17. **Frontend Pages** — 12 routes with access levels
-18. **Data Dependency Map** — ASCII diagram of table-to-function dependencies
-19. **Quantitative Summary** — All metrics (91 functions, 25 modules, 40+ tables, 130+ components)
-20. **Secrets Inventory** — 14 secrets with scope
-21. **Conclusion** — Production ready assessment with remaining minor items
+Recebe: `productName`, `salesPitch`, `benefits`, `features`, `slideType`
+Retorna: campos específicos do slide solicitado
 
-## Key Data Points
+### 2. Frontend — Novos estados e handlers (`InstagramCopyGenerator.tsx`)
 
-- 91 Edge Functions (verified from filesystem)
-- 25 shared modules (verified from `_shared/` directory)
-- 12 frontend pages (verified from `src/pages/`)
-- All Knowledge Brain columns verified including audit fixes (canonical_url, locked_by/locked_at, entity_slug, content_status, processed_by, rejection_reason)
-- All indexes verified including GIN tags index and entity_slug index
+- Adicionar 3 estados: `generatingScience`, `generatingExperience`, `generatingSecurity`
+- Criar 3 handlers que chamam `generate-carousel-slide` com o `slideType` correto e atualizam apenas o slide correspondente em `slideTexts`
+
+### 3. Frontend — 3 novos botões no header do Carrossel Visual
+
+Adicionar ao lado do botão "🎣 Novo Gancho IA" (linha ~1962):
+
+- **🔬 Cientificidade IA** — gera apenas Slide 3
+- **💫 Experiência IA** — gera apenas Slide 4
+- **🛡️ Segurança IA** — gera apenas Slide 5
+
+Cada botão com loading state individual, mesmo padrão visual do botão Hook existente.
+
+### Detalhes técnicos
+
+**Edge function `generate-carousel-slide/index.ts`:**
+- Usa Lovable AI Gateway (`google/gemini-2.5-flash`)
+- Prompt especializado por slideType com regras de formatação
+- Temperature 1.0 para variedade
+- Retorna JSON estruturado via tool calling para garantir campos corretos
+
+**Mapeamento de retorno:**
+- `cientificidade` → `{ title, headline, body, bullet1, bullet2, bullet3, bullet4 }`
+- `experiencia` → `{ keyword, benefit }`
+- `seguranca` → `{ title, badge1, badge2, badge3 }`
 
