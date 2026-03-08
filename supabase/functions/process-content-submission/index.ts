@@ -323,6 +323,7 @@ Gere seções em JSON:
 
     const schemaJsonLd = generateSchemaJsonLd(submission, seoMetadata, linkedEntities, knowledgeGraph);
     results.push({ step: 9, name: 'Generate Schema JSON-LD', success: true });
+    await logStep(9, 'Generate Schema JSON-LD', 'success');
 
     // ═══════════════════════════════════════════════════════════
     // STEP 10: Generate HTML
