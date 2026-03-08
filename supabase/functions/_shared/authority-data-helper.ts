@@ -169,18 +169,7 @@ export async function fetchAuthorityData(supabase: any): Promise<AuthorityData |
   try {
     const { data: companyProfile, error } = await supabase
       .from('company_profile')
-      .select(`
-        company_name, website_url, company_description,
-        institutional_links, areas_served, company_reviews, nps_metrics,
-        founder_name, founder_title, founder_linkedin,
-        social_media_hashtags, social_media_handles, youtube_tags,
-        instagram_profile, youtube_channel, social_media_links,
-        company_videos,
-        brand_values, mission_statement, vision_statement,
-        differentiators, working_methodology, company_culture,
-        seo_context_keywords, seo_service_areas, seo_technical_expertise,
-        seo_competitive_advantages, seo_market_positioning
-      `)
+      .select('*')
       .limit(1)
       .single();
     
@@ -1132,4 +1121,110 @@ export function enrichProductSchema(
   }
 
   return enriched;
+}
+
+// ═══════════════════════════════════════════════════════════
+// FETCH COMPANY MILESTONES
+// ═══════════════════════════════════════════════════════════
+
+export interface CompanyMilestone {
+  id: string;
+  year: number;
+  month?: number;
+  day?: number;
+  title: string;
+  slug: string;
+  description?: string;
+  impact?: string;
+  technologies?: string[];
+  certifications?: string[];
+  key_people?: Array<{ name: string; role: string }>;
+  products_involved?: string[];
+  location?: { city: string; state: string; country: string };
+  image_url?: string;
+}
+
+export async function fetchCompanyMilestones(supabase: any, limit: number = 50): Promise<CompanyMilestone[]> {
+  try {
+    const { data, error } = await supabase
+      .from('company_milestones')
+      .select('*')
+      .eq('is_published', true)
+      .order('year', { ascending: true })
+      .order('month', { ascending: true, nullsFirst: true })
+      .limit(limit);
+    
+    if (error || !data) {
+      console.warn('⚠️ [Authority] Erro ao buscar company_milestones:', error?.message);
+      return [];
+    }
+    
+    console.log(`✅ [Authority] ${data.length} marcos históricos carregados`);
+    return data;
+  } catch (err) {
+    console.error('❌ [Authority] Erro ao buscar milestones:', err);
+    return [];
+  }
+}
+
+/**
+ * Gera HTML invisível com timeline de marcos para crawlers/LLMs
+ */
+export function generateMilestonesAuthorityHTML(milestones: CompanyMilestone[], companyName: string): string {
+  if (!milestones || milestones.length === 0) return '';
+  
+  const items = milestones.map(m => {
+    const date = m.month ? `${String(m.month).padStart(2, '0')}/${m.year}` : `${m.year}`;
+    const techs = Array.isArray(m.technologies) && m.technologies.length > 0 
+      ? ` | Tecnologias: ${m.technologies.join(', ')}` : '';
+    const certs = Array.isArray(m.certifications) && m.certifications.length > 0 
+      ? ` | Certificações: ${m.certifications.join(', ')}` : '';
+    return `<li>${date} — ${m.title}${m.description ? ': ' + m.description.substring(0, 150) : ''}${techs}${certs}</li>`;
+  }).join('\n');
+
+  return `
+    <section class="authority-milestones" aria-label="Marcos Históricos" style="position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden;">
+      <h3>Marcos Históricos — ${companyName}</h3>
+      <ul>${items}</ul>
+    </section>`;
+}
+
+/**
+ * Gera JSON-LD ItemList para marcos históricos
+ */
+export function generateMilestonesSchema(milestones: CompanyMilestone[], companyName: string, baseUrl: string): any {
+  if (!milestones || milestones.length === 0) return null;
+  
+  return {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "name": `Marcos Históricos — ${companyName}`,
+    "numberOfItems": milestones.length,
+    "itemListOrder": "https://schema.org/ItemListOrderAscending",
+    "itemListElement": milestones.map((m, i) => ({
+      "@type": "ListItem",
+      "position": i + 1,
+      "item": {
+        "@type": "Event",
+        "name": m.title,
+        "startDate": m.month 
+          ? `${m.year}-${String(m.month).padStart(2, '0')}${m.day ? '-' + String(m.day).padStart(2, '0') : ''}`
+          : String(m.year),
+        "eventStatus": "https://schema.org/EventCompleted",
+        "description": m.description?.substring(0, 300),
+        "organizer": { "@type": "Organization", "name": companyName },
+        ...(m.location?.city && {
+          "location": {
+            "@type": "Place",
+            "address": {
+              "@type": "PostalAddress",
+              "addressLocality": m.location.city,
+              "addressRegion": m.location.state,
+              "addressCountry": m.location.country || 'Brasil'
+            }
+          }
+        })
+      }
+    }))
+  };
 }

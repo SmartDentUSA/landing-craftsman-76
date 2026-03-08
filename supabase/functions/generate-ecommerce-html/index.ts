@@ -183,19 +183,7 @@ serve(async (req) => {
     console.log('🏢 Buscando perfil da empresa...');
     const { data: companyProfile, error: companyError } = await supabase
       .from('company_profile')
-      .select(`
-        company_name,
-        company_description,
-        company_logo_url,
-        mission_statement,
-        vision_statement,
-        differentiators,
-        founded_year,
-        website_url,
-        contact_phone,
-        location,
-        youtube_company_footer
-      `)
+      .select('*')
       .order('created_at', { ascending: false })
       .limit(1)
       .single();

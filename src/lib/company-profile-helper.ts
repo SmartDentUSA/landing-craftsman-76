@@ -146,6 +146,17 @@ export interface CompanyProfileData {
     };
   };
   
+  // ✅ NOVOS: Campos jurídicos e LocalBusiness
+  opening_hours?: any[];
+  price_range?: string;
+  areas_served?: any[];
+  legal_name?: string;
+  tax_id?: string;
+  duns_number?: string;
+  number_of_employees?: string;
+  google_aggregate_rating?: { ratingValue: string; reviewCount: number };
+  target_audience?: string;
+  
   // Links institucionais
   institutional_links: Array<{
     label: string;
@@ -179,58 +190,7 @@ export async function getCompanyProfileForSEO(): Promise<CompanyProfileData | nu
   try {
     const { data, error } = await supabase
       .from('company_profile')
-      .select(`
-        company_name,
-        company_description,
-        location,
-        country,
-        state,
-        city,
-        street_address,
-        address_number,
-        postal_code,
-        latitude,
-        longitude,
-        contact_phone,
-        contact_email,
-        website_url,
-        brand_values,
-        mission_statement,
-        vision_statement,
-        company_culture,
-        working_methodology,
-        delivery_approach,
-        differentiators,
-        founded_year,
-        team_size,
-        company_logo_url,
-        company_logo_supabase_path,
-        youtube_company_footer,
-        instagram_profile,
-        youtube_channel,
-        founder_name,
-        founder_title,
-        business_sector,
-        main_products_services,
-        seo_context_keywords,
-        seo_market_positioning,
-        seo_service_areas,
-        seo_technical_expertise,
-        seo_competitive_advantages,
-        seo_domains,
-        social_media_hashtags,
-        social_media_handles,
-        youtube_tags,
-        youtube_verified,
-        instagram_verified,
-        tracking_pixels,
-        company_videos,
-        company_reviews,
-        nps_metrics,
-        navigation_footer_config,
-        institutional_links,
-        social_media_links
-      `)
+      .select('*')
       .order('created_at', { ascending: false })
       .limit(1);
 
@@ -240,7 +200,7 @@ export async function getCompanyProfileForSEO(): Promise<CompanyProfileData | nu
     }
 
     if (data && data.length > 0) {
-      companyProfileCache = data[0] as CompanyProfileData;
+      companyProfileCache = data[0] as unknown as CompanyProfileData;
       cacheTimestamp = now;
       return companyProfileCache;
     }
