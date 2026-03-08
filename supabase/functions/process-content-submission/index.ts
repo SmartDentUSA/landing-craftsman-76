@@ -59,6 +59,12 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Rate limit check
+    const rateCheck = await checkRateLimit('process-content-submission');
+    if (!rateCheck.allowed) {
+      return rateLimitResponse(rateCheck, corsHeaders);
+    }
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
@@ -75,6 +81,23 @@ Deno.serve(async (req) => {
 
     console.log(`[process-content-submission] Starting pipeline for: ${submission_id}`);
     const results: ProcessingResult[] = [];
+
+    // Pipeline audit logging helper
+    async function logStep(stepNumber: number, stepName: string, status: string, extra?: any) {
+      try {
+        await supabase.from('pipeline_audit_logs').insert({
+          submission_id,
+          step_number: stepNumber,
+          step_name: stepName,
+          status,
+          started_at: new Date().toISOString(),
+          ...(status === 'success' || status === 'error' ? { finished_at: new Date().toISOString() } : {}),
+          ...(extra || {}),
+        });
+      } catch (e) {
+        console.warn('[pipeline-audit] Log failed:', e);
+      }
+    }
 
     // ═══════════════════════════════════════════════════════════
     // STEP 1: Load Submission
