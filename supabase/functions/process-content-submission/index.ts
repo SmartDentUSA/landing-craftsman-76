@@ -503,6 +503,7 @@ Gere seções em JSON:
       .single();
 
     results.push({ step: 16, name: 'Create publication record', success: true });
+    await logStep(16, 'Create publication record', 'success');
 
     // Update submission as completed
     await supabase
