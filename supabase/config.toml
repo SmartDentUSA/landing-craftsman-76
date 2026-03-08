@@ -225,6 +225,9 @@ verify_jwt = false
 [functions.generate-carousel-slide]
 verify_jwt = false
 
+[functions.publish-ftp-pages]
+verify_jwt = false
+
 [functions.generate-carousel-hook]
 verify_jwt = false
 

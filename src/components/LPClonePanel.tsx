@@ -86,6 +86,10 @@ interface SEODomain {
   cloudflare_enabled?: boolean;
   cloudflare_project_name?: string;
   cloudflare_status?: string;
+  publish_method?: 'cloudflare' | 'ftp';
+  ftp_profile?: string;
+  enabled?: boolean;
+  ftp_remote_path?: string;
 }
 
 // Product Blog types
@@ -201,7 +205,12 @@ export const LPClonePanel = () => {
   });
   
   const seoDomains = (companyProfile?.seo_domains as unknown as SEODomain[]) || [];
-  const enabledDomains = seoDomains.filter(d => d.cloudflare_enabled && d.cloudflare_project_name);
+  const enabledDomains = seoDomains.filter(d => 
+    d.enabled !== false && (
+      d.publish_method === 'ftp' ||
+      (d.cloudflare_enabled && d.cloudflare_project_name)
+    )
+  );
   
   // Handle product selection
   const handleProductSelect = (product: ProductWithSEO) => {
@@ -507,7 +516,11 @@ export const LPClonePanel = () => {
       if (!lp) throw new Error('LP não encontrada');
       if (!lp.target_domain) throw new Error('Domínio não definido');
       
-      const { data, error } = await supabase.functions.invoke('publish-cloudflare-pages', {
+      const domainConfig = seoDomains.find(d => d.domain === lp.target_domain);
+      const method = domainConfig?.publish_method ?? 'cloudflare';
+      const functionName = method === 'ftp' ? 'publish-ftp-pages' : 'publish-cloudflare-pages';
+      
+      const { data, error } = await supabase.functions.invoke(functionName, {
         body: {
           lpId,
           domain: lp.target_domain,
@@ -948,7 +961,7 @@ export const LPClonePanel = () => {
                 <SelectContent className="bg-popover border shadow-md z-50">
                   {enabledDomains.filter(d => d.domain && d.domain.trim() !== '').map(d => (
                     <SelectItem key={d.domain} value={d.domain}>
-                      {d.domain}
+                      {d.domain} {d.publish_method === 'ftp' ? '🟠 FTP' : '⚡ Cloudflare'}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -1130,7 +1143,7 @@ export const LPClonePanel = () => {
                     <SelectContent className="bg-popover border shadow-md z-50">
                       {enabledDomains.filter(d => d.domain && d.domain.trim() !== '').map(d => (
                         <SelectItem key={d.domain} value={d.domain}>
-                          {d.domain}
+                          {d.domain} {d.publish_method === 'ftp' ? '🟠 FTP' : '⚡ Cloudflare'}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1464,7 +1477,9 @@ export const LPClonePanel = () => {
                                     <div className="flex items-center gap-2">
                                       <Globe className="h-4 w-4" />
                                       {d.domain}
-                                      {d.cloudflare_status === 'connected' && (
+                                      {d.publish_method === 'ftp' ? (
+                                        <Badge variant="outline" className="ml-1 text-[10px] px-1 py-0">FTP</Badge>
+                                      ) : (
                                         <CheckCircle className="h-3 w-3 text-green-500" />
                                       )}
                                     </div>

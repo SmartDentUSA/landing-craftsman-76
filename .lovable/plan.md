@@ -1,120 +1,49 @@
 
 
-# FTP Publishing para smartdent.com.br — Plano de Implementacao
+# Botões individuais "Gerar por IA" para slides do Carrossel Visual
 
-## Entregas
+## Contexto
 
-1. **Migration SQL** — `profile_name` em `publication_settings` com partial unique index
-2. **Data UPDATE** — Append smartdent.com.br ao `seo_domains` JSONB
-3. **Edge Function** — `publish-ftp-pages` com FTP real via `Deno.connect()`
-4. **Frontend** — Router em `LPClonePanel.tsx` + `ProductBlogPublisherPanel.tsx` + campo `profile_name` em `PublicationSettings.tsx`
+O Carrossel Visual tem 6 slides. O Slide 1 (🎣 Hook) já possui um botão individual "Novo Gancho IA" que chama a edge function `generate-carousel-hook`. Os slides 3 (🔬 Cientificidade), 4 (💫 Experiência) e 5 (🛡️ Segurança) não possuem botões individuais — só podem ser gerados pelo botão geral "🤖 Gerar com IA" que regenera todos os slides de uma vez.
 
----
+## Plano
 
-## 1. Migration SQL
+### 1. Nova Edge Function: `generate-carousel-slide`
 
-```sql
-ALTER TABLE publication_settings
-ADD COLUMN IF NOT EXISTS profile_name text;
+Criar uma edge function genérica que receba o tipo do slide (`cientificidade`, `experiencia`, `seguranca`) e gere apenas o conteúdo daquele slide específico, com prompts especializados por tipo:
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_publication_settings_profile
-ON publication_settings(profile_name)
-WHERE profile_name IS NOT NULL;
-```
+- **Cientificidade (Slide 3)**: Gera title, headline, body, bullet1-4 com foco em evidências científicas e dados técnicos
+- **Experiência (Slide 4)**: Gera keyword + benefit com foco em experiência clínica e fluxo de trabalho
+- **Segurança (Slide 5)**: Gera title, badge1-3 com foco em certificações, garantias e confiança
 
-## 2. Data UPDATE (via insert tool)
+Recebe: `productName`, `salesPitch`, `benefits`, `features`, `slideType`
+Retorna: campos específicos do slide solicitado
 
-Append smartdent.com.br ao array `seo_domains` em `company_profile` com:
-```json
-{
-  "name": "Smart Dent",
-  "domain": "smartdent.com.br",
-  "enabled": true,
-  "publish_method": "ftp",
-  "ftp_profile": "kinghost_smartdent",
-  "priority": 10,
-  "ftp_remote_path": "/public_html",
-  "url_structure": {
-    "products": "/produtos/{slug}",
-    "blog": "/blog/{slug}",
-    "guides": "/guias/{slug}",
-    "compare": "/compare/{slug}",
-    "spin": "/solucoes/{slug}"
-  }
-}
-```
+### 2. Frontend — Novos estados e handlers (`InstagramCopyGenerator.tsx`)
 
-## 3. Edge Function `publish-ftp-pages`
+- Adicionar 3 estados: `generatingScience`, `generatingExperience`, `generatingSecurity`
+- Criar 3 handlers que chamam `generate-carousel-slide` com o `slideType` correto e atualizam apenas o slide correspondente em `slideTexts`
 
-**Novo:** `supabase/functions/publish-ftp-pages/index.ts`
+### 3. Frontend — 3 novos botões no header do Carrossel Visual
 
-Config: `verify_jwt = false` (valida JWT em codigo via `getClaims()`)
+Adicionar ao lado do botão "🎣 Novo Gancho IA" (linha ~1962):
 
-Pipeline:
-1. CORS + auth via `getClaims()`
-2. Busca LP HTML de `cloned_landing_pages`
-3. Busca domain config de `company_profile.seo_domains` → extrai `ftp_profile`
-4. Busca credenciais de `publication_settings` WHERE `profile_name = ftp_profile`
-5. Injeta tracking pixels (reutiliza logica `generateTrackingScripts` + `injectTrackingScripts` inline)
-6. FTP via `Deno.connect()`: USER → PASS → TYPE I → CWD → `ensureDirectory()` (MKD, ignore 550) → PASV → STOR → QUIT
-7. Timeout wrapper 30s
-8. Atualiza `cloned_landing_pages`: `publish_status`, `published_url`, `published_at`, `publish_error`
+- **🔬 Cientificidade IA** — gera apenas Slide 3
+- **💫 Experiência IA** — gera apenas Slide 4
+- **🛡️ Segurança IA** — gera apenas Slide 5
 
-## 4. Frontend
+Cada botão com loading state individual, mesmo padrão visual do botão Hook existente.
 
-### 4.1 `LPClonePanel.tsx`
+### Detalhes técnicos
 
-**Interface SEODomain** (linha 83): adicionar `publish_method?: 'cloudflare' | 'ftp'`, `ftp_profile?: string`, `enabled?: boolean`, `ftp_remote_path?: string`
+**Edge function `generate-carousel-slide/index.ts`:**
+- Usa Lovable AI Gateway (`google/gemini-2.5-flash`)
+- Prompt especializado por slideType com regras de formatação
+- Temperature 1.0 para variedade
+- Retorna JSON estruturado via tool calling para garantir campos corretos
 
-**Filtro** (linha 204):
-```typescript
-const enabledDomains = seoDomains.filter(d =>
-  d.enabled !== false && (
-    d.publish_method === 'ftp' ||
-    (d.cloudflare_enabled && d.cloudflare_project_name)
-  )
-);
-```
-
-**publishMutation** (linha 510): router baseado em `publish_method`:
-```typescript
-const domainConfig = seoDomains.find(d => d.domain === lp.target_domain);
-const method = domainConfig?.publish_method ?? 'cloudflare';
-const functionName = method === 'ftp' ? 'publish-ftp-pages' : 'publish-cloudflare-pages';
-```
-
-**Badge** no seletor de dominio: `[FTP]` ou `[Cloudflare]` ao lado do nome.
-
-### 4.2 `ProductBlogPublisherPanel.tsx`
-
-**Interface SEODomain** (linha 20): mesmos campos extras.
-
-**Filtro** (linha 108): mesma logica.
-
-**publishMutation** (linha 169): manter `publish-product-blog-cloudflare` para Cloudflare; blogs via FTP serao fase futura.
-
-### 4.3 `PublicationSettings.tsx`
-
-Adicionar campo `profile_name` ao formulario FTP (Input com label "Nome do Perfil" e placeholder "kinghost_smartdent"). Incluir no state, load e save.
-
-### 4.4 `supabase/config.toml`
-
-```toml
-[functions.publish-ftp-pages]
-verify_jwt = false
-```
-
----
-
-## Arquivos
-
-| Acao | Arquivo |
-|------|---------|
-| Criar | `supabase/functions/publish-ftp-pages/index.ts` |
-| Modificar | `src/components/LPClonePanel.tsx` |
-| Modificar | `src/components/ProductBlogPublisherPanel.tsx` |
-| Modificar | `src/pages/PublicationSettings.tsx` |
-| Modificar | `supabase/config.toml` |
-| Migration | ADD COLUMN profile_name + partial unique index |
-| Data | UPDATE company_profile seo_domains (append smartdent) |
+**Mapeamento de retorno:**
+- `cientificidade` → `{ title, headline, body, bullet1, bullet2, bullet3, bullet4 }`
+- `experiencia` → `{ keyword, benefit }`
+- `seguranca` → `{ title, badge1, badge2, badge3 }`
 

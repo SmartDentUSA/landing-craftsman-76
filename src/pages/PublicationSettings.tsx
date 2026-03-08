@@ -11,6 +11,7 @@ import { Loader2, CheckCircle, XCircle, ArrowLeft } from "lucide-react";
 import { TopNavigation } from "@/components/TopNavigation";
 
 interface PublicationSettings {
+  profile_name: string;
   ftp_host: string;
   ftp_user: string;
   ftp_password_encrypted: string;
@@ -25,6 +26,7 @@ interface PublicationSettings {
 export default function PublicationSettings() {
   const navigate = useNavigate();
   const [settings, setSettings] = useState<PublicationSettings>({
+    profile_name: "",
     ftp_host: "",
     ftp_user: "",
     ftp_password_encrypted: "",
@@ -64,6 +66,7 @@ export default function PublicationSettings() {
       if (data) {
         // Limpar campos vazios para null
         const cleanData = {
+          profile_name: data.profile_name || "",
           ftp_host: data.ftp_host || "",
           ftp_user: data.ftp_user || "",
           ftp_password_encrypted: data.ftp_password_encrypted || "",
@@ -341,6 +344,19 @@ export default function PublicationSettings() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="profile_name">Nome do Perfil</Label>
+              <Input
+                id="profile_name"
+                type="text"
+                placeholder="kinghost_smartdent"
+                value={settings.profile_name}
+                onChange={(e) => setSettings(prev => ({ ...prev, profile_name: e.target.value }))}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Identificador único do perfil FTP (usado para lookup de domínio)
+              </p>
+            </div>
             <div>
               <Label htmlFor="ftp_host">Host SFTP</Label>
               <Input
