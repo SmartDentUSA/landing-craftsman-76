@@ -1,49 +1,59 @@
 
 
-# Botões individuais "Gerar por IA" para slides do Carrossel Visual
+# Add FTP Publishing Config to Domain Cards in TrackingSEOTab
 
-## Contexto
+## Problem
+The "Domínios SEO Multi-Site" section in Company Profile only shows Cloudflare Pages configuration. There's no way to configure FTP publishing (needed for smartdent.com.br on KingHost) from this UI. The `publish_method`, `ftp_profile`, `ftp_remote_path`, and `url_structure` fields must be set manually via SQL.
 
-O Carrossel Visual tem 6 slides. O Slide 1 (🎣 Hook) já possui um botão individual "Novo Gancho IA" que chama a edge function `generate-carousel-hook`. Os slides 3 (🔬 Cientificidade), 4 (💫 Experiência) e 5 (🛡️ Segurança) não possuem botões individuais — só podem ser gerados pelo botão geral "🤖 Gerar com IA" que regenera todos os slides de uma vez.
+## Plan
 
-## Plano
+### File: `src/components/TrackingSEOTab.tsx`
 
-### 1. Nova Edge Function: `generate-carousel-slide`
+1. **Add `publish_method` selector** (radio or Select) at the top of each domain card, right after the domain identification inputs:
+   - Options: `cloudflare` (default) | `ftp`
+   - This controls which config section is shown
 
-Criar uma edge function genérica que receba o tipo do slide (`cientificidade`, `experiencia`, `seguranca`) e gere apenas o conteúdo daquele slide específico, com prompts especializados por tipo:
+2. **Add FTP Configuration section** (sibling to the existing Cloudflare section), shown only when `publish_method === 'ftp'`:
+   - **FTP Profile Name** (text input) — must match a `profile_name` in `publication_settings` table (e.g. `kinghost_smartdent`)
+   - **Remote Path** (text input, default `/public_html`)
+   - Status badge linking to Publication Settings page
+   - Helper text: "Configure as credenciais FTP em Publication Settings"
 
-- **Cientificidade (Slide 3)**: Gera title, headline, body, bullet1-4 com foco em evidências científicas e dados técnicos
-- **Experiência (Slide 4)**: Gera keyword + benefit com foco em experiência clínica e fluxo de trabalho
-- **Segurança (Slide 5)**: Gera title, badge1-3 com foco em certificações, garantias e confiança
+3. **Conditionally show/hide Cloudflare vs FTP section** based on `publish_method`
 
-Recebe: `productName`, `salesPitch`, `benefits`, `features`, `slideType`
-Retorna: campos específicos do slide solicitado
+4. **Update the "Adicionar Domínio" button** default object to include `publish_method: 'cloudflare'` and FTP fields
 
-### 2. Frontend — Novos estados e handlers (`InstagramCopyGenerator.tsx`)
+5. **Add `url_structure` editor** (collapsible) — simple key/value inputs for category URL patterns (e.g. `blog` → `/blog/{slug}`)
 
-- Adicionar 3 estados: `generatingScience`, `generatingExperience`, `generatingSecurity`
-- Criar 3 handlers que chamam `generate-carousel-slide` com o `slideType` correto e atualizam apenas o slide correspondente em `slideTexts`
+### File: `src/components/CompanyProfileManager.tsx`
 
-### 3. Frontend — 3 novos botões no header do Carrossel Visual
+6. **Update the `seo_domains` type** in the interface to include the new fields: `publish_method`, `ftp_profile`, `ftp_remote_path`, `url_structure`
 
-Adicionar ao lado do botão "🎣 Novo Gancho IA" (linha ~1962):
+### No database changes needed
+The `seo_domains` column is already JSONB — new fields are stored automatically.
 
-- **🔬 Cientificidade IA** — gera apenas Slide 3
-- **💫 Experiência IA** — gera apenas Slide 4
-- **🛡️ Segurança IA** — gera apenas Slide 5
+## UI Layout per Domain Card (after changes)
 
-Cada botão com loading state individual, mesmo padrão visual do botão Hook existente.
-
-### Detalhes técnicos
-
-**Edge function `generate-carousel-slide/index.ts`:**
-- Usa Lovable AI Gateway (`google/gemini-2.5-flash`)
-- Prompt especializado por slideType com regras de formatação
-- Temperature 1.0 para variedade
-- Retorna JSON estruturado via tool calling para garantir campos corretos
-
-**Mapeamento de retorno:**
-- `cientificidade` → `{ title, headline, body, bullet1, bullet2, bullet3, bullet4 }`
-- `experiencia` → `{ keyword, benefit }`
-- `seguranca` → `{ title, badge1, badge2, badge3 }`
+```text
+┌─────────────────────────────────────────────┐
+│ [Nome]  [Domínio]  [Descrição]              │
+│                                              │
+│ Método: (●) Cloudflare  (○) FTP             │
+│                                              │
+│ ┌─ Cloudflare Pages ──────────────────────┐ │
+│ │ (existing UI, shown when cloudflare)    │ │
+│ └─────────────────────────────────────────┘ │
+│                                              │
+│ ┌─ FTP Config ────────────────────────────┐ │
+│ │ Profile Name: [kinghost_smartdent]      │ │
+│ │ Remote Path:  [/public_html]            │ │
+│ │ ℹ️ Configure credenciais em Pub Settings │ │
+│ └─────────────────────────────────────────┘ │
+│                                              │
+│ ▸ URL Structure (collapsible)               │
+│ ▸ Pixels e Analytics (existing)             │
+│                                              │
+│ [SEO] [Schema] [Footer]          [🗑 Delete]│
+└─────────────────────────────────────────────┘
+```
 
