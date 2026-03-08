@@ -516,7 +516,11 @@ export const LPClonePanel = () => {
       if (!lp) throw new Error('LP não encontrada');
       if (!lp.target_domain) throw new Error('Domínio não definido');
       
-      const { data, error } = await supabase.functions.invoke('publish-cloudflare-pages', {
+      const domainConfig = seoDomains.find(d => d.domain === lp.target_domain);
+      const method = domainConfig?.publish_method ?? 'cloudflare';
+      const functionName = method === 'ftp' ? 'publish-ftp-pages' : 'publish-cloudflare-pages';
+      
+      const { data, error } = await supabase.functions.invoke(functionName, {
         body: {
           lpId,
           domain: lp.target_domain,

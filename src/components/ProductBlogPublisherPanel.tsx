@@ -108,7 +108,12 @@ export const ProductBlogPublisherPanel = () => {
   });
 
   const seoDomains = (companyProfile?.seo_domains as unknown as SEODomain[]) || [];
-  const enabledDomains = seoDomains.filter(d => d.cloudflare_enabled && d.cloudflare_project_name);
+  const enabledDomains = seoDomains.filter(d => 
+    d.enabled !== false && (
+      d.publish_method === 'ftp' ||
+      (d.cloudflare_enabled && d.cloudflare_project_name)
+    )
+  );
 
   // Identify products with unpublished blogs
   const unpublishedBlogs = useMemo(() => {
