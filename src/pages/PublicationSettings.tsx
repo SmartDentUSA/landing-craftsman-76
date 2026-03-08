@@ -11,6 +11,7 @@ import { Loader2, CheckCircle, XCircle, ArrowLeft } from "lucide-react";
 import { TopNavigation } from "@/components/TopNavigation";
 
 interface PublicationSettings {
+  profile_name: string;
   ftp_host: string;
   ftp_user: string;
   ftp_password_encrypted: string;
