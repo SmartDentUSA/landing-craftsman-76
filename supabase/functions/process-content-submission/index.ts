@@ -27,6 +27,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { fetchKnowledgeGraph, buildProductGraph, buildTopicGraph, generateInternalLinks } from '../_shared/fetchKnowledgeGraph.ts';
 import { trackFromResponse } from '../_shared/track-ai-usage.ts';
+import { checkRateLimit, rateLimitResponse } from '../_shared/rate-limiter.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
