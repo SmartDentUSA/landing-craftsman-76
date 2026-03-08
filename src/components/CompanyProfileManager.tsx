@@ -80,6 +80,10 @@ interface CompanyProfile {
     use_in_schema: boolean;
     use_in_footer: boolean;
     priority: number;
+    publish_method?: 'cloudflare' | 'ftp';
+    ftp_profile?: string;
+    ftp_remote_path?: string;
+    url_structure?: Record<string, string>;
   }>;
   institutional_links?: Array<{
     label: string;

@@ -5,7 +5,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Cloud, Loader2, CheckCircle, XCircle, RefreshCw, BarChart3, Key, Save, Eye, EyeOff, Shield, Zap } from "lucide-react";
+import { Plus, Trash2, Cloud, Loader2, CheckCircle, XCircle, RefreshCw, BarChart3, Key, Save, Eye, EyeOff, Shield, Zap, Server, ChevronDown, Link } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -340,11 +341,17 @@ export function TrackingSEOTab({ profile, setProfile }: TrackingSEOTabProps) {
                 use_in_schema: true,
                 use_in_footer: true,
                 priority: (profile.seo_domains?.length || 0) + 1,
+                publish_method: 'cloudflare' as const,
                 // Cloudflare config
                 cloudflare_project_name: '',
                 cloudflare_zone_id: '',
                 cloudflare_enabled: false,
                 cloudflare_status: 'pending',
+                // FTP config
+                ftp_profile: '',
+                ftp_remote_path: '/public_html',
+                // URL Structure
+                url_structure: {} as Record<string, string>,
                 // Tracking pixels por domínio
                 tracking_pixels: {
                   google_tag_manager: { enabled: false, container_id: null },
@@ -410,8 +417,39 @@ export function TrackingSEOTab({ profile, setProfile }: TrackingSEOTabProps) {
               />
             </div>
 
-            {/* Quick Activate Button */}
-            {domain.domain && domain.cloudflare_status !== 'connected' && (
+            {/* Publish Method Selector */}
+            <div className="border rounded-lg p-3 bg-muted/30">
+              <Label className="text-sm font-medium mb-2 block">Método de Publicação</Label>
+              <RadioGroup
+                value={domain.publish_method || 'cloudflare'}
+                onValueChange={(v: string) => {
+                  setProfile(prev => {
+                    const updated = [...(prev.seo_domains || [])];
+                    updated[index].publish_method = v as 'cloudflare' | 'ftp';
+                    return { ...prev, seo_domains: updated };
+                  });
+                }}
+                className="flex gap-6"
+              >
+                <div className="flex items-center gap-2">
+                  <RadioGroupItem value="cloudflare" id={`method-cf-${index}`} />
+                  <Label htmlFor={`method-cf-${index}`} className="flex items-center gap-1 cursor-pointer text-sm">
+                    <Cloud className="h-3.5 w-3.5 text-orange-500" />
+                    Cloudflare Pages
+                  </Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <RadioGroupItem value="ftp" id={`method-ftp-${index}`} />
+                  <Label htmlFor={`method-ftp-${index}`} className="flex items-center gap-1 cursor-pointer text-sm">
+                    <Server className="h-3.5 w-3.5 text-blue-500" />
+                    FTP
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+
+            {/* Quick Activate Button (Cloudflare only) */}
+            {(!domain.publish_method || domain.publish_method === 'cloudflare') && domain.domain && domain.cloudflare_status !== 'connected' && (
               <Button
                 onClick={() => activateDomain(index)}
                 disabled={testingDomain === index}
@@ -431,7 +469,8 @@ export function TrackingSEOTab({ profile, setProfile }: TrackingSEOTabProps) {
               </Button>
             )}
 
-            {/* Cloudflare Configuration */}
+            {/* Cloudflare Configuration (shown when method is cloudflare) */}
+            {(!domain.publish_method || domain.publish_method === 'cloudflare') && (
             <div className="border rounded-lg p-3 bg-muted/30">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
@@ -515,6 +554,147 @@ export function TrackingSEOTab({ profile, setProfile }: TrackingSEOTabProps) {
                 </Button>
               )}
             </div>
+            )}
+
+            {/* FTP Configuration (shown when method is ftp) */}
+            {domain.publish_method === 'ftp' && (
+            <div className="border rounded-lg p-3 bg-muted/30">
+              <div className="flex items-center gap-2 mb-3">
+                <Server className="h-4 w-4 text-blue-500" />
+                <span className="font-medium text-sm">Configuração FTP</span>
+                {domain.ftp_profile ? (
+                  <Badge className="bg-green-500/10 text-green-600 border-green-500/20 text-xs">Configurado</Badge>
+                ) : (
+                  <Badge variant="outline" className="text-xs">Pendente</Badge>
+                )}
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs text-muted-foreground">FTP Profile Name *</Label>
+                  <Input
+                    value={domain.ftp_profile || ''}
+                    onChange={(e) => {
+                      setProfile(prev => {
+                        const updated = [...(prev.seo_domains || [])];
+                        updated[index].ftp_profile = e.target.value;
+                        return { ...prev, seo_domains: updated };
+                      });
+                    }}
+                    placeholder="kinghost_smartdent"
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Remote Path</Label>
+                  <Input
+                    value={domain.ftp_remote_path || '/public_html'}
+                    onChange={(e) => {
+                      setProfile(prev => {
+                        const updated = [...(prev.seo_domains || [])];
+                        updated[index].ftp_remote_path = e.target.value;
+                        return { ...prev, seo_domains: updated };
+                      });
+                    }}
+                    placeholder="/public_html"
+                    className="h-8 text-sm"
+                  />
+                </div>
+              </div>
+
+              <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1">
+                <Link className="h-3 w-3" />
+                Configure as credenciais FTP em{' '}
+                <a href="/publication-settings" className="underline text-primary hover:text-primary/80">
+                  Publication Settings
+                </a>
+              </p>
+            </div>
+            )}
+
+            {/* URL Structure (collapsible) */}
+            <Collapsible>
+              <CollapsibleTrigger asChild>
+                <div className="border rounded-lg p-3 bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium text-sm">Estrutura de URLs</span>
+                    </div>
+                    <Badge variant="outline" className="text-xs">
+                      {Object.keys(domain.url_structure || {}).length} categorias
+                    </Badge>
+                  </div>
+                </div>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-2 space-y-2">
+                {Object.entries(domain.url_structure || {}).map(([key, pattern]) => (
+                  <div key={key} className="flex items-center gap-2">
+                    <Input
+                      value={key}
+                      className="h-8 text-sm w-32"
+                      placeholder="blog"
+                      onChange={(e) => {
+                        setProfile(prev => {
+                          const updated = [...(prev.seo_domains || [])];
+                          const struct = { ...(updated[index].url_structure || {}) };
+                          const val = struct[key];
+                          delete struct[key];
+                          struct[e.target.value] = val;
+                          updated[index].url_structure = struct;
+                          return { ...prev, seo_domains: updated };
+                        });
+                      }}
+                    />
+                    <Input
+                      value={pattern as string}
+                      className="h-8 text-sm flex-1"
+                      placeholder="/blog/{slug}"
+                      onChange={(e) => {
+                        setProfile(prev => {
+                          const updated = [...(prev.seo_domains || [])];
+                          if (!updated[index].url_structure) updated[index].url_structure = {};
+                          updated[index].url_structure[key] = e.target.value;
+                          return { ...prev, seo_domains: updated };
+                        });
+                      }}
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive"
+                      onClick={() => {
+                        setProfile(prev => {
+                          const updated = [...(prev.seo_domains || [])];
+                          const struct = { ...(updated[index].url_structure || {}) };
+                          delete struct[key];
+                          updated[index].url_structure = struct;
+                          return { ...prev, seo_domains: updated };
+                        });
+                      }}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setProfile(prev => {
+                      const updated = [...(prev.seo_domains || [])];
+                      if (!updated[index].url_structure) updated[index].url_structure = {};
+                      const newKey = `categoria${Object.keys(updated[index].url_structure).length + 1}`;
+                      updated[index].url_structure[newKey] = `/${newKey}/{slug}`;
+                      return { ...prev, seo_domains: updated };
+                    });
+                  }}
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Adicionar Categoria
+                </Button>
+              </CollapsibleContent>
+            </Collapsible>
 
             {/* Tracking Pixels por Domínio */}
             <Collapsible>
