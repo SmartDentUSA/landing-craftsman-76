@@ -66,6 +66,7 @@ export default function PublicationSettings() {
       if (data) {
         // Limpar campos vazios para null
         const cleanData = {
+          profile_name: data.profile_name || "",
           ftp_host: data.ftp_host || "",
           ftp_user: data.ftp_user || "",
           ftp_password_encrypted: data.ftp_password_encrypted || "",
