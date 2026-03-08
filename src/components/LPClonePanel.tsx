@@ -86,6 +86,10 @@ interface SEODomain {
   cloudflare_enabled?: boolean;
   cloudflare_project_name?: string;
   cloudflare_status?: string;
+  publish_method?: 'cloudflare' | 'ftp';
+  ftp_profile?: string;
+  enabled?: boolean;
+  ftp_remote_path?: string;
 }
 
 // Product Blog types
