@@ -416,6 +416,12 @@ serve(async (req) => {
   }
 
   try {
+    // Rate limit check
+    const rateCheck = await checkRateLimit('rag-chat');
+    if (!rateCheck.allowed) {
+      return rateLimitResponse(rateCheck, corsHeaders);
+    }
+
     const {
       query,
       messages = [],
