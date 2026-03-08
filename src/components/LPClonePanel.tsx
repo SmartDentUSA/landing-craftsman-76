@@ -175,6 +175,7 @@ export const LPClonePanel = () => {
   const [selectedDomain, setSelectedDomain] = useState('');
   const [pagePath, setPagePath] = useState('');
   const [isHomepage, setIsHomepage] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('');
   
   const [result, setResult] = useState<TransformResult | null>(null);
   
