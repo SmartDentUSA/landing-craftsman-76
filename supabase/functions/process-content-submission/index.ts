@@ -417,6 +417,7 @@ Gere seções em JSON:
     }
 
     results.push({ step: 14, name: 'Generate embeddings', success: !!embedding, data: { hasEmbedding: !!embedding } });
+    await logStep(14, 'Generate embeddings', embedding ? 'success' : 'error', { error_message: embedding ? undefined : 'Embedding generation failed or skipped' });
 
     // ═══════════════════════════════════════════════════════════
     // STEP 15: Save to generated_pages + entity_links
