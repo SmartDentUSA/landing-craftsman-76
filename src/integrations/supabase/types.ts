@@ -719,6 +719,165 @@ export type Database = {
         }
         Relationships: []
       }
+      content_entity_links: {
+        Row: {
+          created_at: string | null
+          entity_id: string
+          entity_type: string
+          id: string
+          page_id: string | null
+          relevance_score: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          page_id?: string | null
+          relevance_score?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          page_id?: string | null
+          relevance_score?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_entity_links_page_id_fkey"
+            columns: ["page_id"]
+            isOneToOne: false
+            referencedRelation: "generated_pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_jobs: {
+        Row: {
+          attempts: number | null
+          created_at: string | null
+          finished_at: string | null
+          id: string
+          job_type: string
+          last_error: string | null
+          max_attempts: number | null
+          priority: number | null
+          scheduled_at: string | null
+          started_at: string | null
+          status: string | null
+          submission_id: string | null
+        }
+        Insert: {
+          attempts?: number | null
+          created_at?: string | null
+          finished_at?: string | null
+          id?: string
+          job_type: string
+          last_error?: string | null
+          max_attempts?: number | null
+          priority?: number | null
+          scheduled_at?: string | null
+          started_at?: string | null
+          status?: string | null
+          submission_id?: string | null
+        }
+        Update: {
+          attempts?: number | null
+          created_at?: string | null
+          finished_at?: string | null
+          id?: string
+          job_type?: string
+          last_error?: string | null
+          max_attempts?: number | null
+          priority?: number | null
+          scheduled_at?: string | null
+          started_at?: string | null
+          status?: string | null
+          submission_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_jobs_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "content_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_submissions: {
+        Row: {
+          content_type: string
+          created_at: string | null
+          editorial_status: string | null
+          extracted_entities: Json | null
+          id: string
+          metadata: Json | null
+          origin: Json | null
+          parent_submission_id: string | null
+          processed_at: string | null
+          processing_notes: string | null
+          processing_status: string | null
+          raw_content: string | null
+          related_products: string[] | null
+          source_system: string
+          tags: string[] | null
+          title: string
+          updated_at: string | null
+          version: number | null
+        }
+        Insert: {
+          content_type: string
+          created_at?: string | null
+          editorial_status?: string | null
+          extracted_entities?: Json | null
+          id?: string
+          metadata?: Json | null
+          origin?: Json | null
+          parent_submission_id?: string | null
+          processed_at?: string | null
+          processing_notes?: string | null
+          processing_status?: string | null
+          raw_content?: string | null
+          related_products?: string[] | null
+          source_system: string
+          tags?: string[] | null
+          title: string
+          updated_at?: string | null
+          version?: number | null
+        }
+        Update: {
+          content_type?: string
+          created_at?: string | null
+          editorial_status?: string | null
+          extracted_entities?: Json | null
+          id?: string
+          metadata?: Json | null
+          origin?: Json | null
+          parent_submission_id?: string | null
+          processed_at?: string | null
+          processing_notes?: string | null
+          processing_status?: string | null
+          raw_content?: string | null
+          related_products?: string[] | null
+          source_system?: string
+          tags?: string[] | null
+          title?: string
+          updated_at?: string | null
+          version?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_submissions_parent_submission_id_fkey"
+            columns: ["parent_submission_id"]
+            isOneToOne: false
+            referencedRelation: "content_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cs_messages: {
         Row: {
           created_at: string
@@ -972,6 +1131,86 @@ export type Database = {
           total_reviews_found?: number | null
         }
         Relationships: []
+      }
+      generated_pages: {
+        Row: {
+          content_hash: string | null
+          created_at: string | null
+          embedding: string | null
+          entities: Json | null
+          html_content: string | null
+          id: string
+          knowledge_graph_snapshot: Json | null
+          page_type: string | null
+          path: string | null
+          published: boolean | null
+          published_at: string | null
+          published_url: string | null
+          regeneration_required: boolean | null
+          schema_json_ld: string | null
+          seo_score: number | null
+          slug: string
+          source_submission_id: string | null
+          structured_content: Json | null
+          tags: string[] | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          content_hash?: string | null
+          created_at?: string | null
+          embedding?: string | null
+          entities?: Json | null
+          html_content?: string | null
+          id?: string
+          knowledge_graph_snapshot?: Json | null
+          page_type?: string | null
+          path?: string | null
+          published?: boolean | null
+          published_at?: string | null
+          published_url?: string | null
+          regeneration_required?: boolean | null
+          schema_json_ld?: string | null
+          seo_score?: number | null
+          slug: string
+          source_submission_id?: string | null
+          structured_content?: Json | null
+          tags?: string[] | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          content_hash?: string | null
+          created_at?: string | null
+          embedding?: string | null
+          entities?: Json | null
+          html_content?: string | null
+          id?: string
+          knowledge_graph_snapshot?: Json | null
+          page_type?: string | null
+          path?: string | null
+          published?: boolean | null
+          published_at?: string | null
+          published_url?: string | null
+          regeneration_required?: boolean | null
+          schema_json_ld?: string | null
+          seo_score?: number | null
+          slug?: string
+          source_submission_id?: string | null
+          structured_content?: Json | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generated_pages_source_submission_id_fkey"
+            columns: ["source_submission_id"]
+            isOneToOne: false
+            referencedRelation: "content_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       google_ads_campaigns: {
         Row: {
@@ -1535,6 +1774,44 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      page_publications: {
+        Row: {
+          html_snapshot: string | null
+          id: string
+          page_id: string | null
+          published_at: string | null
+          published_domain: string | null
+          published_url: string | null
+          version: number
+        }
+        Insert: {
+          html_snapshot?: string | null
+          id?: string
+          page_id?: string | null
+          published_at?: string | null
+          published_domain?: string | null
+          published_url?: string | null
+          version: number
+        }
+        Update: {
+          html_snapshot?: string | null
+          id?: string
+          page_id?: string | null
+          published_at?: string | null
+          published_domain?: string | null
+          published_url?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "page_publications_page_id_fkey"
+            columns: ["page_id"]
+            isOneToOne: false
+            referencedRelation: "generated_pages"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       product_blog_publications: {
         Row: {
