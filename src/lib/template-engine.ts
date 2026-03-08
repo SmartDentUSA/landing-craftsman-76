@@ -5822,11 +5822,39 @@ export const generateBlogHTML = (blogData: any, landingPageData: any) => {
     created_at,
     cover_image,
     content_images,
-    include_offers
+    include_offers,
+    slug,
+    author_name,
+    author_title
   } = blogData;
 
   const publishDate = new Date(created_at).toLocaleDateString('pt-BR');
-  const readingTime = Math.max(1, Math.ceil(content.length / 1000));
+  const isoDate = new Date(created_at).toISOString();
+  const readingTime = Math.max(1, Math.ceil((content || '').length / 1000));
+  
+  // Company profile data
+  const cp = landingPageData?.company_profile || {};
+  const companyName = cp.company_name || landingPageData?.brand?.legal_name || landingPageData?.name || 'Blog';
+  const companyUrl = cp.website_url || landing_page_url || '';
+  const companyLogo = cp.company_logo_url || '';
+  const founderName = author_name || cp.founder_name || companyName;
+  const founderTitle = author_title || cp.founder_title || 'Especialista';
+  const companyDescription = cp.company_description || '';
+  const businessSector = cp.business_sector || '';
+  
+  // SEO URLs
+  const blogSlug = slug || title?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'artigo';
+  const baseUrl = companyUrl.replace(/\/$/, '');
+  const canonicalUrl = `${baseUrl}/blog/${blogSlug}`;
+  const domain = baseUrl.replace(/^https?:\/\//, '');
+  
+  // Keywords deduplication (max 20)
+  const allKeywords = [...new Set([...(keywords || []), ...(cp.seo_context_keywords || [])])].slice(0, 20);
+  
+  // Geo data
+  const geoRegion = cp.state ? `BR-${cp.state}` : 'BR';
+  const geoPlacename = cp.city || cp.location || '';
+  const hasGeo = cp.latitude && cp.longitude;
   
   // Processar conteúdo para inserir imagens
   let processedContent = content || '';
@@ -5835,16 +5863,16 @@ export const generateBlogHTML = (blogData: any, landingPageData: any) => {
   if (cover_image?.src) {
     processedContent = processedContent.replace(
       '<!-- IMAGEM_CAPA -->', 
-      `<img src="${cover_image.src}" alt="${cover_image.alt || 'Imagem de capa'}" class="cover-image">`
+      `<img src="${cover_image.src}" alt="${cover_image.alt || title + ' - ' + companyName}" class="cover-image" fetchpriority="high">`
     );
   }
   
   // Inserir imagens das soluções ao longo do conteúdo
   if (content_images && Array.isArray(content_images)) {
-    content_images.forEach((image, index) => {
+    content_images.forEach((image: any, index: number) => {
       if (image?.src) {
         const placeholder = `<!-- IMAGEM_SOLUCAO_${index + 2} -->`;
-        const imageHtml = `<img src="${image.src}" alt="${image.alt || `Solução ${index + 2}`}" class="content-image">`;
+        const imageHtml = `<img src="${image.src}" alt="${image.alt || `${title} - Solução ${index + 2}`}" class="content-image" loading="lazy" decoding="async">`;
         processedContent = processedContent.replace(placeholder, imageHtml);
       }
     });
@@ -5858,15 +5886,129 @@ export const generateBlogHTML = (blogData: any, landingPageData: any) => {
     }
   }
 
+  // ✅ Schema.org JSON-LD: BlogPosting + Organization + BreadcrumbList
+  const schemaGraph = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'BlogPosting',
+        '@id': `${canonicalUrl}#article`,
+        'headline': title,
+        'description': meta_description || '',
+        'image': cover_image?.src || companyLogo || '',
+        'datePublished': isoDate,
+        'dateModified': isoDate,
+        'wordCount': (content || '').split(/\s+/).length,
+        'timeRequired': `PT${readingTime}M`,
+        'inLanguage': 'pt-BR',
+        'mainEntityOfPage': { '@type': 'WebPage', '@id': canonicalUrl },
+        'author': {
+          '@type': 'Person',
+          'name': founderName,
+          'jobTitle': founderTitle,
+          ...(cp.founder_linkedin ? { 'url': cp.founder_linkedin } : {}),
+          ...(cp.founder_linkedin ? { 'sameAs': [cp.founder_linkedin, cp.founder_instagram, cp.founder_twitter].filter(Boolean) } : {})
+        },
+        'publisher': {
+          '@type': 'Organization',
+          'name': companyName,
+          'url': companyUrl,
+          ...(companyLogo ? { 'logo': { '@type': 'ImageObject', 'url': companyLogo } } : {})
+        },
+        ...(allKeywords.length > 0 ? { 'keywords': allKeywords.join(', ') } : {}),
+        'speakable': {
+          '@type': 'SpeakableSpecification',
+          'cssSelector': ['.article-title', '.article-content p:first-of-type']
+        }
+      },
+      {
+        '@type': 'BreadcrumbList',
+        'itemListElement': [
+          { '@type': 'ListItem', 'position': 1, 'name': 'Home', 'item': baseUrl || companyUrl },
+          { '@type': 'ListItem', 'position': 2, 'name': 'Blog', 'item': `${baseUrl}/blog` },
+          { '@type': 'ListItem', 'position': 3, 'name': title, 'item': canonicalUrl }
+        ]
+      },
+      {
+        '@type': 'Organization',
+        '@id': `${baseUrl}#organization`,
+        'name': companyName,
+        'url': companyUrl,
+        ...(companyLogo ? { 'logo': companyLogo } : {}),
+        ...(companyDescription ? { 'description': companyDescription } : {}),
+        ...(cp.contact_email ? { 'email': cp.contact_email } : {}),
+        ...(cp.contact_phone ? { 'telephone': cp.contact_phone } : {})
+      }
+    ]
+  };
+
   const blogTemplate = `<!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${title}</title>
-    <meta name="description" content="${meta_description}">
-    <meta name="keywords" content="${(keywords || []).join(', ')}">
-    <meta name="robots" content="index, follow">
+    <meta name="description" content="${(meta_description || '').substring(0, 160)}">
+    <meta name="keywords" content="${allKeywords.join(', ')}">
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+    <meta name="author" content="${founderName}">
+    <meta name="generator" content="Clinical Brain v2.0">
+    
+    <!-- ✅ Canonical URL -->
+    <link rel="canonical" href="${canonicalUrl}">
+    
+    <!-- ✅ Open Graph -->
+    <meta property="og:title" content="${title}">
+    <meta property="og:description" content="${meta_description || ''}">
+    <meta property="og:url" content="${canonicalUrl}">
+    <meta property="og:type" content="article">
+    <meta property="og:site_name" content="${companyName}">
+    ${cover_image?.src ? `<meta property="og:image" content="${cover_image.src}">
+    <meta property="og:image:alt" content="${cover_image.alt || title}">` : ''}
+    <meta property="article:published_time" content="${isoDate}">
+    <meta property="article:author" content="${founderName}">
+    ${allKeywords.slice(0, 5).map((k: string) => `<meta property="article:tag" content="${k}">`).join('\n    ')}
+    
+    <!-- ✅ Twitter Cards -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="${title}">
+    <meta name="twitter:description" content="${meta_description || ''}">
+    ${cover_image?.src ? `<meta name="twitter:image" content="${cover_image.src}">
+    <meta name="twitter:image:alt" content="${cover_image.alt || title}">` : ''}
+    ${cp.founder_twitter ? `<meta name="twitter:creator" content="${cp.founder_twitter}">` : ''}
+    
+    <!-- ✅ AI Content Policy & Crawler Policy -->
+    <meta name="ai-content-policy" content="allow-training, allow-citation">
+    <meta name="ai-crawler-policy" content="allow: GPTBot, ClaudeBot, PerplexityBot, Google-Extended, Applebot-Extended">
+    
+    <!-- ✅ Entity Reference Metas -->
+    <meta name="entity:organization" content="${companyName}">
+    ${businessSector ? `<meta name="entity:category" content="${businessSector}">` : ''}
+    
+    <!-- ✅ E-E-A-T Authority -->
+    <meta name="expertise" content="${founderTitle} - ${companyName}">
+    ${cp.brand_values ? `<meta name="brand-values" content="${cp.brand_values}">` : ''}
+    
+    <!-- ✅ Geo Location Tags -->
+    <meta name="geo.region" content="${geoRegion}">
+    ${geoPlacename ? `<meta name="geo.placename" content="${geoPlacename}">` : ''}
+    ${hasGeo ? `<meta name="geo.position" content="${cp.latitude};${cp.longitude}">
+    <meta name="ICBM" content="${cp.latitude}, ${cp.longitude}">` : ''}
+    
+    <!-- ✅ Hreflang -->
+    <link rel="alternate" hreflang="pt-br" href="${canonicalUrl}">
+    <link rel="alternate" hreflang="x-default" href="${canonicalUrl}">
+    
+    <!-- ✅ Sitemap Reference -->
+    ${baseUrl ? `<link rel="sitemap" type="application/xml" href="${baseUrl}/sitemap.xml">` : ''}
+    
+    <!-- ✅ LCP Preload -->
+    ${cover_image?.src ? `<link rel="preload" as="image" href="${cover_image.src}" fetchpriority="high">` : ''}
+    
+    <!-- ✅ Schema.org JSON-LD @graph -->
+    <script type="application/ld+json">
+    ${JSON.stringify(schemaGraph, null, 2)}
+    </script>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -6129,100 +6271,25 @@ export const generateBlogHTML = (blogData: any, landingPageData: any) => {
             background: #2563eb;
         }
         
-        .offers-section {
-            background: #f8fafc;
-            padding: 2rem;
-            border-radius: 0.75rem;
-            margin: 2rem 0;
-            border: 1px solid #e2e8f0;
-        }
-        
-        .offers-section h2 {
-            color: #1e293b;
-            margin-bottom: 1rem;
-            text-align: center;
-        }
-        
-        .offers-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 1.5rem;
-            margin-top: 2rem;
-        }
-        
-        .offer-card {
-            background: white;
-            border-radius: 0.5rem;
+        /* ✅ AI-Readiness: Blocos semânticos ocultos visualmente */
+        .ai-summary, .llm-knowledge, .entity-index {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
             overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            transition: transform 0.2s;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
         }
         
-        .offer-card:hover {
-            transform: translateY(-2px);
-        }
-        
-        .offer-image {
-            width: 100%;
-            height: 150px;
-            object-fit: cover;
-        }
-        
-        .offer-content {
-            padding: 1.25rem;
-        }
-        
-        .offer-title {
-            font-size: 1.125rem;
-            font-weight: 400;
-            color: #1e293b;
-            margin-bottom: 0.75rem;
-        }
-        
-        .offer-description {
-            color: #64748b;
-            font-size: 0.875rem;
-            margin-bottom: 1rem;
-            line-height: 1.5;
-        }
-        
-        .offer-price {
-            margin-bottom: 1rem;
-        }
-        
-        .offer-price-old {
-            text-decoration: line-through;
-            color: #94a3b8;
-            font-size: 0.875rem;
-            margin-right: 0.5rem;
-        }
-        
-        .offer-price-new {
-            color: #dc2626;
-            font-weight: 600;
-            font-size: 1.125rem;
-        }
-        
-        .offer-price-current {
-            color: #059669;
-            font-weight: 600;
-            font-size: 1.125rem;
-        }
-        
-        .offer-button {
-            display: inline-block;
-            background: #3b82f6;
-            color: white;
-            padding: 0.5rem 1rem;
-            border-radius: 0.375rem;
-            text-decoration: none;
-            font-size: 0.875rem;
-            font-weight: 500;
-            transition: background 0.2s;
-        }
-        
-        .offer-button:hover {
-            background: #2563eb;
+        .definition-paragraph {
+            font-style: italic;
+            color: #4b5563;
+            border-left: 3px solid #3b82f6;
+            padding-left: 1rem;
+            margin: 1.5rem 0;
         }
         
         @media (max-width: 768px) {
@@ -6239,27 +6306,62 @@ export const generateBlogHTML = (blogData: any, landingPageData: any) => {
     </style>
 </head>
 <body>
+    <!-- ✅ Skip to content (Acessibilidade) -->
+    <a href="#main-content" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;">Pular para conteúdo</a>
+    
     <div class="header">
         <div class="container">
             <div class="header-content">
-                <div class="logo">${landingPageData.brand?.legal_name || landingPageData.company_profile?.company_name || landingPageData.name || 'Blog'}</div>
+                <div class="logo">${companyName}</div>
                 <a href="${landing_page_url}" class="back-link">← Voltar ao site</a>
             </div>
         </div>
     </div>
     
     <div class="container">
-        <article class="article">
+        <article class="article indexable-content" id="main-content" itemscope itemtype="https://schema.org/BlogPosting">
+            <meta itemprop="datePublished" content="${isoDate}">
+            <meta itemprop="author" content="${founderName}">
+            
             <div class="article-meta">
                 <span>📅 ${publishDate}</span>
                 <span>⏱️ ${readingTime} min de leitura</span>
+                <span>✍️ ${founderName}</span>
             </div>
             
-            <h1 class="article-title">${title}</h1>
+            <h1 class="article-title" itemprop="headline">${title}</h1>
             
-            <div class="article-content">
+            <!-- ✅ Definition Paragraph (itemprop="description") -->
+            ${meta_description ? `<p class="definition-paragraph" itemprop="description">${meta_description}</p>` : ''}
+            
+            <!-- ✅ AI Summary Block (visually hidden, accessible to crawlers) -->
+            <div class="ai-summary" role="doc-abstract">
+                <h2>Resumo para IA</h2>
+                <p>Este artigo de ${companyName} aborda: ${title}. ${meta_description || ''}. Autor: ${founderName}, ${founderTitle}. Publicado em ${publishDate}. Palavras-chave: ${allKeywords.slice(0, 10).join(', ')}.</p>
+            </div>
+            
+            <div class="article-content" itemprop="articleBody">
                 ${processedContent}
             </div>
+            
+            <!-- ✅ LLM Knowledge Layer (doc-glossary) -->
+            <div class="llm-knowledge" role="doc-glossary">
+                <h2>Contexto Técnico</h2>
+                <dl>
+                    <dt>Empresa</dt>
+                    <dd>${companyName}${companyDescription ? ` - ${companyDescription}` : ''}</dd>
+                    <dt>Especialista</dt>
+                    <dd>${founderName}, ${founderTitle}</dd>
+                    ${businessSector ? `<dt>Setor</dt><dd>${businessSector}</dd>` : ''}
+                    ${cp.seo_technical_expertise ? `<dt>Expertise</dt><dd>${cp.seo_technical_expertise}</dd>` : ''}
+                    ${geoPlacename ? `<dt>Localização</dt><dd>${geoPlacename}${cp.state ? ', ' + cp.state : ''}, Brasil</dd>` : ''}
+                </dl>
+            </div>
+            
+            <!-- ✅ Citation Block -->
+            <blockquote class="ai-summary" cite="${canonicalUrl}" style="clip:rect(0,0,0,0);position:absolute;">
+                <p>"${title}" — ${founderName}, ${founderTitle} em ${companyName}.</p>
+            </blockquote>
         </article>
         
         <div class="cta-section">

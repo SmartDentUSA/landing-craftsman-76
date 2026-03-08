@@ -1,93 +1,49 @@
 
 
-## Auditoria SEO: Template Engine Principal (`src/lib/template-engine.ts`)
+# Botões individuais "Gerar por IA" para slides do Carrossel Visual
 
-### Gerador Principal (`generateHTML`) — COMPLETO ✅
+## Contexto
 
-O gerador principal de landing pages está **bem equipado** com todas as técnicas avançadas de SEO:
+O Carrossel Visual tem 6 slides. O Slide 1 (🎣 Hook) já possui um botão individual "Novo Gancho IA" que chama a edge function `generate-carousel-hook`. Os slides 3 (🔬 Cientificidade), 4 (💫 Experiência) e 5 (🛡️ Segurança) não possuem botões individuais — só podem ser gerados pelo botão geral "🤖 Gerar com IA" que regenera todos os slides de uma vez.
 
-| Técnica SEO | Status | Detalhes |
-|---|---|---|
-| `meta robots: index, follow` | ✅ Forçado | Linha 3764 + fallback linha 4454 |
-| Canonical URL | ✅ | Com sanitização de `https://https://` |
-| Open Graph completo | ✅ | og:title, og:description, og:image, og:type, og:site_name, og:url |
-| Twitter Cards | ✅ | card, title, description, image, site, creator |
-| Hreflang multi-idioma | ✅ | pt-BR, en-US, es-ES, x-default |
-| AI Content Policy | ✅ | GPTBot, ClaudeBot, PerplexityBot, etc. |
-| Entity Reference Metas | ✅ | entity:organization, entity:product, entity:category |
-| Geo Location Tags | ✅ | geo.region, geo.placename, geo.position, ICBM |
-| E-E-A-T Authority | ✅ | expertise, brand-values, partnerships |
-| AI Summary Block | ✅ | `clip:rect(0,0,0,0)` visually hidden |
-| Definition Paragraph | ✅ | itemprop="description" |
-| LLM Knowledge Layer | ✅ | role="doc-glossary" |
-| Entity Index (Wikidata) | ✅ | role="doc-index" com links Wikidata |
-| Citation Block | ✅ | blockquote com cite |
-| Entity Index JSON-LD | ✅ | ItemList com entidades |
-| Schema.org @graph | ✅ | Organization, Person, WebPage, Service, hasCredential, Speakable |
-| LCP Preload | ✅ | `fetchpriority="high"` para banner |
-| Lazy Loading | ✅ | CSS `content-visibility: auto` |
-| Keywords deduplicação | ✅ | Max 20, deduplicadas |
-| FAQ auto-agregação | ✅ | De produtos vinculados |
-| Knowledge Feed SEO | ✅ | Schema + keywords enriquecidas |
-| Skip to content | ✅ | Acessibilidade |
-| Sitemap reference | ✅ | `<link rel="sitemap">` |
+## Plano
 
----
+### 1. Nova Edge Function: `generate-carousel-slide`
 
-### Gerador de Blog (`generateBlogHTML`) — DEFICIENTE ❌
+Criar uma edge function genérica que receba o tipo do slide (`cientificidade`, `experiencia`, `seguranca`) e gere apenas o conteúdo daquele slide específico, com prompts especializados por tipo:
 
-O `generateBlogHTML` (linha 5814-6275) está **muito básico** comparado ao gerador principal. Faltam:
+- **Cientificidade (Slide 3)**: Gera title, headline, body, bullet1-4 com foco em evidências científicas e dados técnicos
+- **Experiência (Slide 4)**: Gera keyword + benefit com foco em experiência clínica e fluxo de trabalho
+- **Segurança (Slide 5)**: Gera title, badge1-3 com foco em certificações, garantias e confiança
 
-| Técnica SEO | Status |
-|---|---|
-| Canonical URL | ❌ Ausente |
-| Open Graph | ❌ Ausente |
-| Twitter Cards | ❌ Ausente |
-| Hreflang | ❌ Ausente |
-| AI Content Policy | ❌ Ausente |
-| Entity Reference Metas | ❌ Ausente |
-| Geo Location Tags | ❌ Ausente |
-| E-E-A-T (author meta) | ❌ Ausente |
-| AI Summary Block | ❌ Ausente |
-| Definition Paragraph | ❌ Ausente |
-| LLM Knowledge Layer | ❌ Ausente |
-| Schema.org JSON-LD | ❌ Ausente (nem Article/BlogPosting) |
-| LCP Preload | ❌ Ausente |
-| Speakable | ❌ Ausente |
-| Sitemap reference | ❌ Ausente |
-| `article.indexable-content` wrapper | ❌ Ausente |
+Recebe: `productName`, `salesPitch`, `benefits`, `features`, `slideType`
+Retorna: campos específicos do slide solicitado
 
----
+### 2. Frontend — Novos estados e handlers (`InstagramCopyGenerator.tsx`)
 
-### Plano de Implementação
+- Adicionar 3 estados: `generatingScience`, `generatingExperience`, `generatingSecurity`
+- Criar 3 handlers que chamam `generate-carousel-slide` com o `slideType` correto e atualizam apenas o slide correspondente em `slideTexts`
 
-**Objetivo**: Equipar `generateBlogHTML` com o mesmo nível de SEO avançado do gerador principal.
+### 3. Frontend — 3 novos botões no header do Carrossel Visual
 
-**Alterações em `src/lib/template-engine.ts`** (função `generateBlogHTML`, linhas 5814-6275):
+Adicionar ao lado do botão "🎣 Novo Gancho IA" (linha ~1962):
 
-1. **HEAD — Adicionar meta tags SEO completas**:
-   - Canonical URL (baseada no domínio da landing page + slug do blog)
-   - Open Graph: og:title, og:description, og:image (cover_image), og:type="article", og:site_name
-   - Twitter Cards: summary_large_image
-   - AI Content Policy e AI Crawler Policy
-   - Entity reference metas (entity:product, entity:organization)
-   - Geo location tags (do company_profile)
-   - E-E-A-T: author meta, expertise
-   - Hreflang tags (pt-BR, en-US, es-ES)
-   - Sitemap reference
-   - LCP preload para cover_image
+- **🔬 Cientificidade IA** — gera apenas Slide 3
+- **💫 Experiência IA** — gera apenas Slide 4
+- **🛡️ Segurança IA** — gera apenas Slide 5
 
-2. **HEAD — Adicionar Schema.org JSON-LD**:
-   - BlogPosting com author, datePublished, headline, image, publisher
-   - Organization (do company_profile)
-   - BreadcrumbList (Home → Blog → Artigo)
+Cada botão com loading state individual, mesmo padrão visual do botão Hook existente.
 
-3. **BODY — Adicionar AI-readiness blocks**:
-   - Wrapper `<article class="indexable-content">`
-   - AI Summary block (visually hidden)
-   - Definition paragraph (itemprop="description")
-   - LLM Knowledge layer (doc-glossary)
-   - Citation block
+### Detalhes técnicos
 
-4. **Receber `companyProfile` como parâmetro** (ou buscar via `getCompanyProfileForSEO()`) para preencher dados de empresa, geo, E-E-A-T nos blogs.
+**Edge function `generate-carousel-slide/index.ts`:**
+- Usa Lovable AI Gateway (`google/gemini-2.5-flash`)
+- Prompt especializado por slideType com regras de formatação
+- Temperature 1.0 para variedade
+- Retorna JSON estruturado via tool calling para garantir campos corretos
+
+**Mapeamento de retorno:**
+- `cientificidade` → `{ title, headline, body, bullet1, bullet2, bullet3, bullet4 }`
+- `experiencia` → `{ keyword, benefit }`
+- `seguranca` → `{ title, badge1, badge2, badge3 }`
 
