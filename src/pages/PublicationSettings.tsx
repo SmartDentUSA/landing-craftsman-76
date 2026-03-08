@@ -357,6 +357,7 @@ export default function PublicationSettings() {
                 Identificador único do perfil FTP (usado para lookup de domínio)
               </p>
             </div>
+            <div>
               <Label htmlFor="ftp_host">Host SFTP</Label>
               <Input
                 id="ftp_host"
