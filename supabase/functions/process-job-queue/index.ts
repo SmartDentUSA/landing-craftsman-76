@@ -44,8 +44,12 @@ Deno.serve(async (req) => {
 
     console.log(`[process-job-queue] Starting batch processing (size: ${batchSize})`);
 
+    // Generate unique worker ID for distributed locking
+    const workerId = `worker-${crypto.randomUUID().slice(0, 8)}`;
+    const lockTimeout = 5 * 60 * 1000; // 5 minutes lock timeout
+    
     // ═══════════════════════════════════════════════════════════
-    // FETCH PENDING JOBS
+    // FETCH PENDING JOBS (with distributed lock check)
     // ═══════════════════════════════════════════════════════════
 
     const { data: jobs, error: fetchError } = await supabase
@@ -54,6 +58,7 @@ Deno.serve(async (req) => {
       .eq('status', 'pending')
       .lt('attempts', 3) // Only jobs with < max attempts
       .lte('scheduled_at', new Date().toISOString()) // Scheduled for now or past
+      .is('locked_by', null) // Not locked by another worker
       .order('priority', { ascending: false })
       .order('scheduled_at', { ascending: true })
       .limit(batchSize);
