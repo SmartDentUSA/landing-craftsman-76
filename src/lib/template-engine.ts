@@ -78,8 +78,12 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     
     <!-- AI Content Tags for AI Crawlers -->
     <meta name="ai-content-policy" content="allow-training, allow-citation, allow-indexing">
+    <meta name="ai-crawler-policy" content="allow: GPTBot, ClaudeBot, PerplexityBot, Google-Extended, Applebot-Extended, ChatGPT-User, anthropic-ai, cohere-ai, meta-externalagent">
     {{#ai_content_type}}<meta name="ai-content-type" content="{{ai_content_type}}">{{/ai_content_type}}
     {{#ai_topic}}<meta name="ai-topic" content="{{ai_topic}}">{{/ai_topic}}
+    
+    <!-- Entity Reference Meta Tags (Knowledge System) -->
+    {{{entity_reference_metas}}}
     
     <!-- Geo Location Tags (Local SEO) -->
     {{#geo_region}}<meta name="geo.region" content="{{geo_region}}">{{/geo_region}}
