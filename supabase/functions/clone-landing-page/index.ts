@@ -1987,6 +1987,12 @@ function injectSEO(
     <meta name="ai-content-type" content="landingpage">
     <meta name="ai-content-policy" content="allow-training, allow-citation, allow-indexing">
     <meta name="ai-topic" content="${aiTopic}">
+    ${generateAICrawlerPolicyMeta()}
+    ${generateEntityReferenceMetas({
+      products: [product].filter(Boolean),
+      organization: company,
+      categories: [brand].filter(Boolean),
+    })}
     
     <!-- ═══════════════════════════════════════════════════════════ -->
     <!-- OPEN GRAPH (Facebook, LinkedIn, WhatsApp) -->
