@@ -260,3 +260,12 @@ verify_jwt = true
 
 [functions.evaluate-interaction]
 verify_jwt = false
+
+[functions.content-submission]
+verify_jwt = false
+
+[functions.process-content-submission]
+verify_jwt = true
+
+[functions.process-job-queue]
+verify_jwt = true

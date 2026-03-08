@@ -581,6 +581,321 @@ export function buildBlogGraph(
 export type BlogGraph = NonNullable<ReturnType<typeof buildBlogGraph>>;
 
 // ═══════════════════════════════════════════════════════════
+// TOPIC GRAPH — Navegação por tópico/tema
+// ═══════════════════════════════════════════════════════════
+
+/**
+ * Monta o subgrafo de um TÓPICO específico:
+ * topic → products, reviews, videos, experts, blogPosts, externalLinks
+ * 
+ * Útil para gerar páginas de:
+ * - /implantodontia
+ * - /fluxo-digital
+ * - /guia-cirurgico
+ * 
+ * @param knowledgeGraph - Knowledge Graph completo
+ * @param topic - Tópico para filtrar (ex: "implantodontia", "fluxo digital")
+ */
+export function buildTopicGraph(
+  knowledgeGraph: KnowledgeGraph,
+  topic: string
+) {
+  const topicLower = topic.toLowerCase().trim();
+  const topicNormalized = topicLower
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, ''); // Remove accents
+  
+  const topicVariants = [
+    topicLower,
+    topicNormalized,
+    topicLower.replace(/-/g, ' '),
+    topicLower.replace(/\s+/g, '-'),
+  ];
+
+  console.log(`🔍 [KnowledgeGraph] Building topic graph for: ${topic}`);
+
+  // Helper function to check if text contains any topic variant
+  const containsTopic = (text: string | null | undefined): boolean => {
+    if (!text) return false;
+    const textLower = text.toLowerCase();
+    return topicVariants.some(variant => textLower.includes(variant));
+  };
+
+  // Helper function to check if array contains any topic variant
+  const arrayContainsTopic = (arr: any[] | null | undefined): boolean => {
+    if (!Array.isArray(arr)) return false;
+    return arr.some(item => {
+      if (typeof item === 'string') return containsTopic(item);
+      if (typeof item === 'object' && item !== null) {
+        return Object.values(item).some(v => 
+          typeof v === 'string' && containsTopic(v)
+        );
+      }
+      return false;
+    });
+  };
+
+  // ═══════════════════════════════════════════════════════════
+  // FILTER PRODUCTS BY TOPIC
+  // ═══════════════════════════════════════════════════════════
+
+  const relatedProducts = knowledgeGraph.products.filter(p => {
+    // Match por categoria/subcategoria
+    if (containsTopic(p.category)) return true;
+    if (containsTopic(p.subcategory)) return true;
+    
+    // Match por nome/descrição
+    if (containsTopic(p.name)) return true;
+    if (containsTopic(p.description)) return true;
+    
+    // Match por keywords
+    if (arrayContainsTopic(p.keywords as any)) return true;
+    if (arrayContainsTopic(p.market_keywords as any)) return true;
+    if (arrayContainsTopic(p.search_intent_keywords as any)) return true;
+    if (arrayContainsTopic(p.bot_trigger_words as any)) return true;
+    
+    // Match por applications
+    if (containsTopic(p.applications)) return true;
+    
+    return false;
+  });
+
+  console.log(`  📦 Products matched: ${relatedProducts.length}`);
+
+  // ═══════════════════════════════════════════════════════════
+  // FILTER REVIEWS BY TOPIC
+  // ═══════════════════════════════════════════════════════════
+
+  const relatedReviews = knowledgeGraph.reviews.filter(r => {
+    if (containsTopic(r.contextual_seo_info)) return true;
+    if (arrayContainsTopic(r.ai_keywords)) return true;
+    return false;
+  });
+
+  console.log(`  ⭐ Reviews matched: ${relatedReviews.length}`);
+
+  // ═══════════════════════════════════════════════════════════
+  // FILTER VIDEOS BY TOPIC
+  // ═══════════════════════════════════════════════════════════
+
+  const relatedVideos = knowledgeGraph.videos.filter(v => {
+    if (containsTopic(v.specialty)) return true;
+    if (containsTopic(v.testimonial_text)) return true;
+    if (containsTopic(v.testimonial_name)) return true;
+    return false;
+  });
+
+  console.log(`  🎥 Videos matched: ${relatedVideos.length}`);
+
+  // ═══════════════════════════════════════════════════════════
+  // FILTER EXPERTS BY TOPIC
+  // ═══════════════════════════════════════════════════════════
+
+  const relatedExperts = knowledgeGraph.experts.filter(e => {
+    if (containsTopic(e.specialty)) return true;
+    if (containsTopic(e.mini_cv)) return true;
+    return false;
+  });
+
+  console.log(`  👨‍⚕️ Experts matched: ${relatedExperts.length}`);
+
+  // ═══════════════════════════════════════════════════════════
+  // FILTER BLOG POSTS BY TOPIC
+  // ═══════════════════════════════════════════════════════════
+
+  const relatedBlogPosts = knowledgeGraph.blogPosts.filter(bp => {
+    if (containsTopic(bp.title)) return true;
+    if (containsTopic(bp.meta_description)) return true;
+    if (arrayContainsTopic(bp.keywords)) return true;
+    return false;
+  });
+
+  console.log(`  📝 Blog posts matched: ${relatedBlogPosts.length}`);
+
+  // ═══════════════════════════════════════════════════════════
+  // FILTER EXTERNAL LINKS BY TOPIC
+  // ═══════════════════════════════════════════════════════════
+
+  const relatedLinks = knowledgeGraph.externalLinks.filter(el => {
+    if (containsTopic(el.name)) return true;
+    if (containsTopic(el.description)) return true;
+    if (containsTopic(el.category)) return true;
+    if (containsTopic(el.subcategory)) return true;
+    if (arrayContainsTopic(el.related_keywords)) return true;
+    return false;
+  });
+
+  console.log(`  🔗 External links matched: ${relatedLinks.length}`);
+
+  // ═══════════════════════════════════════════════════════════
+  // FILTER MILESTONES BY TOPIC
+  // ═══════════════════════════════════════════════════════════
+
+  const relatedMilestones = knowledgeGraph.milestones.filter(m => {
+    if (containsTopic(m.title)) return true;
+    if (containsTopic(m.description)) return true;
+    if (containsTopic(m.impact)) return true;
+    if (arrayContainsTopic(m.technologies as any)) return true;
+    return false;
+  });
+
+  console.log(`  🏆 Milestones matched: ${relatedMilestones.length}`);
+
+  return {
+    topic,
+    products: relatedProducts,
+    reviews: relatedReviews,
+    videos: relatedVideos,
+    experts: relatedExperts,
+    blogPosts: relatedBlogPosts,
+    externalLinks: relatedLinks,
+    milestones: relatedMilestones,
+    company: knowledgeGraph.company,
+  };
+}
+
+export type TopicGraph = NonNullable<ReturnType<typeof buildTopicGraph>>;
+
+// ═══════════════════════════════════════════════════════════
+// INTERNAL LINKS GENERATOR — Auto-conecta páginas por entidades
+// ═══════════════════════════════════════════════════════════
+
+/**
+ * Gera links internos automáticos baseado em entidades/keywords
+ * 
+ * Útil para SEO interno:
+ * - Conecta páginas por temas relacionados
+ * - Aumenta tempo de permanência
+ * - Melhora crawlability
+ * 
+ * @param knowledgeGraph - Knowledge Graph completo
+ * @param currentEntities - Entidades/keywords da página atual
+ * @param options - Opções de filtragem
+ */
+export function generateInternalLinks(
+  knowledgeGraph: KnowledgeGraph,
+  currentEntities: string[],
+  options: {
+    maxLinks?: number;
+    excludeSlugs?: string[];
+    includeProducts?: boolean;
+    includeBlogPosts?: boolean;
+    includeExternalLinks?: boolean;
+  } = {}
+): Array<{ title: string; path: string; relevance: number; type: string }> {
+  const {
+    maxLinks = 10,
+    excludeSlugs = [],
+    includeProducts = true,
+    includeBlogPosts = true,
+    includeExternalLinks = true,
+  } = options;
+
+  const links: Array<{ title: string; path: string; relevance: number; type: string }> = [];
+  const entitiesLower = currentEntities.map(e => e.toLowerCase().trim());
+
+  // Helper: calculate relevance score based on keyword matches
+  const calculateRelevance = (text: string | null, keywords: any[]): number => {
+    if (!text) return 0;
+    const textLower = text.toLowerCase();
+    let matches = 0;
+    for (const entity of entitiesLower) {
+      if (textLower.includes(entity)) matches++;
+    }
+    // Check keywords array too
+    if (Array.isArray(keywords)) {
+      for (const kw of keywords) {
+        if (typeof kw === 'string' && entitiesLower.includes(kw.toLowerCase())) {
+          matches++;
+        }
+      }
+    }
+    return Math.min(matches / Math.max(entitiesLower.length, 1), 1);
+  };
+
+  // ═══════════════════════════════════════════════════════════
+  // PRODUCT LINKS
+  // ═══════════════════════════════════════════════════════════
+
+  if (includeProducts) {
+    for (const product of knowledgeGraph.products) {
+      if (excludeSlugs.includes(product.slug || '')) continue;
+      
+      const relevance = calculateRelevance(
+        `${product.name} ${product.description} ${product.category}`,
+        (product.keywords as any[]) || []
+      );
+      
+      if (relevance > 0.1) {
+        links.push({
+          title: product.name,
+          path: product.product_url || `/produto/${product.slug || product.id}`,
+          relevance,
+          type: 'product',
+        });
+      }
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // BLOG POST LINKS
+  // ═══════════════════════════════════════════════════════════
+
+  if (includeBlogPosts) {
+    for (const post of knowledgeGraph.blogPosts) {
+      if (excludeSlugs.includes(post.landing_page_id || '')) continue;
+      
+      const relevance = calculateRelevance(
+        `${post.title} ${post.meta_description}`,
+        post.keywords || []
+      );
+      
+      if (relevance > 0.1) {
+        links.push({
+          title: post.title,
+          path: `/blog/${post.landing_page_id}`,
+          relevance,
+          type: 'blog',
+        });
+      }
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // EXTERNAL LINKS (for reference)
+  // ═══════════════════════════════════════════════════════════
+
+  if (includeExternalLinks) {
+    for (const link of knowledgeGraph.externalLinks) {
+      if (!link.approved) continue;
+      
+      const relevance = calculateRelevance(
+        `${link.name} ${link.description} ${link.category}`,
+        link.related_keywords || []
+      );
+      
+      if (relevance > 0.2) { // Higher threshold for external
+        links.push({
+          title: link.name,
+          path: link.url,
+          relevance,
+          type: 'external',
+        });
+      }
+    }
+  }
+
+  // Sort by relevance and limit
+  links.sort((a, b) => b.relevance - a.relevance);
+  
+  console.log(`🔗 [KnowledgeGraph] Generated ${Math.min(links.length, maxLinks)} internal links from ${currentEntities.length} entities`);
+  
+  return links.slice(0, maxLinks);
+}
+
+export type InternalLink = ReturnType<typeof generateInternalLinks>[0];
+
+// ═══════════════════════════════════════════════════════════
 // UTILIDADES INTERNAS
 // ═══════════════════════════════════════════════════════════
 
