@@ -301,6 +301,7 @@ Gere seções em JSON:
     }
 
     results.push({ step: 7, name: 'Generate structured content', success: true });
+    await logStep(7, 'Generate structured content', 'success');
 
     // ═══════════════════════════════════════════════════════════
     // STEP 8: Generate SEO Metadata
