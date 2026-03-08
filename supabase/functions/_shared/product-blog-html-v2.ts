@@ -1440,6 +1440,14 @@ export function generateProductBlogHTMLV2(options: ProductBlogV2Options): string
   <meta name="ai-content-type" content="blog">
   <meta name="ai-content-policy" content="allow-training, allow-citation, allow-indexing">
   <meta name="ai-topic" content="${escapeHtml(keywordsArray.slice(0, 3).join(', ') || product.name)}">
+  ${generateAICrawlerPolicyMeta()}
+  ${generateEntityReferenceMetas({
+    products: [product.name],
+    technologies: features.slice(0, 3),
+    organization: companyName,
+    categories: [product.category].filter(Boolean),
+    persons: companyProfile?.founder_name ? [companyProfile.founder_name] : [],
+  })}
   
   <!-- ═══════════════════════════════════════════════════════════ -->
   <!-- GEO TAGS (Localização para SEO Local) -->
