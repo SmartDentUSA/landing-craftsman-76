@@ -33,6 +33,8 @@ import { deduplicateKeywords, generateHreflangHTML } from "../_shared/seo-fine-t
 
 // 🤖 AI Readiness Helpers
 import { enrichGraphWithAIReadiness, generateAISummaryBlock, generateLLMKnowledgeLayer, generateEntityIndexHTML, generateDefinedTermSetSchema } from "../_shared/ai-readiness-helpers.ts";
+// 🧠 Knowledge System Helpers
+import { generateEntityReferenceMetas, generateAICrawlerPolicyMeta, generateCitationBlock, generateExpandedKnowledgeLayer, generateEntityIndexJsonLD, generateDefinitionParagraph, generateMedicalEntitySchema } from "../_shared/knowledge-system-helpers.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -1636,6 +1638,14 @@ function buildSEOHead(product: any): string {
   <meta name="ai-content-type" content="product">
   <meta name="ai-content-policy" content="allow-training, allow-citation, allow-indexing">
   <meta name="ai-topic" content="${aiTopic}">
+  ${generateAICrawlerPolicyMeta()}
+  ${generateEntityReferenceMetas({
+    products: [product.name],
+    technologies: (product.features || []).slice(0, 3),
+    organization: companyName,
+    categories: [product.category].filter(Boolean),
+    materials: [product.material].filter(Boolean),
+  })}
   
   <!-- ═══════════════════════════════════════════════════════════ -->
   <!-- GEO TAGS (Localização para SEO Local) -->
@@ -1948,6 +1958,36 @@ function buildEcommerceHTML(
     clinicalApplication: product.applications || '',
     keyProperties: (product.technical_specifications || []).slice(0, 5).map((s: any) => typeof s === 'string' ? s : `${s.label || s.name}: ${s.value}`),
     certifications: product.certifications || []
+  });
+
+  // 🧠 Definition Paragraph (semantic, LLM-priority extraction)
+  html += generateDefinitionParagraph({
+    entityName: product.name,
+    category: product.category,
+    definition: productDescription,
+    company: companyName
+  });
+
+  // 🧠 Expanded Knowledge Layer (full entity context)
+  html += generateExpandedKnowledgeLayer({
+    entity: product.name,
+    category: product.category,
+    company: companyName,
+    definition: productDescription.replace(/<[^>]*>/g, '').substring(0, 300),
+    technology: (product.features || []).slice(0, 3).join('; '),
+    clinicalApplication: product.applications || '',
+    keyProperties: (product.technical_specifications || []).slice(0, 5).map((s: any) => typeof s === 'string' ? s : `${s.label || s.name}: ${s.value}`),
+    certifications: product.certifications || [],
+    applications: product.applications ? [product.applications] : [],
+    relatedProducts: [],
+  });
+
+  // 🧠 Citation Block (expert recommendation for LLM citation)
+  html += generateCitationBlock({
+    quote: `Especialistas da ${companyName} recomendam ${product.name} para aplicações em ${product.category || 'odontologia digital'}.`,
+    source: product.canonical_url || product.product_url || '',
+    expertName: companyName,
+    expertRole: 'Fabricante',
   });
 
   html += `
@@ -2538,6 +2578,26 @@ function buildEcommerceHTML(
 
   // 🤖 Entity Index HTML (Wikidata links for AI crawlers)
   html += generateEntityIndexHTML(allContentText);
+
+  // 🧠 Entity Index JSON-LD (ItemList of related entities)
+  const entityListItems: Array<{ type: string; name: string; url?: string; description?: string }> = [
+    { type: 'Product', name: product.name, url: product.canonical_url || product.product_url || '', description: (product.description || '').replace(/<[^>]*>/g, '').substring(0, 150) },
+  ];
+  if (product.category) entityListItems.push({ type: 'Thing', name: product.category });
+  if (product.brand) entityListItems.push({ type: 'Brand', name: product.brand });
+  if (product.material) entityListItems.push({ type: 'Thing', name: product.material });
+  html += generateEntityIndexJsonLD({ entities: entityListItems, pageName: `Entidades: ${product.name}` });
+
+  // 🧠 MedicalEntity Schema (if applicable)
+  const medicalEntity = generateMedicalEntitySchema({
+    name: product.name,
+    description: product.description || product.sales_pitch || '',
+    medicalSpecialty: 'Dentistry',
+    recognizingAuthority: ['ANVISA', 'CRO'],
+  });
+  if (medicalEntity) {
+    ecommerceSchema["@graph"].push(medicalEntity);
+  }
 
   // ✅ Fechar <article> + <main> wrapper semântico
   html += `\n</article>\n</main>`;

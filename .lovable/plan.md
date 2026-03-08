@@ -1,142 +1,49 @@
 
 
-# Plano: Integração do Knowledge System nos Geradores de HTML
+# Botões individuais "Gerar por IA" para slides do Carrossel Visual
 
-## Diagnóstico — O que já existe vs. O que falta
+## Contexto
 
-### Já implementado
-- AI Summary Block (`ai-summary`, `doc-abstract`) — 5/5 geradores
-- LLM Knowledge Layer (`llm-knowledge`, `doc-glossary`) — 5/5 geradores
-- Entity Index HTML (Wikidata links) — 5/5 geradores
-- DefinedTermSet JSON-LD — 5/5 geradores
-- AI Policy meta (`ai-content-policy`) — 5/5 geradores
-- JSON-LD @graph (Organization, Product, Person, FAQ, HowTo, etc.) — 5/5 geradores
-- GEO Context + Authority Context — SPIN, clone-LP, ecommerce
-- `<article class="indexable-content">` wrapper — 5/5 geradores
+O Carrossel Visual tem 6 slides. O Slide 1 (🎣 Hook) já possui um botão individual "Novo Gancho IA" que chama a edge function `generate-carousel-hook`. Os slides 3 (🔬 Cientificidade), 4 (💫 Experiência) e 5 (🛡️ Segurança) não possuem botões individuais — só podem ser gerados pelo botão geral "🤖 Gerar com IA" que regenera todos os slides de uma vez.
 
-### Não existe (solicitado pelo usuário)
+## Plano
 
-| Feature | Descrição | Impacto |
-|---------|-----------|---------|
-| **Entity Reference Meta Tags** | `<meta name="entity:product">`, `<meta name="entity:technology">`, `<meta name="entity:organization">` no HEAD | LLMs identificam entidades sem parsear o body |
-| **AI Crawler Policy (expandida)** | `<meta name="ai-crawler-policy" content="allow: GPTBot, ClaudeBot, PerplexityBot, Google-Extended">` | Diretiva explícita por bot |
-| **Citation Blocks** | `<blockquote cite="..." class="citation-block">` com dados de especialistas | LLMs citam trechos específicos |
-| **LLM Knowledge Layer expandido** | Incluir entidade, categoria, empresa, aplicações, tecnologia, especialistas associados | Camada mais rica que a atual (apenas definição/tecnologia/aplicação) |
-| **Entity Index JSON-LD** | Bloco separado com `ItemList` de entidades relacionadas | Complementa o Entity Index HTML |
-| **Header com navegação semântica** | Links de categorias e produtos no header vindos do banco | Melhora crawlability |
-| **Definition Paragraph** | Parágrafo semântico com `itemprop="description"` após AI Summary | Prioridade para extração |
-| **MedicalEntity schema** | JSON-LD para entidades médicas/odontológicas quando aplicável | Google Health |
+### 1. Nova Edge Function: `generate-carousel-slide`
 
----
+Criar uma edge function genérica que receba o tipo do slide (`cientificidade`, `experiencia`, `seguranca`) e gere apenas o conteúdo daquele slide específico, com prompts especializados por tipo:
 
-## Plano de Implementação — 3 Módulos
+- **Cientificidade (Slide 3)**: Gera title, headline, body, bullet1-4 com foco em evidências científicas e dados técnicos
+- **Experiência (Slide 4)**: Gera keyword + benefit com foco em experiência clínica e fluxo de trabalho
+- **Segurança (Slide 5)**: Gera title, badge1-3 com foco em certificações, garantias e confiança
 
-### Módulo 1: Expandir `ai-readiness-helpers.ts` (shared helper)
+Recebe: `productName`, `salesPitch`, `benefits`, `features`, `slideType`
+Retorna: campos específicos do slide solicitado
 
-**Novas funções a criar:**
+### 2. Frontend — Novos estados e handlers (`InstagramCopyGenerator.tsx`)
 
-```text
-generateEntityReferenceMetas(params)     → <meta name="entity:product" ...>
-generateAICrawlerPolicyMeta()            → <meta name="ai-crawler-policy" ...>
-generateCitationBlock(params)            → <blockquote class="citation-block" ...>
-generateExpandedKnowledgeLayer(params)   → LLM Knowledge Layer com entidade, categoria, empresa, especialistas
-generateEntityIndexJsonLD(params)        → ItemList JSON-LD de entidades relacionadas
-generateDefinitionParagraph(params)      → <p itemprop="description" class="definition-paragraph">
-```
+- Adicionar 3 estados: `generatingScience`, `generatingExperience`, `generatingSecurity`
+- Criar 3 handlers que chamam `generate-carousel-slide` com o `slideType` correto e atualizam apenas o slide correspondente em `slideTexts`
 
-**Expandir `generateLLMKnowledgeLayer`** para aceitar campos adicionais:
-- `entity` (nome da entidade principal)
-- `category` (categoria)
-- `company` (empresa)
-- `applications` (array)
-- `associatedExperts` (array de nomes)
-- `relatedProducts` (array)
+### 3. Frontend — 3 novos botões no header do Carrossel Visual
 
-### Módulo 2: Injetar nos 5 geradores (HEAD)
+Adicionar ao lado do botão "🎣 Novo Gancho IA" (linha ~1962):
 
-Em cada gerador, adicionar no `<head>`:
+- **🔬 Cientificidade IA** — gera apenas Slide 3
+- **💫 Experiência IA** — gera apenas Slide 4
+- **🛡️ Segurança IA** — gera apenas Slide 5
 
-1. **Entity Reference Metas** — Extrair automaticamente do produto/solution/company:
-   - `entity:product` = nome do produto
-   - `entity:technology` = tecnologia principal (de features/keywords)
-   - `entity:organization` = nome da empresa
-   - `entity:category` = categoria
-   - `entity:person` = especialista associado (KOL)
+Cada botão com loading state individual, mesmo padrão visual do botão Hook existente.
 
-2. **AI Crawler Policy expandida** — Nova meta tag além da existente `ai-content-policy`
+### Detalhes técnicos
 
-3. **Entity Index JSON-LD** — `ItemList` com produtos relacionados, categorias, tecnologias
+**Edge function `generate-carousel-slide/index.ts`:**
+- Usa Lovable AI Gateway (`google/gemini-2.5-flash`)
+- Prompt especializado por slideType com regras de formatação
+- Temperature 1.0 para variedade
+- Retorna JSON estruturado via tool calling para garantir campos corretos
 
-**Arquivos afetados (HEAD):**
-- `generate-ecommerce-html/index.ts` (buildSEOHead)
-- `generate-spin-landing-page/generateHTML.ts` (HEAD section)
-- `product-blog-html-v2.ts` (HEAD section)
-- `clone-landing-page/index.ts` (seoTags injection)
-- `src/lib/template-engine.ts` (TEMPLATE_HTML + Mustache vars)
-
-### Módulo 3: Injetar nos 5 geradores (BODY)
-
-Em cada gerador, adicionar no `<body>`:
-
-1. **Definition Paragraph** — Após AI Summary, antes do conteúdo principal. Parágrafo semântico com `itemprop="description"` contendo definição clara da entidade.
-
-2. **Citation Blocks** — Após seções de conteúdo. Usar dados de KOLs/especialistas para gerar blockquotes citáveis com `cite` attribute.
-
-3. **Expanded Knowledge Layer** — Substituir chamada atual de `generateLLMKnowledgeLayer()` pela versão expandida incluindo entidade, empresa, especialistas associados, produtos relacionados.
-
-4. **Entity Index JSON-LD** — Antes do `</article>`, adicionar `<script type="application/ld+json">` com `ItemList` de entidades.
-
-**Arquivos afetados (BODY):**
-- Mesmos 5 arquivos do Módulo 2
-
----
-
-## Detalhamento Técnico
-
-### `generateEntityReferenceMetas()`
-```text
-Input: { products: string[], technologies: string[], organization: string, categories: string[], persons: string[] }
-Output: string (HTML meta tags)
-```
-
-### `generateCitationBlock()`
-```text
-Input: { quote: string, source: string, expertName?: string, expertRole?: string, date?: string }
-Output: <blockquote cite="source" class="citation-block" data-ai-hint="citation"> ... </blockquote>
-```
-
-### `generateExpandedKnowledgeLayer()`
-Evolução do `generateLLMKnowledgeLayer()` atual com campos adicionais:
-```text
-Input: {
-  ...existing params,
-  entity: string,
-  category: string,
-  company: string,
-  applications: string[],
-  associatedExperts: string[],
-  relatedProducts: string[]
-}
-```
-
-### `generateEntityIndexJsonLD()`
-```text
-Input: { entities: Array<{type, name, url?}>, pageName: string }
-Output: JSON-LD ItemList schema
-```
-
----
-
-## Resumo de Alterações
-
-| Arquivo | Alterações |
-|---------|-----------|
-| `_shared/ai-readiness-helpers.ts` | +6 novas funções, expandir LLM Knowledge Layer |
-| `generate-ecommerce-html/index.ts` | HEAD: entity metas + crawler policy. BODY: definition paragraph + citation block + expanded knowledge + entity JSON-LD |
-| `generate-spin-landing-page/generateHTML.ts` | HEAD: entity metas + crawler policy. BODY: definition paragraph + citation block + expanded knowledge + entity JSON-LD |
-| `_shared/product-blog-html-v2.ts` | HEAD: entity metas + crawler policy. BODY: definition paragraph + citation block + expanded knowledge + entity JSON-LD |
-| `clone-landing-page/index.ts` | HEAD: entity metas + crawler policy. BODY: definition paragraph + citation block + expanded knowledge + entity JSON-LD |
-| `src/lib/template-engine.ts` | HEAD: Mustache vars para entity metas + crawler policy. BODY: Mustache vars para definition + citation + expanded knowledge + entity JSON-LD |
-
-**Total: 6 arquivos, ~400 linhas de código novo**
+**Mapeamento de retorno:**
+- `cientificidade` → `{ title, headline, body, bullet1, bullet2, bullet3, bullet4 }`
+- `experiencia` → `{ keyword, benefit }`
+- `seguranca` → `{ title, badge1, badge2, badge3 }`
 

@@ -42,6 +42,8 @@ import {
 
 // 🤖 AI Readiness Helpers
 import { enrichGraphWithAIReadiness, generateLandingPageAISummary, generateEntityIndexHTML, generateDefinedTermSetSchema, generateLLMKnowledgeLayer } from "../_shared/ai-readiness-helpers.ts";
+// 🧠 Knowledge System Helpers
+import { generateEntityReferenceMetas, generateAICrawlerPolicyMeta, generateExpandedKnowledgeLayer, generateEntityIndexJsonLD, generateDefinitionParagraph, generateCitationBlock } from "../_shared/knowledge-system-helpers.ts";
 
 // ✅ FASE 9: Wrapper para manter compatibilidade
 function generateLandingPageBreadcrumbsForClone(
@@ -1985,6 +1987,12 @@ function injectSEO(
     <meta name="ai-content-type" content="landingpage">
     <meta name="ai-content-policy" content="allow-training, allow-citation, allow-indexing">
     <meta name="ai-topic" content="${aiTopic}">
+    ${generateAICrawlerPolicyMeta()}
+    ${generateEntityReferenceMetas({
+      products: [product].filter(Boolean),
+      organization: company,
+      categories: [brand].filter(Boolean),
+    })}
     
     <!-- ═══════════════════════════════════════════════════════════ -->
     <!-- OPEN GRAPH (Facebook, LinkedIn, WhatsApp) -->
@@ -2085,12 +2093,44 @@ function injectSEO(
     clinicalApplication: options.name || '',
   });
   
+  // 🧠 Knowledge System: Definition Paragraph + Expanded Knowledge + Citation + Entity JSON-LD
+  const definitionParagraphHTML = generateDefinitionParagraph({
+    entityName: product || options.name || '',
+    category: brand || options.businessSector || '',
+    definition: options.mainProductsServices || `${company} — ${options.businessSector || 'odontologia digital'}`,
+    company: company
+  });
+  
+  const expandedKnowledgeHTML = generateExpandedKnowledgeLayer({
+    entity: product || options.name || '',
+    category: brand || options.businessSector || '',
+    company: company,
+    definition: `${company} — ${options.businessSector || 'odontologia digital'}`,
+    technology: options.mainProductsServices || '',
+  });
+  
+  const citationBlockHTML = generateCitationBlock({
+    quote: `${company} é referência em ${options.businessSector || 'odontologia digital'}${product ? `, oferecendo ${product}` : ''}.`,
+    source: canonical,
+    expertName: company,
+    expertRole: 'Fabricante',
+  });
+  
+  const entityJsonLDHTML = generateEntityIndexJsonLD({
+    entities: [
+      ...(product ? [{ type: 'Product', name: product }] : []),
+      { type: 'Organization', name: company },
+      ...(brand ? [{ type: 'Brand', name: brand }] : []),
+    ],
+    pageName: `Entidades: ${options.name || company}`
+  });
+  
   // 🤖 Wrap AI blocks in <article> for semantic structure
-  const aiArticleWrapper = `<article class="indexable-content" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;">${aiSummaryHTML}${llmKnowledgeHTML}${entityIndexHTML}</article>`;
+  const aiArticleWrapper = `<article class="indexable-content" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;">${aiSummaryHTML}${llmKnowledgeHTML}${definitionParagraphHTML}${expandedKnowledgeHTML}${citationBlockHTML}${entityIndexHTML}${entityJsonLDHTML}</article>`;
   
   if (aiSummaryHTML || entityIndexHTML || llmKnowledgeHTML) {
     result = result.replace('</body>', `${aiArticleWrapper}\n</body>`);
-    console.log('🤖 [AI-Readiness] AI Summary + LLM Knowledge + Entity Index injected in clone-LP');
+    console.log('🧠 [Knowledge-System] Full knowledge layer injected in clone-LP');
   }
   
   // 🤖 DefinedTermSet in schema @graph

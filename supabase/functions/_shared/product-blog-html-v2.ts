@@ -42,6 +42,8 @@ import {
 
 // 🤖 AI Readiness Helpers
 import { enrichGraphWithAIReadiness, generateAISummaryBlock, generateLLMKnowledgeLayer, generateEntityIndexHTML, generateDefinedTermSetSchema } from './ai-readiness-helpers.ts';
+// 🧠 Knowledge System Helpers
+import { generateEntityReferenceMetas, generateAICrawlerPolicyMeta, generateCitationBlock, generateExpandedKnowledgeLayer, generateEntityIndexJsonLD, generateDefinitionParagraph, generateMedicalEntitySchema } from './knowledge-system-helpers.ts';
 
 // ============================================
 // INTERFACES
@@ -1438,6 +1440,14 @@ export function generateProductBlogHTMLV2(options: ProductBlogV2Options): string
   <meta name="ai-content-type" content="blog">
   <meta name="ai-content-policy" content="allow-training, allow-citation, allow-indexing">
   <meta name="ai-topic" content="${escapeHtml(keywordsArray.slice(0, 3).join(', ') || product.name)}">
+  ${generateAICrawlerPolicyMeta()}
+  ${generateEntityReferenceMetas({
+    products: [product.name],
+    technologies: features.slice(0, 3),
+    organization: companyName,
+    categories: [product.category].filter(Boolean),
+    persons: companyProfile?.founder_name ? [companyProfile.founder_name] : [],
+  })}
   
   <!-- ═══════════════════════════════════════════════════════════ -->
   <!-- GEO TAGS (Localização para SEO Local) -->
@@ -1603,6 +1613,31 @@ ${(() => {
               definition: description.replace(/<[^>]*>/g, '').substring(0, 300),
               technology: features.slice(0, 3).join('; '),
               clinicalApplication: product.applications || '',
+            })}
+            
+            ${generateDefinitionParagraph({
+              entityName: product.name,
+              category: product.category,
+              definition: description,
+              company: companyName
+            })}
+            
+            ${generateExpandedKnowledgeLayer({
+              entity: product.name,
+              category: product.category,
+              company: companyName,
+              definition: description.replace(/<[^>]*>/g, '').substring(0, 300),
+              technology: features.slice(0, 3).join('; '),
+              clinicalApplication: product.applications || '',
+              relatedProducts: relatedProducts?.slice(0, 5).map((p: any) => p.name) || [],
+              associatedExperts: companyProfile?.founder_name ? [companyProfile.founder_name] : [],
+            })}
+            
+            ${generateCitationBlock({
+              quote: `${companyName} apresenta ${product.name} como solução em ${product.category || 'odontologia digital'}.`,
+              source: canonicalUrl,
+              expertName: companyProfile?.founder_name || companyName,
+              expertRole: companyProfile?.founder_title || 'Especialista',
             })}
             
             <p class="lead">${escapeHtml(description.substring(0, 200))}${description.length > 200 ? '...' : ''}</p>
@@ -1924,6 +1959,16 @@ ${(() => {
   </script>
   
   ${generateEntityIndexHTML([product.name, description, product.category, product.sales_pitch, ...features].filter(Boolean).join(' '))}
+  
+  ${generateEntityIndexJsonLD({
+    entities: [
+      { type: 'Product', name: product.name, url: canonicalUrl, description: description.replace(/<[^>]*>/g, '').substring(0, 150) },
+      ...(product.category ? [{ type: 'Thing', name: product.category }] : []),
+      ...(product.brand ? [{ type: 'Brand', name: product.brand }] : []),
+      ...(relatedProducts || []).slice(0, 5).map((p: any) => ({ type: 'Product', name: p.name })),
+    ],
+    pageName: `Entidades: ${product.name}`
+  })}
   
 </body>
 </html>`;
