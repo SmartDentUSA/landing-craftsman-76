@@ -131,6 +131,7 @@ Deno.serve(async (req) => {
 
     const normalizedContent = normalizeContent(submission.raw_content || '', submission.content_type);
     results.push({ step: 2, name: 'Normalize content', success: true, data: { length: normalizedContent.length } });
+    await logStep(2, 'Normalize content', 'success', { output_summary: { length: normalizedContent.length } });
 
     // ═══════════════════════════════════════════════════════════
     // STEP 3: Extract Entities (AI)
