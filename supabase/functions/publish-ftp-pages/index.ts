@@ -294,6 +294,14 @@ serve(async (req) => {
     html = injectTrackingPixels(html, trackingPixels);
     console.log('✅ Tracking pixels injected');
 
+    // ─── 4b. Inject nav-data.js script for incremental footer ───
+    const navScript = `<script src="/nav-data.js" defer></script>`;
+    if (html.includes('</body>')) {
+      html = html.replace('</body>', `${navScript}\n</body>`);
+    } else {
+      html += navScript;
+    }
+
     // ─── 5. FTP Upload ───
     const finalPath = pagePath || '/';
     const remoteDirPath = isHomepage 
