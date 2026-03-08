@@ -1615,6 +1615,31 @@ ${(() => {
               clinicalApplication: product.applications || '',
             })}
             
+            ${generateDefinitionParagraph({
+              entityName: product.name,
+              category: product.category,
+              definition: description,
+              company: companyName
+            })}
+            
+            ${generateExpandedKnowledgeLayer({
+              entity: product.name,
+              category: product.category,
+              company: companyName,
+              definition: description.replace(/<[^>]*>/g, '').substring(0, 300),
+              technology: features.slice(0, 3).join('; '),
+              clinicalApplication: product.applications || '',
+              relatedProducts: relatedProducts?.slice(0, 5).map((p: any) => p.name) || [],
+              associatedExperts: companyProfile?.founder_name ? [companyProfile.founder_name] : [],
+            })}
+            
+            ${generateCitationBlock({
+              quote: `${companyName} apresenta ${product.name} como solução em ${product.category || 'odontologia digital'}.`,
+              source: canonicalUrl,
+              expertName: companyProfile?.founder_name || companyName,
+              expertRole: companyProfile?.founder_title || 'Especialista',
+            })}
+            
             <p class="lead">${escapeHtml(description.substring(0, 200))}${description.length > 200 ? '...' : ''}</p>
             
             ${features.length > 0 ? `
