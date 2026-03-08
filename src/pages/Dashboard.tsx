@@ -2,7 +2,7 @@ import { ContentQualityDashboard } from "@/components/ContentQualityDashboard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FileText, Copy, Edit, ExternalLink, MoreVertical, Trash2, Shield, PenTool, Database, Globe, Building2, Upload } from "lucide-react";
+import { Plus, FileText, Copy, Edit, ExternalLink, MoreVertical, Trash2, Shield, PenTool, Database, Globe, Upload } from "lucide-react";
 import { CompanyReviewsManager } from "@/components/CompanyReviewsManager";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
@@ -12,20 +12,13 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import { useLandingPagesSupabase } from "@/hooks/useLandingPagesSupabase";
 import { type LandingPage } from "@/hooks/useLandingPagesSupabase";
 import { useDebounce } from "@/hooks/useDebounce";
-import { processContentWithIntelligentLinks } from "@/lib/intelligent-links";
-import { useSEOHTMLGenerator } from "@/hooks/useSEOHTMLGenerator";
 import { generateBlogHTML } from '@/services/seo/blogHTMLGenerator';
 import { getTrackingConfig, type TrackingConfig } from '@/lib/tracking-injector';
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { BreadcrumbNavigation } from "@/components/BreadcrumbNavigation";
 import { useBlogStatusMonitor } from '@/hooks/useBlogStatusMonitor';
-import { useProductBlogsIntegration } from '@/hooks/useProductBlogsIntegration';
-import { sanitizeBlogContent } from "@/utils/sanitize-html";
 import { ProductMigrationModal } from "@/components/ProductMigrationModal";
-import { useBlogReadMore } from "@/hooks/useBlogReadMore";
 import { LPPublishDialog } from "@/components/LPPublishDialog";
-import { useConsolidatedBlogAutoGenerator } from "@/hooks/useConsolidatedBlogAutoGenerator";
-import { Wand2, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 
 // Interface for blog posts
 interface BlogPost {
@@ -37,7 +30,7 @@ interface BlogPost {
   content?: string;
   meta_description?: string;
   keywords?: string[];
-  intelligent_links?: any; // Handle Json type from Supabase
+  intelligent_links?: any;
 }
 
 
@@ -46,28 +39,9 @@ const DashboardContent = () => {
   const { toast } = useToast();
   const { landingPages, deleteLandingPage, addLandingPage, isLoading, loadLandingPages } = useLandingPagesSupabase();
   const { 
-    consolidatedBlogs,
-    approvedBlogsCount, 
-    generatedBlogsCount, 
-    publishedBlogsCount,
     approvedLandingPagesWithBlogs
   } = useBlogStatusMonitor(landingPages);
   
-  const { 
-    productBlogsForHTML, 
-    productBlogsForHTMLByDomain,
-    activeProductBlogsCount,
-    activeProductBlogsCountByDomain
-  } = useProductBlogsIntegration(approvedLandingPagesWithBlogs);
-  
-  const { generateConsolidatedBlogHTML } = useSEOHTMLGenerator();
-  
-  // ✅ Hook centralizado para geração de HTML consolidado
-  const { 
-    consolidatedHTMLs, 
-    isGenerating: isGeneratingConsolidated, 
-    generateAllConsolidated 
-  } = useConsolidatedBlogAutoGenerator(approvedLandingPagesWithBlogs);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [promotingToAdmin, setPromotingToAdmin] = useState(false);
@@ -76,9 +50,6 @@ const DashboardContent = () => {
   const [trackingConfig, setTrackingConfig] = useState<TrackingConfig | null>(null);
   const [publishOpen, setPublishOpen] = useState(false);
   const [publishLP, setPublishLP] = useState<LandingPage | null>(null);
-  
-  // Ativar funcionalidade "Leia mais" para blogs
-  useBlogReadMore();
 
   useEffect(() => {
     getTrackingConfig().then(setTrackingConfig);
@@ -166,12 +137,10 @@ const DashboardContent = () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         
-        // Validar se há tokens Google
         if (!session?.provider_token || !session?.provider_refresh_token) {
           return;
         }
 
-        // Verificar se já existe registro (evita duplicatas)
         const { data: existingTokens } = await supabase
           .from('google_oauth_tokens')
           .select('id')
@@ -222,16 +191,6 @@ const DashboardContent = () => {
     fetchBlogPosts();
   }, [approvedLandingPagesIds, fetchBlogPosts]);
 
-  // React to changes in blog generation status from useBlogStatusMonitor
-  useEffect(() => {
-    console.log('🎯 Blog monitor data changed:', {
-      approvedBlogsCount,
-      generatedBlogsCount,
-      publishedBlogsCount,
-      approvedLandingPagesCount: approvedLandingPagesWithBlogs.length
-    });
-  }, [approvedBlogsCount, generatedBlogsCount, publishedBlogsCount, approvedLandingPagesWithBlogs]);
-
   useEffect(() => {
     const channel = supabase
       .channel('dashboard-blog-live')
@@ -273,10 +232,7 @@ const DashboardContent = () => {
           description: "Você agora tem acesso total ao editor.",
         });
         
-        // Update role state
         setUserRole('admin');
-        
-        // Redirect to editor
         navigate('/editor');
       } else {
         throw new Error('Não foi possível ativar o acesso de administrador');
@@ -296,7 +252,6 @@ const DashboardContent = () => {
     try {
       console.log('🚀 Creating new landing page');
       
-      // Criar nova landing page com dados mínimos padrão
       const newId = await addLandingPage({
         name: "Nova Landing Page",
         status: "draft",
@@ -304,8 +259,6 @@ const DashboardContent = () => {
       });
       
       console.log('✅ Landing page created with ID:', newId);
-      
-      // Navegar para o editor com o ID da nova landing page
       navigate(`/editor/${newId}`);
     } catch (error) {
       console.error('❌ Failed to create landing page:', error);
@@ -335,7 +288,6 @@ const DashboardContent = () => {
     try {
       console.log('📋 Duplicating landing page:', landingPage.name);
       
-      // Create duplicate with modified data
       const duplicateData = {
         name: `${landingPage.name} - Cópia`,
         status: 'draft' as const,
@@ -345,7 +297,6 @@ const DashboardContent = () => {
         selected_product_ids: landingPage.selected_product_ids
       };
       
-      // Add the duplicate to the store
       const newId = addLandingPage(duplicateData);
       console.log('✅ Landing page duplicated with ID:', newId);
       
@@ -353,9 +304,6 @@ const DashboardContent = () => {
         title: "Landing duplicada",
         description: `"${landingPage.name}" foi duplicada como rascunho.`,
       });
-      
-      // Optionally navigate to edit the new duplicate
-      // navigate(`/editor/${newId}`);
     } catch (error) {
       console.error('❌ Duplication failed:', error);
       toast({
@@ -379,7 +327,6 @@ const DashboardContent = () => {
           throw new Error('Landing page não encontrada');
         }
         
-        // Buscar produtos selecionados
         let selectedProducts: any[] = [];
         if (lpData.selected_product_ids && lpData.selected_product_ids.length > 0) {
           const { data: products } = await supabase
@@ -390,7 +337,6 @@ const DashboardContent = () => {
           selectedProducts = products || [];
         }
         
-        // USAR NOVO GERADOR SEO
         const pageData = lpData.data as any;
         const htmlCode = await generateBlogHTML({
           blogs: [{
@@ -434,7 +380,6 @@ const DashboardContent = () => {
   const handleDelete = (landingPage: LandingPage) => {
     if (confirm(`Tem certeza que deseja excluir "${landingPage.name}"? Esta ação não pode ser desfeita.`)) {
       deleteLandingPage(landingPage.id);
-      // Toast is now handled in the hook
     }
   };
 
@@ -444,521 +389,6 @@ const DashboardContent = () => {
 
   const getStatusText = (status: string) => {
     return status === 'approved' ? 'Aprovado' : 'Rascunho';
-  };
-
-  // Optimized function to extract clean text from HTML for preview
-  const extractCleanText = useCallback((html: string): string => {
-    if (!html) return '';
-    
-    try {
-      // Simple and safe text extraction
-      let cleanText = html
-        // Remove non-content tags first
-        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-        .replace(/<meta[^>]*>/gi, '')
-        .replace(/<link[^>]*>/gi, '')
-        .replace(/<head[^>]*>[\s\S]*?<\/head>/gi, '')
-        // Remove all remaining HTML tags
-        .replace(/<[^>]*>/g, ' ')
-        // Clean up whitespace and entities
-        .replace(/\s+/g, ' ')
-        .replace(/&nbsp;/g, ' ')
-        .replace(/&amp;/g, '&')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&quot;/g, '"')
-        .replace(/&#39;/g, "'")
-        .trim();
-      
-      return cleanText;
-    } catch (error) {
-      console.warn('Error extracting clean text:', error);
-      return 'Erro ao extrair texto';
-    }
-  }, []);
-
-  // Function to generate clean HTML for copying (without preview structure)
-  const generateCleanHTML = useCallback(async (blogs: BlogPost[], domain: string) => {
-    const domainName = domain === 'dentala' ? 'Dentala' : 'Eodonto';
-    console.log(`🎨 Generating clean ${domainName} HTML using NEW SEO generator`);
-    
-    // Buscar produtos para o domínio
-    const domainProductBlogs = productBlogsForHTMLByDomain(domain);
-    
-    // Converter product blogs para formato BlogPost
-    const productBlogs: BlogPost[] = domainProductBlogs.map(pb => ({
-      id: pb.id,
-      title: pb.title,
-      created_at: pb.created_at,
-      status: 'published',
-      landing_page_id: `product-${pb.productId}`,
-      content: pb.content,
-      meta_description: pb.type === 'commercial' 
-        ? `Descubra ${pb.productName}. Saiba por que é a melhor escolha.`
-        : `Especificações técnicas de ${pb.productName}.`,
-      keywords: [],
-      intelligent_links: {}
-    }));
-    
-    // Combinar blogs de landing pages + produtos
-    const allBlogs = [...blogs, ...productBlogs];
-    
-    // USAR NOVO GERADOR SEO
-    return await generateBlogHTML({
-      blogs: allBlogs.map(blog => ({
-        title: blog.title,
-        content: blog.content || '',
-        meta_description: blog.meta_description,
-        keywords: Array.isArray(blog.keywords) ? blog.keywords : []
-      })),
-      domain: domain,
-      canonicalUrl: `https://${domain}/blog`,
-      finalTitle: `Blog ${domainName} - Odontologia Digital`,
-      finalDescription: `Conteúdo especializado de odontologia digital do ${domainName}`,
-      selectedProducts: domainProductBlogs.map(p => ({
-        id: p.productId,
-        name: p.productName,
-        description: p.content,
-        keywords: [],
-        category: 'Odontologia'
-      })),
-      intelligentLinks: {},
-      schemas: [],
-      trackingConfig: trackingConfig,
-      preview: false,
-      keywords: []
-    });
-  }, [productBlogsForHTMLByDomain, trackingConfig]);
-
-  const generateConsolidatedHTML = useCallback((blogs: BlogPost[], domain: string) => {
-    const domainName = domain === 'dentala' ? 'Dentala' : 'Eodonto';
-    console.log(`🎨 Generating ${domainName} HTML with ${blogs.length} blogs`);
-    
-    // Create individual product blogs filtered by domain
-    const domainProductBlogs = productBlogsForHTMLByDomain(domain);
-    const productBlogs: BlogPost[] = domainProductBlogs.map(productBlog => ({
-      id: productBlog.id,
-      title: productBlog.title,
-      created_at: productBlog.created_at,
-      status: 'published',
-      landing_page_id: `product-${productBlog.productId}`,
-      content: productBlog.content,
-      meta_description: productBlog.type === 'commercial' 
-        ? `Descubra todas as vantagens e benefícios do ${productBlog.productName}. Saiba por que é a melhor escolha para seu consultório.`
-        : `Conheça as especificações técnicas e funcionamento detalhado do ${productBlog.productName}. Tecnologia avançada para odontologia.`,
-      keywords: [],
-      intelligent_links: {}
-    } as BlogPost));
-    
-    // If no published blogs, create fallback from consolidatedBlogs
-    const landingPageBlogs = blogs.length > 0 ? blogs : consolidatedBlogs.map(lp => ({
-      id: lp.id,
-      title: lp.name,
-      created_at: new Date().toISOString(),
-      status: 'draft',
-      landing_page_id: lp.id,
-      content: 'Conteúdo será gerado após a publicação do blog.',
-      meta_description: `Conteúdo sobre ${lp.name}`,
-      keywords: [],
-      intelligent_links: {}
-    } as BlogPost));
-    
-    // Combine landing page blogs and product blogs
-    const approvedBlogs = [...landingPageBlogs, ...productBlogs].sort((a, b) => 
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    );
-    
-    console.log(`📊 Using ${approvedBlogs.length} blogs for ${domainName} (${landingPageBlogs.length} LP + ${productBlogs.length} ${domain === 'eodonto' ? 'commercial' : 'technical'} products)`);
-    
-    const featuredBlog = approvedBlogs[0];
-    // Mostrar mais blogs na seção principal - até 6 blogs recentes
-    const recentBlogs = approvedBlogs.slice(1, 7);
-    // Calcular quantos blogs restam para a sidebar
-    const sidebarBlogs = approvedBlogs.slice(7);
-
-    if (!featuredBlog) {
-      return `<style>
-        :root {
-            --primary-color: #007bff;
-            --secondary-color: #6c757d;
-            --text-color: #333;
-            --background-color: #f8f9fa;
-            --white: #fff;
-            --light-gray: #e9ecef;
-            --dark-gray: #495057;
-        }
-        * { box-sizing: border-box; }
-        body {
-            font-family: 'Poppins', sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: var(--background-color);
-            color: var(--text-color);
-            line-height: 1.6;
-        }
-        .container {
-            width: 100%;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 1rem;
-        }
-        .main-content {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 2rem;
-            padding: 2rem 0;
-        }
-        .no-content {
-            text-align: center;
-            padding: 3rem;
-            color: var(--secondary-color);
-        }
-    </style>
-
-    <main class="container main-content">
-        <div class="no-content">
-            <h2>Nenhum blog aprovado encontrado para ${domainName}</h2>
-            <p>Aguarde a aprovação de landing pages para visualizar o conteúdo.</p>
-        </div>
-    </main>`;
-    }
-
-    const currentDate = new Date().toLocaleDateString('pt-BR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-
-    return `<style>
-        :root {
-            --primary-color: #007bff;
-            --secondary-color: #6c757d;
-            --text-color: #333;
-            --background-color: #f8f9fa;
-            --white: #fff;
-            --light-gray: #e9ecef;
-            --dark-gray: #495057;
-        }
-        * { box-sizing: border-box; }
-        body {
-            font-family: 'Poppins', sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: var(--background-color);
-            color: var(--text-color);
-            line-height: 1.6;
-        }
-        a { text-decoration: none; color: var(--primary-color); }
-        a:hover { text-decoration: underline; }
-        .container {
-            width: 100%;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 1rem;
-        }
-        img { max-width: 100%; height: auto; display: block; }
-        
-        .posts-section {
-            display: grid;
-            gap: 2rem;
-        }
-        .featured-post {
-            background-color: var(--white);
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-        }
-        .featured-post-content {
-            padding: 1.5rem;
-        }
-        .featured-post-content h2 {
-            margin-top: 0;
-            font-size: 1.75rem;
-        }
-        .post-card {
-            background-color: var(--white);
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
-            transition: transform 0.2s;
-        }
-        .post-card:hover {
-            transform: translateY(-5px);
-        }
-        .post-card img {
-            width: 100%;
-            height: 250px;
-            object-fit: cover;
-        }
-        .post-card-content {
-            padding: 1.5rem;
-        }
-        .post-card-content h3 {
-            margin-top: 0;
-            font-size: 1.25rem;
-        }
-        .post-meta {
-            color: var(--secondary-color);
-            font-size: 0.875rem;
-        }
-        
-        .sidebar {
-            display: flex;
-            flex-direction: column;
-            gap: 2rem;
-        }
-        
-        .posts-grid {
-            display: grid;
-            gap: 2rem;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        }
-        
-        .sidebar-posts {
-            display: grid;
-            gap: 1.5rem;
-        }
-
-        .sidebar-posts .post-card img {
-            height: 150px;
-        }
-        
-        .sidebar-posts .post-card-content h3 {
-            font-size: 1rem;
-        }
-
-        .read-more-btn {
-            background: none;
-            border: none;
-            padding: 0;
-            cursor: pointer;
-            color: var(--primary-color);
-            font-weight: 600;
-            font-family: inherit;
-            font-size: 1rem;
-            margin-top: 0.5rem;
-        }
-
-        .full-content {
-            max-height: 0;
-            overflow: hidden;
-            opacity: 0;
-            margin-top: 0;
-            padding-top: 0;
-            border-top: 1px solid transparent;
-            transition: max-height 0.5s ease, opacity 0.3s ease, margin-top 0.3s ease, padding-top 0.3s ease;
-        }
-        
-        .full-content.expanded {
-            max-height: 5000px;
-            opacity: 1;
-            margin-top: 1rem;
-            padding-top: 1rem;
-            border-top: 1px solid var(--light-gray);
-        }
-        
-        .main-content {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 2rem;
-            padding: 2rem 0;
-        }
-        @media (min-width: 768px) {
-            .main-content {
-                grid-template-columns: 2fr 1fr;
-            }
-        }
-    </style>
-
-    <main class="container main-content">
-        <section class="posts-section">
-            <article class="featured-post">
-                <img src="https://via.placeholder.com/1200x600?text=${encodeURIComponent(featuredBlog.title.substring(0, 50))}" alt="Imagem do post de destaque">
-                <div class="featured-post-content">
-                    <p class="post-meta">${domainName} | ${new Date(featuredBlog.created_at).toLocaleDateString('pt-BR')}</p>
-                    <h2>${featuredBlog.title}</h2>
-                    <p>${featuredBlog.meta_description || 'Conteúdo sobre odontologia digital'}</p>
-                     <div class="full-content" style="display: none;">
-                        ${processContentWithIntelligentLinks(featuredBlog.content || 'Conteúdo do blog gerado pela IA', featuredBlog.intelligent_links || {})}
-                    </div>
-                    <button class="read-more-btn">Leia mais &rarr;</button>
-                </div>
-            </article>
-
-            <div class="posts-grid">
-                ${recentBlogs.map(blog => `
-                <article class="post-card">
-                    <img src="https://via.placeholder.com/600x400?text=${encodeURIComponent(blog.title.substring(0, 30))}" alt="Imagem do post">
-                    <div class="post-card-content">
-                        <p class="post-meta">${domainName} | ${new Date(blog.created_at).toLocaleDateString('pt-BR')}</p>
-                        <h3>${blog.title}</h3>
-                        <p>${blog.meta_description || 'Descrição do blog'}</p>
-                        <div class="full-content" style="display: none;">
-                            ${processContentWithIntelligentLinks(blog.content || 'Conteúdo do blog', blog.intelligent_links || {})}
-                        </div>
-                        <button class="read-more-btn">Leia mais &rarr;</button>
-                    </div>
-                </article>
-                `).join('')}
-            </div>
-        </section>
-
-        <aside class="sidebar">
-            <div class="sidebar-posts">
-                <h3>Mais Postagens (${sidebarBlogs.length})</h3>
-                ${sidebarBlogs.map(blog => `
-                <article class="post-card">
-                    <img src="https://via.placeholder.com/600x400?text=${encodeURIComponent(blog.title.substring(0, 20))}" alt="Imagem do post">
-                    <div class="post-card-content">
-                        <p class="post-meta">${domainName} | ${new Date(blog.created_at).toLocaleDateString('pt-BR')}</p>
-                        <h3>${blog.title}</h3>
-                        <p>${blog.meta_description || 'Descrição do blog'}</p>
-                        <div class="full-content" style="display: none;">
-                            ${processContentWithIntelligentLinks(blog.content || 'Conteúdo do blog', blog.intelligent_links || {})}
-                        </div>
-                        <button class="read-more-btn">Leia mais &rarr;</button>
-                    </div>
-                </article>
-                `).join('')}
-            </div>
-        </aside>
-    </main>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const readMoreButtons = document.querySelectorAll('.read-more-btn');
-
-            readMoreButtons.forEach(button => {
-                button.addEventListener('click', function() {
-                    // Encontrar o elemento .full-content no mesmo container
-                    const cardContent = this.closest('.featured-post-content, .post-card-content');
-                    const fullContent = cardContent.querySelector('.full-content');
-                    
-                    if (fullContent) {
-                        const isExpanded = fullContent.classList.contains('expanded');
-
-                        if (isExpanded) {
-                            fullContent.classList.remove('expanded');
-                            this.textContent = 'Leia mais →';
-                        } else {
-                            fullContent.classList.add('expanded');
-                            this.textContent = 'Fechar ↑';
-                        }
-                    }
-                });
-            });
-        });
-    </script>`;
-  }, [productBlogsForHTMLByDomain]);
-
-  // Generate HTML with preview structure for dashboard display
-  const eodontoHTML = useMemo(() => 
-    generateConsolidatedHTML(blogPosts, 'eodonto'), 
-    [blogPosts, generateConsolidatedHTML, consolidatedBlogs, productBlogsForHTMLByDomain]
-  );
-
-  const dentalaHTML = useMemo(() => 
-    generateConsolidatedHTML(blogPosts, 'dentala'), 
-    [blogPosts, generateConsolidatedHTML, consolidatedBlogs, productBlogsForHTMLByDomain]
-  );
-
-  // Generate clean HTML for copying (without preview structure)
-  const [eodontoCleanHTML, setEodontoCleanHTML] = useState('');
-  const [dentalaCleanHTML, setDentalaCleanHTML] = useState('');
-
-  useEffect(() => {
-    const loadHTML = async () => {
-      try {
-        const eodonto = await generateCleanHTML(blogPosts, 'eodonto');
-        const dentala = await generateCleanHTML(blogPosts, 'dentala');
-        
-        if (eodonto && eodonto.length > 100) {
-          setEodontoCleanHTML(eodonto);
-          console.log('✅ Eodonto HTML gerado:', eodonto.length, 'caracteres');
-        } else {
-          console.error('❌ Eodonto HTML vazio ou inválido');
-        }
-        
-        if (dentala && dentala.length > 100) {
-          setDentalaCleanHTML(dentala);
-          console.log('✅ Dentala HTML gerado:', dentala.length, 'caracteres');
-        } else {
-          console.error('❌ Dentala HTML vazio ou inválido');
-        }
-      } catch (error) {
-        console.error('❌ Erro ao gerar HTML limpo:', error);
-        toast({
-          title: "Erro ao gerar HTML",
-          description: "Verifique o console para detalhes",
-          variant: "destructive"
-        });
-      }
-    };
-    loadHTML();
-  }, [blogPosts, generateCleanHTML, consolidatedBlogs, productBlogsForHTMLByDomain, toast]);
-
-  // Cached clean text extraction for preview
-  const eodontoCleanText = useMemo(() => 
-    extractCleanText(eodontoHTML), 
-    [eodontoHTML, extractCleanText]
-  );
-
-  const dentalaCleanText = useMemo(() => 
-    extractCleanText(dentalaHTML), 
-    [dentalaHTML, extractCleanText]
-  );
-
-  const copyConsolidatedHTML = useCallback(async (domain: string) => {
-    const html = domain === 'eodonto' ? eodontoCleanHTML : dentalaCleanHTML;
-    const domainName = domain === 'dentala' ? 'Dentala' : 'Eodonto';
-    
-    // Validar antes de copiar
-    if (!html || html.length < 100) {
-      toast({
-        title: "❌ HTML não disponível",
-        description: `O HTML consolidado do ${domainName} ainda não foi gerado. Aguarde ou recarregue a página.`,
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    try {
-      await navigator.clipboard.writeText(html);
-      const blogsCount = domain === 'eodonto' 
-        ? activeProductBlogsCountByDomain('eodonto')
-        : activeProductBlogsCountByDomain('dentala');
-      
-      toast({
-        title: "✅ HTML consolidado copiado!",
-        description: `${(html.length / 1024).toFixed(1)}KB copiados com ${blogsCount} blogs de produtos`,
-      });
-    } catch (err) {
-      console.error('Erro ao copiar:', err);
-      toast({
-        title: "Erro ao copiar",
-        description: "Não foi possível copiar o HTML. Tente novamente.",
-        variant: "destructive",
-      });
-    }
-  }, [eodontoCleanHTML, dentalaCleanHTML, toast, activeProductBlogsCountByDomain]);
-
-  const getApprovedBlogsCount = (domain: string) => {
-    // Calculate total blogs including products with individual blogs by domain
-    const domainProductBlogsCount = activeProductBlogsCountByDomain(domain);
-    const totalBlogs = consolidatedBlogs.length + domainProductBlogsCount;
-    
-    console.log(`🔍 Getting approved blogs count for ${domain}:`, {
-      consolidatedBlogsCount: consolidatedBlogs.length,
-      domainProductBlogsCount,
-      totalBlogs,
-      approvedBlogsCount,
-      generatedBlogsCount,
-      publishedBlogsCount,
-      blogPostsLength: blogPosts.length
-    });
-    
-    return totalBlogs;
   };
 
   return (
@@ -976,24 +406,15 @@ const DashboardContent = () => {
                 <Shield className="h-5 w-5 text-primary" />
                 <div>
                   <h3 className="font-semibold text-primary">Ativar Acesso de Administrador</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Clique no botão para ativar o acesso completo ao editor de landing pages.
-                  </p>
+                  <p className="text-sm text-muted-foreground">Clique para obter acesso total ao editor</p>
                 </div>
               </div>
               <Button 
                 onClick={handlePromoteToAdmin}
                 disabled={promotingToAdmin}
-                className="gradient-primary shadow-primary"
+                className="gradient-primary"
               >
-                {promotingToAdmin ? (
-                  <>Ativando...</>
-                ) : (
-                  <>
-                    <Shield className="h-4 w-4 mr-2" />
-                    Ativar Acesso
-                  </>
-                )}
+                {promotingToAdmin ? 'Ativando...' : 'Ativar Acesso Admin'}
               </Button>
             </div>
           </div>
@@ -1045,17 +466,6 @@ const DashboardContent = () => {
                   Configurações Cloudflare
                 </Button>
               )}
-              
-              {/* DESABILITADO: Configurações de Publicação removidas temporariamente
-              <Button 
-                variant="outline" 
-                onClick={() => navigate('/publication-settings')}
-                className="border-primary/30 text-primary hover:bg-primary/10"
-              >
-                <Shield className="h-4 w-4 mr-2" />
-                Configurações de Publicação
-              </Button>
-              */}
               
               <Button onClick={handleCreateNew} className="gradient-primary shadow-primary transition-smooth hover:scale-105">
                 <Plus className="h-4 w-4 mr-2" />
@@ -1224,224 +634,6 @@ const DashboardContent = () => {
         {/* Company Reviews Manager */}
         <div className="mt-8 mb-8">
           <CompanyReviewsManager />
-        </div>
-
-        {/* HTML Blogs Copy & Paste Section */}
-        {/* HTML Blogs Copy & Paste - 2 Consolidated Preview Cards */}
-        <div className="mt-8 mb-8">
-          <div className="flex items-center gap-2 mb-6">
-            <FileText className="h-6 w-6 text-primary" />
-            <h2 className="text-2xl font-bold">HTML Blogs Copy & Paste</h2>
-          </div>
-
-          {/* ✅ Controle centralizado de geração de HTML consolidado */}
-          <div className="flex items-center justify-between mb-6 p-4 bg-muted/50 rounded-lg border border-border">
-            <div className="flex items-center gap-3">
-              {Object.keys(consolidatedHTMLs).length > 0 ? (
-                <>
-                  <Badge variant="default" className="flex items-center gap-1">
-                    <CheckCircle className="h-3 w-3" />
-                    {Object.keys(consolidatedHTMLs).length} LP{Object.keys(consolidatedHTMLs).length > 1 ? 's' : ''} em cache
-                  </Badge>
-                  <span className="text-xs text-muted-foreground">
-                    HTMLs Consolidados gerados e prontos para copiar
-                  </span>
-                </>
-              ) : (
-                <>
-                  <Badge variant="outline" className="flex items-center gap-1">
-                    <AlertCircle className="h-3 w-3" />
-                    Cache vazio
-                  </Badge>
-                  <span className="text-xs text-muted-foreground">
-                    Gere os HTMLs consolidados para todas as LPs aprovadas
-                  </span>
-                </>
-              )}
-            </div>
-            <Button
-              onClick={generateAllConsolidated}
-              disabled={isGeneratingConsolidated || approvedLandingPagesWithBlogs.length === 0}
-              variant="default"
-              size="sm"
-            >
-              {isGeneratingConsolidated ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Gerando HTMLs...
-                </>
-              ) : (
-                <>
-                  <Wand2 className="h-4 w-4 mr-2" />
-                  Gerar/Atualizar HTMLs Consolidados
-                </>
-              )}
-            </Button>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Eodonto Card */}
-            <Card className="bg-card">
-              <CardHeader className="pb-4">
-                <div className="flex items-center gap-2">
-                  <Building2 className="h-5 w-5 text-primary" />
-                  <CardTitle className="text-lg">Preview Consolidado Eodonto.com</CardTitle>
-                </div>
-                <CardDescription>
-                  {getApprovedBlogsCount('eodonto')} blogs consolidados disponíveis
-                  <br />
-                  <span className="text-xs text-muted-foreground">
-                    ({consolidatedBlogs.length} landing pages + {activeProductBlogsCountByDomain('eodonto')} produtos comerciais)
-                  </span>
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2 mb-4">
-                  <div className="text-sm text-muted-foreground">
-                    📝 Total de blogs: <strong>{approvedBlogsCount}</strong>
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    📄 Landing pages: <strong>{consolidatedBlogs.length}</strong>
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    🏷️ Produtos comerciais: <strong>{activeProductBlogsCountByDomain('eodonto')}</strong>
-                  </div>
-                  {approvedBlogsCount === 0 && (
-                    <div className="text-xs text-orange-600 bg-orange-50 p-3 rounded-lg border">
-                      ⚠️ <strong>Nenhum blog disponível:</strong><br/>
-                      • Gere blogs para as landing pages aprovadas<br/>
-                      • Configure blogs individuais dos produtos<br/>
-                      • Use a interface de curadoria para incluir blogs
-                    </div>
-                  )}
-                  {blogPosts.length === 0 && approvedBlogsCount > 0 && (
-                    <div className="text-xs text-warning bg-warning/10 p-2 rounded">
-                      ⚠️ Prévia com rascunhos gerados; publique para ver o conteúdo final
-                    </div>
-                  )}
-                </div>
-                <div className="bg-muted rounded-lg p-4 mb-4 h-48 overflow-auto">
-                  <div className="post-card-content">
-                    <div className="text-xs leading-relaxed mb-2">
-                      <strong>Preview do Blog Consolidado Eodonto</strong>
-                    </div>
-                    {eodontoHTML && eodontoHTML.length > 0 ? (
-                      <>
-                        <div className="text-xs leading-relaxed">
-                          {eodontoCleanText.length > 200 ? eodontoCleanText.substring(0, 200) + '...' : eodontoCleanText}
-                        </div>
-                        {eodontoCleanText.length > 200 && (
-                          <>
-                            <div className="full-content text-xs leading-relaxed">
-                              <div 
-                                dangerouslySetInnerHTML={{ 
-                                  __html: sanitizeBlogContent(eodontoHTML)
-                                }}
-                              />
-                            </div>
-                            <button className="read-more-btn text-xs mt-2">Leia mais →</button>
-                          </>
-                        )}
-                      </>
-                    ) : (
-                      <div className="text-xs text-muted-foreground">
-                        Gerando HTML consolidado...
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <Button 
-                  onClick={() => copyConsolidatedHTML('eodonto')}
-                  className="w-full"
-                  variant="default"
-                >
-                  <Copy className="h-4 w-4 mr-2" />
-                  Copiar HTML Eodonto
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Dentala Card */}
-            <Card className="bg-card">
-              <CardHeader className="pb-4">
-                <div className="flex items-center gap-2">
-                  <Globe className="h-5 w-5 text-primary" />
-                  <CardTitle className="text-lg">Preview Consolidado Dentala.com</CardTitle>
-                </div>
-                <CardDescription>
-                  {getApprovedBlogsCount('dentala')} blogs consolidados disponíveis  
-                  <br />
-                  <span className="text-xs text-muted-foreground">
-                    ({consolidatedBlogs.length} landing pages + {activeProductBlogsCountByDomain('dentala')} produtos técnicos)
-                  </span>
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2 mb-4">
-                  <div className="text-sm text-muted-foreground">
-                    📝 Total de blogs: <strong>{approvedBlogsCount}</strong>
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    📄 Landing pages: <strong>{consolidatedBlogs.length}</strong>
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    🏷️ Produtos técnicos: <strong>{activeProductBlogsCountByDomain('dentala')}</strong>
-                  </div>
-                  {approvedBlogsCount === 0 && (
-                    <div className="text-xs text-orange-600 bg-orange-50 p-3 rounded-lg border">
-                      ⚠️ <strong>Nenhum blog disponível:</strong><br/>
-                      • Gere blogs para as landing pages aprovadas<br/>
-                      • Configure blogs individuais dos produtos<br/>
-                      • Use a interface de curadoria para incluir blogs
-                    </div>
-                  )}
-                  {blogPosts.length === 0 && approvedBlogsCount > 0 && (
-                    <div className="text-xs text-warning bg-warning/10 p-2 rounded">
-                      ⚠️ Prévia com rascunhos gerados; publique para ver o conteúdo final
-                    </div>
-                  )}
-                </div>
-                <div className="bg-muted rounded-lg p-4 mb-4 h-48 overflow-auto">
-                  <div className="post-card-content">
-                    <div className="text-xs leading-relaxed mb-2">
-                      <strong>Preview do Blog Consolidado Dentala</strong>
-                    </div>
-                    {dentalaHTML && dentalaHTML.length > 0 ? (
-                      <>
-                        <div className="text-xs leading-relaxed">
-                          {dentalaCleanText.length > 200 ? dentalaCleanText.substring(0, 200) + '...' : dentalaCleanText}
-                        </div>
-                        {dentalaCleanText.length > 200 && (
-                          <>
-                            <div className="full-content text-xs leading-relaxed">
-                              <div 
-                                dangerouslySetInnerHTML={{ 
-                                  __html: sanitizeBlogContent(dentalaHTML)
-                                }}
-                              />
-                            </div>
-                            <button className="read-more-btn text-xs mt-2">Leia mais →</button>
-                          </>
-                        )}
-                      </>
-                    ) : (
-                      <div className="text-xs text-muted-foreground">
-                        Gerando HTML consolidado...
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <Button 
-                  onClick={() => copyConsolidatedHTML('dentala')}
-                  className="w-full"
-                  variant="default"
-                >
-                  <Copy className="h-4 w-4 mr-2" />
-                  Copiar HTML Dentala
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
         </div>
       </main>
       

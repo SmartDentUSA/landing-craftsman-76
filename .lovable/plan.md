@@ -1,42 +1,49 @@
 
 
-# Remover seção "HTML Blogs Copy & Paste" do Dashboard
+# Botões individuais "Gerar por IA" para slides do Carrossel Visual
 
-## Escopo
+## Contexto
 
-Remover a seção inteira de HTML Blogs Copy & Paste (linhas ~1229-1445) do JSX, e todo o código de suporte que só existia para essa seção:
+O Carrossel Visual tem 6 slides. O Slide 1 (🎣 Hook) já possui um botão individual "Novo Gancho IA" que chama a edge function `generate-carousel-hook`. Os slides 3 (🔬 Cientificidade), 4 (💫 Experiência) e 5 (🛡️ Segurança) não possuem botões individuais — só podem ser gerados pelo botão geral "🤖 Gerar com IA" que regenera todos os slides de uma vez.
 
-### Código a remover do Dashboard.tsx:
+## Plano
 
-1. **JSX da seção** (linhas 1229-1445) — os dois cards Eodonto/Dentala + controle de geração
-2. **Variáveis/funções usadas apenas pela seção removida:**
-   - `eodontoHTML`, `dentalaHTML` (useMemo, linhas 856-864)
-   - `eodontoCleanHTML`, `dentalaCleanHTML` (useState + useEffect, linhas 867-899)
-   - `eodontoCleanText`, `dentalaCleanText` (useMemo, linhas 902-910)
-   - `copyConsolidatedHTML` (useCallback, linhas 912-944)
-   - `getApprovedBlogsCount` (function, linhas 946-962)
-   - `generateConsolidatedHTML` (useCallback, linhas 534-853) — a função enorme com todo o template HTML inline
-   - `generateCleanHTML` (useCallback, linhas 482-532)
-   - `extractCleanText` (useCallback, linhas 450-479)
+### 1. Nova Edge Function: `generate-carousel-slide`
 
-3. **Hooks/imports que ficam sem uso após remoção:**
-   - `useConsolidatedBlogAutoGenerator` + suas variáveis (`consolidatedHTMLs`, `isGeneratingConsolidated`, `generateAllConsolidated`)
-   - `useBlogReadMore`
-   - `sanitizeBlogContent` import
-   - `processContentWithIntelligentLinks` import
-   - `useSEOHTMLGenerator` hook
-   - `useProductBlogsIntegration` hook (verificar se usado em outro lugar)
-   - Icons: `Building2`, `Globe`, `Wand2`, `CheckCircle`, `AlertCircle`, `Loader2` (verificar uso restante)
+Criar uma edge function genérica que receba o tipo do slide (`cientificidade`, `experiencia`, `seguranca`) e gere apenas o conteúdo daquele slide específico, com prompts especializados por tipo:
 
-4. **useEffect de log** (linhas 226-233) que monitora `approvedBlogsCount`/`generatedBlogsCount`/`publishedBlogsCount` — remover se não tiver outro uso
+- **Cientificidade (Slide 3)**: Gera title, headline, body, bullet1-4 com foco em evidências científicas e dados técnicos
+- **Experiência (Slide 4)**: Gera keyword + benefit com foco em experiência clínica e fluxo de trabalho
+- **Segurança (Slide 5)**: Gera title, badge1-3 com foco em certificações, garantias e confiança
 
-### Imports a limpar
-Remover imports não utilizados após as remoções acima.
+Recebe: `productName`, `salesPitch`, `benefits`, `features`, `slideType`
+Retorna: campos específicos do slide solicitado
 
-### Arquivos afetados
-| Acao | Arquivo |
-|------|---------|
-| Modificar | `src/pages/Dashboard.tsx` — remover seção + código morto |
+### 2. Frontend — Novos estados e handlers (`InstagramCopyGenerator.tsx`)
 
-Nenhuma mudança de banco de dados necessária.
+- Adicionar 3 estados: `generatingScience`, `generatingExperience`, `generatingSecurity`
+- Criar 3 handlers que chamam `generate-carousel-slide` com o `slideType` correto e atualizam apenas o slide correspondente em `slideTexts`
+
+### 3. Frontend — 3 novos botões no header do Carrossel Visual
+
+Adicionar ao lado do botão "🎣 Novo Gancho IA" (linha ~1962):
+
+- **🔬 Cientificidade IA** — gera apenas Slide 3
+- **💫 Experiência IA** — gera apenas Slide 4
+- **🛡️ Segurança IA** — gera apenas Slide 5
+
+Cada botão com loading state individual, mesmo padrão visual do botão Hook existente.
+
+### Detalhes técnicos
+
+**Edge function `generate-carousel-slide/index.ts`:**
+- Usa Lovable AI Gateway (`google/gemini-2.5-flash`)
+- Prompt especializado por slideType com regras de formatação
+- Temperature 1.0 para variedade
+- Retorna JSON estruturado via tool calling para garantir campos corretos
+
+**Mapeamento de retorno:**
+- `cientificidade` → `{ title, headline, body, bullet1, bullet2, bullet3, bullet4 }`
+- `experiencia` → `{ keyword, benefit }`
+- `seguranca` → `{ title, badge1, badge2, badge3 }`
 
