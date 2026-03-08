@@ -27,6 +27,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { fetchKnowledgeGraph, buildProductGraph, buildTopicGraph, generateInternalLinks } from '../_shared/fetchKnowledgeGraph.ts';
 import { trackFromResponse } from '../_shared/track-ai-usage.ts';
+import { checkRateLimit, rateLimitResponse } from '../_shared/rate-limiter.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -58,6 +59,12 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Rate limit check
+    const rateCheck = await checkRateLimit('process-content-submission');
+    if (!rateCheck.allowed) {
+      return rateLimitResponse(rateCheck, corsHeaders);
+    }
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
@@ -74,6 +81,23 @@ Deno.serve(async (req) => {
 
     console.log(`[process-content-submission] Starting pipeline for: ${submission_id}`);
     const results: ProcessingResult[] = [];
+
+    // Pipeline audit logging helper
+    async function logStep(stepNumber: number, stepName: string, status: string, extra?: any) {
+      try {
+        await supabase.from('pipeline_audit_logs').insert({
+          submission_id,
+          step_number: stepNumber,
+          step_name: stepName,
+          status,
+          started_at: new Date().toISOString(),
+          ...(status === 'success' || status === 'error' ? { finished_at: new Date().toISOString() } : {}),
+          ...(extra || {}),
+        });
+      } catch (e) {
+        console.warn('[pipeline-audit] Log failed:', e);
+      }
+    }
 
     // ═══════════════════════════════════════════════════════════
     // STEP 1: Load Submission
@@ -93,6 +117,7 @@ Deno.serve(async (req) => {
     }
 
     results.push({ step: 1, name: 'Load submission', success: true, data: { id: submission.id, title: submission.title } });
+    await logStep(1, 'Load submission', 'success');
 
     // Update status to processing
     await supabase
@@ -106,6 +131,7 @@ Deno.serve(async (req) => {
 
     const normalizedContent = normalizeContent(submission.raw_content || '', submission.content_type);
     results.push({ step: 2, name: 'Normalize content', success: true, data: { length: normalizedContent.length } });
+    await logStep(2, 'Normalize content', 'success', { output_summary: { length: normalizedContent.length } });
 
     // ═══════════════════════════════════════════════════════════
     // STEP 3: Extract Entities (AI)
@@ -169,6 +195,7 @@ Responda APENAS em JSON válido:
     }
 
     results.push({ step: 3, name: 'Extract entities', success: true, data: extractedEntities });
+    await logStep(3, 'Extract entities', 'success', { output_summary: { products: extractedEntities.products?.length || 0, keywords: extractedEntities.keywords?.length || 0 } });
 
     // Update submission with extracted entities
     await supabase
@@ -186,6 +213,7 @@ Responda APENAS em JSON válido:
       reviews: knowledgeGraph.reviews.length,
       experts: knowledgeGraph.experts.length 
     }});
+    await logStep(4, 'Fetch Knowledge Graph', 'success', { output_summary: { products: knowledgeGraph.products.length } });
 
     // ═══════════════════════════════════════════════════════════
     // STEP 5: Build Topic/Product Graph
@@ -205,6 +233,7 @@ Responda APENAS em JSON válido:
       type: primaryProductId ? 'product' : 'topic',
       hasGraph: !!contextGraph 
     }});
+    await logStep(5, 'Build context graph', 'success');
 
     // ═══════════════════════════════════════════════════════════
     // STEP 6: Link Entities
@@ -215,9 +244,7 @@ Responda APENAS em JSON válido:
       linkedProducts: linkedEntities.products.length,
       linkedExperts: linkedEntities.experts.length 
     }});
-
-    // ═══════════════════════════════════════════════════════════
-    // STEP 7: Generate Structured Content
+    await logStep(6, 'Link entities', 'success');
     // ═══════════════════════════════════════════════════════════
 
     let structuredContent: any = {
@@ -274,6 +301,7 @@ Gere seções em JSON:
     }
 
     results.push({ step: 7, name: 'Generate structured content', success: true });
+    await logStep(7, 'Generate structured content', 'success');
 
     // ═══════════════════════════════════════════════════════════
     // STEP 8: Generate SEO Metadata
@@ -287,6 +315,7 @@ Gere seções em JSON:
     };
 
     results.push({ step: 8, name: 'Generate SEO metadata', success: true, data: seoMetadata });
+    await logStep(8, 'Generate SEO metadata', 'success');
 
     // ═══════════════════════════════════════════════════════════
     // STEP 9: Generate Schema JSON-LD
@@ -294,6 +323,7 @@ Gere seções em JSON:
 
     const schemaJsonLd = generateSchemaJsonLd(submission, seoMetadata, linkedEntities, knowledgeGraph);
     results.push({ step: 9, name: 'Generate Schema JSON-LD', success: true });
+    await logStep(9, 'Generate Schema JSON-LD', 'success');
 
     // ═══════════════════════════════════════════════════════════
     // STEP 10: Generate HTML
@@ -301,6 +331,7 @@ Gere seções em JSON:
 
     const htmlContent = generateHtmlPage(structuredContent, seoMetadata, schemaJsonLd);
     results.push({ step: 10, name: 'Generate HTML', success: true, data: { length: htmlContent.length } });
+    await logStep(10, 'Generate HTML', 'success', { output_summary: { html_length: htmlContent.length } });
 
     // ═══════════════════════════════════════════════════════════
     // STEP 11: Generate Internal Links
@@ -308,6 +339,7 @@ Gere seções em JSON:
 
     const internalLinks = generateInternalLinks(knowledgeGraph, extractedEntities.keywords || []);
     results.push({ step: 11, name: 'Generate internal links', success: true, data: { count: internalLinks.length } });
+    await logStep(11, 'Generate internal links', 'success');
 
     // ═══════════════════════════════════════════════════════════
     // STEP 12: Compute SHA256 Hash
@@ -315,6 +347,7 @@ Gere seções em JSON:
 
     const contentHash = await computeSha256(htmlContent);
     results.push({ step: 12, name: 'Compute content hash', success: true, data: { hash: contentHash.slice(0, 16) + '...' } });
+    await logStep(12, 'Compute content hash', 'success');
 
     // ═══════════════════════════════════════════════════════════
     // STEP 13: Check Duplicates
@@ -352,6 +385,7 @@ Gere seções em JSON:
     }
 
     results.push({ step: 13, name: 'Check duplicates', success: true, data: { isDuplicate: false } });
+    await logStep(13, 'Check duplicates', 'success');
 
     // ═══════════════════════════════════════════════════════════
     // STEP 14: Generate Embeddings
@@ -383,6 +417,7 @@ Gere seções em JSON:
     }
 
     results.push({ step: 14, name: 'Generate embeddings', success: !!embedding, data: { hasEmbedding: !!embedding } });
+    await logStep(14, 'Generate embeddings', embedding ? 'success' : 'error', { error_message: embedding ? undefined : 'Embedding generation failed or skipped' });
 
     // ═══════════════════════════════════════════════════════════
     // STEP 15: Save to generated_pages + entity_links
@@ -449,6 +484,7 @@ Gere seções em JSON:
     }
 
     results.push({ step: 15, name: 'Save generated page', success: true, data: { pageId: insertedPage.id } });
+    await logStep(15, 'Save generated page', 'success', { output_summary: { page_id: insertedPage.id } });
 
     // ═══════════════════════════════════════════════════════════
     // STEP 16: Create Publication Record
@@ -467,6 +503,7 @@ Gere seções em JSON:
       .single();
 
     results.push({ step: 16, name: 'Create publication record', success: true });
+    await logStep(16, 'Create publication record', 'success');
 
     // Update submission as completed
     await supabase
