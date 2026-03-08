@@ -90,7 +90,15 @@ serve(async (req) => {
   }
 
   try {
-    const { host, user, password, port = 22, remotePath = 'public_html/blog' } = await req.json();
+    let { host, user, password, port = 22, remotePath = 'public_html/blog' } = await req.json();
+    
+    // ✅ Sanitizar hostname: remover protocolo, espaços, tabs, barras
+    if (host) {
+      host = host.replace(/^https?:\/\//, '').replace(/[\s\t\r\n]/g, '').replace(/\/+$/, '').trim();
+    }
+    if (user) {
+      user = user.trim();
+    }
 
     if (!host || !user || !password) {
       return new Response(
