@@ -279,8 +279,9 @@ serve(async (req) => {
       throw new Error(`FTP profile "${ftpProfile}" not found in publication_settings`);
     }
 
-    const ftpHost = pubSettings.ftp_host;
-    const ftpUser = pubSettings.ftp_user;
+    // ✅ Sanitizar credenciais FTP (remover protocolo, espaços, tabs)
+    const ftpHost = (pubSettings.ftp_host || '').replace(/^https?:\/\//, '').replace(/[\s\t\r\n]/g, '').replace(/\/+$/, '').trim();
+    const ftpUser = (pubSettings.ftp_user || '').trim();
     const ftpPass = pubSettings.ftp_password_encrypted;
     const ftpPort = pubSettings.ftp_port || 21;
     const baseRemotePath = domainConfig.ftp_remote_path || pubSettings.ftp_remote_path || '/public_html';
