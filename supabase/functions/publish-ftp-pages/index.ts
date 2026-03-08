@@ -309,7 +309,7 @@ serve(async (req) => {
     const ftp = new FTPClient();
     
     try {
-      await withTimeout(async () => {
+      const ftpWork = (async () => {
         await ftp.connect(ftpHost, ftpPort);
         await ftp.login(ftpUser, ftpPass);
         await ftp.setBinary();
@@ -325,7 +325,8 @@ serve(async (req) => {
         console.log(`✅ Uploaded index.html (${htmlBytes.length} bytes) to ${remoteDirPath}`);
         
         await ftp.quit();
-      }(), 30000);
+      })();
+      await withTimeout(ftpWork, 30000);
     } catch (ftpError) {
       // Try to quit gracefully
       try { await ftp.quit(); } catch (_) { }
