@@ -341,11 +341,17 @@ export function TrackingSEOTab({ profile, setProfile }: TrackingSEOTabProps) {
                 use_in_schema: true,
                 use_in_footer: true,
                 priority: (profile.seo_domains?.length || 0) + 1,
+                publish_method: 'cloudflare' as const,
                 // Cloudflare config
                 cloudflare_project_name: '',
                 cloudflare_zone_id: '',
                 cloudflare_enabled: false,
                 cloudflare_status: 'pending',
+                // FTP config
+                ftp_profile: '',
+                ftp_remote_path: '/public_html',
+                // URL Structure
+                url_structure: {} as Record<string, string>,
                 // Tracking pixels por domínio
                 tracking_pixels: {
                   google_tag_manager: { enabled: false, container_id: null },
