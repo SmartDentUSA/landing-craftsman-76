@@ -117,6 +117,7 @@ Deno.serve(async (req) => {
     }
 
     results.push({ step: 1, name: 'Load submission', success: true, data: { id: submission.id, title: submission.title } });
+    await logStep(1, 'Load submission', 'success');
 
     // Update status to processing
     await supabase
