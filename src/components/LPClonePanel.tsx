@@ -1477,7 +1477,9 @@ export const LPClonePanel = () => {
                                     <div className="flex items-center gap-2">
                                       <Globe className="h-4 w-4" />
                                       {d.domain}
-                                      {d.cloudflare_status === 'connected' && (
+                                      {d.publish_method === 'ftp' ? (
+                                        <Badge variant="outline" className="ml-1 text-[10px] px-1 py-0">FTP</Badge>
+                                      ) : (
                                         <CheckCircle className="h-3 w-3 text-green-500" />
                                       )}
                                     </div>
