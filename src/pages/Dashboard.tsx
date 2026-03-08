@@ -23,6 +23,7 @@ import { useProductBlogsIntegration } from '@/hooks/useProductBlogsIntegration';
 import { sanitizeBlogContent } from "@/utils/sanitize-html";
 import { ProductMigrationModal } from "@/components/ProductMigrationModal";
 import { useBlogReadMore } from "@/hooks/useBlogReadMore";
+import { LPPublishDialog } from "@/components/LPPublishDialog";
 import { useConsolidatedBlogAutoGenerator } from "@/hooks/useConsolidatedBlogAutoGenerator";
 import { Wand2, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 
