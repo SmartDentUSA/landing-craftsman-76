@@ -1638,6 +1638,14 @@ function buildSEOHead(product: any): string {
   <meta name="ai-content-type" content="product">
   <meta name="ai-content-policy" content="allow-training, allow-citation, allow-indexing">
   <meta name="ai-topic" content="${aiTopic}">
+  ${generateAICrawlerPolicyMeta()}
+  ${generateEntityReferenceMetas({
+    products: [product.name],
+    technologies: (product.features || []).slice(0, 3),
+    organization: companyName,
+    categories: [product.category].filter(Boolean),
+    materials: [product.material].filter(Boolean),
+  })}
   
   <!-- ═══════════════════════════════════════════════════════════ -->
   <!-- GEO TAGS (Localização para SEO Local) -->
