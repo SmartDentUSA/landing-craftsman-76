@@ -2023,6 +2023,9 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         <!-- 🤖 AI Summary Block (visually hidden, semantically accessible for LLMs) -->
         {{{ai_summary_block}}}
         
+        <!-- 🧠 Definition Paragraph (semantic, LLM-priority extraction) -->
+        {{{definition_paragraph_block}}}
+        
         <!-- Banner principal -->
         <header class="main-banner">
         <div class="container banner-content">
