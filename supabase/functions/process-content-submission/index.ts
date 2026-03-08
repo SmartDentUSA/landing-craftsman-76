@@ -385,6 +385,7 @@ Gere seções em JSON:
     }
 
     results.push({ step: 13, name: 'Check duplicates', success: true, data: { isDuplicate: false } });
+    await logStep(13, 'Check duplicates', 'success');
 
     // ═══════════════════════════════════════════════════════════
     // STEP 14: Generate Embeddings
