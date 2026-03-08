@@ -2522,8 +2522,17 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     <!-- 🤖 LLM Knowledge Layer (structured knowledge for AI extraction) -->
     {{{llm_knowledge_block}}}
     
+    <!-- 🧠 Expanded Knowledge Layer (full entity context) -->
+    {{{expanded_knowledge_block}}}
+    
+    <!-- 🧠 Citation Block (expert recommendation for LLM citation) -->
+    {{{citation_block}}}
+    
     <!-- 🤖 AI Entity Index (visually hidden, Wikidata links for crawlers) -->
     {{{entity_index_block}}}
+    
+    <!-- 🧠 Entity Index JSON-LD (ItemList) -->
+    {{{entity_index_jsonld_block}}}
     
       </article>
     
