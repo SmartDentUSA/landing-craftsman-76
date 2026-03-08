@@ -233,6 +233,7 @@ Responda APENAS em JSON válido:
       type: primaryProductId ? 'product' : 'topic',
       hasGraph: !!contextGraph 
     }});
+    await logStep(5, 'Build context graph', 'success');
 
     // ═══════════════════════════════════════════════════════════
     // STEP 6: Link Entities
