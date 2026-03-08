@@ -484,6 +484,7 @@ Gere seções em JSON:
     }
 
     results.push({ step: 15, name: 'Save generated page', success: true, data: { pageId: insertedPage.id } });
+    await logStep(15, 'Save generated page', 'success', { output_summary: { page_id: insertedPage.id } });
 
     // ═══════════════════════════════════════════════════════════
     // STEP 16: Create Publication Record
