@@ -195,6 +195,7 @@ Responda APENAS em JSON válido:
     }
 
     results.push({ step: 3, name: 'Extract entities', success: true, data: extractedEntities });
+    await logStep(3, 'Extract entities', 'success', { output_summary: { products: extractedEntities.products?.length || 0, keywords: extractedEntities.keywords?.length || 0 } });
 
     // Update submission with extracted entities
     await supabase
