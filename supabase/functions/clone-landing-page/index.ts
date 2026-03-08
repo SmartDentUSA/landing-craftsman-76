@@ -42,6 +42,8 @@ import {
 
 // 🤖 AI Readiness Helpers
 import { enrichGraphWithAIReadiness, generateLandingPageAISummary, generateEntityIndexHTML, generateDefinedTermSetSchema, generateLLMKnowledgeLayer } from "../_shared/ai-readiness-helpers.ts";
+// 🧠 Knowledge System Helpers
+import { generateEntityReferenceMetas, generateAICrawlerPolicyMeta, generateExpandedKnowledgeLayer, generateEntityIndexJsonLD, generateDefinitionParagraph, generateCitationBlock } from "../_shared/knowledge-system-helpers.ts";
 
 // ✅ FASE 9: Wrapper para manter compatibilidade
 function generateLandingPageBreadcrumbsForClone(
