@@ -169,18 +169,7 @@ export async function fetchAuthorityData(supabase: any): Promise<AuthorityData |
   try {
     const { data: companyProfile, error } = await supabase
       .from('company_profile')
-      .select(`
-        company_name, website_url, company_description,
-        institutional_links, areas_served, company_reviews, nps_metrics,
-        founder_name, founder_title, founder_linkedin,
-        social_media_hashtags, social_media_handles, youtube_tags,
-        instagram_profile, youtube_channel, social_media_links,
-        company_videos,
-        brand_values, mission_statement, vision_statement,
-        differentiators, working_methodology, company_culture,
-        seo_context_keywords, seo_service_areas, seo_technical_expertise,
-        seo_competitive_advantages, seo_market_positioning
-      `)
+      .select('*')
       .limit(1)
       .single();
     
