@@ -885,6 +885,14 @@ export function generateLandingPageHTML(
   <meta name="ai-content-type" content="landingpage">
   <meta name="ai-content-policy" content="allow-training, allow-citation, allow-indexing">
   <meta name="ai-topic" content="${escapeHtml(extractedKeywords.slice(0, 3).join(', ') || solution.title)}">
+  ${generateAICrawlerPolicyMeta()}
+  ${generateEntityReferenceMetas({
+    products: products.slice(0, 5).map((p: any) => p.name),
+    technologies: extractedKeywords.slice(0, 3),
+    organization: sanitizeCompanyName(company?.company_name),
+    categories: [solution.pain_type].filter(Boolean),
+    persons: authorKOL ? [authorKOL.name] : [],
+  })}
   
   <!-- ═══════════════════════════════════════════════════════════ -->
   <!-- GEO TAGS (Localização para SEO Local) -->
