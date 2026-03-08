@@ -7,10 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, CheckCircle, XCircle, ArrowLeft } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, ArrowLeft, Plus, Trash2, Server } from "lucide-react";
 import { TopNavigation } from "@/components/TopNavigation";
 
-interface PublicationSettings {
+interface FTPProfile {
+  id?: string;
   profile_name: string;
   ftp_host: string;
   ftp_user: string;
@@ -18,29 +19,36 @@ interface PublicationSettings {
   ftp_protocol: string;
   ftp_port: number;
   ftp_remote_path: string;
+}
+
+interface WordPressSettings {
   wordpress_url: string;
   wordpress_user: string;
   wordpress_app_password_encrypted: string;
 }
 
+const emptyFTPProfile: FTPProfile = {
+  profile_name: "",
+  ftp_host: "",
+  ftp_user: "",
+  ftp_password_encrypted: "",
+  ftp_protocol: "ftp",
+  ftp_port: 21,
+  ftp_remote_path: "/public_html",
+};
+
 export default function PublicationSettings() {
   const navigate = useNavigate();
-  const [settings, setSettings] = useState<PublicationSettings>({
-    profile_name: "",
-    ftp_host: "",
-    ftp_user: "",
-    ftp_password_encrypted: "",
-    ftp_protocol: "sftp",
-    ftp_port: 22,
-    ftp_remote_path: "public_html/blog",
+  const [ftpProfiles, setFtpProfiles] = useState<FTPProfile[]>([]);
+  const [wpSettings, setWpSettings] = useState<WordPressSettings>({
     wordpress_url: "",
     wordpress_user: "",
     wordpress_app_password_encrypted: "",
   });
   const [loading, setLoading] = useState(false);
-  const [testingFtp, setTestingFtp] = useState(false);
+  const [testingFtp, setTestingFtp] = useState<string | null>(null);
   const [testingWordPress, setTestingWordPress] = useState(false);
-  const [ftpStatus, setFtpStatus] = useState<"idle" | "success" | "error">("idle");
+  const [ftpStatuses, setFtpStatuses] = useState<Record<string, "idle" | "success" | "error">>({});
   const [wpStatus, setWpStatus] = useState<"idle" | "success" | "error">("idle");
   const { toast } = useToast();
 
@@ -57,29 +65,30 @@ export default function PublicationSettings() {
         .from("publication_settings")
         .select("*")
         .eq('user_id', user.user.id)
-        .maybeSingle();
+        .order('created_at', { ascending: true });
 
       if (error) throw error;
 
-      console.log("📊 Dados carregados do Supabase:", data);
+      if (data && data.length > 0) {
+        const profiles: FTPProfile[] = data.map(d => ({
+          id: d.id,
+          profile_name: d.profile_name || "",
+          ftp_host: d.ftp_host || "",
+          ftp_user: d.ftp_user || "",
+          ftp_password_encrypted: d.ftp_password_encrypted || "",
+          ftp_protocol: d.ftp_protocol || "ftp",
+          ftp_port: d.ftp_port || 21,
+          ftp_remote_path: d.ftp_remote_path || "/public_html",
+        }));
+        setFtpProfiles(profiles);
 
-      if (data) {
-        // Limpar campos vazios para null
-        const cleanData = {
-          profile_name: data.profile_name || "",
-          ftp_host: data.ftp_host || "",
-          ftp_user: data.ftp_user || "",
-          ftp_password_encrypted: data.ftp_password_encrypted || "",
-          ftp_protocol: data.ftp_protocol || "sftp",
-          ftp_port: data.ftp_port || 22,
-          ftp_remote_path: data.ftp_remote_path || "public_html/blog",
-          wordpress_url: data.wordpress_url || "",
-          wordpress_user: data.wordpress_user || "",
-          wordpress_app_password_encrypted: data.wordpress_app_password_encrypted || "",
-        };
-        
-        console.log("🧹 Dados limpos:", cleanData);
-        setSettings(cleanData);
+        // WordPress settings from first record
+        const first = data[0];
+        setWpSettings({
+          wordpress_url: first.wordpress_url || "",
+          wordpress_user: first.wordpress_user || "",
+          wordpress_app_password_encrypted: first.wordpress_app_password_encrypted || "",
+        });
       }
     } catch (error) {
       console.error("❌ Erro ao carregar configurações:", error);
@@ -91,32 +100,75 @@ export default function PublicationSettings() {
     }
   };
 
+  const addProfile = () => {
+    setFtpProfiles(prev => [...prev, { ...emptyFTPProfile }]);
+  };
+
+  const removeProfile = async (index: number) => {
+    const profile = ftpProfiles[index];
+    if (profile.id) {
+      const { error } = await supabase
+        .from("publication_settings")
+        .delete()
+        .eq("id", profile.id);
+      if (error) {
+        toast({ title: "Erro", description: "Erro ao remover perfil.", variant: "destructive" });
+        return;
+      }
+    }
+    setFtpProfiles(prev => prev.filter((_, i) => i !== index));
+    toast({ title: "Perfil removido" });
+  };
+
+  const updateProfile = (index: number, field: keyof FTPProfile, value: string | number) => {
+    setFtpProfiles(prev => prev.map((p, i) => i === index ? { ...p, [field]: value } : p));
+  };
+
   const saveSettings = async () => {
     setLoading(true);
     try {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) throw new Error("Usuário não autenticado");
 
-      const { error } = await supabase
-        .from("publication_settings")
-        .upsert({
+      for (const profile of ftpProfiles) {
+        const record = {
           user_id: user.user.id,
-          ...settings,
-        }, {
-          onConflict: 'user_id'
-        });
+          profile_name: profile.profile_name || null,
+          ftp_host: profile.ftp_host,
+          ftp_user: profile.ftp_user,
+          ftp_password_encrypted: profile.ftp_password_encrypted,
+          ftp_protocol: profile.ftp_protocol,
+          ftp_port: profile.ftp_port,
+          ftp_remote_path: profile.ftp_remote_path,
+          ...(ftpProfiles.indexOf(profile) === 0 ? wpSettings : {}),
+        };
 
-      if (error) throw error;
+        if (profile.id) {
+          const { error } = await supabase
+            .from("publication_settings")
+            .update(record)
+            .eq("id", profile.id);
+          if (error) throw error;
+        } else {
+          const { data, error } = await supabase
+            .from("publication_settings")
+            .insert(record)
+            .select("id")
+            .single();
+          if (error) throw error;
+          profile.id = data.id;
+        }
+      }
 
       toast({
         title: "Configurações salvas",
-        description: "As configurações de publicação foram salvas com sucesso.",
+        description: "Todos os perfis foram salvos com sucesso.",
       });
     } catch (error) {
       console.error("Erro ao salvar configurações:", error);
       toast({
         title: "Erro",
-        description: "Erro ao salvar configurações. Tente novamente.",
+        description: `Erro ao salvar: ${(error as Error).message}`,
         variant: "destructive",
       });
     } finally {
@@ -124,173 +176,87 @@ export default function PublicationSettings() {
     }
   };
 
-  const testFtpConnection = async () => {
-    // Validate fields first
-    if (!settings.ftp_host.trim() || !settings.ftp_user.trim() || !settings.ftp_password_encrypted.trim()) {
-      toast({
-        title: "Campos obrigatórios",
-        description: "Preencha todos os campos do FTP antes de testar.",
-        variant: "destructive",
-      });
+  const testFtpConnection = async (index: number) => {
+    const profile = ftpProfiles[index];
+    if (!profile.ftp_host.trim() || !profile.ftp_user.trim() || !profile.ftp_password_encrypted.trim()) {
+      toast({ title: "Campos obrigatórios", description: "Preencha host, usuário e senha.", variant: "destructive" });
       return;
     }
 
-    setTestingFtp(true);
-    setFtpStatus("idle");
-    
-    console.log("🔄 Iniciando teste FTP com dados:", {
-      host: settings.ftp_host,
-      user: settings.ftp_user,
-      password: settings.ftp_password_encrypted ? "***" : "vazio"
-    });
-    
+    const key = profile.profile_name || String(index);
+    setTestingFtp(key);
+    setFtpStatuses(prev => ({ ...prev, [key]: "idle" }));
+
     try {
       const { data, error } = await supabase.functions.invoke("test-ftp-connection", {
         body: {
-          host: settings.ftp_host,
-          user: settings.ftp_user,
-          password: settings.ftp_password_encrypted,
-          port: settings.ftp_port,
-          remotePath: settings.ftp_remote_path,
+          host: profile.ftp_host,
+          user: profile.ftp_user,
+          password: profile.ftp_password_encrypted,
+          port: profile.ftp_port,
+          remotePath: profile.ftp_remote_path,
         },
       });
 
-      console.log("📡 Resposta da função FTP:", { data, error });
-
-      if (error) {
-        console.error("❌ Erro na invocação da função:", error);
-        throw error;
-      }
+      if (error) throw error;
 
       if (data?.success) {
-        setFtpStatus("success");
-        toast({
-          title: "Conexão FTP testada",
-          description: "Conexão FTP estabelecida com sucesso!",
-        });
+        setFtpStatuses(prev => ({ ...prev, [key]: "success" }));
+        toast({ title: "Conexão FTP testada", description: `Perfil "${profile.profile_name}" conectou com sucesso!` });
       } else {
-        setFtpStatus("error");
-        toast({
-          title: "Erro na conexão FTP",
-          description: data?.error || "Não foi possível conectar ao servidor FTP.",
-          variant: "destructive",
-        });
+        setFtpStatuses(prev => ({ ...prev, [key]: "error" }));
+        toast({ title: "Erro na conexão FTP", description: data?.error || "Falha na conexão.", variant: "destructive" });
       }
     } catch (error) {
-      console.error("❌ Erro no teste FTP:", error);
-      setFtpStatus("error");
-      toast({
-        title: "Erro no teste FTP",
-        description: `Erro ao testar a conexão FTP: ${error}`,
-        variant: "destructive",
-      });
+      setFtpStatuses(prev => ({ ...prev, [key]: "error" }));
+      toast({ title: "Erro no teste FTP", description: `${error}`, variant: "destructive" });
     } finally {
-      setTestingFtp(false);
+      setTestingFtp(null);
     }
   };
 
-  // Helper function to sanitize WordPress URL
   const sanitizeWordPressUrl = (url: string): string => {
     if (!url) return "";
-    
     let sanitized = url.trim();
-    
-    // Add https if no protocol
     if (!sanitized.startsWith('http://') && !sanitized.startsWith('https://')) {
       sanitized = `https://${sanitized}`;
     }
-    
-    // Remove paths like /wp-admin, /blog, etc. - keep only origin
     try {
       const urlObj = new URL(sanitized);
       sanitized = `${urlObj.protocol}//${urlObj.host}`;
     } catch {
-      // If URL parsing fails, just remove common paths manually
-      sanitized = sanitized.replace(/\/wp-admin.*$/, '');
-      sanitized = sanitized.replace(/\/blog.*$/, '');
-      sanitized = sanitized.replace(/\/+$/, '');
+      sanitized = sanitized.replace(/\/wp-admin.*$/, '').replace(/\/blog.*$/, '').replace(/\/+$/, '');
     }
-    
     return sanitized;
   };
 
   const testWordPressConnection = async () => {
-    // Validate fields first
-    if (!settings.wordpress_url.trim() || !settings.wordpress_user.trim() || !settings.wordpress_app_password_encrypted.trim()) {
-      toast({
-        title: "Campos obrigatórios",
-        description: "Preencha todos os campos do WordPress antes de testar.",
-        variant: "destructive",
-      });
+    if (!wpSettings.wordpress_url.trim() || !wpSettings.wordpress_user.trim() || !wpSettings.wordpress_app_password_encrypted.trim()) {
+      toast({ title: "Campos obrigatórios", description: "Preencha todos os campos do WordPress.", variant: "destructive" });
       return;
     }
 
     setTestingWordPress(true);
     setWpStatus("idle");
-    
-    const sanitizedUrl = sanitizeWordPressUrl(settings.wordpress_url);
-    
-    console.log("🔄 Iniciando teste WordPress com dados:", {
-      originalUrl: settings.wordpress_url,
-      sanitizedUrl: sanitizedUrl,
-      user: settings.wordpress_user,
-      password: settings.wordpress_app_password_encrypted ? "***" : "vazio"
-    });
-    
+    const sanitizedUrl = sanitizeWordPressUrl(wpSettings.wordpress_url);
+
     try {
       const { data, error } = await supabase.functions.invoke("test-wordpress-connection", {
-        body: {
-          url: sanitizedUrl,
-          user: settings.wordpress_user,
-          password: settings.wordpress_app_password_encrypted,
-        },
+        body: { url: sanitizedUrl, user: wpSettings.wordpress_user, password: wpSettings.wordpress_app_password_encrypted },
       });
 
-      console.log("📡 Resposta da função WordPress:", { data, error });
-
-      if (error) {
-        console.error("❌ Erro na invocação da função:", error);
-        throw error;
-      }
+      if (error) throw error;
 
       if (data?.success) {
         setWpStatus("success");
-        toast({
-          title: "Conexão WordPress testada",
-          description: "Conexão WordPress estabelecida com sucesso!",
-        });
+        toast({ title: "Conexão WordPress testada", description: "Conexão estabelecida com sucesso!" });
       } else {
         setWpStatus("error");
-        
-        // Mensagens específicas baseadas no tipo de erro
-        let title = "Erro na conexão WordPress";
-        let description = data?.details || data?.error || "Não foi possível conectar ao WordPress.";
-        
-        if (data?.error === 'invalid_credentials') {
-          title = "Credenciais inválidas";
-          description = "Use seu username do WordPress (não email) e gere um Application Password em: WP Admin → Users → Your Profile → Application Passwords";
-        } else if (data?.error === 'auth_blocked') {
-          title = "Authorization bloqueado";
-          description = "Seu servidor está bloqueando headers de Authorization. Contate seu provedor de hospedagem para habilitar Basic Authentication.";
-        } else if (data?.error === 'connection_error') {
-          title = "Erro de conexão";
-          description = "Verifique se a URL está correta e se o site está acessível.";
-        }
-        
-        toast({
-          title,
-          description,
-          variant: "destructive",
-        });
+        toast({ title: "Erro WordPress", description: data?.error || "Falha na conexão.", variant: "destructive" });
       }
     } catch (error) {
-      console.error("❌ Erro no teste WordPress:", error);
       setWpStatus("error");
-      toast({
-        title: "Erro no teste WordPress",
-        description: `Erro ao testar a conexão WordPress: ${error}`,
-        variant: "destructive",
-      });
+      toast({ title: "Erro no teste WordPress", description: `${error}`, variant: "destructive" });
     } finally {
       setTestingWordPress(false);
     }
@@ -298,12 +264,9 @@ export default function PublicationSettings() {
 
   const getStatusIcon = (status: "idle" | "success" | "error") => {
     switch (status) {
-      case "success":
-        return <CheckCircle className="h-4 w-4 text-success" />;
-      case "error":
-        return <XCircle className="h-4 w-4 text-destructive" />;
-      default:
-        return null;
+      case "success": return <CheckCircle className="h-4 w-4 text-success" />;
+      case "error": return <XCircle className="h-4 w-4 text-destructive" />;
+      default: return null;
     }
   };
 
@@ -314,139 +277,158 @@ export default function PublicationSettings() {
       <div className="container max-w-4xl mx-auto p-6 space-y-8">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate("/dashboard")}
-            >
+            <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
               <ArrowLeft className="h-4 w-4 mr-2" />
               Voltar
             </Button>
             <div>
               <h1 className="text-3xl font-bold">Configurações de Publicação</h1>
               <p className="text-muted-foreground mt-2">
-                Configure as credenciais para publicação automática em FTP e WordPress.
+                Configure as credenciais para publicação automática via FTP e WordPress.
               </p>
             </div>
           </div>
         </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Configurações FTP */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              SFTP (eodonto.com)
-              {getStatusIcon(ftpStatus)}
-            </CardTitle>
-            <CardDescription>
-              Configurações para publicação via SFTP no site eodonto.com
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="profile_name">Nome do Perfil</Label>
-              <Input
-                id="profile_name"
-                type="text"
-                placeholder="kinghost_smartdent"
-                value={settings.profile_name}
-                onChange={(e) => setSettings(prev => ({ ...prev, profile_name: e.target.value }))}
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Identificador único do perfil FTP (usado para lookup de domínio)
-              </p>
-            </div>
-            <div>
-              <Label htmlFor="ftp_host">Host SFTP</Label>
-              <Input
-                id="ftp_host"
-                type="text"
-                placeholder="eodonto.com"
-                value={settings.ftp_host}
-                onChange={(e) => setSettings(prev => ({ ...prev, ftp_host: e.target.value }))}
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Apenas o domínio ou IP do servidor
-              </p>
-            </div>
-            <div>
-              <Label htmlFor="ftp_user">Usuário SFTP</Label>
-              <Input
-                id="ftp_user"
-                type="text"
-                placeholder="u976305328"
-                value={settings.ftp_user}
-                onChange={(e) => setSettings(prev => ({ ...prev, ftp_user: e.target.value }))}
-              />
-            </div>
-            <div>
-              <Label htmlFor="ftp_password">Senha SFTP</Label>
-              <Input
-                id="ftp_password"
-                type="password"
-                placeholder="••••••••"
-                value={settings.ftp_password_encrypted}
-                onChange={(e) => setSettings(prev => ({ ...prev, ftp_password_encrypted: e.target.value }))}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label htmlFor="ftp_port">Porta</Label>
-                <Input
-                  id="ftp_port"
-                  type="number"
-                  placeholder="22"
-                  min="1"
-                  max="65535"
-                  value={settings.ftp_port}
-                  onChange={(e) => setSettings(prev => ({ ...prev, ftp_port: parseInt(e.target.value) || 22 }))}
-                />
-              </div>
-              <div>
-                <Label htmlFor="ftp_protocol">Protocolo</Label>
-                <Input
-                  id="ftp_protocol"
-                  type="text"
-                  placeholder="sftp"
-                  value={settings.ftp_protocol}
-                  onChange={(e) => setSettings(prev => ({ ...prev, ftp_protocol: e.target.value }))}
-                  disabled
-                />
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="ftp_remote_path">Caminho remoto</Label>
-              <Input
-                id="ftp_remote_path"
-                type="text"
-                placeholder="public_html/blog"
-                value={settings.ftp_remote_path}
-                onChange={(e) => setSettings(prev => ({ ...prev, ftp_remote_path: e.target.value }))}
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Pasta onde os arquivos serão salvos no servidor
-              </p>
-            </div>
-            <Button
-              onClick={testFtpConnection}
-              disabled={testingFtp}
-              variant="outline"
-              className="w-full"
-            >
-              {testingFtp ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Testando...
-                </>
-              ) : (
-                "Testar SFTP"
-              )}
+        {/* FTP Profiles Section */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold flex items-center gap-2">
+              <Server className="h-5 w-5" />
+              Perfis FTP / SFTP
+            </h2>
+            <Button variant="outline" size="sm" onClick={addProfile}>
+              <Plus className="h-4 w-4 mr-2" />
+              Adicionar Perfil
             </Button>
-          </CardContent>
-        </Card>
+          </div>
 
-        {/* Configurações WordPress */}
+          {ftpProfiles.length === 0 && (
+            <Card className="border-dashed">
+              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+                <Server className="h-10 w-10 text-muted-foreground/50 mb-3" />
+                <p className="text-muted-foreground">Nenhum perfil FTP configurado.</p>
+                <Button variant="outline" size="sm" className="mt-3" onClick={addProfile}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Criar primeiro perfil
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          <div className="grid gap-6 md:grid-cols-2">
+            {ftpProfiles.map((profile, idx) => {
+              const key = profile.profile_name || String(idx);
+              const status = ftpStatuses[key] || "idle";
+              
+              return (
+                <Card key={profile.id || idx}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between text-base">
+                      <span className="flex items-center gap-2">
+                        {profile.profile_name ? (
+                          <code className="text-sm bg-muted px-2 py-0.5 rounded">{profile.profile_name}</code>
+                        ) : (
+                          <span className="text-muted-foreground italic">Novo perfil</span>
+                        )}
+                        {getStatusIcon(status)}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => removeProfile(idx)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </CardTitle>
+                    <CardDescription>
+                      {profile.ftp_host ? `${profile.ftp_protocol}://${profile.ftp_host}:${profile.ftp_port}` : 'Configure as credenciais FTP'}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div>
+                      <Label>Nome do Perfil *</Label>
+                      <Input
+                        value={profile.profile_name}
+                        onChange={(e) => updateProfile(idx, 'profile_name', e.target.value)}
+                        placeholder="kinghost_smartdent"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Deve coincidir com o <code>ftp_profile</code> do domínio em seo_domains
+                      </p>
+                    </div>
+                    <div>
+                      <Label>Host</Label>
+                      <Input
+                        value={profile.ftp_host}
+                        onChange={(e) => updateProfile(idx, 'ftp_host', e.target.value)}
+                        placeholder="ftp.smartdent.com.br"
+                      />
+                    </div>
+                    <div>
+                      <Label>Usuário</Label>
+                      <Input
+                        value={profile.ftp_user}
+                        onChange={(e) => updateProfile(idx, 'ftp_user', e.target.value)}
+                        placeholder="ftp_user"
+                      />
+                    </div>
+                    <div>
+                      <Label>Senha</Label>
+                      <Input
+                        type="password"
+                        value={profile.ftp_password_encrypted}
+                        onChange={(e) => updateProfile(idx, 'ftp_password_encrypted', e.target.value)}
+                        placeholder="••••••••"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label>Porta</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          max="65535"
+                          value={profile.ftp_port}
+                          onChange={(e) => updateProfile(idx, 'ftp_port', parseInt(e.target.value) || 21)}
+                        />
+                      </div>
+                      <div>
+                        <Label>Protocolo</Label>
+                        <Input value={profile.ftp_protocol} disabled />
+                      </div>
+                    </div>
+                    <div>
+                      <Label>Caminho remoto</Label>
+                      <Input
+                        value={profile.ftp_remote_path}
+                        onChange={(e) => updateProfile(idx, 'ftp_remote_path', e.target.value)}
+                        placeholder="/public_html"
+                      />
+                    </div>
+                    <Button
+                      onClick={() => testFtpConnection(idx)}
+                      disabled={testingFtp !== null}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      {testingFtp === key ? (
+                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Testando...</>
+                      ) : (
+                        "Testar Conexão FTP"
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+
+        <Separator />
+
+        {/* WordPress Card */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
@@ -459,36 +441,31 @@ export default function PublicationSettings() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label htmlFor="wordpress_url">URL do WordPress</Label>
+              <Label>URL do WordPress</Label>
               <Input
-                id="wordpress_url"
-                type="text"
                 placeholder="https://dentala.com.br"
-                value={settings.wordpress_url}
-                onChange={(e) => setSettings(prev => ({ ...prev, wordpress_url: e.target.value }))}
+                value={wpSettings.wordpress_url}
+                onChange={(e) => setWpSettings(prev => ({ ...prev, wordpress_url: e.target.value }))}
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Use apenas o domínio, sem /wp-admin. Ex.: https://dentala.com.br
+                Use apenas o domínio, sem /wp-admin.
               </p>
             </div>
             <div>
-              <Label htmlFor="wordpress_user">Usuário WordPress</Label>
+              <Label>Usuário WordPress</Label>
               <Input
-                id="wordpress_user"
-                type="text"
                 placeholder="admin"
-                value={settings.wordpress_user}
-                onChange={(e) => setSettings(prev => ({ ...prev, wordpress_user: e.target.value }))}
+                value={wpSettings.wordpress_user}
+                onChange={(e) => setWpSettings(prev => ({ ...prev, wordpress_user: e.target.value }))}
               />
             </div>
             <div>
-              <Label htmlFor="wordpress_password">Application Password</Label>
+              <Label>Application Password</Label>
               <Input
-                id="wordpress_password"
                 type="password"
                 placeholder="••••••••••••••••••••"
-                value={settings.wordpress_app_password_encrypted}
-                onChange={(e) => setSettings(prev => ({ ...prev, wordpress_app_password_encrypted: e.target.value }))}
+                value={wpSettings.wordpress_app_password_encrypted}
+                onChange={(e) => setWpSettings(prev => ({ ...prev, wordpress_app_password_encrypted: e.target.value }))}
               />
             </div>
             <Button
@@ -498,32 +475,25 @@ export default function PublicationSettings() {
               className="w-full"
             >
               {testingWordPress ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Testando...
-                </>
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Testando...</>
               ) : (
                 "Testar Conexão WordPress"
               )}
             </Button>
           </CardContent>
         </Card>
-      </div>
 
-      <Separator />
+        <Separator />
 
-      <div className="flex justify-end">
-        <Button onClick={saveSettings} disabled={loading}>
-          {loading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Salvando...
-            </>
-          ) : (
-            "Salvar Configurações"
-          )}
-        </Button>
-      </div>
+        <div className="flex justify-end">
+          <Button onClick={saveSettings} disabled={loading}>
+            {loading ? (
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Salvando...</>
+            ) : (
+              "Salvar Todas as Configurações"
+            )}
+          </Button>
+        </div>
       </div>
     </div>
   );
