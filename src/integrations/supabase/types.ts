@@ -2441,6 +2441,7 @@ export type Database = {
           ftp_remote_path: string | null
           ftp_user: string | null
           id: string
+          profile_name: string | null
           seo_settings: Json | null
           updated_at: string
           user_id: string
@@ -2457,6 +2458,7 @@ export type Database = {
           ftp_remote_path?: string | null
           ftp_user?: string | null
           id?: string
+          profile_name?: string | null
           seo_settings?: Json | null
           updated_at?: string
           user_id: string
@@ -2473,6 +2475,7 @@ export type Database = {
           ftp_remote_path?: string | null
           ftp_user?: string | null
           id?: string
+          profile_name?: string | null
           seo_settings?: Json | null
           updated_at?: string
           user_id?: string
