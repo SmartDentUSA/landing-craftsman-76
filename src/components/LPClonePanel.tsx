@@ -90,6 +90,7 @@ interface SEODomain {
   ftp_profile?: string;
   enabled?: boolean;
   ftp_remote_path?: string;
+  url_structure?: Record<string, string>;
 }
 
 // Product Blog types
@@ -174,6 +175,7 @@ export const LPClonePanel = () => {
   const [selectedDomain, setSelectedDomain] = useState('');
   const [pagePath, setPagePath] = useState('');
   const [isHomepage, setIsHomepage] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('');
   
   const [result, setResult] = useState<TransformResult | null>(null);
   
@@ -1516,20 +1518,65 @@ export const LPClonePanel = () => {
                             </Alert>
                           )}
                           
-                          {!isHomepage && (
-                            <div>
-                              <Label>Caminho da Página</Label>
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm text-muted-foreground">{selectedDomain || 'dominio.com'}/</span>
-                                <Input
-                                  value={pagePath.replace(/^\//, '')}
-                                  onChange={(e) => setPagePath('/' + e.target.value.replace(/^\//, ''))}
-                                  placeholder="scanner-i900"
-                                  className="flex-1"
-                                />
+                          {!isHomepage && (() => {
+                            const currentDomainConfig = enabledDomains.find(d => d.domain === selectedDomain);
+                            const urlStructure = currentDomainConfig?.url_structure;
+                            const categoryEntries = urlStructure ? Object.entries(urlStructure) : [];
+                            const categoryLabels: Record<string, string> = {
+                              products: '📦 Produtos',
+                              blog: '📝 Blog',
+                              guides: '📖 Guias',
+                              compare: '⚖️ Comparativos',
+                              spin: '🔄 Soluções SPIN',
+                            };
+                            
+                            return (
+                              <div className="space-y-3">
+                                {categoryEntries.length > 0 && (
+                                  <div>
+                                    <Label>Categoria da Página</Label>
+                                    <Select 
+                                      value={selectedCategory} 
+                                      onValueChange={(cat) => {
+                                        setSelectedCategory(cat);
+                                        const template = urlStructure?.[cat] || '/';
+                                        const prefix = template.replace('{slug}', '');
+                                        setPagePath(prefix);
+                                      }}
+                                    >
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Selecionar categoria..." />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {categoryEntries.map(([key, template]) => (
+                                          <SelectItem key={key} value={key}>
+                                            {categoryLabels[key] || key} — <code className="text-xs">{template}</code>
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                )}
+                                <div>
+                                  <Label>Caminho da Página</Label>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm text-muted-foreground">{selectedDomain || 'dominio.com'}/</span>
+                                    <Input
+                                      value={pagePath.replace(/^\//, '')}
+                                      onChange={(e) => setPagePath('/' + e.target.value.replace(/^\//, ''))}
+                                      placeholder={selectedCategory ? `${selectedCategory === 'products' ? 'scanner-i900' : 'meu-artigo'}` : 'scanner-i900'}
+                                      className="flex-1"
+                                    />
+                                  </div>
+                                  {selectedCategory && urlStructure?.[selectedCategory] && (
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      Estrutura: <code>{urlStructure[selectedCategory]}</code>
+                                    </p>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          )}
+                            );
+                          })()}
                           
                           {selectedDomain && (
                             <div className="p-3 bg-muted rounded-lg">
