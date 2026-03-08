@@ -1450,6 +1450,13 @@ const DashboardContent = () => {
         open={migrationModalOpen} 
         onOpenChange={setMigrationModalOpen} 
       />
+      
+      {/* LP Publish Dialog */}
+      <LPPublishDialog
+        open={publishOpen}
+        onOpenChange={setPublishOpen}
+        landingPage={publishLP}
+      />
     </div>
   );
 };
