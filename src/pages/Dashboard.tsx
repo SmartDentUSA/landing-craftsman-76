@@ -56,6 +56,31 @@ const DashboardContent = () => {
     getTrackingConfig().then(setTrackingConfig);
   }, []);
 
+  // Fetch published URLs from cloned_landing_pages
+  useEffect(() => {
+    const fetchPublishedInfo = async () => {
+      const { data } = await supabase
+        .from('cloned_landing_pages')
+        .select('source_landing_page_id, publish_status, published_url')
+        .eq('publish_status', 'published')
+        .not('source_landing_page_id', 'is', null);
+      
+      if (data) {
+        const map: Record<string, { publish_status: string; published_url: string | null }> = {};
+        data.forEach((row) => {
+          if (row.source_landing_page_id) {
+            map[row.source_landing_page_id] = {
+              publish_status: row.publish_status || 'draft',
+              published_url: row.published_url
+            };
+          }
+        });
+        setPublishedMap(map);
+      }
+    };
+    fetchPublishedInfo();
+  }, [landingPages]);
+
   const debouncedFetchBlogPosts = useDebounce(async () => {
     try {
       console.log('🔄 Fetching blog posts - Landing pages count:', landingPages.length);
