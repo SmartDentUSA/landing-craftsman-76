@@ -267,6 +267,9 @@ verify_jwt = false
 [functions.content-submission]
 verify_jwt = false
 
+[functions.unpublish-pages]
+verify_jwt = false
+
 [functions.process-content-submission]
 verify_jwt = true
 
