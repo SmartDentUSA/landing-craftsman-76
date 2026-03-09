@@ -50,10 +50,36 @@ const DashboardContent = () => {
   const [trackingConfig, setTrackingConfig] = useState<TrackingConfig | null>(null);
   const [publishOpen, setPublishOpen] = useState(false);
   const [publishLP, setPublishLP] = useState<LandingPage | null>(null);
+  const [publishedMap, setPublishedMap] = useState<Record<string, { publish_status: string; published_url: string | null }>>({});
 
   useEffect(() => {
     getTrackingConfig().then(setTrackingConfig);
   }, []);
+
+  // Fetch published URLs from cloned_landing_pages
+  useEffect(() => {
+    const fetchPublishedInfo = async () => {
+      const { data } = await supabase
+        .from('cloned_landing_pages')
+        .select('source_landing_page_id, publish_status, published_url')
+        .eq('publish_status', 'published')
+        .not('source_landing_page_id', 'is', null);
+      
+      if (data) {
+        const map: Record<string, { publish_status: string; published_url: string | null }> = {};
+        data.forEach((row) => {
+          if (row.source_landing_page_id) {
+            map[row.source_landing_page_id] = {
+              publish_status: row.publish_status || 'draft',
+              published_url: row.published_url
+            };
+          }
+        });
+        setPublishedMap(map);
+      }
+    };
+    fetchPublishedInfo();
+  }, [landingPages]);
 
   const debouncedFetchBlogPosts = useDebounce(async () => {
     try {
@@ -541,6 +567,11 @@ const DashboardContent = () => {
                       <Badge variant={getStatusColor(landingPage.status) as "secondary"}>
                         {getStatusText(landingPage.status)}
                       </Badge>
+                      {publishedMap[landingPage.id]?.publish_status === 'published' && (
+                        <Badge className="bg-success text-success-foreground hover:bg-success/90">
+                          Publicado
+                        </Badge>
+                      )}
                     </div>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <span>Template: {landingPage.template}</span>
@@ -553,6 +584,19 @@ const DashboardContent = () => {
                         }
                       </span>
                     </div>
+                    {publishedMap[landingPage.id]?.published_url && (
+                      <div className="mt-1">
+                        <a 
+                          href={publishedMap[landingPage.id].published_url!} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-sm text-primary hover:underline flex items-center gap-1"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          {publishedMap[landingPage.id].published_url}
+                        </a>
+                      </div>
+                    )}
                   </div>
                   
                   <div className="flex items-center gap-2">
@@ -586,15 +630,6 @@ const DashboardContent = () => {
                           Copiar Código
                         </Button>
                         
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => navigate(`/blog-generator/${landingPage.id}`)}
-                          className="border-primary/30 text-primary hover:bg-primary/10"
-                        >
-                          <PenTool className="h-4 w-4 mr-2" />
-                          Gerar Blog Post
-                        </Button>
                         <Button
                           variant="outline"
                           size="sm"
