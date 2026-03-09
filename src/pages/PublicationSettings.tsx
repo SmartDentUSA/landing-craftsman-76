@@ -64,7 +64,6 @@ export default function PublicationSettings() {
       const { data, error } = await supabase
         .from("publication_settings")
         .select("*")
-        .eq('user_id', user.user.id)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
