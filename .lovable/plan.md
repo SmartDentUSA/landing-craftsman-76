@@ -1,62 +1,47 @@
 
 
-# Nav-Data.js for Git Deploy (publish-git-kinghost)
+## Plano: Substituir FTP por Git Deploy (KingHost) para www.smartdent.com.br
 
-## Summary
+### Contexto da Imagem
+O KingHost Git Deploy usa o repo **SmartDentUSA/landing-craftsman-76** (este projeto Lovable), branch **main**, deploy em **/www/**. Ele cria automaticamente a branch `stable-website`, GitHub Actions e webhook.
 
-Add the same `nav-data.js` incremental navigation system that already exists in `publish-ftp-pages` to `publish-git-kinghost`. After publishing a LP, the function will:
-
-1. Inject `<script src="/nav-data.js" defer>` into the HTML before `</body>`
-2. Query all published LPs + blogs for that domain
-3. Generate `nav-data.js` with the same self-rendering script used by FTP
-4. Push `nav-data.js` to `public/nav-data.js` in the same Git commit (or a follow-up commit)
-
-## Changes
-
-### `supabase/functions/publish-git-kinghost/index.ts`
-
-**A. Inject nav-data.js script tag** (after tracking pixels injection, before blob creation ~line 140):
-```typescript
-const navScriptTag = `<script src="/nav-data.js" defer></script>`;
-if (html.includes('</body>')) {
-  html = html.replace('</body>', `${navScriptTag}\n</body>`);
-} else {
-  html += navScriptTag;
-}
-```
-
-**B. After DB update (~line 219), add nav-data.js generation and push:**
-
-1. Query `cloned_landing_pages` where `target_domain = domain` and `publish_status = 'published'`
-2. Also query `product_blog_publications` for same domain
-3. Build `navItems` array (same format as FTP version)
-4. Generate the self-executing JS script (same as FTP's nav-data.js)
-5. Create a second blob + tree + commit to push `public/nav-data.js`
-
-**Key detail:** The Git tree API supports multiple files in one tree. We can optimize by including both the HTML blob AND the nav-data.js blob in a **single commit** instead of two separate commits. This means restructuring the flow slightly:
+### Como funciona o fluxo
 
 ```text
-1. Create HTML blob
-2. Query all published pages for domain
-3. Generate nav-data.js content
-4. Create nav-data.js blob
-5. Create tree with BOTH files
-6. Create single commit
-7. Update branch ref
+Edge Function gera HTML → Commit via GitHub API no repo (public/blog/...) → Push main → GitHub Actions build → KingHost sync /www/ → www.smartdent.com.br
 ```
 
-This is more efficient (1 commit instead of 2) and avoids race conditions.
+Os arquivos HTML gerados são commitados na pasta `public/` do repo. O Vite copia `public/` para `dist/` no build. O KingHost deploya `dist/` para `/www/`.
 
-**C. Include `product_blog_publications` in the query** to also list blog posts in the navigation, matching the user's specification.
+### Alterações
 
-### No other files change
+**1. Nova Edge Function: `supabase/functions/publish-git-deploy/index.ts`**
+- Recebe `{ lpId, domain, pagePath, isHomepage }`
+- Busca HTML de `cloned_landing_pages`
+- Usa GitHub API (`PUT /repos/SmartDentUSA/landing-craftsman-76/contents/public{pagePath}`) para commitar o HTML
+- Atualiza `publish_status` para `published`
+- Requer secret `GITHUB_DEPLOY_TOKEN` (Personal Access Token com `contents:write`)
 
-The FTP and Cloudflare functions already have their own nav-data implementations. The template engine and frontend are not affected.
+**2. `supabase/config.toml`** — Adicionar `[functions.publish-git-deploy]` com `verify_jwt = true`
 
-## Technical Notes
+**3. Expandir `publish_method` em 5 arquivos:**
 
-- The nav-data.js script is self-contained with inline styles — no CSS dependencies
-- The script skips rendering if fewer than 2 pages exist
-- Current page is excluded from the nav links (`item.url === window.location.href`)
-- The `product_blog_publications` table has columns: `title`, `published_url`, `page_path`, `target_domain`, `publish_status`
+| Arquivo | Mudança |
+|---------|---------|
+| `TrackingSEOTab.tsx` | Tipo L428 → `'cloudflare' \| 'ftp' \| 'git-deploy'`. Adicionar 3a opção "🔀 Git Deploy" no RadioGroup (L434-448). Adicionar seção config Git Deploy com campos `git_repo` (fixo: SmartDentUSA/landing-craftsman-76), `git_branch` (fixo: main), `git_base_path` (fixo: public). |
+| `LPPublishDialog.tsx` | Tipo L20 → incluir `'git-deploy'`. Roteamento L195 → adicionar caso `git-deploy` → `publish-git-deploy`. |
+| `LPClonePanel.tsx` | Tipo L89 → incluir `'git-deploy'`. Filtro L210-214 → incluir `git-deploy`. Roteamento L522-523 → caso `git-deploy`. Labels L966, L1148, L1482 → badge "🔀 Git". |
+| `ProductBlogPublisherPanel.tsx` | Tipo L25 → incluir `'git-deploy'`. Filtro L111-115 → incluir `git-deploy`. |
+| `CompanyProfileManager.tsx` | Tipo L83 → incluir `'git-deploy'`. |
+
+**4. Secret necessário**
+- `GITHUB_DEPLOY_TOKEN`: Personal Access Token com permissão `contents:write` no repo SmartDentUSA/landing-craftsman-76
+
+**5. Dados no banco**
+- No `seo_domains` do `company_profile`, para smartdent.com.br: mudar `publish_method` de `ftp` para `git-deploy`, adicionar `git_repo: "SmartDentUSA/landing-craftsman-76"`, `git_branch: "main"`, `git_base_path: "public"`
+
+### O que NÃO muda
+- Domínios Cloudflare permanecem inalterados
+- Edge functions FTP existentes permanecem
+- Nenhuma tabela alterada
 
