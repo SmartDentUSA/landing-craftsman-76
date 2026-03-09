@@ -425,7 +425,7 @@ export function TrackingSEOTab({ profile, setProfile }: TrackingSEOTabProps) {
                 onValueChange={(v: string) => {
                   setProfile(prev => {
                     const updated = [...(prev.seo_domains || [])];
-                    updated[index].publish_method = v as 'cloudflare' | 'ftp';
+                    updated[index].publish_method = v as 'cloudflare' | 'ftp' | 'git';
                     return { ...prev, seo_domains: updated };
                   });
                 }}
