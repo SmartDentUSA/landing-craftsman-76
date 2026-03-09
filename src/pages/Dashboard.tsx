@@ -567,6 +567,11 @@ const DashboardContent = () => {
                       <Badge variant={getStatusColor(landingPage.status) as "secondary"}>
                         {getStatusText(landingPage.status)}
                       </Badge>
+                      {publishedMap[landingPage.id]?.publish_status === 'published' && (
+                        <Badge className="bg-green-600 text-white hover:bg-green-700">
+                          Publicado
+                        </Badge>
+                      )}
                     </div>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <span>Template: {landingPage.template}</span>
@@ -579,6 +584,19 @@ const DashboardContent = () => {
                         }
                       </span>
                     </div>
+                    {publishedMap[landingPage.id]?.published_url && (
+                      <div className="mt-1">
+                        <a 
+                          href={publishedMap[landingPage.id].published_url!} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-sm text-primary hover:underline flex items-center gap-1"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          {publishedMap[landingPage.id].published_url}
+                        </a>
+                      </div>
+                    )}
                   </div>
                   
                   <div className="flex items-center gap-2">
