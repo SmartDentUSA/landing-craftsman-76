@@ -21,8 +21,10 @@ class FTPClient {
   private encoder = new TextEncoder();
   private decoder = new TextDecoder();
   private buffer = '';
+  private host = '';
 
   async connect(host: string, port: number) {
+    this.host = host;
     this.conn = await Deno.connect({ hostname: host, port, transport: 'tcp' });
     this.reader = this.conn.readable.getReader();
     const welcome = await this.readResponse();
