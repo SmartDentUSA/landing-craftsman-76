@@ -149,8 +149,8 @@ serve(async (req) => {
     // 4. Determine file path in repo
     if (isHomepage) pagePath = '/';
     const repoPath = isHomepage
-      ? 'public/index.html'
-      : `public${pagePath.startsWith('/') ? pagePath : '/' + pagePath}/index.html`;
+      ? 'index.html'
+      : `${pagePath.startsWith('/') ? pagePath.slice(1) : pagePath}/index.html`;
 
     console.log(`📁 Repo path: ${repoPath}`);
 
@@ -247,7 +247,7 @@ window.__NAV_DATA__ = ${JSON.stringify(navItems, null, 2)};
 
     if (navBlobSha) {
       treeFiles.push({
-        path: 'public/nav-data.js',
+        path: 'nav-data.js',
         mode: '100644',
         type: 'blob',
         sha: navBlobSha,
