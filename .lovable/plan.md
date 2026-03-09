@@ -1,47 +1,40 @@
 
 
-## Plano: Substituir FTP por Git Deploy (KingHost) para www.smartdent.com.br
+# Fix: Perfis FTP não persistem após salvar
 
-### Contexto da Imagem
-O KingHost Git Deploy usa o repo **SmartDentUSA/landing-craftsman-76** (este projeto Lovable), branch **main**, deploy em **/www/**. Ele cria automaticamente a branch `stable-website`, GitHub Actions e webhook.
+## Problema
 
-### Como funciona o fluxo
+Três bugs no `PublicationSettings.tsx`:
 
-```text
-Edge Function gera HTML → Commit via GitHub API no repo (public/blog/...) → Push main → GitHub Actions build → KingHost sync /www/ → www.smartdent.com.br
+1. **Filtro `user_id` na query de load** (linha 67): `.eq('user_id', user.user.id)` exclui perfis criados por outro admin. Perfis compartilhados devem ser visíveis para todos os admins.
+
+2. **Mutação direta do state** (linha 159): `profile.id = data.id` altera o objeto sem chamar `setState`, então React não sabe que o perfil agora tem ID. No próximo save ou reload, o perfil pode ser duplicado ou perdido.
+
+3. **Sobrescreve `user_id` no update** (linha 135): Ao atualizar um perfil existente criado por outro admin, o `user_id` é substituído pelo do usuário atual. Deve manter o original.
+
+## Correções em `src/pages/PublicationSettings.tsx`
+
+### 1. Remover filtro `user_id` do loadSettings (linha 67)
+```typescript
+// Antes:
+.eq('user_id', user.user.id)
+
+// Depois: remover esta linha
 ```
 
-Os arquivos HTML gerados são commitados na pasta `public/` do repo. O Vite copia `public/` para `dist/` no build. O KingHost deploya `dist/` para `/www/`.
+### 2. Corrigir mutação de state após insert (linhas 152-160)
+```typescript
+// Após insert bem-sucedido, atualizar state corretamente:
+if (data) {
+  setFtpProfiles(prev => prev.map((p, i) =>
+    i === ftpProfiles.indexOf(profile) ? { ...p, id: data.id } : p
+  ));
+}
+```
 
-### Alterações
+### 3. No update, não enviar `user_id` (linha 134-144)
+Separar o record para insert vs update — no update, omitir `user_id`.
 
-**1. Nova Edge Function: `supabase/functions/publish-git-deploy/index.ts`**
-- Recebe `{ lpId, domain, pagePath, isHomepage }`
-- Busca HTML de `cloned_landing_pages`
-- Usa GitHub API (`PUT /repos/SmartDentUSA/landing-craftsman-76/contents/public{pagePath}`) para commitar o HTML
-- Atualiza `publish_status` para `published`
-- Requer secret `GITHUB_DEPLOY_TOKEN` (Personal Access Token com `contents:write`)
-
-**2. `supabase/config.toml`** — Adicionar `[functions.publish-git-deploy]` com `verify_jwt = true`
-
-**3. Expandir `publish_method` em 5 arquivos:**
-
-| Arquivo | Mudança |
-|---------|---------|
-| `TrackingSEOTab.tsx` | Tipo L428 → `'cloudflare' \| 'ftp' \| 'git-deploy'`. Adicionar 3a opção "🔀 Git Deploy" no RadioGroup (L434-448). Adicionar seção config Git Deploy com campos `git_repo` (fixo: SmartDentUSA/landing-craftsman-76), `git_branch` (fixo: main), `git_base_path` (fixo: public). |
-| `LPPublishDialog.tsx` | Tipo L20 → incluir `'git-deploy'`. Roteamento L195 → adicionar caso `git-deploy` → `publish-git-deploy`. |
-| `LPClonePanel.tsx` | Tipo L89 → incluir `'git-deploy'`. Filtro L210-214 → incluir `git-deploy`. Roteamento L522-523 → caso `git-deploy`. Labels L966, L1148, L1482 → badge "🔀 Git". |
-| `ProductBlogPublisherPanel.tsx` | Tipo L25 → incluir `'git-deploy'`. Filtro L111-115 → incluir `git-deploy`. |
-| `CompanyProfileManager.tsx` | Tipo L83 → incluir `'git-deploy'`. |
-
-**4. Secret necessário**
-- `GITHUB_DEPLOY_TOKEN`: Personal Access Token com permissão `contents:write` no repo SmartDentUSA/landing-craftsman-76
-
-**5. Dados no banco**
-- No `seo_domains` do `company_profile`, para smartdent.com.br: mudar `publish_method` de `ftp` para `git-deploy`, adicionar `git_repo: "SmartDentUSA/landing-craftsman-76"`, `git_branch: "main"`, `git_base_path: "public"`
-
-### O que NÃO muda
-- Domínios Cloudflare permanecem inalterados
-- Edge functions FTP existentes permanecem
-- Nenhuma tabela alterada
+### Arquivo alterado
+- `src/pages/PublicationSettings.tsx`
 
