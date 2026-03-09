@@ -32,6 +32,18 @@ import {
 // ✅ SEO Fine-Tuning 10/10 - Shared Module
 import { deduplicateKeywords } from "../_shared/seo-fine-tuning.ts";
 
+// ✅ FASE 6: AI/SEO Helpers para conformidade semântica
+import {
+  generateAICrawlerPolicyMeta,
+  generateEntityReferenceMetas,
+  generateDefinitionParagraph
+} from "../_shared/knowledge-system-helpers.ts";
+import {
+  generateAISummaryBlock,
+  generateLLMKnowledgeLayer,
+  generateEntityIndexHTML
+} from "../_shared/ai-readiness-helpers.ts";
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -639,7 +651,14 @@ function generateHTMLContent(blogPost: any, productData: any = null): string {
     
     <!-- ✅ FASE 10: Authority Meta Tags (Twitter, Facebook, Expertise) -->
     ${authorityMetaTags}
-    
+
+    <!-- AI Crawler Policy & Entity Reference -->
+    ${generateAICrawlerPolicyMeta()}
+    ${generateEntityReferenceMetas({
+      organization: 'E-Odonto',
+      categories: (blogPost.keywords || []).slice(0, 2),
+    })}
+
     <!-- Schema.org -->
     <script type="application/ld+json">${JSON.stringify(schema)}</script>
     
@@ -667,26 +686,37 @@ function generateHTMLContent(blogPost: any, productData: any = null): string {
     <!-- Skip Link for Accessibility -->
     <a href="#main-content" class="skip-link">Pular para o conteúdo principal</a>
     <div class="container">
-        <article>
+        <article class="indexable-content" itemscope itemtype="https://schema.org/Article">
             <main id="main-content">
-            <h1>${blogPost.title}</h1>
+            ${generateAISummaryBlock({
+              productName: blogPost.title,
+              companyName: 'E-Odonto',
+              description: blogPost.meta_description,
+              keyBenefits: (blogPost.keywords || []).slice(0, 3),
+            })}
+            ${generateDefinitionParagraph({
+              entityName: blogPost.title,
+              definition: blogPost.meta_description || '',
+              company: 'E-Odonto',
+            })}
+            <h1 itemprop="headline">${blogPost.title}</h1>
             <div class="meta">
                 <p>${blogPost.meta_description}</p>
-                ${blogPost.keywords && blogPost.keywords.length > 0 ? 
+                ${blogPost.keywords && blogPost.keywords.length > 0 ?
                   `<p><strong>Tags:</strong> ${blogPost.keywords.join(', ')}</p>` : ''
                 }
             </div>
-            <div class="content">
+            <div class="content" itemprop="articleBody">
                 ${finalContent}
             </div>
-            
+
             ${blogPost.youtube_video_url ? `
             <div class="youtube-embed">
                 <h3>🎥 Vídeo relacionado:</h3>
                 <a href="${blogPost.youtube_video_url}" target="_blank" rel="noopener">${blogPost.youtube_video_url}</a>
             </div>
             ` : ''}
-            
+
             <div class="cross-links">
                 <h3>📚 Links relacionados:</h3>
                 <ul>
@@ -694,6 +724,14 @@ function generateHTMLContent(blogPost: any, productData: any = null): string {
                     <li><a href="https://dentala.com.br" target="_blank" rel="noopener">Confira mais conteúdo em dentala.com.br</a></li>
                 </ul>
             </div>
+
+            ${generateLLMKnowledgeLayer({
+              definition: (blogPost.meta_description || '').substring(0, 300),
+              keyProperties: (blogPost.keywords || []).slice(0, 5),
+            })}
+
+            ${generateEntityIndexHTML([blogPost.title, blogPost.meta_description || '', (blogPost.keywords || []).join(' ')].join(' '))}
+
             </main>
         </article>
     </div>

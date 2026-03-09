@@ -57,12 +57,24 @@ import {
 import { fetchAggregateRating, type AggregateRatingData } from '../_shared/aggregate-rating-helper.ts';
 
 // ✅ SEO Fine-Tuning 10/10 - Shared Module
-import { 
+import {
   expandFounderSameAs,
   generateServiceSchemas,
   generateHasCredential,
   deduplicateKeywords
 } from '../_shared/seo-fine-tuning.ts';
+
+// ✅ FASE 6: AI/SEO Helpers para conformidade semântica
+import {
+  generateAICrawlerPolicyMeta,
+  generateEntityReferenceMetas,
+  generateDefinitionParagraph
+} from '../_shared/knowledge-system-helpers.ts';
+import {
+  generateAISummaryBlock,
+  generateLLMKnowledgeLayer,
+  generateEntityIndexHTML
+} from '../_shared/ai-readiness-helpers.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -890,7 +902,15 @@ function generateProductBlogHTML(options: {
   <meta name="twitter:title" content="${escapeHtml(title)}">
   <meta name="twitter:description" content="${escapeHtml(description)}">
   <meta name="twitter:image" content="${escapeHtml(galleryImages[0] || '')}">
-  
+
+  <!-- AI Crawler Policy & Entity Reference -->
+  ${generateAICrawlerPolicyMeta()}
+  ${generateEntityReferenceMetas({
+    organization: companyName,
+    products: [product.name],
+    categories: product.category ? [product.category] : [],
+  })}
+
   <!-- Hreflang -->
   <link rel="alternate" hreflang="pt-BR" href="${escapeHtml(canonicalUrl)}">
   <link rel="alternate" hreflang="x-default" href="${escapeHtml(canonicalUrl)}">
@@ -1716,7 +1736,7 @@ ${JSON.stringify({ "@context": "https://schema.org", "@graph": schemas.map(s => 
   ${bodyScripts}
   
   <!-- HEADER -->
-  <header class="site-header">
+  <header class="site-header" role="banner">
     <div class="container">
       <div class="header-inner">
         ${companyProfile?.company_logo_url 
@@ -1745,11 +1765,13 @@ ${JSON.stringify({ "@context": "https://schema.org", "@graph": schemas.map(s => 
       <section class="hero-section">
         <div class="hero-grid">
           <div class="hero-image-container">
-            <div class="hero-image">
-              ${product.image_url 
-                ? `<img src="${escapeHtml(product.image_url)}" alt="${escapeHtml(product.name)}" loading="eager" width="400" height="400" id="main-product-image">`
-                : `<div style="width:300px;height:300px;background:#e2e8f0;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#94a3b8;"><i class="fas fa-image fa-3x"></i></div>`
-              }
+            <div class="hero-container">
+              <div class="hero-image">
+                ${product.image_url
+                  ? `<img src="${escapeHtml(product.image_url)}" alt="${escapeHtml(product.name)}" loading="eager" width="400" height="400" id="main-product-image" itemprop="image">`
+                  : `<div style="width:300px;height:300px;background:#e2e8f0;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#94a3b8;"><i class="fas fa-image fa-3x"></i></div>`
+                }
+              </div>
             </div>
             ${(() => {
               // Extrair galeria de imagens
@@ -1783,7 +1805,14 @@ ${JSON.stringify({ "@context": "https://schema.org", "@graph": schemas.map(s => 
           </div>
           <div class="hero-info">
             <span class="category-badge">${escapeHtml(product.subcategory || product.category || 'Produto Premium')}</span>
-            <h1>${escapeHtml(product.name)}</h1>
+            <h1 itemprop="headline">${escapeHtml(product.name)}</h1>
+            ${generateAISummaryBlock({
+              productName: product.name,
+              companyName,
+              category: product.category,
+              description: product.description,
+              keyBenefits: (product.benefits || []).slice(0, 3).map((b: any) => typeof b === 'string' ? b : ''),
+            })}
             <!-- PREÇOS REMOVIDOS - blogs não contêm preços para evitar republicação em reajustes -->
             <ul class="feature-checklist">
               ${features.map(f => `<li><i class="fas fa-check-circle"></i> ${escapeHtml(f)}</li>`).join('')}
@@ -1827,8 +1856,28 @@ ${JSON.stringify({ "@context": "https://schema.org", "@graph": schemas.map(s => 
     <!-- BLOG CONTENT -->
     <section class="content-section">
       <div class="container">
-        <article class="blog-content">
-          ${htmlContent}
+        <article class="indexable-content blog-content" itemscope itemtype="https://schema.org/Article">
+
+          ${generateDefinitionParagraph({
+            entityName: product.name,
+            category: product.category,
+            definition: product.description || '',
+            company: companyName,
+          })}
+
+          <section class="content-body" itemprop="articleBody">
+            ${htmlContent}
+          </section>
+
+          ${generateLLMKnowledgeLayer({
+            definition: (product.description || '').replace(/<[^>]*>/g, '').substring(0, 300),
+            technology: features.slice(0, 3).join('; '),
+            clinicalApplication: Array.isArray(product.applications) ? product.applications.slice(0, 2).join('; ') : (product.applications || ''),
+            keyProperties: features.slice(0, 5),
+          })}
+
+          ${generateEntityIndexHTML([product.name, product.category || '', product.description || '', features.join(' ')].join(' '))}
+
         </article>
       </div>
     </section>
@@ -1918,7 +1967,7 @@ ${JSON.stringify({ "@context": "https://schema.org", "@graph": schemas.map(s => 
   </main>
 
   <!-- FOOTER -->
-  <footer class="site-footer">
+  <footer class="site-footer" role="contentinfo">
     <div class="container">
       ${footerHTML}
       <div class="footer-bottom">

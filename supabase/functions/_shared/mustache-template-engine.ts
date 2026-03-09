@@ -4,12 +4,24 @@
  */
 
 // ✅ SEO Fine-Tuning 10/10 - Shared Module
-import { 
+import {
   expandFounderSameAs,
   generateServiceSchemas,
   generateHasCredential,
   deduplicateKeywords
 } from './seo-fine-tuning.ts';
+
+// ✅ FASE 6: AI/SEO Helpers para conformidade semântica
+import {
+  generateAICrawlerPolicyMeta,
+  generateEntityReferenceMetas,
+  generateDefinitionParagraph
+} from './knowledge-system-helpers.ts';
+import {
+  generateAISummaryBlock,
+  generateLLMKnowledgeLayer,
+  generateEntityIndexHTML
+} from './ai-readiness-helpers.ts';
 
 // Simple Mustache-like template engine
 export interface TemplateData {
@@ -644,7 +656,15 @@ function renderFullTemplate(data: TemplateData, schemas: Record<string, string>)
   <meta name="twitter:title" content="${escapeHtml(product.name)}">
   <meta name="twitter:description" content="${escapeHtml(metaDescription)}">
   <meta name="twitter:image" content="${escapeHtml(product.image_url || '')}">
-  
+
+  <!-- AI Crawler Policy & Entity Reference -->
+  ${generateAICrawlerPolicyMeta()}
+  ${generateEntityReferenceMetas({
+    organization: company.company_name,
+    products: [product.name],
+    categories: product.category ? [product.category] : [],
+  })}
+
   <!-- Schema.org -->
   <script type="application/ld+json">${schemas.organization}</script>
   <script type="application/ld+json">${schemas.product}</script>
@@ -664,7 +684,7 @@ function renderFullTemplate(data: TemplateData, schemas: Record<string, string>)
   ${trackingScripts.bodyStart}
   
   <!-- Header -->
-  <header class="site-header">
+  <header class="site-header" role="banner">
     <div class="container header-content">
       <a href="${escapeHtml(company.website_url || '/')}" class="logo">
         ${company.company_logo_url 
@@ -700,16 +720,19 @@ function renderFullTemplate(data: TemplateData, schemas: Record<string, string>)
     <section class="hero-section" aria-labelledby="hero-title">
       <div class="container hero-grid">
         <div class="hero-image-wrapper">
-          ${product.image_url 
-            ? `<img 
-                src="${escapeHtml(product.image_url)}" 
-                alt="${escapeHtml(product.name)}"
-                class="hero-image"
-                loading="eager"
-                fetchpriority="high"
-              >`
-            : ''
-          }
+          <div class="hero-container">
+            ${product.image_url
+              ? `<img
+                  src="${escapeHtml(product.image_url)}"
+                  alt="${escapeHtml(product.name)}"
+                  class="hero-image"
+                  loading="eager"
+                  fetchpriority="high"
+                  itemprop="image"
+                >`
+              : ''
+            }
+          </div>
           ${renderImageGallery(product.images_gallery)}
         </div>
         
@@ -719,8 +742,16 @@ function renderFullTemplate(data: TemplateData, schemas: Record<string, string>)
             ${product.brand ? `<span class="badge badge-brand">${escapeHtml(product.brand)}</span>` : ''}
           </div>
           
-          <h1 id="hero-title" class="hero-title">${escapeHtml(product.name)}</h1>
-          
+          <h1 id="hero-title" class="hero-title" itemprop="headline">${escapeHtml(product.name)}</h1>
+
+          ${generateAISummaryBlock({
+            productName: product.name,
+            companyName: company.company_name,
+            category: product.category,
+            description: product.description,
+            keyBenefits: (product.benefits || []).slice(0, 3).map((b: any) => typeof b === 'string' ? b : ''),
+          })}
+
           ${product.sales_pitch 
             ? `<p class="hero-subtitle">${escapeHtml(truncate(stripHtml(product.sales_pitch), 280))}</p>` 
             : ''
@@ -748,14 +779,35 @@ function renderFullTemplate(data: TemplateData, schemas: Record<string, string>)
     <!-- Main Content -->
     <section id="conteudo" class="content-section">
       <div class="container content-grid">
-        <article class="main-content">
+        <article class="indexable-content main-content" itemscope itemtype="https://schema.org/Article">
+
+          ${generateDefinitionParagraph({
+            entityName: product.name,
+            category: product.category,
+            definition: product.description || '',
+            company: company.company_name,
+          })}
+
           <h2>Sobre ${escapeHtml(product.name)}</h2>
-          <p class="lead">${escapeHtml(product.description || '')}</p>
-          
-          ${renderApplicationsSection(product.applications)}
-          ${renderTargetAudienceSection(product.target_audience)}
+
+          <section class="content-body" itemprop="articleBody">
+            <p class="lead">${escapeHtml(product.description || '')}</p>
+
+            ${renderApplicationsSection(product.applications)}
+            ${renderTargetAudienceSection(product.target_audience)}
+          </section>
+
+          ${generateLLMKnowledgeLayer({
+            definition: (product.description || '').replace(/<[^>]*>/g, '').substring(0, 300),
+            technology: (product.features || []).slice(0, 3).join('; '),
+            clinicalApplication: Array.isArray(product.applications) ? product.applications.slice(0, 2).join('; ') : (product.applications || ''),
+            keyProperties: (product.features || []).slice(0, 5),
+          })}
+
+          ${generateEntityIndexHTML([product.name, product.category || '', product.description || '', (product.features || []).join(' ')].join(' '))}
+
         </article>
-        
+
         ${renderAuthorCard(author)}
       </div>
     </section>
@@ -781,7 +833,7 @@ function renderFullTemplate(data: TemplateData, schemas: Record<string, string>)
   </main>
 
   <!-- Footer -->
-  <footer class="site-footer">
+  <footer class="site-footer" role="contentinfo">
     <div class="container footer-content">
       <div class="footer-brand">
         <span class="footer-logo">${escapeHtml(company.company_name)}</span>
