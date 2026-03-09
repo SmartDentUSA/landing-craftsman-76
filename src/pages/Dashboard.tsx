@@ -568,7 +568,7 @@ const DashboardContent = () => {
                         {getStatusText(landingPage.status)}
                       </Badge>
                       {publishedMap[landingPage.id]?.publish_status === 'published' && (
-                        <Badge className="bg-green-600 text-white hover:bg-green-700">
+                        <Badge className="bg-success text-success-foreground hover:bg-success/90">
                           Publicado
                         </Badge>
                       )}
