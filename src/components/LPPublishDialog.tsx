@@ -162,21 +162,23 @@ export function LPPublishDialog({ open, onOpenChange, landingPage }: LPPublishDi
       if (!user) throw new Error('Usuário não autenticado');
 
       // 4. Insert into cloned_landing_pages
+      const insertPayload = {
+        name: landingPage.name,
+        original_html: htmlCode,
+        transformed_html: htmlCode,
+        cta_url: previewUrl,
+        user_id: user.id,
+        target_domain: selectedDomain,
+        page_path: pagePath,
+        is_homepage: isHomepage,
+        status: 'ready' as const,
+        publish_status: 'pending' as const,
+        source_landing_page_id: landingPage.id,
+      };
+
       const { data: clonedLP, error: insertError } = await supabase
         .from('cloned_landing_pages')
-        .insert({
-          name: landingPage.name,
-          original_html: htmlCode,
-          transformed_html: htmlCode,
-          cta_url: previewUrl,
-          user_id: user.id,
-          target_domain: selectedDomain,
-          page_path: pagePath,
-          is_homepage: isHomepage,
-          status: 'ready',
-          publish_status: 'pending',
-          source_landing_page_id: landingPage.id,
-        })
+        .insert(insertPayload)
         .select('id')
         .single();
 
