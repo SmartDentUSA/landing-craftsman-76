@@ -2585,6 +2585,7 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
   ${generateGTMNoScript(company?.tracking_pixels as TrackingPixels, { preview })}
   
   <!-- Header com Logo e Menu -->
+  <header role="banner">
   <div class="container">
     <div class="header">
       <!-- Logo com fallback robusto -->
@@ -2626,13 +2627,16 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
       </nav>
     </div>
   </div>
+  </header>
 
   <!-- Hero Image com Texto Sobreposto -->
   <div class="container">
     ${heroImageSrc ? `
     <!-- Hero com imagem de fundo -->
     <div class="image1-container">
+      <div class="hero-container">
       <img src="${escapeHtml(heroImageSrc)}" alt="${escapeHtml(heroImageAlt)}" width="1200" height="675" loading="eager" fetchpriority="high">
+      </div>
       <div class="text-overlay">
         <small><i class="fas fa-microchip"></i> ${escapeHtml(badge)}</small>
         <h1 data-editable="true" data-field="hero_title">${escapeHtml(finalHeroTitle)}</h1>
@@ -3240,7 +3244,7 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
   </div>
 
   <!-- Footer -->
-  <footer>
+  <footer role="contentinfo">
     <div class="footer-top-bar"></div>
     <div class="container footer-content">
       ${(() => {

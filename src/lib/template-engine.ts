@@ -2016,9 +2016,9 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
 
     <!-- Conteúdo Principal -->
     <main id="main-content">
-      <article class="indexable-content">
+      <article class="indexable-content" itemscope itemtype="https://schema.org/Article">
         <!-- H1 Principal para SEO e Acessibilidade -->
-        <h1 class="sr-only">{{seo_title}}</h1>
+        <h1 class="sr-only" itemprop="headline">{{seo_title}}</h1>
         
         <!-- 🤖 AI Summary Block (visually hidden, semantically accessible for LLMs) -->
         {{{ai_summary_block}}}
@@ -2031,7 +2031,6 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         <div class="container banner-content">
             <div class="banner-text">
                 <p>{{banner.badge_text}}</p>
-                <h1>{{banner.title}}</h1>
                 <p>{{banner.subtitle}}</p>
                 {{#banner.cta_primary}}
                 {{#visible}}
@@ -2046,19 +2045,22 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             </div>
             <div class="banner-images">
                 {{#banner.images}}
+                <div class="hero-container">
                 {{#href}}
                 <a href="{{href}}" target="_blank" rel="noopener noreferrer">
-                    <img src="{{src}}" alt="{{alt}}" style="transform: scale({{scale}})" fetchpriority="high" decoding="async">
+                    <img src="{{src}}" alt="{{alt}}" style="transform: scale({{scale}})" fetchpriority="high" loading="eager" decoding="async">
                 </a>
                 {{/href}}
                 {{^href}}
-                <img src="{{src}}" alt="{{alt}}" style="transform: scale({{scale}})" fetchpriority="high" decoding="async">
+                <img src="{{src}}" alt="{{alt}}" style="transform: scale({{scale}})" fetchpriority="high" loading="eager" decoding="async">
                 {{/href}}
+                </div>
                 {{/banner.images}}
             </div>
         </div>
     </header>
 
+    <div itemprop="articleBody">
     <!-- Animated Banner Section (Independent) -->
     {{#animated_banner_section}}
     {{#visible_any}}
@@ -2518,6 +2520,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     </div>
     {{/visible_any}}
     {{/knowledge_feed_section}}
+    </div>
 
     <!-- 🤖 LLM Knowledge Layer (structured knowledge for AI extraction) -->
     {{{llm_knowledge_block}}}

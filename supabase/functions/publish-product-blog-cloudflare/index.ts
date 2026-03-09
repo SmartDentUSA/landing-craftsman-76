@@ -1716,7 +1716,7 @@ ${JSON.stringify({ "@context": "https://schema.org", "@graph": schemas.map(s => 
   ${bodyScripts}
   
   <!-- HEADER -->
-  <header class="site-header">
+  <header class="site-header" role="banner">
     <div class="container">
       <div class="header-inner">
         ${companyProfile?.company_logo_url 
@@ -1918,7 +1918,7 @@ ${JSON.stringify({ "@context": "https://schema.org", "@graph": schemas.map(s => 
   </main>
 
   <!-- FOOTER -->
-  <footer class="site-footer">
+  <footer class="site-footer" role="contentinfo">
     <div class="container">
       ${footerHTML}
       <div class="footer-bottom">

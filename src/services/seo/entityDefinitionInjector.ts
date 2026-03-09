@@ -58,7 +58,7 @@ export function injectEntityDefinition(
   <!-- GEO Context - Enterprise Entity Definition for AI Crawlers -->
   <aside class="geo-context visually-hidden" aria-hidden="true" itemscope itemtype="https://schema.org/Organization">
     <meta itemprop="@type" content="Organization">
-    <h1 itemprop="name">${sanitize(config.companyName)}</h1>
+    <span itemprop="name">${sanitize(config.companyName)}</span>
     <p itemprop="description">${sanitize(config.description)}</p>
     
     <div class="entity-details">
