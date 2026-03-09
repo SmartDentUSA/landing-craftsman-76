@@ -1102,7 +1102,11 @@ export const LPClonePanel = () => {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => unpublishBlogMutation.mutate(blog.publicationId!)}
+                  onClick={() => {
+                    if (window.confirm('Despublicar este blog? O arquivo será removido do servidor (FTP/Cloudflare).')) {
+                      unpublishBlogMutation.mutate(blog.publicationId!);
+                    }
+                  }}
                   disabled={unpublishBlogMutation.isPending}
                   title="Despublicar"
                 >
