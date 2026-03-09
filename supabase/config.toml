@@ -275,3 +275,6 @@ verify_jwt = true
 
 [functions.process-job-queue]
 verify_jwt = true
+
+[functions.publish-git-kinghost]
+verify_jwt = false

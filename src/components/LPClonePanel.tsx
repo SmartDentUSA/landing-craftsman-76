@@ -1486,6 +1486,8 @@ export const LPClonePanel = () => {
                                       {d.domain}
                                       {d.publish_method === 'ftp' ? (
                                         <Badge variant="outline" className="ml-1 text-[10px] px-1 py-0">FTP</Badge>
+                                      ) : d.publish_method === 'git' ? (
+                                        <Badge variant="outline" className="ml-1 text-[10px] px-1 py-0">🐙 Git</Badge>
                                       ) : (
                                         <CheckCircle className="h-3 w-3 text-green-500" />
                                       )}

@@ -445,6 +445,13 @@ export function TrackingSEOTab({ profile, setProfile }: TrackingSEOTabProps) {
                     FTP
                   </Label>
                 </div>
+                <div className="flex items-center gap-2">
+                  <RadioGroupItem value="git" id={`method-git-${index}`} />
+                  <Label htmlFor={`method-git-${index}`} className="flex items-center gap-1 cursor-pointer text-sm">
+                    <GitBranch className="h-3.5 w-3.5 text-purple-500" />
+                    🐙 Git Deploy
+                  </Label>
+                </div>
               </RadioGroup>
             </div>
 

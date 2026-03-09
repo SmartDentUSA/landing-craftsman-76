@@ -248,7 +248,7 @@ export function LPPublishDialog({ open, onOpenChange, landingPage }: LPPublishDi
                     <span className="flex items-center gap-2">
                       {d.name} — {d.domain}
                       <Badge variant="outline" className="ml-1 text-xs">
-                        {d.publish_method === 'ftp' ? 'FTP' : 'Cloudflare'}
+                        {d.publish_method === 'ftp' ? 'FTP' : d.publish_method === 'git' ? '🐙 Git' : 'Cloudflare'}
                       </Badge>
                     </span>
                   </SelectItem>
