@@ -3518,6 +3518,11 @@ export const generatePreviewHTML = async (data: any): Promise<string> => {
 };
 
 export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Promise<string> => {
+  // 🔧 Normalizar logo_url: pode ser string ou ImageData object
+  if (data.logo_url && typeof data.logo_url === 'object' && data.logo_url !== null) {
+    data.logo_url = data.logo_url.src || '';
+  }
+  
   console.log('🎯 [template-engine] generateHTML - SPIN Solutions:', {
     count: relatedSpinSolutions?.length || 0,
     solutions: relatedSpinSolutions?.map(s => ({ id: s.id, title: s.title })) || []
@@ -5256,7 +5261,9 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
     const companyMeta = buildSEOMetaFromCompany(companyProfile, processedData.ai_keywords?.primary || []);
     
     // ✅ FALLBACK LOGO: Usar logo da empresa se não definido no Editor
-    if (!processedData.logo_url || processedData.logo_url === '' || processedData.logo_url.includes('placeholder')) {
+    if (!processedData.logo_url || processedData.logo_url === '' || 
+        (typeof processedData.logo_url === 'string' && processedData.logo_url.includes('placeholder')) ||
+        (typeof processedData.logo_url === 'object' && processedData.logo_url?.src?.includes('placeholder'))) {
       if (companyProfile.company_logo_url) {
         processedData.logo_url = companyProfile.company_logo_url;
         console.log('🔧 [FALLBACK] Logo preenchido do company_profile:', companyProfile.company_logo_url);
