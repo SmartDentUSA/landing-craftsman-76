@@ -1150,7 +1150,7 @@ export const LPClonePanel = () => {
                     <SelectContent className="bg-popover border shadow-md z-50">
                       {enabledDomains.filter(d => d.domain && d.domain.trim() !== '').map(d => (
                         <SelectItem key={d.domain} value={d.domain}>
-                          {d.domain} {d.publish_method === 'ftp' ? '🟠 FTP' : '⚡ Cloudflare'}
+                          {d.domain} {d.publish_method === 'ftp' ? '🟠 FTP' : d.publish_method === 'git' ? '🐙 Git' : '⚡ Cloudflare'}
                         </SelectItem>
                       ))}
                     </SelectContent>
