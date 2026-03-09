@@ -21,8 +21,10 @@ class FTPClient {
   private encoder = new TextEncoder();
   private decoder = new TextDecoder();
   private buffer = '';
+  private host = '';
 
   async connect(host: string, port: number) {
+    this.host = host;
     this.conn = await Deno.connect({ hostname: host, port, transport: 'tcp' });
     this.reader = this.conn.readable.getReader();
     const welcome = await this.readResponse();
@@ -98,15 +100,39 @@ class FTPClient {
   }
 
   async pasv(): Promise<{ host: string; port: number }> {
+    // Try EPSV first (more reliable, returns only port)
+    try {
+      const epsvResp = await this.sendCommand('EPSV');
+      if (epsvResp.startsWith('229')) {
+        const epsvMatch = epsvResp.match(/\|{3}(\d+)\|/);
+        if (epsvMatch) {
+          return { host: this.host, port: parseInt(epsvMatch[1]) };
+        }
+      }
+    } catch {
+      // Fall through to PASV
+    }
+
     const resp = await this.sendCommand('PASV');
     if (!resp.startsWith('227')) throw new Error(`PASV failed: ${resp}`);
     
-    const match = resp.match(/\((\d+),(\d+),(\d+),(\d+),(\d+),(\d+)\)/);
-    if (!match) throw new Error(`Cannot parse PASV response: ${resp}`);
+    // Standard 6-number format: (h1,h2,h3,h4,p1,p2)
+    const match6 = resp.match(/\((\d+),(\d+),(\d+),(\d+),(\d+),(\d+)\)/);
+    if (match6) {
+      const host = `${match6[1]}.${match6[2]}.${match6[3]}.${match6[4]}`;
+      const port = parseInt(match6[5]) * 256 + parseInt(match6[6]);
+      return { host, port };
+    }
     
-    const host = `${match[1]}.${match[2]}.${match[3]}.${match[4]}`;
-    const port = parseInt(match[5]) * 256 + parseInt(match[6]);
-    return { host, port };
+    // Some servers return non-standard responses - extract any numbers we can find
+    const allNums = resp.match(/(\d+),(\d+),(\d+),(\d+),(\d+),(\d+)/);
+    if (allNums) {
+      const host = `${allNums[1]}.${allNums[2]}.${allNums[3]}.${allNums[4]}`;
+      const port = parseInt(allNums[5]) * 256 + parseInt(allNums[6]);
+      return { host, port };
+    }
+    
+    throw new Error(`Cannot parse PASV response: ${resp}`);
   }
 
   async stor(filename: string, content: Uint8Array) {
