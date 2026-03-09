@@ -17,7 +17,7 @@ interface SEODomain {
   name: string;
   domain: string;
   enabled: boolean;
-  publish_method: 'ftp' | 'cloudflare';
+  publish_method: 'ftp' | 'cloudflare' | 'git';
   ftp_profile?: string;
   ftp_remote_path?: string;
   url_structure?: Record<string, string>;
