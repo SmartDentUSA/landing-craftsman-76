@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Cloud, Loader2, CheckCircle, XCircle, RefreshCw, BarChart3, Key, Save, Eye, EyeOff, Shield, Zap, Server, ChevronDown, Link } from "lucide-react";
+import { Plus, Trash2, Cloud, Loader2, CheckCircle, XCircle, RefreshCw, BarChart3, Key, Save, Eye, EyeOff, Shield, Zap, Server, ChevronDown, Link, GitBranch } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
