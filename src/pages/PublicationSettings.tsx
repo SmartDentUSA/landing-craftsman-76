@@ -64,7 +64,6 @@ export default function PublicationSettings() {
       const { data, error } = await supabase
         .from("publication_settings")
         .select("*")
-        .eq('user_id', user.user.id)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
@@ -130,9 +129,9 @@ export default function PublicationSettings() {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) throw new Error("Usuário não autenticado");
 
-      for (const profile of ftpProfiles) {
-        const record = {
-          user_id: user.user.id,
+      for (let idx = 0; idx < ftpProfiles.length; idx++) {
+        const profile = ftpProfiles[idx];
+        const baseFields = {
           profile_name: profile.profile_name || null,
           ftp_host: profile.ftp_host,
           ftp_user: profile.ftp_user,
@@ -140,23 +139,28 @@ export default function PublicationSettings() {
           ftp_protocol: profile.ftp_protocol,
           ftp_port: profile.ftp_port,
           ftp_remote_path: profile.ftp_remote_path,
-          ...(ftpProfiles.indexOf(profile) === 0 ? wpSettings : {}),
+          ...(idx === 0 ? wpSettings : {}),
         };
 
         if (profile.id) {
           const { error } = await supabase
             .from("publication_settings")
-            .update(record)
+            .update(baseFields)
             .eq("id", profile.id);
           if (error) throw error;
         } else {
           const { data, error } = await supabase
             .from("publication_settings")
-            .insert(record)
+            .insert({ ...baseFields, user_id: user.user.id })
             .select("id")
             .single();
           if (error) throw error;
-          profile.id = data.id;
+          if (data) {
+            const insertedIdx = idx;
+            setFtpProfiles(prev => prev.map((p, i) =>
+              i === insertedIdx ? { ...p, id: data.id } : p
+            ));
+          }
         }
       }
 
