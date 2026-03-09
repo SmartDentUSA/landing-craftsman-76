@@ -210,6 +210,7 @@ export const LPClonePanel = () => {
   const enabledDomains = seoDomains.filter(d => 
     d.enabled !== false && (
       d.publish_method === 'ftp' ||
+      d.publish_method === 'git' ||
       (d.cloudflare_enabled && d.cloudflare_project_name)
     )
   );
