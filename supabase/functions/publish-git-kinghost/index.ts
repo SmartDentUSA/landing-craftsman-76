@@ -159,7 +159,16 @@ serve(async (req) => {
     // Step C: Create blob with HTML content (base64)
     const encoder = new TextEncoder();
     const htmlBytes = encoder.encode(html);
-    const base64Content = btoa(String.fromCharCode(...htmlBytes));
+    // Chunked base64 conversion to avoid stack overflow on large HTML
+    const chunkSize = 8192;
+    let binary = '';
+    for (let i = 0; i < htmlBytes.length; i += chunkSize) {
+      const chunk = htmlBytes.subarray(i, Math.min(i + chunkSize, htmlBytes.length));
+      for (let j = 0; j < chunk.length; j++) {
+        binary += String.fromCharCode(chunk[j]);
+      }
+    }
+    const base64Content = btoa(binary);
 
     const blobData = await ghFetch('/git/blobs', githubToken, {
       method: 'POST',
