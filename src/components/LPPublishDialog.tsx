@@ -185,8 +185,11 @@ export function LPPublishDialog({ open, onOpenChange, landingPage }: LPPublishDi
       if (insertError) throw insertError;
 
       // 5. Call publish edge function
-      const functionName = domainConfig?.publish_method === 'ftp'
+      const method = domainConfig?.publish_method;
+      const functionName = method === 'ftp'
         ? 'publish-ftp-pages'
+        : method === 'git'
+        ? 'publish-git-kinghost'
         : 'publish-cloudflare-pages';
 
       const { error: fnError } = await supabase.functions.invoke(functionName, {
