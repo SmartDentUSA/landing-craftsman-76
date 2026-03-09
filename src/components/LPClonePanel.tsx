@@ -721,20 +721,18 @@ export const LPClonePanel = () => {
     }
   });
 
-  // Unpublish blog mutation
+  // Unpublish blog mutation (real removal from FTP/Cloudflare)
   const unpublishBlogMutation = useMutation({
     mutationFn: async (publicationId: string) => {
-      const { error } = await supabase
-        .from('product_blog_publications')
-        .update({
-          publish_status: 'draft',
-          published_url: null
-        })
-        .eq('id', publicationId);
+      const { data, error } = await supabase.functions.invoke('unpublish-pages', {
+        body: { publicationId, entityType: 'blog' }
+      });
       if (error) throw error;
+      if (!data.success) throw new Error(data.error);
+      return data;
     },
     onSuccess: () => {
-      toast.success('Blog despublicado!');
+      toast.success('Blog despublicado e removido do servidor!');
       queryClient.invalidateQueries({ queryKey: ['blog-publications'] });
     },
     onError: (error) => {
