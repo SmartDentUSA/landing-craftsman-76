@@ -86,7 +86,7 @@ interface SEODomain {
   cloudflare_enabled?: boolean;
   cloudflare_project_name?: string;
   cloudflare_status?: string;
-  publish_method?: 'cloudflare' | 'ftp';
+  publish_method?: 'cloudflare' | 'ftp' | 'git';
   ftp_profile?: string;
   enabled?: boolean;
   ftp_remote_path?: string;
@@ -210,6 +210,7 @@ export const LPClonePanel = () => {
   const enabledDomains = seoDomains.filter(d => 
     d.enabled !== false && (
       d.publish_method === 'ftp' ||
+      d.publish_method === 'git' ||
       (d.cloudflare_enabled && d.cloudflare_project_name)
     )
   );
@@ -520,7 +521,7 @@ export const LPClonePanel = () => {
       
       const domainConfig = seoDomains.find(d => d.domain === lp.target_domain);
       const method = domainConfig?.publish_method ?? 'cloudflare';
-      const functionName = method === 'ftp' ? 'publish-ftp-pages' : 'publish-cloudflare-pages';
+      const functionName = method === 'ftp' ? 'publish-ftp-pages' : method === 'git' ? 'publish-git-kinghost' : 'publish-cloudflare-pages';
       
       const { data, error } = await supabase.functions.invoke(functionName, {
         body: {
@@ -963,7 +964,7 @@ export const LPClonePanel = () => {
                 <SelectContent className="bg-popover border shadow-md z-50">
                   {enabledDomains.filter(d => d.domain && d.domain.trim() !== '').map(d => (
                     <SelectItem key={d.domain} value={d.domain}>
-                      {d.domain} {d.publish_method === 'ftp' ? '🟠 FTP' : '⚡ Cloudflare'}
+                      {d.domain} {d.publish_method === 'ftp' ? '🟠 FTP' : d.publish_method === 'git' ? '🐙 Git' : '⚡ Cloudflare'}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -1149,7 +1150,7 @@ export const LPClonePanel = () => {
                     <SelectContent className="bg-popover border shadow-md z-50">
                       {enabledDomains.filter(d => d.domain && d.domain.trim() !== '').map(d => (
                         <SelectItem key={d.domain} value={d.domain}>
-                          {d.domain} {d.publish_method === 'ftp' ? '🟠 FTP' : '⚡ Cloudflare'}
+                          {d.domain} {d.publish_method === 'ftp' ? '🟠 FTP' : d.publish_method === 'git' ? '🐙 Git' : '⚡ Cloudflare'}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1485,6 +1486,8 @@ export const LPClonePanel = () => {
                                       {d.domain}
                                       {d.publish_method === 'ftp' ? (
                                         <Badge variant="outline" className="ml-1 text-[10px] px-1 py-0">FTP</Badge>
+                                      ) : d.publish_method === 'git' ? (
+                                        <Badge variant="outline" className="ml-1 text-[10px] px-1 py-0">🐙 Git</Badge>
                                       ) : (
                                         <CheckCircle className="h-3 w-3 text-green-500" />
                                       )}

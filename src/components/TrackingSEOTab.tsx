@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Cloud, Loader2, CheckCircle, XCircle, RefreshCw, BarChart3, Key, Save, Eye, EyeOff, Shield, Zap, Server, ChevronDown, Link } from "lucide-react";
+import { Plus, Trash2, Cloud, Loader2, CheckCircle, XCircle, RefreshCw, BarChart3, Key, Save, Eye, EyeOff, Shield, Zap, Server, ChevronDown, Link, GitBranch } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -425,7 +425,7 @@ export function TrackingSEOTab({ profile, setProfile }: TrackingSEOTabProps) {
                 onValueChange={(v: string) => {
                   setProfile(prev => {
                     const updated = [...(prev.seo_domains || [])];
-                    updated[index].publish_method = v as 'cloudflare' | 'ftp';
+                    updated[index].publish_method = v as 'cloudflare' | 'ftp' | 'git';
                     return { ...prev, seo_domains: updated };
                   });
                 }}
@@ -443,6 +443,13 @@ export function TrackingSEOTab({ profile, setProfile }: TrackingSEOTabProps) {
                   <Label htmlFor={`method-ftp-${index}`} className="flex items-center gap-1 cursor-pointer text-sm">
                     <Server className="h-3.5 w-3.5 text-blue-500" />
                     FTP
+                  </Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <RadioGroupItem value="git" id={`method-git-${index}`} />
+                  <Label htmlFor={`method-git-${index}`} className="flex items-center gap-1 cursor-pointer text-sm">
+                    <GitBranch className="h-3.5 w-3.5 text-purple-500" />
+                    🐙 Git Deploy
                   </Label>
                 </div>
               </RadioGroup>

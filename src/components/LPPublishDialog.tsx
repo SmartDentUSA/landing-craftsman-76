@@ -17,7 +17,7 @@ interface SEODomain {
   name: string;
   domain: string;
   enabled: boolean;
-  publish_method: 'ftp' | 'cloudflare';
+  publish_method: 'ftp' | 'cloudflare' | 'git';
   ftp_profile?: string;
   ftp_remote_path?: string;
   url_structure?: Record<string, string>;
@@ -185,8 +185,11 @@ export function LPPublishDialog({ open, onOpenChange, landingPage }: LPPublishDi
       if (insertError) throw insertError;
 
       // 5. Call publish edge function
-      const functionName = domainConfig?.publish_method === 'ftp'
+      const method = domainConfig?.publish_method;
+      const functionName = method === 'ftp'
         ? 'publish-ftp-pages'
+        : method === 'git'
+        ? 'publish-git-kinghost'
         : 'publish-cloudflare-pages';
 
       const { error: fnError } = await supabase.functions.invoke(functionName, {
@@ -245,7 +248,7 @@ export function LPPublishDialog({ open, onOpenChange, landingPage }: LPPublishDi
                     <span className="flex items-center gap-2">
                       {d.name} — {d.domain}
                       <Badge variant="outline" className="ml-1 text-xs">
-                        {d.publish_method === 'ftp' ? 'FTP' : 'Cloudflare'}
+                        {d.publish_method === 'ftp' ? 'FTP' : d.publish_method === 'git' ? '🐙 Git' : 'Cloudflare'}
                       </Badge>
                     </span>
                   </SelectItem>
