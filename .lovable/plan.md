@@ -1,47 +1,47 @@
 
 
-## Plano: Substituir FTP por Git Deploy (KingHost) para www.smartdent.com.br
+# Despublicação Real: Remover arquivos do Cloudflare/FTP automaticamente
 
-### Contexto da Imagem
-O KingHost Git Deploy usa o repo **SmartDentUSA/landing-craftsman-76** (este projeto Lovable), branch **main**, deploy em **/www/**. Ele cria automaticamente a branch `stable-website`, GitHub Actions e webhook.
+## Problema Atual
+O botão "Despublicar" (X) apenas atualiza o banco de dados (`publish_status → draft`, `published_url → null`). Os arquivos HTML permanecem acessíveis no Cloudflare Pages e no servidor FTP.
 
-### Como funciona o fluxo
+## Solução
 
-```text
-Edge Function gera HTML → Commit via GitHub API no repo (public/blog/...) → Push main → GitHub Actions build → KingHost sync /www/ → www.smartdent.com.br
-```
+Criar uma edge function `unpublish-pages` que recebe o `lpId`, identifica o método de publicação (Cloudflare ou FTP), e remove/substitui o arquivo no servidor remoto antes de atualizar o banco.
 
-Os arquivos HTML gerados são commitados na pasta `public/` do repo. O Vite copia `public/` para `dist/` no build. O KingHost deploya `dist/` para `/www/`.
+### 1. Nova Edge Function: `unpublish-pages`
 
-### Alterações
+**Lógica:**
+- Recebe `lpId` (LP) ou `publicationId` (Blog)
+- Busca o registro no banco para obter `target_domain`, `page_path`, `is_homepage`
+- Busca o `publish_method` do domínio em `company_profile.seo_domains`
+- **FTP**: Conecta via FTP, navega até o diretório e substitui `index.html` por uma página de redirecionamento 301 (ou deleta com `DELE`)
+- **Cloudflare**: Faz deploy de uma página vazia/redirect via Cloudflare Pages API (Cloudflare Pages não suporta deleção individual de arquivos — a abordagem é fazer um novo deploy sem o arquivo, ou substituí-lo por um redirect)
+- Atualiza o banco: `publish_status → draft`, `published_url → null`
+- Regenera `nav-data.js` (FTP) para remover o link da página despublicada
 
-**1. Nova Edge Function: `supabase/functions/publish-git-deploy/index.ts`**
-- Recebe `{ lpId, domain, pagePath, isHomepage }`
-- Busca HTML de `cloned_landing_pages`
-- Usa GitHub API (`PUT /repos/SmartDentUSA/landing-craftsman-76/contents/public{pagePath}`) para commitar o HTML
-- Atualiza `publish_status` para `published`
-- Requer secret `GITHUB_DEPLOY_TOKEN` (Personal Access Token com `contents:write`)
+### 2. Atualizar `LPClonePanel.tsx`
 
-**2. `supabase/config.toml`** — Adicionar `[functions.publish-git-deploy]` com `verify_jwt = true`
+- `unpublishMutation`: Em vez de só atualizar o banco, invocar `unpublish-pages` edge function
+- `unpublishBlogMutation`: Mesma lógica para blogs
+- Adicionar diálogo de confirmação antes de despublicar
 
-**3. Expandir `publish_method` em 5 arquivos:**
+### 3. Estratégia por método
 
-| Arquivo | Mudança |
-|---------|---------|
-| `TrackingSEOTab.tsx` | Tipo L428 → `'cloudflare' \| 'ftp' \| 'git-deploy'`. Adicionar 3a opção "🔀 Git Deploy" no RadioGroup (L434-448). Adicionar seção config Git Deploy com campos `git_repo` (fixo: SmartDentUSA/landing-craftsman-76), `git_branch` (fixo: main), `git_base_path` (fixo: public). |
-| `LPPublishDialog.tsx` | Tipo L20 → incluir `'git-deploy'`. Roteamento L195 → adicionar caso `git-deploy` → `publish-git-deploy`. |
-| `LPClonePanel.tsx` | Tipo L89 → incluir `'git-deploy'`. Filtro L210-214 → incluir `git-deploy`. Roteamento L522-523 → caso `git-deploy`. Labels L966, L1148, L1482 → badge "🔀 Git". |
-| `ProductBlogPublisherPanel.tsx` | Tipo L25 → incluir `'git-deploy'`. Filtro L111-115 → incluir `git-deploy`. |
-| `CompanyProfileManager.tsx` | Tipo L83 → incluir `'git-deploy'`. |
+| Método | Ação | Detalhes |
+|--------|------|----------|
+| **FTP** | `DELE index.html` no diretório remoto | Simples e direto. Após deletar, regenera `nav-data.js` |
+| **Cloudflare** | Deploy de redirect HTML | Substitui o conteúdo por uma página com `<meta http-equiv="refresh">` apontando para a home, pois CF Pages não tem API de deleção individual |
 
-**4. Secret necessário**
-- `GITHUB_DEPLOY_TOKEN`: Personal Access Token com permissão `contents:write` no repo SmartDentUSA/landing-craftsman-76
+### 4. Arquivo da Edge Function
 
-**5. Dados no banco**
-- No `seo_domains` do `company_profile`, para smartdent.com.br: mudar `publish_method` de `ftp` para `git-deploy`, adicionar `git_repo: "SmartDentUSA/landing-craftsman-76"`, `git_branch: "main"`, `git_base_path: "public"`
+- `supabase/functions/unpublish-pages/index.ts`
+- Reutiliza a classe `FTPClient` do `publish-ftp-pages`
+- Para Cloudflare, reutiliza a lógica de deploy do `publish-cloudflare-pages` mas com HTML de redirect
+- Registrar em `config.toml` com `verify_jwt = false`
 
-### O que NÃO muda
-- Domínios Cloudflare permanecem inalterados
-- Edge functions FTP existentes permanecem
-- Nenhuma tabela alterada
+### Resumo de arquivos
+- **Criar**: `supabase/functions/unpublish-pages/index.ts`
+- **Editar**: `supabase/config.toml` (registrar função)
+- **Editar**: `src/components/LPClonePanel.tsx` (chamar edge function + confirmação)
 
