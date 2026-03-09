@@ -1,47 +1,53 @@
 
 
-## Plano: Substituir FTP por Git Deploy (KingHost) para www.smartdent.com.br
+# Fix: logo_url.includes is not a function
 
-### Contexto da Imagem
-O KingHost Git Deploy usa o repo **SmartDentUSA/landing-craftsman-76** (este projeto Lovable), branch **main**, deploy em **/www/**. Ele cria automaticamente a branch `stable-website`, GitHub Actions e webhook.
+## Problem
+`logo_url` can be either a string or an ImageData object (`{ mode, src, alt, scale }`). When it's an object, calling `.includes()` crashes.
 
-### Como funciona o fluxo
+## Locations to fix
 
-```text
-Edge Function gera HTML → Commit via GitHub API no repo (public/blog/...) → Push main → GitHub Actions build → KingHost sync /www/ → www.smartdent.com.br
+### 1. `src/lib/template-engine.ts` (line 5259)
+The fallback logo check calls `processedData.logo_url.includes('placeholder')` without checking type.
+
+**Fix:** Add typeof guard:
+```typescript
+if (!processedData.logo_url || processedData.logo_url === '' || 
+    (typeof processedData.logo_url === 'string' && processedData.logo_url.includes('placeholder')) ||
+    (typeof processedData.logo_url === 'object' && processedData.logo_url?.src?.includes('placeholder'))) {
 ```
 
-Os arquivos HTML gerados são commitados na pasta `public/` do repo. O Vite copia `public/` para `dist/` no build. O KingHost deploya `dist/` para `/www/`.
+### 2. `src/pages/Editor.tsx` — lines 2041, 2175 
+These access `processedData.logo_url.src` assuming it's always an ImageData object. If old data has it as a string, `.src` would be undefined.
 
-### Alterações
+**Fix:** Safe extraction:
+```typescript
+logo_url: typeof processedData.logo_url === 'object' && processedData.logo_url?.src 
+  ? processedData.logo_url.src 
+  : (typeof processedData.logo_url === 'string' ? processedData.logo_url : ''),
+```
 
-**1. Nova Edge Function: `supabase/functions/publish-git-deploy/index.ts`**
-- Recebe `{ lpId, domain, pagePath, isHomepage }`
-- Busca HTML de `cloned_landing_pages`
-- Usa GitHub API (`PUT /repos/SmartDentUSA/landing-craftsman-76/contents/public{pagePath}`) para commitar o HTML
-- Atualiza `publish_status` para `published`
-- Requer secret `GITHUB_DEPLOY_TOKEN` (Personal Access Token com `contents:write`)
+### 3. `src/pages/Editor.tsx` — lines 2634, 2705
+When saving to DB, `logo_url` is stored as-is (could be either type). This is fine since the DB column is JSONB, but we should ensure consistency.
 
-**2. `supabase/config.toml`** — Adicionar `[functions.publish-git-deploy]` com `verify_jwt = true`
+### 4. `src/lib/template-engine.ts` — normalize early
+At the top of `generateHTML`, normalize `logo_url` to always be a string before any processing:
+```typescript
+if (typeof processedData.logo_url === 'object' && processedData.logo_url !== null) {
+  processedData.logo_url = processedData.logo_url.src || '';
+}
+```
 
-**3. Expandir `publish_method` em 5 arquivos:**
+This early normalization prevents all downstream `.includes()` issues.
 
-| Arquivo | Mudança |
-|---------|---------|
-| `TrackingSEOTab.tsx` | Tipo L428 → `'cloudflare' \| 'ftp' \| 'git-deploy'`. Adicionar 3a opção "🔀 Git Deploy" no RadioGroup (L434-448). Adicionar seção config Git Deploy com campos `git_repo` (fixo: SmartDentUSA/landing-craftsman-76), `git_branch` (fixo: main), `git_base_path` (fixo: public). |
-| `LPPublishDialog.tsx` | Tipo L20 → incluir `'git-deploy'`. Roteamento L195 → adicionar caso `git-deploy` → `publish-git-deploy`. |
-| `LPClonePanel.tsx` | Tipo L89 → incluir `'git-deploy'`. Filtro L210-214 → incluir `git-deploy`. Roteamento L522-523 → caso `git-deploy`. Labels L966, L1148, L1482 → badge "🔀 Git". |
-| `ProductBlogPublisherPanel.tsx` | Tipo L25 → incluir `'git-deploy'`. Filtro L111-115 → incluir `git-deploy`. |
-| `CompanyProfileManager.tsx` | Tipo L83 → incluir `'git-deploy'`. |
+## Summary of changes
+| File | Lines | Change |
+|------|-------|--------|
+| `src/lib/template-engine.ts` | Near top of `generateHTML` | Normalize `logo_url` object → string |
+| `src/lib/template-engine.ts` | ~5259 | Add typeof guard on `.includes()` |
+| `src/pages/Editor.tsx` | ~2041, ~2175 | Safe `.src` extraction with fallback |
 
-**4. Secret necessário**
-- `GITHUB_DEPLOY_TOKEN`: Personal Access Token com permissão `contents:write` no repo SmartDentUSA/landing-craftsman-76
-
-**5. Dados no banco**
-- No `seo_domains` do `company_profile`, para smartdent.com.br: mudar `publish_method` de `ftp` para `git-deploy`, adicionar `git_repo: "SmartDentUSA/landing-craftsman-76"`, `git_branch: "main"`, `git_base_path: "public"`
-
-### O que NÃO muda
-- Domínios Cloudflare permanecem inalterados
-- Edge functions FTP existentes permanecem
-- Nenhuma tabela alterada
+## Scope
+- Only touches `logo_url` handling
+- No CSS, no other features, no new dependencies
 
