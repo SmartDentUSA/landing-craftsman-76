@@ -187,9 +187,9 @@ export function generateAISummaryBlock(params: {
   const summaryText = summaryParts.join(' ');
   
   return `
-  <div class="ai-summary" data-ai-hint="summary" role="doc-abstract" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;">
+  <section class="ai-summary llm-knowledge-layer" aria-label="Resumo para IA" data-ai-hint="summary" role="doc-abstract" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;">
     <p>${summaryText}</p>
-  </div>`;
+  </section>`;
 }
 
 /**
@@ -211,9 +211,9 @@ export function generateLandingPageAISummary(params: {
   if (services) parts.push(`Serviços: ${services}.`);
   
   return `
-  <div class="ai-summary" data-ai-hint="summary" role="doc-abstract" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;">
+  <section class="ai-summary llm-knowledge-layer" aria-label="Resumo para IA" data-ai-hint="summary" role="doc-abstract" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;">
     <p>${parts.join(' ')}</p>
-  </div>`;
+  </section>`;
 }
 
 // ============================================
@@ -308,11 +308,11 @@ export function generateLLMKnowledgeLayer(params: {
   }
   
   return `
-  <aside class="llm-knowledge" data-ai-hint="knowledge" role="doc-glossary" style="${VISUALLY_HIDDEN_STYLE}">
+  <section class="llm-knowledge-layer" aria-hidden="true" style="display:none" data-ai-hint="knowledge" role="doc-glossary">
     <dl>
 ${items.join('\n')}
     </dl>
-  </aside>`;
+  </section>`;
 }
 
 // ============================================

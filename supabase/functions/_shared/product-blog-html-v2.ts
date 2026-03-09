@@ -44,6 +44,7 @@ import {
 import { enrichGraphWithAIReadiness, generateAISummaryBlock, generateLLMKnowledgeLayer, generateEntityIndexHTML, generateDefinedTermSetSchema } from './ai-readiness-helpers.ts';
 // 🧠 Knowledge System Helpers
 import { generateEntityReferenceMetas, generateAICrawlerPolicyMeta, generateCitationBlock, generateExpandedKnowledgeLayer, generateEntityIndexJsonLD, generateDefinitionParagraph, generateMedicalEntitySchema } from './knowledge-system-helpers.ts';
+import { COMPANY_PROFILE } from './company-profile.ts';
 
 // ============================================
 // INTERFACES
@@ -344,6 +345,19 @@ function generateSchemaGraph(options: {
     "@type": "Organization",
     "name": companyName,
     "url": websiteUrl,
+    "legalName": companyProfile?.legal_name || COMPANY_PROFILE.legalName,
+    "taxID": companyProfile?.tax_id || COMPANY_PROFILE.taxID,
+    "founder": {
+      "@type": "Person",
+      "@id": COMPANY_PROFILE.founder.schemaID,
+      "name": companyProfile?.founder_name || COMPANY_PROFILE.founder.name,
+      "hasCredential": COMPANY_PROFILE.founder.credential,
+    },
+    "geo": {
+      "@type": "GeoCoordinates",
+      "latitude": companyProfile?.latitude || COMPANY_PROFILE.geo.latitude,
+      "longitude": companyProfile?.longitude || COMPANY_PROFILE.geo.longitude,
+    },
     "logo": companyProfile?.company_logo_url ? {
       "@type": "ImageObject",
       "url": companyProfile.company_logo_url
@@ -1445,6 +1459,8 @@ export function generateProductBlogHTMLV2(options: ProductBlogV2Options): string
     products: [product.name],
     technologies: features.slice(0, 3),
     organization: companyName,
+    legalName: COMPANY_PROFILE.legalName,
+    taxID: COMPANY_PROFILE.taxID,
     categories: [product.category].filter(Boolean),
     persons: companyProfile?.founder_name ? [companyProfile.founder_name] : [],
   })}

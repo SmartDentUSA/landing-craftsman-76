@@ -27,15 +27,23 @@ export function generateEntityReferenceMetas(params: {
   products?: string[];
   technologies?: string[];
   organization?: string;
+  legalName?: string;
+  taxID?: string;
   categories?: string[];
   persons?: string[];
   materials?: string[];
 }): string {
-  const { products, technologies, organization, categories, persons, materials } = params;
+  const { products, technologies, organization, legalName, taxID, categories, persons, materials } = params;
   const metas: string[] = [];
 
   if (organization) {
     metas.push(`<meta name="entity:organization" content="${escapeAttr(organization)}">`);
+  }
+  if (legalName) {
+    metas.push(`<meta name="entity:legalName" content="${escapeAttr(legalName)}">`);
+  }
+  if (taxID) {
+    metas.push(`<meta name="entity:taxID" content="${escapeAttr(taxID)}">`);
   }
 
   if (products && products.length > 0) {
@@ -279,7 +287,7 @@ export function generateDefinitionParagraph(params: {
   const truncated = cleanDef.length > 400 ? cleanDef.substring(0, 397) + '...' : cleanDef;
 
   return `
-  <p itemprop="description" class="definition-paragraph" data-ai-hint="definition" style="${VISUALLY_HIDDEN_STYLE}">
+  <p itemprop="description" class="definition-paragraph" data-section="definition" data-ai-hint="definition" style="${VISUALLY_HIDDEN_STYLE}">
     ${escapeAttr(entityName)}${category ? ` (${escapeAttr(category)})` : ''}: ${escapeAttr(truncated)}${company ? ` — ${escapeAttr(company)}` : ''}
   </p>`;
 }

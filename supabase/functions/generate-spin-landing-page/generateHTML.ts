@@ -47,6 +47,7 @@ import {
 import { enrichGraphWithAIReadiness, generateAISummaryBlock, generateEntityIndexHTML, generateDefinedTermSetSchema, generateLLMKnowledgeLayer } from '../_shared/ai-readiness-helpers.ts';
 // 🧠 Knowledge System Helpers
 import { generateEntityReferenceMetas, generateAICrawlerPolicyMeta, generateCitationBlock, generateExpandedKnowledgeLayer, generateEntityIndexJsonLD, generateDefinitionParagraph, generateMedicalEntitySchema } from '../_shared/knowledge-system-helpers.ts';
+import { COMPANY_PROFILE } from '../_shared/company-profile.ts';
 
 // ═══════════════════════════════════════════════════════════
 // 🛡️ SANITIZAÇÃO DE NOME DA EMPRESA
@@ -82,10 +83,24 @@ function generateSPINSchemas(
       name: sanitizeCompanyName(company.company_name),
       // ✅ CORREÇÃO: usar website_url em vez de website
       url: company.website_url || company.website || canonicalUrl,
-      
+
       // ✅ FASE 1: Logo CRÍTICO (priorizar company_logo_url)
       logo: company.company_logo_url || company.logo_url || '',
-      
+
+      "legalName": company.legal_name || COMPANY_PROFILE.legalName,
+      "taxID": company.tax_id || COMPANY_PROFILE.taxID,
+      "founder": {
+        "@type": "Person",
+        "@id": COMPANY_PROFILE.founder.schemaID,
+        "name": company.founder_name || COMPANY_PROFILE.founder.name,
+        "hasCredential": COMPANY_PROFILE.founder.credential,
+      },
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": company.latitude || COMPANY_PROFILE.geo.latitude,
+        "longitude": company.longitude || COMPANY_PROFILE.geo.longitude,
+      },
+
       contactPoint: {
         '@type': 'ContactPoint',
         // ✅ CORREÇÃO: usar contact_phone em vez de phone_number
@@ -890,6 +905,8 @@ export function generateLandingPageHTML(
     products: products.slice(0, 5).map((p: any) => p.name),
     technologies: extractedKeywords.slice(0, 3),
     organization: sanitizeCompanyName(company?.company_name),
+    legalName: COMPANY_PROFILE.legalName,
+    taxID: COMPANY_PROFILE.taxID,
     categories: [solution.pain_type].filter(Boolean),
     persons: authorKOL ? [authorKOL.name] : [],
   })}

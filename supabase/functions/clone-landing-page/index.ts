@@ -44,6 +44,7 @@ import {
 import { enrichGraphWithAIReadiness, generateLandingPageAISummary, generateEntityIndexHTML, generateDefinedTermSetSchema, generateLLMKnowledgeLayer } from "../_shared/ai-readiness-helpers.ts";
 // 🧠 Knowledge System Helpers
 import { generateEntityReferenceMetas, generateAICrawlerPolicyMeta, generateExpandedKnowledgeLayer, generateEntityIndexJsonLD, generateDefinitionParagraph, generateCitationBlock } from "../_shared/knowledge-system-helpers.ts";
+import { COMPANY_PROFILE } from "../_shared/company-profile.ts";
 
 // ✅ FASE 9: Wrapper para manter compatibilidade
 function generateLandingPageBreadcrumbsForClone(
@@ -1743,6 +1744,18 @@ function injectSEO(
         "email": email,
         "telephone": phone,
         "taxID": taxId,
+        "legalName": companyData?.legal_name || COMPANY_PROFILE.legalName,
+        "founder": {
+          "@type": "Person",
+          "@id": COMPANY_PROFILE.founder.schemaID,
+          "name": companyData?.founder_name || COMPANY_PROFILE.founder.name,
+          "hasCredential": COMPANY_PROFILE.founder.credential,
+        },
+        "geo": {
+          "@type": "GeoCoordinates",
+          "latitude": companyData?.latitude || COMPANY_PROFILE.geo.latitude,
+          "longitude": companyData?.longitude || COMPANY_PROFILE.geo.longitude,
+        },
         ...(foundedYear && { "foundingDate": foundedYear.toString() }),
         ...(missionStatement && { "mission": missionStatement }),
         ...(seoTechnicalExpertise && { "knowsAbout": seoTechnicalExpertise.split(',').map((s: string) => s.trim()) }),
@@ -1991,6 +2004,8 @@ function injectSEO(
     ${generateEntityReferenceMetas({
       products: [product].filter(Boolean),
       organization: company,
+      legalName: COMPANY_PROFILE.legalName,
+      taxID: COMPANY_PROFILE.taxID,
       categories: [brand].filter(Boolean),
     })}
     

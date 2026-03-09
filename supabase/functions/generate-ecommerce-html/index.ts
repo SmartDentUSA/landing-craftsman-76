@@ -35,6 +35,7 @@ import { deduplicateKeywords, generateHreflangHTML } from "../_shared/seo-fine-t
 import { enrichGraphWithAIReadiness, generateAISummaryBlock, generateLLMKnowledgeLayer, generateEntityIndexHTML, generateDefinedTermSetSchema } from "../_shared/ai-readiness-helpers.ts";
 // 🧠 Knowledge System Helpers
 import { generateEntityReferenceMetas, generateAICrawlerPolicyMeta, generateCitationBlock, generateExpandedKnowledgeLayer, generateEntityIndexJsonLD, generateDefinitionParagraph, generateMedicalEntitySchema } from "../_shared/knowledge-system-helpers.ts";
+import { COMPANY_PROFILE } from "../_shared/company-profile.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -1631,6 +1632,8 @@ function buildSEOHead(product: any): string {
     products: [product.name],
     technologies: (product.features || []).slice(0, 3),
     organization: companyName,
+    legalName: COMPANY_PROFILE.legalName,
+    taxID: COMPANY_PROFILE.taxID,
     categories: [product.category].filter(Boolean),
     materials: [product.material].filter(Boolean),
   })}
@@ -2535,6 +2538,19 @@ function buildEcommerceHTML(
         "@id": `${companyUrl}/#organization`,
         "name": companyName,
         "url": companyUrl,
+        "legalName": company?.legal_name || COMPANY_PROFILE.legalName,
+        "taxID": company?.tax_id || COMPANY_PROFILE.taxID,
+        "founder": {
+          "@type": "Person",
+          "@id": COMPANY_PROFILE.founder.schemaID,
+          "name": company?.founder_name || COMPANY_PROFILE.founder.name,
+          "hasCredential": COMPANY_PROFILE.founder.credential,
+        },
+        "geo": {
+          "@type": "GeoCoordinates",
+          "latitude": company?.latitude || COMPANY_PROFILE.geo.latitude,
+          "longitude": company?.longitude || COMPANY_PROFILE.geo.longitude,
+        },
         ...(company?.company_logo_url && { "logo": { "@type": "ImageObject", "url": company.company_logo_url } })
       }
     ]
