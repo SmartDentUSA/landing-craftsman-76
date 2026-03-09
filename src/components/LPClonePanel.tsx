@@ -618,20 +618,18 @@ export const LPClonePanel = () => {
     }
   });
   
-  // Unpublish mutation
+  // Unpublish mutation (real removal from FTP/Cloudflare)
   const unpublishMutation = useMutation({
     mutationFn: async (lpId: string) => {
-      const { error } = await supabase
-        .from('cloned_landing_pages')
-        .update({
-          publish_status: 'draft',
-          published_url: null
-        })
-        .eq('id', lpId);
+      const { data, error } = await supabase.functions.invoke('unpublish-pages', {
+        body: { lpId, entityType: 'lp' }
+      });
       if (error) throw error;
+      if (!data.success) throw new Error(data.error);
+      return data;
     },
     onSuccess: () => {
-      toast.success('LP despublicada!');
+      toast.success('LP despublicada e removida do servidor!');
       queryClient.invalidateQueries({ queryKey: ['cloned-landing-pages'] });
     },
     onError: (error) => {
