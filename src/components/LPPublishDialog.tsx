@@ -9,8 +9,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Upload, Globe, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { generateBlogHTML } from '@/services/seo/blogHTMLGenerator';
-import { getTrackingConfig } from '@/lib/tracking-injector';
+import { generateHTML } from '@/lib/template-engine';
+import { getCompanyProfileForSEO, buildSEOMetaFromCompany } from '@/lib/company-profile-helper';
 import type { LandingPage } from '@/hooks/useLandingPagesSupabase';
 
 interface SEODomain {
