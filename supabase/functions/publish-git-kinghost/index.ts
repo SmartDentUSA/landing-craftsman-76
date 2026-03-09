@@ -156,25 +156,12 @@ serve(async (req) => {
     const commitData = await ghFetch(`/git/commits/${latestCommitSha}`, githubToken);
     const baseTreeSha = commitData.tree.sha;
 
-    // Step C: Create blob with HTML content (base64)
-    const encoder = new TextEncoder();
-    const htmlBytes = encoder.encode(html);
-    // Chunked base64 conversion to avoid stack overflow on large HTML
-    const chunkSize = 8192;
-    let binary = '';
-    for (let i = 0; i < htmlBytes.length; i += chunkSize) {
-      const chunk = htmlBytes.subarray(i, Math.min(i + chunkSize, htmlBytes.length));
-      for (let j = 0; j < chunk.length; j++) {
-        binary += String.fromCharCode(chunk[j]);
-      }
-    }
-    const base64Content = btoa(binary);
-
+    // Step C: Create blob with HTML content (utf-8 — no base64 needed)
     const blobData = await ghFetch('/git/blobs', githubToken, {
       method: 'POST',
       body: JSON.stringify({
-        content: base64Content,
-        encoding: 'base64',
+        content: html,
+        encoding: 'utf-8',
       }),
     });
     console.log(`📦 Blob created: ${blobData.sha}`);
