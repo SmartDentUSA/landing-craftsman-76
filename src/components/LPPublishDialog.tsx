@@ -155,7 +155,7 @@ export function LPPublishDialog({ open, onOpenChange, landingPage }: LPPublishDi
         enhancedData.company_profile = companyProfile;
       }
 
-      const htmlCode = generateHTML(enhancedData);
+      const htmlCode = await generateHTML(enhancedData);
 
       // 3. Get current user
       const { data: { user } } = await supabase.auth.getUser();
