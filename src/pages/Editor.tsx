@@ -2038,7 +2038,7 @@ const EditorPageContent = () => {
       
       const previewData = {
         ...processedData,
-        logo_url: processedData.logo_url.src,
+        logo_url: typeof processedData.logo_url === 'object' && processedData.logo_url?.src ? processedData.logo_url.src : (typeof processedData.logo_url === 'string' ? processedData.logo_url : ''),
         banner: {
           ...processedData.banner,
           images: processedData.banner.images.map(img => ({
