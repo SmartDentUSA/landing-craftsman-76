@@ -5261,7 +5261,9 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
     const companyMeta = buildSEOMetaFromCompany(companyProfile, processedData.ai_keywords?.primary || []);
     
     // ✅ FALLBACK LOGO: Usar logo da empresa se não definido no Editor
-    if (!processedData.logo_url || processedData.logo_url === '' || processedData.logo_url.includes('placeholder')) {
+    if (!processedData.logo_url || processedData.logo_url === '' || 
+        (typeof processedData.logo_url === 'string' && processedData.logo_url.includes('placeholder')) ||
+        (typeof processedData.logo_url === 'object' && processedData.logo_url?.src?.includes('placeholder'))) {
       if (companyProfile.company_logo_url) {
         processedData.logo_url = companyProfile.company_logo_url;
         console.log('🔧 [FALLBACK] Logo preenchido do company_profile:', companyProfile.company_logo_url);
