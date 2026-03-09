@@ -247,7 +247,7 @@ window.__NAV_DATA__ = ${JSON.stringify(navItems, null, 2)};
 
     if (navBlobSha) {
       treeFiles.push({
-        path: 'public/nav-data.js',
+        path: 'nav-data.js',
         mode: '100644',
         type: 'blob',
         sha: navBlobSha,
