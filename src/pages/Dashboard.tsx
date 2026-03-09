@@ -633,15 +633,6 @@ const DashboardContent = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => navigate(`/blog-generator/${landingPage.id}`)}
-                          className="border-primary/30 text-primary hover:bg-primary/10"
-                        >
-                          <PenTool className="h-4 w-4 mr-2" />
-                          Gerar Blog Post
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
                           onClick={() => { setPublishLP(landingPage); setPublishOpen(true); }}
                           className="border-accent/30 text-accent-foreground hover:bg-accent/10"
                         >
