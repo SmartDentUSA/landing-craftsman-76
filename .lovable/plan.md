@@ -1,47 +1,66 @@
 
 
-## Plano: Substituir FTP por Git Deploy (KingHost) para www.smartdent.com.br
+# Sistema de Publicação via Git Deploy para smartdent.com.br
 
-### Contexto da Imagem
-O KingHost Git Deploy usa o repo **SmartDentUSA/landing-craftsman-76** (este projeto Lovable), branch **main**, deploy em **/www/**. Ele cria automaticamente a branch `stable-website`, GitHub Actions e webhook.
+## Resumo
 
-### Como funciona o fluxo
+Criar a Edge Function `publish-git-kinghost` que publica HTML via GitHub API REST na branch `stable-website`, e atualizar todos os componentes frontend para suportar o novo método `'git'`.
+
+## Arquivos
+
+### 1. CRIAR: `supabase/functions/publish-git-kinghost/index.ts`
+
+Edge Function que implementa o fluxo Git completo via GitHub REST API (sem git CLI):
 
 ```text
-Edge Function gera HTML → Commit via GitHub API no repo (public/blog/...) → Push main → GitHub Actions build → KingHost sync /www/ → www.smartdent.com.br
+GET /git/ref/heads/stable-website → sha do branch
+GET /git/commits/{sha} → tree sha
+POST /git/blobs (HTML base64) → blob sha
+POST /git/trees (blob + path) → new tree sha
+POST /git/commits (parent + tree) → new commit sha
+PATCH /git/refs/heads/stable-website → avança ref
 ```
 
-Os arquivos HTML gerados são commitados na pasta `public/` do repo. O Vite copia `public/` para `dist/` no build. O KingHost deploya `dist/` para `/www/`.
+- Recebe `{ html?, pagePath, isHomepage, lpId, domain }`
+- Se `html` não enviado, busca de `cloned_landing_pages` via `lpId`
+- Token: `Deno.env.get("GITHUB_PAT_DEPLOY")`
+- Repo fixo: `SmartDentUSA/landing-craftsman-76`, branch: `stable-website`
+- Path no repo: `public{pagePath}/index.html` (ex: `public/produtos/scanner-3d/index.html`)
+- Homepage: `public/index.html`
+- Injeta tracking pixels (mesma lógica do publish-ftp-pages)
+- Atualiza `cloned_landing_pages` com `published_url` e `publish_status = 'published'`
+- Em caso de erro, atualiza `publish_status = 'error'`
 
-### Alterações
+### 2. EDITAR: `supabase/config.toml`
 
-**1. Nova Edge Function: `supabase/functions/publish-git-deploy/index.ts`**
-- Recebe `{ lpId, domain, pagePath, isHomepage }`
-- Busca HTML de `cloned_landing_pages`
-- Usa GitHub API (`PUT /repos/SmartDentUSA/landing-craftsman-76/contents/public{pagePath}`) para commitar o HTML
-- Atualiza `publish_status` para `published`
-- Requer secret `GITHUB_DEPLOY_TOKEN` (Personal Access Token com `contents:write`)
+Adicionar:
+```toml
+[functions.publish-git-kinghost]
+verify_jwt = false
+```
 
-**2. `supabase/config.toml`** — Adicionar `[functions.publish-git-deploy]` com `verify_jwt = true`
-
-**3. Expandir `publish_method` em 5 arquivos:**
+### 3. EDITAR: 5 arquivos frontend (tipos + roteamento + badges)
 
 | Arquivo | Mudança |
 |---------|---------|
-| `TrackingSEOTab.tsx` | Tipo L428 → `'cloudflare' \| 'ftp' \| 'git-deploy'`. Adicionar 3a opção "🔀 Git Deploy" no RadioGroup (L434-448). Adicionar seção config Git Deploy com campos `git_repo` (fixo: SmartDentUSA/landing-craftsman-76), `git_branch` (fixo: main), `git_base_path` (fixo: public). |
-| `LPPublishDialog.tsx` | Tipo L20 → incluir `'git-deploy'`. Roteamento L195 → adicionar caso `git-deploy` → `publish-git-deploy`. |
-| `LPClonePanel.tsx` | Tipo L89 → incluir `'git-deploy'`. Filtro L210-214 → incluir `git-deploy`. Roteamento L522-523 → caso `git-deploy`. Labels L966, L1148, L1482 → badge "🔀 Git". |
-| `ProductBlogPublisherPanel.tsx` | Tipo L25 → incluir `'git-deploy'`. Filtro L111-115 → incluir `git-deploy`. |
-| `CompanyProfileManager.tsx` | Tipo L83 → incluir `'git-deploy'`. |
-
-**4. Secret necessário**
-- `GITHUB_DEPLOY_TOKEN`: Personal Access Token com permissão `contents:write` no repo SmartDentUSA/landing-craftsman-76
-
-**5. Dados no banco**
-- No `seo_domains` do `company_profile`, para smartdent.com.br: mudar `publish_method` de `ftp` para `git-deploy`, adicionar `git_repo: "SmartDentUSA/landing-craftsman-76"`, `git_branch: "main"`, `git_base_path: "public"`
+| `LPPublishDialog.tsx` L20 | `publish_method: 'ftp' \| 'cloudflare' \| 'git'` |
+| `LPPublishDialog.tsx` L188-190 | Adicionar `=== 'git' → 'publish-git-kinghost'` |
+| `LPClonePanel.tsx` L89 | `publish_method?: 'cloudflare' \| 'ftp' \| 'git'` |
+| `LPClonePanel.tsx` L210-214 | Filtro `enabledDomains`: incluir `d.publish_method === 'git'` |
+| `LPClonePanel.tsx` L522-523 | Roteamento: `method === 'git' → 'publish-git-kinghost'` |
+| `LPClonePanel.tsx` L966, 1152, 1486 | Badge: `'git' → '🐙 Git'` |
+| `CompanyProfileManager.tsx` L83 | Tipo: incluir `\| 'git'` |
+| `ProductBlogPublisherPanel.tsx` L25 | Tipo: incluir `\| 'git'` |
+| `ProductBlogPublisherPanel.tsx` L111-115 | Filtro: incluir `d.publish_method === 'git'` |
+| `TrackingSEOTab.tsx` L428 | Tipo: `'cloudflare' \| 'ftp' \| 'git'` |
+| `TrackingSEOTab.tsx` L433-448 | Adicionar 3a opção RadioGroup: "🐙 Git Deploy" com ícone `GitBranch` |
 
 ### O que NÃO muda
-- Domínios Cloudflare permanecem inalterados
-- Edge functions FTP existentes permanecem
-- Nenhuma tabela alterada
+- Edge functions FTP e Cloudflare permanecem inalteradas
+- Nenhuma tabela do banco é alterada
+- CSS não é modificado
+- Outros domínios não são afetados
+
+### Nota sobre package-lock.json
+Lovable não suporta execução de comandos npm. O `package-lock.json` é gerenciado automaticamente pelo sistema de build.
 
