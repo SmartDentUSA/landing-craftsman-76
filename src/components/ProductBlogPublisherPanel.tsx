@@ -22,7 +22,7 @@ interface SEODomain {
   domain: string;
   cloudflare_enabled?: boolean;
   cloudflare_project_name?: string;
-  publish_method?: 'cloudflare' | 'ftp';
+  publish_method?: 'cloudflare' | 'ftp' | 'git';
   ftp_profile?: string;
   enabled?: boolean;
 }
