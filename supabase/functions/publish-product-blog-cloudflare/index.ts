@@ -754,24 +754,32 @@ function generateProductBlogHTML(options: {
   ` : '';
 
   // Schema.org JSON-LD - Complete SEO Schema Collection
+  const orgSameAs = expandFounderSameAs(companyProfile || {});
   const schemas: any[] = [
+    // ✅ Organization Schema (definida 1x; author/publisher referenciam via @id)
+    {
+      "@type": "Organization",
+      "@id": `${websiteUrl}/#organization`,
+      "name": companyName,
+      "url": websiteUrl,
+      ...(companyProfile?.company_logo_url && {
+        "logo": {
+          "@type": "ImageObject",
+          "url": companyProfile.company_logo_url
+        }
+      }),
+      ...(orgSameAs.length > 0 && { "sameAs": orgSameAs })
+    },
     // ✅ BlogPosting Schema
     {
       "@type": "BlogPosting",
       "headline": title,
       "description": description,
       "author": {
-        "@type": "Organization",
-        "name": companyName,
-        "url": companyProfile?.website_url
+        "@id": `${websiteUrl}/#organization`
       },
       "publisher": {
-        "@type": "Organization",
-        "name": companyName,
-        "logo": {
-          "@type": "ImageObject",
-          "url": companyProfile?.company_logo_url
-        }
+        "@id": `${websiteUrl}/#organization`
       },
       "datePublished": new Date().toISOString(),
       "dateModified": new Date().toISOString(),

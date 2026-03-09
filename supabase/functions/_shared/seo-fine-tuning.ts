@@ -173,10 +173,12 @@ export function generateServiceSchemas(
 ): object[] {
   if (!servicesText) return [];
   
+  // Filter to proper service names: short (< 60 chars), not starting with lowercase conjunctions/prepositions
+  const phraseStartRegex = /^(incluindo|com|de|do|da|para|e |ou |sem |além|também|que |como )/i;
   const services = servicesText
     .split(/[,;]/)
     .map(s => s.trim())
-    .filter(s => s.length > 3 && s.length < 100);
+    .filter(s => s.length > 3 && s.length < 60 && !phraseStartRegex.test(s));
   
   if (services.length === 0) return [];
   

@@ -339,9 +339,10 @@ function generateSchemaGraph(options: {
   
   const schemas: object[] = [];
   
-  // 1. Organization
+  // 1. Organization (definida 1x com @id; author/publisher referenciam via @id)
   const orgSchema: any = {
     "@type": "Organization",
+    "@id": `${websiteUrl}/#organization`,
     "name": companyName,
     "url": websiteUrl,
     "logo": companyProfile?.company_logo_url ? {
@@ -372,17 +373,10 @@ function generateSchemaGraph(options: {
     "headline": title,
     "description": description,
     "author": {
-      "@type": "Organization",
-      "name": companyName,
-      "url": websiteUrl
+      "@id": `${websiteUrl}/#organization`
     },
     "publisher": {
-      "@type": "Organization",
-      "name": companyName,
-      "logo": {
-        "@type": "ImageObject",
-        "url": companyProfile?.company_logo_url
-      }
+      "@id": `${websiteUrl}/#organization`
     },
     "datePublished": new Date().toISOString(),
     "dateModified": new Date().toISOString(),

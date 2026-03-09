@@ -433,6 +433,9 @@ export function generateAreaServedSchema(areas: AreaServed[]): any[] {
 export function generateReviewsSchema(reviews: ReviewData[], maxReviews: number = 5): any[] {
   return reviews
     .filter(r => r.rating >= 4 && r.review_text)
+    .filter((review, index, self) =>
+      index === self.findIndex(r => r.author_name === review.author_name)
+    )
     .slice(0, maxReviews)
     .map(r => ({
       "@type": "Review",
@@ -451,25 +454,37 @@ export function generateReviewsSchema(reviews: ReviewData[], maxReviews: number 
     }));
 }
 
+// Normalize a raw social profile value to a full URL
+function normalizeSocialUrl(raw: string | undefined, platformBase: string): string | null {
+  if (!raw) return null;
+  if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
+  const handle = raw.replace(/^@/, '');
+  return handle ? `${platformBase}${handle}` : null;
+}
+
 // ✅ NOVO - Gerar sameAs para Schema.org
 export function generateSameAsSchema(authority: AuthorityData): string[] {
   const sameAs: string[] = [];
   const { socialProfiles, founder } = authority;
-  
-  if (socialProfiles.instagram) sameAs.push(socialProfiles.instagram);
-  if (socialProfiles.youtube) sameAs.push(socialProfiles.youtube);
-  if (socialProfiles.facebook) sameAs.push(socialProfiles.facebook);
-  if (socialProfiles.twitter) sameAs.push(socialProfiles.twitter);
-  if (socialProfiles.tiktok) sameAs.push(socialProfiles.tiktok);
-  if (founder?.linkedin) sameAs.push(founder.linkedin);
-  
+
+  const addUrl = (url: string | null | undefined) => {
+    if (url && (url.startsWith('http://') || url.startsWith('https://')) && !sameAs.includes(url)) {
+      sameAs.push(url);
+    }
+  };
+
+  addUrl(normalizeSocialUrl(socialProfiles.instagram, 'https://www.instagram.com/'));
+  addUrl(normalizeSocialUrl(socialProfiles.youtube, 'https://www.youtube.com/'));
+  addUrl(normalizeSocialUrl(socialProfiles.facebook, 'https://www.facebook.com/'));
+  addUrl(normalizeSocialUrl(socialProfiles.twitter, 'https://twitter.com/'));
+  addUrl(normalizeSocialUrl(socialProfiles.tiktok, 'https://www.tiktok.com/@'));
+  addUrl(founder?.linkedin);
+
   // Adicionar links sociais adicionais
   socialProfiles.socialLinks.forEach(link => {
-    if (link.url && !sameAs.includes(link.url)) {
-      sameAs.push(link.url);
-    }
+    addUrl(link.url);
   });
-  
+
   return sameAs;
 }
 
@@ -1068,17 +1083,26 @@ export function enrichOrganizationSchema(
     enriched.sameAs = sameAs;
   }
 
-  // ✅ NOVO - knowsAbout (expertise)
-  const knowsAbout: string[] = [];
+  // ✅ NOVO - knowsAbout (expertise) — extrair termos curtos
+  const extractShortTerms = (text: string): string[] =>
+    text.split(/[•\n,;]/)
+      .map(t => t.replace(/^[:\-\s]+/, '').replace(/\s+/g, ' ').trim())
+      .filter(t => t.length > 3 && t.length < 60);
+
+  const knowsAboutSet = new Set<string>();
   if (authority.seoContext.technicalExpertise) {
-    knowsAbout.push(authority.seoContext.technicalExpertise);
+    extractShortTerms(authority.seoContext.technicalExpertise).forEach(t => knowsAboutSet.add(t));
   }
-  authority.seoContext.keywords.slice(0, 10).forEach(k => knowsAbout.push(k));
+  authority.seoContext.keywords.slice(0, 10)
+    .filter(k => k.length <= 60)
+    .forEach(k => knowsAboutSet.add(k));
+
+  const knowsAbout = Array.from(knowsAboutSet).slice(0, 20);
   if (knowsAbout.length === 0) {
     knowsAbout.push(
       "Odontologia Digital",
       "Scanner Intraoral",
-      "Impressora 3D Odontológica", 
+      "Impressora 3D Odontológica",
       "CAD/CAM Dental",
       "Prótese Digital",
       "Fluxo Digital Odontológico"
@@ -1096,9 +1120,12 @@ export function enrichOrganizationSchema(
     enriched.foundingPrinciples = authority.corporateIdentity.missionStatement;
   }
 
-  // ✅ NOVO - slogan (diferenciadores resumidos)
-  if (authority.corporateIdentity.differentiators) {
-    enriched.slogan = authority.corporateIdentity.differentiators.substring(0, 100);
+  // ✅ NOVO - slogan (frase curta, max 100 chars)
+  // Usar mission ou first sentence de differentiators — NÃO usar o texto longo de brandValues
+  const sloganSource = authority.corporateIdentity.missionStatement || authority.corporateIdentity.differentiators;
+  if (sloganSource) {
+    const firstSentence = sloganSource.split(/[.!?]/)[0].trim();
+    enriched.slogan = firstSentence.substring(0, 100);
   }
 
   return enriched;

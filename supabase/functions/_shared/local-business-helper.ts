@@ -212,10 +212,18 @@ export function generateLocalBusinessSchema(data: LocalBusinessData): any {
   }
   
   // Redes sociais
+  const rawInstagram = data.instagram_profile || DEFAULT_LOCAL_BUSINESS.instagram_profile;
+  const rawYoutube = data.youtube_channel || DEFAULT_LOCAL_BUSINESS.youtube_channel;
+  const normalizeProfileUrl = (raw: string | undefined, base: string): string | null => {
+    if (!raw) return null;
+    if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
+    const handle = raw.replace(/^@/, '');
+    return handle ? `${base}${handle}` : null;
+  };
   const sameAs = [
-    data.instagram_profile || DEFAULT_LOCAL_BUSINESS.instagram_profile,
-    data.youtube_channel || DEFAULT_LOCAL_BUSINESS.youtube_channel
-  ].filter(Boolean);
+    normalizeProfileUrl(rawInstagram, 'https://www.instagram.com/'),
+    normalizeProfileUrl(rawYoutube, 'https://www.youtube.com/')
+  ].filter(Boolean) as string[];
   if (sameAs.length > 0) {
     schema.sameAs = sameAs;
   }

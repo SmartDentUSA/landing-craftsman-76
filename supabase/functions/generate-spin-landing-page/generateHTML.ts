@@ -62,6 +62,14 @@ function sanitizeCompanyName(name: string | null | undefined): string {
   return normalized;
 }
 
+function extractKnowsAboutTerms(text: string): string[] {
+  return text
+    .split(/[•\n,;]/)
+    .map(t => t.replace(/^[:\-\s]+/, '').replace(/\s+/g, ' ').trim())
+    .filter(t => t.length > 3 && t.length < 60)
+    .slice(0, 20);
+}
+
 function generateSPINSchemas(
   solution: any,
   products: any[],
@@ -116,9 +124,10 @@ function generateSPINSchemas(
       orgSchema.mission = company.mission_statement;
     }
     
-    // ✅ FASE 1: Visão como slogan (SGE prioriza)
+    // ✅ FASE 1: Visão como slogan (SGE prioriza) - truncar para frase curta
     if (company.vision_statement) {
-      orgSchema.slogan = company.vision_statement;
+      const firstSentence = (company.vision_statement as string).split(/[.!?]/)[0].trim();
+      orgSchema.slogan = firstSentence.substring(0, 100);
     }
     
     // ✅ FASE 1: Tamanho da equipe
@@ -129,24 +138,13 @@ function generateSPINSchemas(
       };
     }
     
-    // ✅ FASE 1: Expertise expandido com company_culture, working_methodology, differentiators
+    // ✅ FASE 1: Expertise expandido — extrair termos curtos para knowsAbout
     if (company.seo_technical_expertise) {
-      const knowsAboutItems = [company.seo_technical_expertise];
-      
-      if (company.company_culture) {
-        knowsAboutItems.push(company.company_culture);
-      }
-      
-      if (company.working_methodology) {
-        knowsAboutItems.push(company.working_methodology);
-      }
-      
-      if (company.differentiators) {
-        const diffs = company.differentiators.split(',').map((d: string) => d.trim()).filter(Boolean);
-        knowsAboutItems.push(...diffs);
-      }
-      
-      orgSchema.knowsAbout = knowsAboutItems.filter(Boolean);
+      const allText = [
+        company.seo_technical_expertise,
+        company.differentiators
+      ].filter(Boolean).join('\n');
+      orgSchema.knowsAbout = extractKnowsAboutTerms(allText);
     }
     
     // ✅ NOVO: sameAs EXPANDIDO com redes sociais para SEO/GEO (usando módulo compartilhado)

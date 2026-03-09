@@ -742,9 +742,7 @@ async function generateSchemaLD(blogPost: any, productData: any = null) {
     "datePublished": new Date().toISOString(),
     "author": authorSchema,
     "publisher": {
-      "@type": "Organization",
-      "name": "E-Odonto",
-      "url": "https://eodonto.com"
+      "@id": "https://eodonto.com/#organization"
     }
   };
 
@@ -931,14 +929,26 @@ async function generateSchemaLD(blogPost: any, productData: any = null) {
           localBusinessSchema.ethicsPolicy = currentAuthorityData.corporateIdentity.brandValues;
         }
         if (currentAuthorityData.seoContext?.technicalExpertise) {
-          localBusinessSchema.knowsAbout = currentAuthorityData.seoContext.technicalExpertise.split(',').map((s: string) => s.trim());
+          localBusinessSchema.knowsAbout = currentAuthorityData.seoContext.technicalExpertise
+            .split(/[,;•\n]/)
+            .map((s: string) => s.replace(/^[:\-\s]+/, '').trim())
+            .filter((s: string) => s.length > 3 && s.length < 60)
+            .slice(0, 20);
         }
       }
     }
 
+    // Organization entity definida 1x no @graph (publisher/author referenciam via @id)
+    const orgEntity = {
+      "@type": "Organization",
+      "@id": "https://eodonto.com/#organization",
+      "name": "E-Odonto",
+      "url": "https://eodonto.com"
+    };
+
     return {
       "@context": "https://schema.org",
-      "@graph": [blogSchema, productSchema, localBusinessSchema, howToSchema, personSchema, faqSchema, itemListSchema, breadcrumbSchema, ...videoSchemas, ...authoritySchemas].filter(Boolean)
+      "@graph": [orgEntity, blogSchema, productSchema, localBusinessSchema, howToSchema, personSchema, faqSchema, itemListSchema, breadcrumbSchema, ...videoSchemas, ...authoritySchemas].filter(Boolean)
     };
   }
 
