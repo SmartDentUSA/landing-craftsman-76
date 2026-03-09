@@ -22,7 +22,7 @@ interface SEODomain {
   domain: string;
   cloudflare_enabled?: boolean;
   cloudflare_project_name?: string;
-  publish_method?: 'cloudflare' | 'ftp';
+  publish_method?: 'cloudflare' | 'ftp' | 'git';
   ftp_profile?: string;
   enabled?: boolean;
 }
@@ -108,9 +108,10 @@ export const ProductBlogPublisherPanel = () => {
   });
 
   const seoDomains = (companyProfile?.seo_domains as unknown as SEODomain[]) || [];
-  const enabledDomains = seoDomains.filter(d => 
+  const enabledDomains = seoDomains.filter(d =>
     d.enabled !== false && (
       d.publish_method === 'ftp' ||
+      d.publish_method === 'git' ||
       (d.cloudflare_enabled && d.cloudflare_project_name)
     )
   );
