@@ -8,7 +8,9 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "sync:profile": "tsx scripts/sync-company-profile.ts",
+    "validate:html": "tsx scripts/validate-html-output.ts"
   },
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",

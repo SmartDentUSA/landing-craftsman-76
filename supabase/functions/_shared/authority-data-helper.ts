@@ -4,14 +4,15 @@
 // VERSÃO COMPLETA: Company Videos, Video Testimonials, SEO Context, Corporate Identity
 // ═══════════════════════════════════════════════════════════
 
-import { 
-  generateVideoObjectSchema, 
-  extractYouTubeId, 
+import {
+  generateVideoObjectSchema,
+  extractYouTubeId,
   getYouTubeThumbnail,
   getYouTubeEmbedUrl,
   formatDuration,
-  type VideoSchemaData 
+  type VideoSchemaData
 } from './video-schema-helper.ts';
+import { SMART_DENT_PROFILE, getOrganizationJsonLDBase } from './company-profile.ts';
 
 // ═══════════════════════════════════════════════════════════
 // INTERFACES EXPANDIDAS
@@ -1227,4 +1228,255 @@ export function generateMilestonesSchema(milestones: CompanyMilestone[], company
       }
     }))
   };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// NOVOS BUILDERS — usam SMART_DENT_PROFILE como fallback
+// Importados por geradores de HTML para injeção de company-profile
+// ═══════════════════════════════════════════════════════════════
+
+/** Escapa atributos HTML (uso interno) */
+function _escAttr(v: string | null | undefined): string {
+  if (!v) return '';
+  return String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// ─────────────────────────────────────────────────────────────
+// 1. buildAuthorityMeta
+// Gera <meta> tags de autoridade (E-E-A-T) para injeção no <head>.
+// Usa AuthorityData quando disponível, fallback em SMART_DENT_PROFILE.
+// ─────────────────────────────────────────────────────────────
+export function buildAuthorityMeta(authority: AuthorityData | null): string {
+  const p = SMART_DENT_PROFILE;
+  const tags: string[] = [];
+
+  // Organização
+  tags.push(`<meta name="organization:name" content="${_escAttr(authority?.companyName ?? p.companyName)}">`);
+  tags.push(`<meta name="organization:url" content="${_escAttr(authority?.websiteUrl ?? p.websiteUrl)}">`);
+
+  // Áreas geográficas
+  const areas = authority?.areasServed.map((a) => a.name) ?? p.areasServed;
+  if (areas.length > 0) {
+    tags.push(`<meta name="geo.coverage" content="${_escAttr(areas.join(', '))}">`);
+  }
+
+  // Parcerias
+  const partners = authority?.partnerships.slice(0, 10).map((p) => p.label) ?? [];
+  if (partners.length > 0) {
+    tags.push(`<meta name="organization.partnerships" content="${_escAttr(partners.join(', '))}">`);
+  }
+
+  // Redes sociais
+  const instagram = authority?.socialProfiles?.instagram ?? p.instagram;
+  if (instagram) {
+    tags.push(`<meta property="article:publisher" content="${_escAttr(instagram)}">`);
+  }
+
+  // Twitter/X handles
+  const handles = authority?.socialTags?.handles ?? p.socialHandles;
+  const twitterHandle = handles.find((h) => h.startsWith('@')) ?? handles[0];
+  if (twitterHandle) {
+    tags.push(`<meta name="twitter:site" content="${_escAttr(twitterHandle)}">`);
+    tags.push(`<meta name="twitter:creator" content="${_escAttr(twitterHandle)}">`);
+  }
+
+  // Hashtags
+  const hashtags = authority?.socialTags?.hashtags ?? p.hashtags;
+  if (hashtags.length > 0) {
+    tags.push(`<meta name="social.hashtags" content="${_escAttr(hashtags.join(' '))}">`);
+  }
+
+  // Fundador
+  if (authority?.founder?.name) {
+    tags.push(`<meta name="organization.founder" content="${_escAttr(authority.founder.name)}">`);
+  }
+
+  // SEO expertise
+  const expertise = authority?.seoContext?.technicalExpertise ?? p.technicalExpertise;
+  if (expertise) {
+    tags.push(`<meta name="expertise" content="${_escAttr(expertise.substring(0, 200))}">`);
+  }
+
+  // Identidade corporativa
+  const brandValues = authority?.corporateIdentity?.brandValues ?? p.brandValues;
+  if (brandValues) {
+    tags.push(`<meta name="brand-values" content="${_escAttr(brandValues.substring(0, 200))}">`);
+  }
+
+  return tags.join('\n');
+}
+
+// ─────────────────────────────────────────────────────────────
+// 2. buildOrganizationJsonLD
+// Gera objeto Organization JSON-LD completo para injeção no @graph.
+// Enriquece com AuthorityData (parcerias, reviews, vídeos, sameAs).
+// ─────────────────────────────────────────────────────────────
+export function buildOrganizationJsonLD(authority: AuthorityData | null): any {
+  // Base vem do SMART_DENT_PROFILE (sem chamada de rede)
+  const base = getOrganizationJsonLDBase();
+
+  if (!authority) return base;
+
+  // Enriquecer com dados do banco (via enrichOrganizationSchema já existente)
+  const enriched = enrichOrganizationSchema(base, authority);
+
+  // Adicionar reviews individuais se disponíveis
+  const reviews = generateReviewsSchema(authority.reviews, 5);
+  if (reviews.length > 0) {
+    enriched.review = reviews;
+  }
+
+  // Adicionar vídeos da empresa
+  const videoSchemas = generateCompanyVideoSchemas(
+    authority.companyVideos,
+    authority.companyName ?? SMART_DENT_PROFILE.companyName,
+    authority.websiteUrl ?? SMART_DENT_PROFILE.websiteUrl,
+    10
+  );
+  if (videoSchemas.length > 0) {
+    enriched.subjectOf = videoSchemas;
+  }
+
+  return enriched;
+}
+
+// ─────────────────────────────────────────────────────────────
+// 3. buildAiSummary
+// Gera bloco HTML oculto otimizado para citação por LLMs e SGE.
+// Complementa generateAISummaryBlock de ai-readiness-helpers.ts
+// sem importar aquele módulo (evita dependência circular).
+// ─────────────────────────────────────────────────────────────
+export function buildAiSummary(
+  authority: AuthorityData | null,
+  context: { pageTitle?: string; productName?: string; pageType?: string } = {}
+): string {
+  const p = SMART_DENT_PROFILE;
+  const companyName = authority?.companyName ?? p.companyName;
+  const websiteUrl = authority?.websiteUrl ?? p.websiteUrl;
+  const description = authority?.corporateIdentity?.companyDescription ?? p.description;
+  const expertise = authority?.seoContext?.technicalExpertise ?? p.technicalExpertise;
+  const positioning = authority?.seoContext?.marketPositioning ?? p.marketPositioning;
+  const areas = (authority?.areasServed.map((a) => a.name) ?? p.areasServed).join(', ');
+  const keywords = (authority?.seoContext?.keywords ?? p.seoKeywords).slice(0, 10).join(', ');
+  const nps = authority?.npsMetrics;
+
+  const pageTitle = context.pageTitle ? `\n  <dt>Página</dt><dd>${_escAttr(context.pageTitle)}</dd>` : '';
+  const productLine = context.productName ? `\n  <dt>Produto</dt><dd>${_escAttr(context.productName)}</dd>` : '';
+
+  const npsLine = nps?.nps_score !== undefined
+    ? `\n  <dt>NPS</dt><dd>${nps.nps_score} (${nps.total_responses ?? '?'} respostas)</dd>`
+    : '';
+
+  return `
+<!-- AI Summary Block — visível para crawlers/LLMs, oculto para usuários -->
+<aside class="ai-summary-block" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;" data-ai-summary="true">
+  <dl itemscope itemtype="https://schema.org/Organization">
+    <dt>Organização</dt><dd itemprop="name">${_escAttr(companyName)}</dd>
+    <dt>Site</dt><dd itemprop="url">${_escAttr(websiteUrl)}</dd>
+    <dt>Descrição</dt><dd itemprop="description">${_escAttr(description)}</dd>
+    <dt>Especialidade</dt><dd itemprop="knowsAbout">${_escAttr(expertise)}</dd>
+    <dt>Posicionamento</dt><dd>${_escAttr(positioning)}</dd>
+    <dt>Áreas Atendidas</dt><dd>${_escAttr(areas)}</dd>
+    <dt>Palavras-chave</dt><dd>${_escAttr(keywords)}</dd>${pageTitle}${productLine}${npsLine}
+  </dl>
+</aside>
+`.trim();
+}
+
+// ─────────────────────────────────────────────────────────────
+// 4. buildLlmKnowledgeLayer
+// Gera camada de conhecimento estruturado para LLMs (GEO SEO).
+// Combina dados da empresa, expertise técnica e contexto SEO.
+// ─────────────────────────────────────────────────────────────
+export function buildLlmKnowledgeLayer(
+  authority: AuthorityData | null,
+  extraKeywords: string[] = []
+): string {
+  const p = SMART_DENT_PROFILE;
+  const companyName = authority?.companyName ?? p.companyName;
+  const websiteUrl = authority?.websiteUrl ?? p.websiteUrl;
+  const expertise = authority?.seoContext?.technicalExpertise ?? p.technicalExpertise;
+  const positioning = authority?.seoContext?.marketPositioning ?? p.marketPositioning;
+  const advantages = authority?.seoContext?.competitiveAdvantages ?? p.competitiveAdvantages;
+  const mission = authority?.corporateIdentity?.missionStatement ?? p.missionStatement;
+  const baseKeywords = authority?.seoContext?.keywords ?? p.seoKeywords;
+  const allKeywords = [...new Set([...baseKeywords, ...extraKeywords])].slice(0, 20);
+  const areas = (authority?.areasServed.map((a) => a.name) ?? p.areasServed).join(', ');
+  const partners = authority?.partnerships.slice(0, 5).map((pt) => pt.label).join(', ') ?? '';
+
+  const workflowLabels = p.workflowStages.map((s) => s.label).join(' → ');
+
+  return `
+<!-- LLM Knowledge Layer — structured context for Generative AI engines -->
+<section class="llm-knowledge-layer" aria-hidden="true"
+  style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;"
+  data-llm-knowledge="true"
+  data-organization="${_escAttr(companyName)}"
+  data-website="${_escAttr(websiteUrl)}">
+  <article itemscope itemtype="https://schema.org/Organization">
+    <h1 itemprop="name">${_escAttr(companyName)}</h1>
+    <p itemprop="description">${_escAttr(mission)}</p>
+    <section>
+      <h2>Expertise Técnica</h2>
+      <p itemprop="knowsAbout">${_escAttr(expertise)}</p>
+    </section>
+    <section>
+      <h2>Posicionamento</h2>
+      <p>${_escAttr(positioning)}</p>
+    </section>
+    <section>
+      <h2>Vantagens Competitivas</h2>
+      <p>${_escAttr(advantages)}</p>
+    </section>
+    <section>
+      <h2>Fluxo de Trabalho Odontológico Digital</h2>
+      <p>${workflowLabels}</p>
+    </section>
+    <section>
+      <h2>Áreas Atendidas</h2>
+      <p itemprop="areaServed">${_escAttr(areas)}</p>
+    </section>
+    ${partners ? `<section><h2>Parceiros Internacionais</h2><p>${_escAttr(partners)}</p></section>` : ''}
+    <section>
+      <h2>Palavras-chave de Contexto</h2>
+      <p>${allKeywords.map((k) => _escAttr(k)).join(', ')}</p>
+    </section>
+  </article>
+</section>
+`.trim();
+}
+
+// ─────────────────────────────────────────────────────────────
+// 5. buildSocialLinks
+// Gera HTML de links sociais para uso em rodapés e templates.
+// Retorna fragmento <ul> com rel="me" para E-E-A-T.
+// ─────────────────────────────────────────────────────────────
+export function buildSocialLinks(authority: AuthorityData | null): string {
+  const p = SMART_DENT_PROFILE;
+
+  const profiles = authority?.socialProfiles;
+  const youtube   = profiles?.youtube   ?? p.youtube;
+  const instagram = profiles?.instagram ?? p.instagram;
+  const linkedin  = profiles?.linkedin  ?? p.linkedin;
+  const facebook  = profiles?.facebook  ?? p.facebook;
+  const tiktok    = profiles?.tiktok    ?? p.tiktok;
+  const extra: Array<{ platform: string; url: string }> = profiles?.socialLinks ?? [];
+
+  const items: string[] = [];
+
+  if (youtube)   items.push(`<li><a href="${_escAttr(youtube)}" rel="me noopener" title="YouTube Oficial ${_escAttr(p.companyName)}">YouTube</a></li>`);
+  if (instagram) items.push(`<li><a href="${_escAttr(instagram)}" rel="me noopener" title="Instagram Oficial ${_escAttr(p.companyName)}">Instagram</a></li>`);
+  if (linkedin)  items.push(`<li><a href="${_escAttr(linkedin)}" rel="me noopener" title="LinkedIn ${_escAttr(p.companyName)}">LinkedIn</a></li>`);
+  if (facebook)  items.push(`<li><a href="${_escAttr(facebook)}" rel="me noopener" title="Facebook ${_escAttr(p.companyName)}">Facebook</a></li>`);
+  if (tiktok)    items.push(`<li><a href="${_escAttr(tiktok)}" rel="me noopener" title="TikTok ${_escAttr(p.companyName)}">TikTok</a></li>`);
+
+  for (const link of extra) {
+    if (link.url) {
+      items.push(`<li><a href="${_escAttr(link.url)}" rel="me noopener">${_escAttr(link.platform)}</a></li>`);
+    }
+  }
+
+  if (items.length === 0) return '';
+
+  return `<ul class="social-links" aria-label="Canais Oficiais ${_escAttr(p.companyName)}">\n  ${items.join('\n  ')}\n</ul>`;
 }

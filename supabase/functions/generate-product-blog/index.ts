@@ -1,6 +1,8 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
+// ✅ Fonte única de dados da empresa — fallback quando banco indisponível
+import { SMART_DENT_PROFILE } from '../_shared/company-profile.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -414,19 +416,22 @@ INSTRUÇÕES CRÍTICAS:
   };
 
   // FASE 1: Preparar dados COMPLETOS da empresa (incluindo SEO Hidden fields)
-  const companyData = companyProfile ? {
-    name: companyProfile.company_name || '',
-    description: companyProfile.company_description || '',
-    mission: companyProfile.mission_statement || '',
-    values: companyProfile.brand_values || '',
+  // Fallback para SMART_DENT_PROFILE quando o banco não retornar dados
+  const _cp = companyProfile ?? {};
+  const companyData = {
+    name: _cp.company_name || SMART_DENT_PROFILE.companyName,
+    description: _cp.company_description || SMART_DENT_PROFILE.description,
+    mission: _cp.mission_statement || SMART_DENT_PROFILE.missionStatement,
+    values: _cp.brand_values || SMART_DENT_PROFILE.brandValues,
     // SEO Hidden Fields
-    seoTechnicalExpertise: companyProfile.seo_technical_expertise || 'N/A',
-    seoMarketPositioning: companyProfile.seo_market_positioning || 'N/A',
-    seoCompetitiveAdvantages: companyProfile.seo_competitive_advantages || 'N/A',
-    seoContextKeywords: Array.isArray(companyProfile.seo_context_keywords) ? 
-      companyProfile.seo_context_keywords.join(', ') : 'N/A',
-    seoServiceAreas: companyProfile.seo_service_areas || 'N/A'
-  } : null;
+    seoTechnicalExpertise: _cp.seo_technical_expertise || SMART_DENT_PROFILE.technicalExpertise,
+    seoMarketPositioning: _cp.seo_market_positioning || SMART_DENT_PROFILE.marketPositioning,
+    seoCompetitiveAdvantages: _cp.seo_competitive_advantages || SMART_DENT_PROFILE.competitiveAdvantages,
+    seoContextKeywords: Array.isArray(_cp.seo_context_keywords)
+      ? _cp.seo_context_keywords.join(', ')
+      : SMART_DENT_PROFILE.seoKeywords.join(', '),
+    seoServiceAreas: _cp.seo_service_areas || SMART_DENT_PROFILE.areasServed.join(', ')
+  };
 
   // Se há um prompt customizado, processa variáveis; senão usa o prompt padrão
   let systemPrompt;

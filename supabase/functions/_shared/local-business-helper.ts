@@ -63,36 +63,10 @@ export interface LocalBusinessData {
 
 // ═══════════════════════════════════════════════════════════
 // 📌 DADOS PADRÃO SMART DENT (FALLBACK)
+// Fonte única: company-profile.ts — não duplicar aqui.
 // ═══════════════════════════════════════════════════════════
-const DEFAULT_LOCAL_BUSINESS: LocalBusinessData = {
-  company_name: "Smart Dent",
-  legal_name: "Smart Dent Importação e Comércio Ltda",
-  company_description: "Smart Dent - Odontologia Digital Simples, Eficiente e Lucrativa. Scanners intraorais, impressoras 3D e soluções CAD/CAM para dentistas.",
-  website_url: "https://smartdent.com.br",
-  company_logo_url: "https://pgfgripuanuwwolmtknn.supabase.co/storage/v1/object/public/product-images/smartdent-logo.png",
-  contact_phone: "(11) 4200-7008",
-  contact_email: "contato@smartdent.com.br",
-  street_address: "Av. Paulista",
-  address_number: "1000",
-  city: "São Paulo",
-  state: "SP",
-  postal_code: "01310-100",
-  country: "Brasil",
-  latitude: -23.5505,
-  longitude: -46.6333,
-  price_range: "$$$$",
-  tax_id: "12.345.678/0001-90",
-  instagram_profile: "https://instagram.com/smartdentoficial",
-  youtube_channel: "https://youtube.com/@smartdentoficial",
-  opening_hours: [
-    { dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"], opens: "09:00", closes: "18:00" }
-  ],
-  areas_served: ["São Paulo", "Brasil", "América Latina"],
-  founder_name: "Smart Dent Team",
-  founder_title: "Equipe Fundadora",
-  number_of_employees: "10-50",
-  founded_year: 2018
-};
+import { getDefaultLocalBusinessData } from './company-profile.ts';
+const DEFAULT_LOCAL_BUSINESS: LocalBusinessData = getDefaultLocalBusinessData();
 
 // ═══════════════════════════════════════════════════════════
 // 🔧 GERADOR DE LOCALBUSINESS SCHEMA

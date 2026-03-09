@@ -2,6 +2,8 @@
 // 🎯 GERADOR DE SCHEMAS JSON-LD PARA SGE/AEO
 // ═══════════════════════════════════════════════════════════
 
+// ✅ Fonte única de dados Smart Dent (fallback sem banco)
+import { SMART_DENT_PROFILE, getOrganizationJsonLDBase } from '../_shared/company-profile.ts';
 // ✅ FASE 3.1: Importar processamento de intelligent links
 import { buildIntelligentLinksMap, applyIntelligentLinks } from '../_shared/intelligent-links-processor.ts';
 // ✅ INTEGRAÇÃO SISTEMA B: Schemas de vídeos e documentos
