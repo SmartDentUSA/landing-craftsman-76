@@ -138,7 +138,15 @@ serve(async (req) => {
       }
     }
 
-    // 3. Determine file path in repo
+    // 3. Inject nav-data.js script tag for incremental footer
+    const navScriptTag = `<script src="/nav-data.js" defer></script>`;
+    if (html.includes('</body>')) {
+      html = html.replace('</body>', `${navScriptTag}\n</body>`);
+    } else {
+      html += navScriptTag;
+    }
+
+    // 4. Determine file path in repo
     if (isHomepage) pagePath = '/';
     const repoPath = isHomepage
       ? 'public/index.html'
@@ -146,7 +154,7 @@ serve(async (req) => {
 
     console.log(`📁 Repo path: ${repoPath}`);
 
-    // 4. Git flow via GitHub REST API
+    // 5. Git flow via GitHub REST API
     // Step A: Get branch ref
     const refData = await ghFetch(`/git/ref/heads/${BRANCH}`, githubToken);
     const latestCommitSha = refData.object.sha;
@@ -156,7 +164,7 @@ serve(async (req) => {
     const commitData = await ghFetch(`/git/commits/${latestCommitSha}`, githubToken);
     const baseTreeSha = commitData.tree.sha;
 
-    // Step C: Create blob with HTML content (utf-8 — no base64 needed)
+    // Step C: Create blob with HTML content
     const blobData = await ghFetch('/git/blobs', githubToken, {
       method: 'POST',
       body: JSON.stringify({
@@ -164,24 +172,98 @@ serve(async (req) => {
         encoding: 'utf-8',
       }),
     });
-    console.log(`📦 Blob created: ${blobData.sha}`);
+    console.log(`📦 HTML blob created: ${blobData.sha}`);
 
-    // Step D: Create tree with new file
+    // Step D: Generate nav-data.js and create its blob
+    let navBlobSha: string | null = null;
+    try {
+      const { data: allPublished } = await supabase
+        .from('cloned_landing_pages')
+        .select('name, published_url, page_path, is_homepage, product, brand')
+        .eq('target_domain', domain)
+        .eq('publish_status', 'published')
+        .order('is_homepage', { ascending: false })
+        .order('name');
+
+      if (allPublished && allPublished.length > 0) {
+        const navItems = allPublished.map((p: any) => ({
+          name: p.name || p.product || 'Página',
+          url: p.published_url || `https://${domain}${p.page_path || '/'}`,
+          isHome: p.is_homepage || false,
+          brand: p.brand || null,
+        }));
+
+        const navDataJS = `/* Smart Dent Navigation Data - Auto-generated */
+window.__NAV_DATA__ = ${JSON.stringify(navItems, null, 2)};
+(function() {
+  var data = window.__NAV_DATA__;
+  if (!data || data.length < 2) return;
+  var nav = document.createElement('nav');
+  nav.id = 'smartdent-nav-footer';
+  nav.style.cssText = 'background:#1a1a2e;padding:24px 16px;text-align:center;margin-top:40px;border-top:2px solid #16213e;';
+  var title = document.createElement('p');
+  title.style.cssText = 'color:#e2e8f0;font-size:14px;font-weight:600;margin:0 0 12px 0;';
+  title.textContent = 'Navegue por nossas páginas:';
+  nav.appendChild(title);
+  var links = document.createElement('div');
+  links.style.cssText = 'display:flex;flex-wrap:wrap;justify-content:center;gap:8px;';
+  data.forEach(function(item) {
+    if (item.url === window.location.href) return;
+    var a = document.createElement('a');
+    a.href = item.url;
+    a.textContent = item.isHome ? '🏠 Home' : item.name;
+    a.style.cssText = 'color:#60a5fa;text-decoration:none;font-size:13px;padding:4px 10px;background:#16213e;border-radius:4px;transition:background 0.2s;';
+    a.onmouseover = function() { this.style.background = '#1e3a5f'; };
+    a.onmouseout = function() { this.style.background = '#16213e'; };
+    links.appendChild(a);
+  });
+  nav.appendChild(links);
+  var existing = document.getElementById('smartdent-nav-footer');
+  if (existing) existing.remove();
+  document.body.appendChild(nav);
+})();`;
+
+        const navBlob = await ghFetch('/git/blobs', githubToken, {
+          method: 'POST',
+          body: JSON.stringify({
+            content: navDataJS,
+            encoding: 'utf-8',
+          }),
+        });
+        navBlobSha = navBlob.sha;
+        console.log(`📦 nav-data.js blob created: ${navBlobSha}`);
+      }
+    } catch (navErr: any) {
+      console.warn('⚠️ nav-data.js generation failed (continuing without it):', navErr.message);
+    }
+
+    // Step E: Create tree with HTML + optional nav-data.js (single commit)
+    const treeFiles: any[] = [{
+      path: repoPath,
+      mode: '100644',
+      type: 'blob',
+      sha: blobData.sha,
+    }];
+
+    if (navBlobSha) {
+      treeFiles.push({
+        path: 'public/nav-data.js',
+        mode: '100644',
+        type: 'blob',
+        sha: navBlobSha,
+      });
+    }
+
     const treeData = await ghFetch('/git/trees', githubToken, {
       method: 'POST',
       body: JSON.stringify({
         base_tree: baseTreeSha,
-        tree: [{
-          path: repoPath,
-          mode: '100644',
-          type: 'blob',
-          sha: blobData.sha,
-        }],
+        tree: treeFiles,
       }),
     });
-    console.log(`🌳 Tree created: ${treeData.sha}`);
+    console.log(`🌳 Tree created: ${treeData.sha} (${treeFiles.length} files)`);
 
-    // Step E: Create commit
+    // Step F: Create commit
     const newCommitData = await ghFetch('/git/commits', githubToken, {
       method: 'POST',
       body: JSON.stringify({
@@ -192,7 +274,7 @@ serve(async (req) => {
     });
     console.log(`✅ Commit created: ${newCommitData.sha}`);
 
-    // Step F: Update branch ref
+    // Step G: Update branch ref
     await ghFetch(`/git/refs/heads/${BRANCH}`, githubToken, {
       method: 'PATCH',
       body: JSON.stringify({
@@ -202,7 +284,7 @@ serve(async (req) => {
     });
     console.log(`🎯 Branch ${BRANCH} updated to ${newCommitData.sha}`);
 
-    // 5. Update cloned_landing_pages
+    // 6. Update cloned_landing_pages
     const publishedUrl = `https://${domain}${pagePath === '/' ? '' : pagePath}`;
     const { error: updateError } = await supabase
       .from('cloned_landing_pages')
@@ -223,6 +305,7 @@ serve(async (req) => {
       commitSha: newCommitData.sha,
       publishedUrl,
       repoPath,
+      navDataIncluded: !!navBlobSha,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
