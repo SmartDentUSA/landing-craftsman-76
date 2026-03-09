@@ -920,7 +920,11 @@ export const LPClonePanel = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => unpublishMutation.mutate(lp.id)}
+              onClick={() => {
+                if (window.confirm('Despublicar esta LP? O arquivo será removido do servidor (FTP/Cloudflare).')) {
+                  unpublishMutation.mutate(lp.id);
+                }
+              }}
               disabled={unpublishMutation.isPending}
               title="Despublicar"
             >
