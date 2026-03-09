@@ -283,8 +283,14 @@ serve(async (req) => {
     const ftpHost = (pubSettings.ftp_host || '').replace(/^https?:\/\//, '').replace(/[\s\t\r\n]/g, '').replace(/\/+$/, '').trim();
     const ftpUser = (pubSettings.ftp_user || '').trim();
     const ftpPass = pubSettings.ftp_password_encrypted;
-    const ftpPort = pubSettings.ftp_port || 21;
     const baseRemotePath = domainConfig.ftp_remote_path || pubSettings.ftp_remote_path || '/public_html';
+    
+    // ✅ FTP usa porta 21, porta 22 é SSH/SFTP (não suportado)
+    let ftpPort = pubSettings.ftp_port || 21;
+    if (ftpPort === 22) {
+      console.warn('⚠️ Porta 22 é SSH/SFTP, não FTP. Usando porta 21 como fallback.');
+      ftpPort = 21;
+    }
 
     if (!ftpHost || !ftpUser || !ftpPass) {
       throw new Error(`Incomplete FTP credentials for profile "${ftpProfile}"`);
