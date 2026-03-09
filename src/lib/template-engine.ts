@@ -3518,6 +3518,11 @@ export const generatePreviewHTML = async (data: any): Promise<string> => {
 };
 
 export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Promise<string> => {
+  // 🔧 Normalizar logo_url: pode ser string ou ImageData object
+  if (data.logo_url && typeof data.logo_url === 'object' && data.logo_url !== null) {
+    data.logo_url = data.logo_url.src || '';
+  }
+  
   console.log('🎯 [template-engine] generateHTML - SPIN Solutions:', {
     count: relatedSpinSolutions?.length || 0,
     solutions: relatedSpinSolutions?.map(s => ({ id: s.id, title: s.title })) || []
