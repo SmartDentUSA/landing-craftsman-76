@@ -192,7 +192,7 @@ serve(async (req) => {
         .eq('id', lpId)
         .single();
       if (error || !lp) throw new Error('Landing Page não encontrada');
-      if (lp.publish_status !== 'published') throw new Error('LP não está publicada');
+      if (lp.publish_status !== 'published' && lp.publish_status !== 'success') throw new Error('LP não está publicada');
       targetDomain = lp.target_domain;
       pagePath = lp.page_path || '/';
       isHomepage = lp.is_homepage || false;
