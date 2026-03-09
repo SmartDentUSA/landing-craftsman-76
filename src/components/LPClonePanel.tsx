@@ -618,20 +618,18 @@ export const LPClonePanel = () => {
     }
   });
   
-  // Unpublish mutation
+  // Unpublish mutation (real removal from FTP/Cloudflare)
   const unpublishMutation = useMutation({
     mutationFn: async (lpId: string) => {
-      const { error } = await supabase
-        .from('cloned_landing_pages')
-        .update({
-          publish_status: 'draft',
-          published_url: null
-        })
-        .eq('id', lpId);
+      const { data, error } = await supabase.functions.invoke('unpublish-pages', {
+        body: { lpId, entityType: 'lp' }
+      });
       if (error) throw error;
+      if (!data.success) throw new Error(data.error);
+      return data;
     },
     onSuccess: () => {
-      toast.success('LP despublicada!');
+      toast.success('LP despublicada e removida do servidor!');
       queryClient.invalidateQueries({ queryKey: ['cloned-landing-pages'] });
     },
     onError: (error) => {
@@ -723,20 +721,18 @@ export const LPClonePanel = () => {
     }
   });
 
-  // Unpublish blog mutation
+  // Unpublish blog mutation (real removal from FTP/Cloudflare)
   const unpublishBlogMutation = useMutation({
     mutationFn: async (publicationId: string) => {
-      const { error } = await supabase
-        .from('product_blog_publications')
-        .update({
-          publish_status: 'draft',
-          published_url: null
-        })
-        .eq('id', publicationId);
+      const { data, error } = await supabase.functions.invoke('unpublish-pages', {
+        body: { publicationId, entityType: 'blog' }
+      });
       if (error) throw error;
+      if (!data.success) throw new Error(data.error);
+      return data;
     },
     onSuccess: () => {
-      toast.success('Blog despublicado!');
+      toast.success('Blog despublicado e removido do servidor!');
       queryClient.invalidateQueries({ queryKey: ['blog-publications'] });
     },
     onError: (error) => {
@@ -924,7 +920,11 @@ export const LPClonePanel = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => unpublishMutation.mutate(lp.id)}
+              onClick={() => {
+                if (window.confirm('Despublicar esta LP? O arquivo será removido do servidor (FTP/Cloudflare).')) {
+                  unpublishMutation.mutate(lp.id);
+                }
+              }}
               disabled={unpublishMutation.isPending}
               title="Despublicar"
             >
@@ -1102,7 +1102,11 @@ export const LPClonePanel = () => {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => unpublishBlogMutation.mutate(blog.publicationId!)}
+                  onClick={() => {
+                    if (window.confirm('Despublicar este blog? O arquivo será removido do servidor (FTP/Cloudflare).')) {
+                      unpublishBlogMutation.mutate(blog.publicationId!);
+                    }
+                  }}
                   disabled={unpublishBlogMutation.isPending}
                   title="Despublicar"
                 >
