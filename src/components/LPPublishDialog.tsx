@@ -9,8 +9,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Upload, Globe, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { generateBlogHTML } from '@/services/seo/blogHTMLGenerator';
-import { getTrackingConfig } from '@/lib/tracking-injector';
+import { generateHTML } from '@/lib/template-engine';
+import { getCompanyProfileForSEO, buildSEOMetaFromCompany } from '@/lib/company-profile-helper';
 import type { LandingPage } from '@/hooks/useLandingPagesSupabase';
 
 interface SEODomain {
@@ -142,29 +142,51 @@ export function LPPublishDialog({ open, onOpenChange, landingPage }: LPPublishDi
         selectedProducts = products || [];
       }
 
-      // 2. Generate HTML
+      // 2. Generate HTML using the same template engine as CodeView/Preview
       const pageData = lpData.data as any;
-      const trackingConfig = await getTrackingConfig();
 
-      const htmlCode = await generateBlogHTML({
-        blogs: [{
-          title: lpData.name,
-          content: pageData?.content || '',
-          meta_description: pageData?.seo_description,
-          keywords: pageData?.seo?.ai_keywords || [],
-        }],
-        domain: selectedDomain,
-        canonicalUrl: previewUrl,
-        finalTitle: pageData?.seo?.seo_title || lpData.name,
-        finalDescription: pageData?.seo_description || '',
-        selectedProducts,
-        intelligentLinks: pageData?.seo?.intelligent_links || {},
-        schemas: Object.values(pageData?.schema || {}),
-        trackingConfig,
-        preview: false,
-        ogImage: pageData?.banner?.images?.[0]?.src,
-        keywords: pageData?.seo?.ai_keywords || [],
-      });
+      // Build enhancedData exactly like useEnhancedTemplateEngine
+      let enhancedData = { ...pageData };
+
+      try {
+        const companyProfile = await getCompanyProfileForSEO();
+
+        if (companyProfile) {
+          const companyMeta = buildSEOMetaFromCompany(companyProfile, pageData?.ai_keywords?.primary || []);
+
+          if (!enhancedData.og_site_name && companyProfile.company_name) {
+            enhancedData.og_site_name = companyProfile.company_name;
+          }
+
+          if (!enhancedData.seo_description && companyProfile.company_description) {
+            enhancedData.seo_description = companyProfile.company_description;
+          }
+
+          if (companyMeta.additionalKeywords.length > 0) {
+            const existingKeywords = enhancedData.ai_keywords?.primary || [];
+            enhancedData.ai_keywords = {
+              ...enhancedData.ai_keywords,
+              primary: [...existingKeywords, ...companyMeta.additionalKeywords]
+            };
+          }
+
+          if (companyProfile.seo_market_positioning && enhancedData.seo_description) {
+            enhancedData.seo_description = `${enhancedData.seo_description} ${companyProfile.seo_market_positioning}`;
+          }
+
+          if (companyMeta.geoContext && !enhancedData.seo_description?.includes(companyMeta.geoContext)) {
+            enhancedData.seo_description = `${enhancedData.seo_description} | ${companyMeta.geoContext}`;
+          }
+
+          enhancedData.company_footer = companyMeta.companyFooter;
+          enhancedData.institutional_links_html = companyMeta.institutionalLinksHtml;
+          enhancedData.company_profile = companyProfile;
+        }
+      } catch (profileError) {
+        console.error('Erro ao buscar company profile, usando fallback:', profileError);
+      }
+
+      const htmlCode = generateHTML(enhancedData);
 
       // 3. Get current user
       const { data: { user } } = await supabase.auth.getUser();
