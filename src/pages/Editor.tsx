@@ -2631,7 +2631,7 @@ const EditorPageContent = () => {
           // Campos SEO e header
           seo_title: processedData.seo_title,
           seo_description: processedData.seo_description,
-          logo_url: processedData.logo_url,
+          logo_url: processedData.logo_url.src,
           logo_alt: processedData.logo_alt,
           menu: processedData.menu,
           // Seções da landing page
@@ -2702,7 +2702,7 @@ const EditorPageContent = () => {
           // Campos SEO e header
           seo_title: processedData.seo_title,
           seo_description: processedData.seo_description,
-          logo_url: processedData.logo_url,
+          logo_url: processedData.logo_url.src,
           logo_alt: processedData.logo_alt,
           menu: processedData.menu,
           // Seções da landing page
