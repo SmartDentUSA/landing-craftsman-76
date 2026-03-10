@@ -57,30 +57,61 @@ const DashboardContent = () => {
     getTrackingConfig().then(setTrackingConfig);
   }, []);
 
-  // Fetch published URLs from cloned_landing_pages
+  const fetchPublishedInfo = useCallback(async () => {
+    const { data } = await supabase
+      .from('cloned_landing_pages')
+      .select('source_landing_page_id, publish_status, published_url')
+      .eq('publish_status', 'published')
+      .not('source_landing_page_id', 'is', null);
+    
+    if (data) {
+      const map: Record<string, { publish_status: string; published_url: string | null }> = {};
+      data.forEach((row) => {
+        if (row.source_landing_page_id) {
+          map[row.source_landing_page_id] = {
+            publish_status: row.publish_status || 'draft',
+            published_url: row.published_url
+          };
+        }
+      });
+      setPublishedMap(map);
+    }
+  }, []);
+
   useEffect(() => {
-    const fetchPublishedInfo = async () => {
-      const { data } = await supabase
-        .from('cloned_landing_pages')
-        .select('source_landing_page_id, publish_status, published_url')
-        .eq('publish_status', 'published')
-        .not('source_landing_page_id', 'is', null);
-      
-      if (data) {
-        const map: Record<string, { publish_status: string; published_url: string | null }> = {};
-        data.forEach((row) => {
-          if (row.source_landing_page_id) {
-            map[row.source_landing_page_id] = {
-              publish_status: row.publish_status || 'draft',
-              published_url: row.published_url
-            };
-          }
-        });
-        setPublishedMap(map);
-      }
-    };
     fetchPublishedInfo();
-  }, [landingPages]);
+  }, [landingPages, fetchPublishedInfo]);
+
+  const handleUnpublish = async (lpId: string) => {
+    if (!window.confirm('Despublicar esta LP? O conteúdo será removido do servidor.')) return;
+    
+    setUnpublishingId(lpId);
+    try {
+      const { data: cloned, error: findError } = await supabase
+        .from('cloned_landing_pages')
+        .select('id')
+        .eq('source_landing_page_id', lpId)
+        .eq('publish_status', 'published')
+        .limit(1)
+        .single();
+      
+      if (findError || !cloned) throw new Error('Publicação não encontrada');
+      
+      const { data, error } = await supabase.functions.invoke('unpublish-pages', {
+        body: { lpId: cloned.id, entityType: 'lp' }
+      });
+      
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Erro ao despublicar');
+      
+      toast({ title: '✅ Despublicado com sucesso!', description: 'O conteúdo foi removido do servidor.' });
+      await fetchPublishedInfo();
+    } catch (err: any) {
+      toast({ title: 'Erro ao despublicar', description: err.message, variant: 'destructive' });
+    } finally {
+      setUnpublishingId(null);
+    }
+  };
 
   const debouncedFetchBlogPosts = useDebounce(async () => {
     try {
