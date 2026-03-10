@@ -456,9 +456,20 @@ window.__NAV_DATA__ = ${JSON.stringify(navItems, null, 2)};
     var copyright = null;
     var allEls = footer.querySelectorAll('*');
     for (var i = 0; i < allEls.length; i++) {
-      if (allEls[i].textContent && allEls[i].textContent.indexOf('\\u00A9') !== -1 && allEls[i].children.length === 0) {
+      var txt = allEls[i].textContent || '';
+      if ((txt.indexOf('©') !== -1 || txt.toLowerCase().indexOf('direitos') !== -1) && allEls[i].children.length === 0) {
         copyright = allEls[i];
         break;
+      }
+    }
+    if (!copyright) {
+      var directChildren = footer.children;
+      for (var j = directChildren.length - 1; j >= 0; j--) {
+        var t = directChildren[j].textContent || '';
+        if (t.indexOf('©') !== -1 || t.toLowerCase().indexOf('direitos') !== -1) {
+          copyright = directChildren[j];
+          break;
+        }
       }
     }
     if (copyright) {
