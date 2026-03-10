@@ -366,9 +366,8 @@ serve(async (req) => {
         await ftp.login(ftpUser, ftpPass);
         await ftp.setBinary();
         
-        // Ensure directory exists
+        // Ensure directory exists (also CWDs into it)
         await ftp.ensureDirectory(remoteDirPath);
-        await ftp.cwd(remoteDirPath);
         
         // Upload HTML
         const htmlBytes = new TextEncoder().encode(html);
