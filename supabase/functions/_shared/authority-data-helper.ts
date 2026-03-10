@@ -47,6 +47,9 @@ export interface AuthorityData {
   
   // ✅ NOVOS - Contexto SEO Estratégico
   seoContext: SEOContext;
+
+  // ✅ Wikidata Entity ID
+  wikidataId?: string;
 }
 
 export interface Partnership {
