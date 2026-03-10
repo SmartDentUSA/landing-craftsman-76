@@ -74,6 +74,7 @@ export async function generateReviewsAndLocalBusinessForFooter(
   const sameAs: string[] = [];
   if (instagram_profile) sameAs.push(instagram_profile);
   if (youtube_channel) sameAs.push(youtube_channel);
+  if (wikidata_id) sameAs.push(`https://www.wikidata.org/wiki/${wikidata_id}`);
   
   // ✅ Adicionar domínios SEO ao sameAs
   try {
