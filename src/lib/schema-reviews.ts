@@ -201,6 +201,7 @@ export async function generateSchemaFromCompanyProfile(
     location: companyData.location,
     instagram_profile: companyData.instagram_profile,
     youtube_channel: companyData.youtube_channel,
+    wikidata_id: companyData.wikidata_id,
     reviews,
     maxReviews
   });
