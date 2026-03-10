@@ -2,7 +2,7 @@ import { ContentQualityDashboard } from "@/components/ContentQualityDashboard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FileText, Copy, Edit, ExternalLink, MoreVertical, Trash2, Shield, PenTool, Database, Globe, Upload } from "lucide-react";
+import { Plus, FileText, Copy, Edit, ExternalLink, MoreVertical, Trash2, Shield, PenTool, Database, Globe, Upload, Loader2, CloudOff } from "lucide-react";
 import { CompanyReviewsManager } from "@/components/CompanyReviewsManager";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
@@ -51,35 +51,67 @@ const DashboardContent = () => {
   const [publishOpen, setPublishOpen] = useState(false);
   const [publishLP, setPublishLP] = useState<LandingPage | null>(null);
   const [publishedMap, setPublishedMap] = useState<Record<string, { publish_status: string; published_url: string | null }>>({});
+  const [unpublishingId, setUnpublishingId] = useState<string | null>(null);
 
   useEffect(() => {
     getTrackingConfig().then(setTrackingConfig);
   }, []);
 
-  // Fetch published URLs from cloned_landing_pages
+  const fetchPublishedInfo = useCallback(async () => {
+    const { data } = await supabase
+      .from('cloned_landing_pages')
+      .select('source_landing_page_id, publish_status, published_url')
+      .eq('publish_status', 'published')
+      .not('source_landing_page_id', 'is', null);
+    
+    if (data) {
+      const map: Record<string, { publish_status: string; published_url: string | null }> = {};
+      data.forEach((row) => {
+        if (row.source_landing_page_id) {
+          map[row.source_landing_page_id] = {
+            publish_status: row.publish_status || 'draft',
+            published_url: row.published_url
+          };
+        }
+      });
+      setPublishedMap(map);
+    }
+  }, []);
+
   useEffect(() => {
-    const fetchPublishedInfo = async () => {
-      const { data } = await supabase
-        .from('cloned_landing_pages')
-        .select('source_landing_page_id, publish_status, published_url')
-        .eq('publish_status', 'published')
-        .not('source_landing_page_id', 'is', null);
-      
-      if (data) {
-        const map: Record<string, { publish_status: string; published_url: string | null }> = {};
-        data.forEach((row) => {
-          if (row.source_landing_page_id) {
-            map[row.source_landing_page_id] = {
-              publish_status: row.publish_status || 'draft',
-              published_url: row.published_url
-            };
-          }
-        });
-        setPublishedMap(map);
-      }
-    };
     fetchPublishedInfo();
-  }, [landingPages]);
+  }, [landingPages, fetchPublishedInfo]);
+
+  const handleUnpublish = async (lpId: string) => {
+    if (!window.confirm('Despublicar esta LP? O conteúdo será removido do servidor.')) return;
+    
+    setUnpublishingId(lpId);
+    try {
+      const { data: cloned, error: findError } = await supabase
+        .from('cloned_landing_pages')
+        .select('id')
+        .eq('source_landing_page_id', lpId)
+        .eq('publish_status', 'published')
+        .limit(1)
+        .single();
+      
+      if (findError || !cloned) throw new Error('Publicação não encontrada');
+      
+      const { data, error } = await supabase.functions.invoke('unpublish-pages', {
+        body: { lpId: cloned.id, entityType: 'lp' }
+      });
+      
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Erro ao despublicar');
+      
+      toast({ title: '✅ Despublicado com sucesso!', description: 'O conteúdo foi removido do servidor.' });
+      await fetchPublishedInfo();
+    } catch (err: any) {
+      toast({ title: 'Erro ao despublicar', description: err.message, variant: 'destructive' });
+    } finally {
+      setUnpublishingId(null);
+    }
+  };
 
   const debouncedFetchBlogPosts = useDebounce(async () => {
     try {
@@ -640,6 +672,20 @@ const DashboardContent = () => {
                           Publicar
                         </Button>
                       </>
+                    )}
+                    {publishedMap[landingPage.id]?.publish_status === 'published' && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleUnpublish(landingPage.id)}
+                        disabled={unpublishingId === landingPage.id}
+                      >
+                        {unpublishingId === landingPage.id 
+                          ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> 
+                          : <CloudOff className="h-4 w-4 mr-2" />
+                        }
+                        Despublicar
+                      </Button>
                     )}
                     
                     <DropdownMenu>
