@@ -11,6 +11,7 @@ import { TagInput } from "@/components/ui/tag-input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Save, Building2, Video, Instagram, Youtube, Search, Plus, Trash2, Activity, Globe, Target, Zap, Calendar, CheckCircle2, Menu, User, Clock, MapPin } from "lucide-react";
+import { SOCIAL_PLATFORMS, SocialIcon } from "@/components/icons/SocialIcons";
 import { VideoSection } from "./VideoSection";
 import { ReviewsSection } from "./ReviewsSection";
 import { useCompanyVideos } from "@/hooks/useCompanyVideos";
