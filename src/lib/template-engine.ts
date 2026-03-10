@@ -2063,7 +2063,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     {{#animated_banner_section}}
     {{#visible_any}}
     <section class="animated-banner-section {{visibility_class}}">
-        <div class="container">
+        <h2 class="sr-only">{{title}}</h2>
             <h2 class="sr-only">{{title}}</h2>
             <div style="overflow: hidden; position: relative; padding: 2rem 0;">
                 <div class="animate-infinite-scroll" style="display: flex; gap: 3rem; align-items: center;">
