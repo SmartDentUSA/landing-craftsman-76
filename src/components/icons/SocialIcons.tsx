@@ -66,6 +66,12 @@ export const TikTokIcon: React.FC<IconProps> = ({ className = "h-4 w-4", size = 
   </svg>
 );
 
+export const KwaiIcon: React.FC<IconProps> = ({ className = "h-4 w-4", size = 16, color = "currentColor" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={color} className={className}>
+    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 7.36c-.39.39-1.02.39-1.41 0L12 6.13 8.77 9.36c-.39.39-1.02.39-1.41 0-.39-.39-.39-1.02 0-1.41l3.93-3.93c.39-.39 1.02-.39 1.41 0l3.93 3.93c.4.39.4 1.02.01 1.41zM12 17.87l-3.23-3.23c-.39-.39-.39-1.02 0-1.41.39-.39 1.02-.39 1.41 0L12 15.05l1.82-1.82c.39-.39 1.02-.39 1.41 0 .39.39.39 1.02 0 1.41L12 17.87zm0-4.87c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/>
+  </svg>
+);
+
 // Mapa de plataformas sociais com ícones e configurações
 export const SOCIAL_PLATFORMS = [
   { id: 'facebook', label: 'Facebook', icon: FacebookIcon, color: '#1877F2', baseUrl: 'https://facebook.com/' },
