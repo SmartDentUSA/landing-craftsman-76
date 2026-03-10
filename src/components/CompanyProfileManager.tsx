@@ -1381,6 +1381,48 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
                   </div>
                 </div>
 
+                {/* ✨ Outras Redes Sociais */}
+                <div className="space-y-4 border-t pt-6 mt-6">
+                  <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <Globe className="h-4 w-4" />
+                    Outras Redes Sociais
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Links das redes sociais da empresa. YouTube e Instagram já estão acima.
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {SOCIAL_PLATFORMS
+                      .filter(p => p.id !== 'youtube' && p.id !== 'instagram')
+                      .map(platform => {
+                        const links = (profile.social_media_links || []) as Array<{ platform: string; url: string }>;
+                        const link = links.find(l => l.platform === platform.id);
+                        return (
+                          <div key={platform.id} className="flex items-center gap-2">
+                            <SocialIcon platform={platform.id} className="h-5 w-5 flex-shrink-0" />
+                            <Input
+                              value={link?.url || ''}
+                              onChange={(e) => {
+                                const existing = [...links];
+                                const idx = existing.findIndex(l => l.platform === platform.id);
+                                if (idx >= 0) {
+                                  existing[idx] = { ...existing[idx], url: e.target.value };
+                                } else {
+                                  existing.push({ platform: platform.id, url: e.target.value });
+                                }
+                                setProfile(prev => ({
+                                  ...prev,
+                                  social_media_links: existing.filter(l => l.url.trim() !== '')
+                                }));
+                              }}
+                              placeholder={`${platform.label} — ${platform.baseUrl}...`}
+                              className="flex-1"
+                            />
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+
                 {/* ✨ NOVOS CAMPOS: Hashtags e Handles */}
                 <div className="space-y-4 border-t pt-6 mt-6">
                   <div className="flex items-start gap-2">
