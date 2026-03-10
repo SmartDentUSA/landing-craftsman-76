@@ -2104,7 +2104,6 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                     {{/logo.href}}
                     {{/partners}}
                 </div>
-            </div>
         </div>
     </section>
     {{/visible_any}}
