@@ -1,36 +1,47 @@
 
 
-# Diagnóstico: O GitHub Actions está sobrescrevendo os HTMLs da Edge Function
+## Plano: Substituir FTP por Git Deploy (KingHost) para www.smartdent.com.br
 
-## Problema raiz
+### Contexto da Imagem
+O KingHost Git Deploy usa o repo **SmartDentUSA/landing-craftsman-76** (este projeto Lovable), branch **main**, deploy em **/www/**. Ele cria automaticamente a branch `stable-website`, GitHub Actions e webhook.
 
-Existem **dois sistemas escrevendo na mesma branch `stable-website`** e se sobrescrevendo:
-
-1. **Edge Function `publish-git-kinghost`** — commita HTML das landing pages diretamente na `stable-website` via GitHub API (correto)
-2. **GitHub Actions workflow** (`lovable-deploy.yml`) — a cada push no `main`, faz `npm run build` e deploya `dist/` na `stable-website` com `clean: true`, **apagando tudo** que a Edge Function commitou
-
-O `clean: true` na linha 53 do workflow é destrutivo: ele substitui todo o conteúdo da `stable-website` pelo `dist/` do Vite (que é um React SPA, não os HTMLs estáticos das landing pages).
+### Como funciona o fluxo
 
 ```text
-Fluxo atual (quebrado):
-Edge Function → commit HTML em stable-website ✓
-Lovable push main → Actions build → clean: true → APAGA tudo → deploya SPA React ✗
+Edge Function gera HTML → Commit via GitHub API no repo (public/blog/...) → Push main → GitHub Actions build → KingHost sync /www/ → www.smartdent.com.br
 ```
 
-## Solução: Remover o workflow
+Os arquivos HTML gerados são commitados na pasta `public/` do repo. O Vite copia `public/` para `dist/` no build. O KingHost deploya `dist/` para `/www/`.
 
-O workflow não é necessário. A Edge Function já commita os HTMLs finais diretamente na `stable-website`, e a KingHost/Hostinger sincroniza essa branch. O workflow só atrapalha.
+### Alterações
 
-### Alteração
+**1. Nova Edge Function: `supabase/functions/publish-git-deploy/index.ts`**
+- Recebe `{ lpId, domain, pagePath, isHomepage }`
+- Busca HTML de `cloned_landing_pages`
+- Usa GitHub API (`PUT /repos/SmartDentUSA/landing-craftsman-76/contents/public{pagePath}`) para commitar o HTML
+- Atualiza `publish_status` para `published`
+- Requer secret `GITHUB_DEPLOY_TOKEN` (Personal Access Token com `contents:write`)
 
-**Deletar** `.github/workflows/lovable-deploy.yml`
+**2. `supabase/config.toml`** — Adicionar `[functions.publish-git-deploy]` com `verify_jwt = true`
 
-Isso resolve o problema porque:
-- A Edge Function continua commitando HTMLs standalone (com `<html>`, `<body>`, CSS inline, etc.) na `stable-website`
-- A Hostinger sincroniza a `stable-website` e serve os HTMLs diretamente
-- Nenhum build de SPA React interfere mais
+**3. Expandir `publish_method` em 5 arquivos:**
 
-### Alternativa (se quiser manter o workflow por outro motivo)
+| Arquivo | Mudança |
+|---------|---------|
+| `TrackingSEOTab.tsx` | Tipo L428 → `'cloudflare' \| 'ftp' \| 'git-deploy'`. Adicionar 3a opção "🔀 Git Deploy" no RadioGroup (L434-448). Adicionar seção config Git Deploy com campos `git_repo` (fixo: SmartDentUSA/landing-craftsman-76), `git_branch` (fixo: main), `git_base_path` (fixo: public). |
+| `LPPublishDialog.tsx` | Tipo L20 → incluir `'git-deploy'`. Roteamento L195 → adicionar caso `git-deploy` → `publish-git-deploy`. |
+| `LPClonePanel.tsx` | Tipo L89 → incluir `'git-deploy'`. Filtro L210-214 → incluir `git-deploy`. Roteamento L522-523 → caso `git-deploy`. Labels L966, L1148, L1482 → badge "🔀 Git". |
+| `ProductBlogPublisherPanel.tsx` | Tipo L25 → incluir `'git-deploy'`. Filtro L111-115 → incluir `git-deploy`. |
+| `CompanyProfileManager.tsx` | Tipo L83 → incluir `'git-deploy'`. |
 
-Se por alguma razão o workflow for necessário para outros fins, mudar `clean: true` para `clean: false` e adicionar `clean-exclude` para preservar os HTMLs das landing pages. Mas isso adiciona complexidade desnecessária.
+**4. Secret necessário**
+- `GITHUB_DEPLOY_TOKEN`: Personal Access Token com permissão `contents:write` no repo SmartDentUSA/landing-craftsman-76
+
+**5. Dados no banco**
+- No `seo_domains` do `company_profile`, para smartdent.com.br: mudar `publish_method` de `ftp` para `git-deploy`, adicionar `git_repo: "SmartDentUSA/landing-craftsman-76"`, `git_branch: "main"`, `git_base_path: "public"`
+
+### O que NÃO muda
+- Domínios Cloudflare permanecem inalterados
+- Edge functions FTP existentes permanecem
+- Nenhuma tabela alterada
 
