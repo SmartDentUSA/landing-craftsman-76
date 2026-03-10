@@ -3667,8 +3667,8 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
   
   // 🤖 Entity Index: detect known dental entities in content
   const WIKIDATA_QUICK_MAP: Record<string, { qid: string; label: string }> = {
-    'odontologia digital': { qid: 'Q2915883', label: 'Digital dentistry' },
-    'cad/cam': { qid: 'Q1071923', label: 'CAD/CAM' },
+    'odontologia digital': { qid: 'Q18351767', label: 'Digital dentistry' },
+    'cad/cam': { qid: 'Q3033573', label: 'CAD/CAM' },
     'impressão 3d': { qid: 'Q229367', label: '3D printing' },
     'scanner intraoral': { qid: 'Q113534653', label: 'Intraoral scanner' },
     'zircônia': { qid: 'Q80235', label: 'Zirconia' },
