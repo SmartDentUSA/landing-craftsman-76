@@ -1,47 +1,72 @@
 
 
-## Plano: Substituir FTP por Git Deploy (KingHost) para www.smartdent.com.br
+# Fix nav-data.js: Limpar duplicatas do DB + Corrigir posição no footer
 
-### Contexto da Imagem
-O KingHost Git Deploy usa o repo **SmartDentUSA/landing-craftsman-76** (este projeto Lovable), branch **main**, deploy em **/www/**. Ele cria automaticamente a branch `stable-website`, GitHub Actions e webhook.
+## Diagnóstico
 
-### Como funciona o fluxo
+**Duplicatas**: O banco tem **11 registros** de homepage para `smartdent.com.br` com `publish_status='published'`. O código de dedup por URL no JS funciona, mas o `nav-data.js` atual no site pode ter sido gerado antes do deploy do fix. Além disso, o DB precisa de limpeza.
 
-```text
-Edge Function gera HTML → Commit via GitHub API no repo (public/blog/...) → Push main → GitHub Actions build → KingHost sync /www/ → www.smartdent.com.br
+**Posição**: O JavaScript busca `©` via `'\u00A9'` dentro de elementos-folha do `<footer>`. Possível que o elemento de copyright no HTML gerado tenha filhos (ex: `<p>` com `<span>` dentro), fazendo a condição `children.length === 0` falhar. Resultado: cai no fallback `document.body.appendChild`.
+
+## Plano
+
+### 1. Limpar duplicatas existentes no DB
+
+Manter apenas o registro mais recente de homepage por domínio, marcando os demais como `replaced`:
+
+```sql
+-- Keep only the latest homepage per domain, archive the rest
+UPDATE cloned_landing_pages 
+SET publish_status = 'replaced'
+WHERE id IN (
+  SELECT id FROM cloned_landing_pages 
+  WHERE target_domain = 'smartdent.com.br' 
+    AND is_homepage = true 
+    AND publish_status = 'published'
+  ORDER BY created_at DESC
+  OFFSET 1
+);
 ```
 
-Os arquivos HTML gerados são commitados na pasta `public/` do repo. O Vite copia `public/` para `dist/` no build. O KingHost deploya `dist/` para `/www/`.
+### 2. Corrigir busca do copyright no nav-data.js (ambas Edge Functions)
 
-### Alterações
+O problema é que `children.length === 0` falha se o copyright estiver em um elemento com sub-elementos. Mudar a lógica para buscar o **container pai** do texto de copyright, usando uma busca mais flexível:
 
-**1. Nova Edge Function: `supabase/functions/publish-git-deploy/index.ts`**
-- Recebe `{ lpId, domain, pagePath, isHomepage }`
-- Busca HTML de `cloned_landing_pages`
-- Usa GitHub API (`PUT /repos/SmartDentUSA/landing-craftsman-76/contents/public{pagePath}`) para commitar o HTML
-- Atualiza `publish_status` para `published`
-- Requer secret `GITHUB_DEPLOY_TOKEN` (Personal Access Token com `contents:write`)
+```javascript
+// Buscar por texto "©" OU "direitos reservados" (mais robusto)
+var copyright = null;
+var allEls = footer.querySelectorAll('*');
+for (var i = 0; i < allEls.length; i++) {
+  var txt = allEls[i].textContent || '';
+  if ((txt.indexOf('©') !== -1 || txt.indexOf('direitos') !== -1) && allEls[i].children.length === 0) {
+    copyright = allEls[i];
+    break;
+  }
+}
+// Se não achou folha, tentar containers diretos do footer
+if (!copyright) {
+  var directChildren = footer.children;
+  for (var j = directChildren.length - 1; j >= 0; j--) {
+    var t = directChildren[j].textContent || '';
+    if (t.indexOf('©') !== -1 || t.indexOf('direitos') !== -1) {
+      copyright = directChildren[j];
+      break;
+    }
+  }
+}
+```
 
-**2. `supabase/config.toml`** — Adicionar `[functions.publish-git-deploy]` com `verify_jwt = true`
+A mudança chave: se a busca por elemento-folha falhar, fazer uma segunda passada nos filhos diretos do footer (que podem ter sub-elementos).
 
-**3. Expandir `publish_method` em 5 arquivos:**
+### 3. Usar `©` literal em vez de `\u00A9`
 
-| Arquivo | Mudança |
-|---------|---------|
-| `TrackingSEOTab.tsx` | Tipo L428 → `'cloudflare' \| 'ftp' \| 'git-deploy'`. Adicionar 3a opção "🔀 Git Deploy" no RadioGroup (L434-448). Adicionar seção config Git Deploy com campos `git_repo` (fixo: SmartDentUSA/landing-craftsman-76), `git_branch` (fixo: main), `git_base_path` (fixo: public). |
-| `LPPublishDialog.tsx` | Tipo L20 → incluir `'git-deploy'`. Roteamento L195 → adicionar caso `git-deploy` → `publish-git-deploy`. |
-| `LPClonePanel.tsx` | Tipo L89 → incluir `'git-deploy'`. Filtro L210-214 → incluir `git-deploy`. Roteamento L522-523 → caso `git-deploy`. Labels L966, L1148, L1482 → badge "🔀 Git". |
-| `ProductBlogPublisherPanel.tsx` | Tipo L25 → incluir `'git-deploy'`. Filtro L111-115 → incluir `git-deploy`. |
-| `CompanyProfileManager.tsx` | Tipo L83 → incluir `'git-deploy'`. |
+Substituir `'\\u00A9'` por `'©'` diretamente na string do JS gerado. Mais legível e elimina ambiguidade de escaping entre template literals do TypeScript e o JS final.
 
-**4. Secret necessário**
-- `GITHUB_DEPLOY_TOKEN`: Personal Access Token com permissão `contents:write` no repo SmartDentUSA/landing-craftsman-76
+### Arquivos alterados
+- `supabase/functions/publish-git-kinghost/index.ts` — corrigir busca copyright
+- `supabase/functions/publish-ftp-pages/index.ts` — mesma correção
+- DB: executar UPDATE para limpar duplicatas
 
-**5. Dados no banco**
-- No `seo_domains` do `company_profile`, para smartdent.com.br: mudar `publish_method` de `ftp` para `git-deploy`, adicionar `git_repo: "SmartDentUSA/landing-craftsman-76"`, `git_branch: "main"`, `git_base_path: "public"`
-
-### O que NÃO muda
-- Domínios Cloudflare permanecem inalterados
-- Edge functions FTP existentes permanecem
-- Nenhuma tabela alterada
+### Deploy
+Ambas Edge Functions re-deployed. Depois, re-publicar a homepage para gerar novo `nav-data.js`.
 
