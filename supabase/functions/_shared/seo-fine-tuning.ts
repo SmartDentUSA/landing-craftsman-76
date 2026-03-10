@@ -96,6 +96,7 @@ export interface CompanyProfile {
   instagram_profile?: string;
   youtube_channel?: string;
   twitter_profile?: string;
+  wikidata_id?: string;
   social_media_links?: Array<{ url?: string; href?: string; platform?: string }>;
 }
 
