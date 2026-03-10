@@ -38,6 +38,7 @@ export async function generateReviewsAndLocalBusinessForFooter(
     location,
     instagram_profile,
     youtube_channel,
+    wikidata_id,
     reviews,
     maxReviews = 15
   } = options;
