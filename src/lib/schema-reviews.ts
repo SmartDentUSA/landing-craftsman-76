@@ -17,6 +17,7 @@ interface ReviewsSchemaOptions {
   location?: string;
   instagram_profile?: string;
   youtube_channel?: string;
+  wikidata_id?: string;
   reviews: UnifiedReview[];
   maxReviews?: number;
 }
@@ -37,6 +38,7 @@ export async function generateReviewsAndLocalBusinessForFooter(
     location,
     instagram_profile,
     youtube_channel,
+    wikidata_id,
     reviews,
     maxReviews = 15
   } = options;
@@ -72,6 +74,7 @@ export async function generateReviewsAndLocalBusinessForFooter(
   const sameAs: string[] = [];
   if (instagram_profile) sameAs.push(instagram_profile);
   if (youtube_channel) sameAs.push(youtube_channel);
+  if (wikidata_id) sameAs.push(`https://www.wikidata.org/wiki/${wikidata_id}`);
   
   // ✅ Adicionar domínios SEO ao sameAs
   try {
@@ -198,6 +201,7 @@ export async function generateSchemaFromCompanyProfile(
     location: companyData.location,
     instagram_profile: companyData.instagram_profile,
     youtube_channel: companyData.youtube_channel,
+    wikidata_id: companyData.wikidata_id,
     reviews,
     maxReviews
   });

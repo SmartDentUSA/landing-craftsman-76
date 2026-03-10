@@ -157,6 +157,9 @@ export interface CompanyProfileData {
   google_aggregate_rating?: { ratingValue: string; reviewCount: number };
   target_audience?: string;
   
+  // Wikidata
+  wikidata_id?: string;
+  
   // Links institucionais
   institutional_links: Array<{
     label: string;

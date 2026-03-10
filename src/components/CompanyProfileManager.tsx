@@ -164,6 +164,9 @@ interface CompanyProfile {
   tax_id?: string;
   duns_number?: string;
   number_of_employees?: string;
+  
+  // Wikidata
+  wikidata_id?: string;
 }
 
 interface CompanyProfileManagerProps {
@@ -245,6 +248,7 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
     tax_id: '',
     duns_number: '',
     number_of_employees: '',
+    wikidata_id: '',
   });
   
   const [loading, setLoading] = useState(true);
@@ -363,6 +367,7 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
           tax_id: (data as any).tax_id || '',
           duns_number: (data as any).duns_number || '',
           number_of_employees: (data as any).number_of_employees || '',
+          wikidata_id: (data as any).wikidata_id || '',
         });
       } else {
         setProfile(prev => ({ ...prev, user_id: user.id }));
@@ -458,6 +463,7 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
           tax_id: profile.tax_id,
           duns_number: profile.duns_number,
           number_of_employees: profile.number_of_employees,
+          wikidata_id: profile.wikidata_id || null,
           
           updated_at: new Date().toISOString()
         };
@@ -875,6 +881,22 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
                   />
                 </div>
               </div>
+            </div>
+
+            {/* Wikidata */}
+            <div>
+              <Label htmlFor="wikidata_id">Wikidata ID (Entidade de Conhecimento)</Label>
+              <Input
+                id="wikidata_id"
+                value={profile.wikidata_id || ''}
+                onChange={(e) => setProfile(prev => ({...prev, wikidata_id: e.target.value}))}
+                placeholder="Q138636902"
+              />
+              {profile.wikidata_id && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  → <a href={`https://www.wikidata.org/wiki/${profile.wikidata_id}`} target="_blank" rel="noopener" className="underline">Ver no Wikidata</a>
+                </p>
+              )}
             </div>
 
             <div>

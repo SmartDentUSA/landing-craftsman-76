@@ -1,46 +1,47 @@
 
 
-# Adicionar campo `wikidata_id` ao Perfil da Empresa
+## Plano: Substituir FTP por Git Deploy (KingHost) para www.smartdent.com.br
 
-## Objetivo
+### Contexto da Imagem
+O KingHost Git Deploy usa o repo **SmartDentUSA/landing-craftsman-76** (este projeto Lovable), branch **main**, deploy em **/www/**. Ele cria automaticamente a branch `stable-website`, GitHub Actions e webhook.
 
-Criar um campo `wikidata_id` no perfil da empresa que será usado em dois lugares:
-- **JSON-LD**: Injetado no array `sameAs` de Organization/LocalBusiness como `https://www.wikidata.org/wiki/{ID}`
-- **Footer HTML**: Link semântico com `itemprop="sameAs"` para navegação e SEO
+### Como funciona o fluxo
 
-## Alterações
-
-### 1. Migração: Adicionar coluna `wikidata_id` à tabela `company_profile`
-```sql
-ALTER TABLE company_profile ADD COLUMN wikidata_id text;
+```text
+Edge Function gera HTML → Commit via GitHub API no repo (public/blog/...) → Push main → GitHub Actions build → KingHost sync /www/ → www.smartdent.com.br
 ```
 
-### 2. `src/components/CompanyProfileManager.tsx`
-- Adicionar `wikidata_id` ao state, load e save do perfil
-- Adicionar input na aba de SEO ou dados da empresa com label "Wikidata ID" e placeholder "Q138636902"
+Os arquivos HTML gerados são commitados na pasta `public/` do repo. O Vite copia `public/` para `dist/` no build. O KingHost deploya `dist/` para `/www/`.
 
-### 3. `supabase/functions/_shared/seo-fine-tuning.ts` — `expandFounderSameAs()`
-- Adicionar verificação de `company.wikidata_id` e push de `https://www.wikidata.org/wiki/${wikidata_id}` ao array `sameAs`
+### Alterações
 
-### 4. `src/lib/company-profile-helper.ts`
-- Adicionar `wikidata_id?: string` à interface `CompanyProfileData`
+**1. Nova Edge Function: `supabase/functions/publish-git-deploy/index.ts`**
+- Recebe `{ lpId, domain, pagePath, isHomepage }`
+- Busca HTML de `cloned_landing_pages`
+- Usa GitHub API (`PUT /repos/SmartDentUSA/landing-craftsman-76/contents/public{pagePath}`) para commitar o HTML
+- Atualiza `publish_status` para `published`
+- Requer secret `GITHUB_DEPLOY_TOKEN` (Personal Access Token com `contents:write`)
 
-### 5. Edge Functions que geram footer HTML (template-engine, generate-ecommerce, generate-spin, clone, blog)
-- No bloco de footer, adicionar link Wikidata quando `wikidata_id` estiver presente:
-```html
-<a href="https://www.wikidata.org/wiki/{ID}" target="_blank" rel="noopener" itemprop="sameAs">
-  Entidade de Conhecimento Oficial
-</a>
-```
+**2. `supabase/config.toml`** — Adicionar `[functions.publish-git-deploy]` com `verify_jwt = true`
 
-### 6. `src/lib/schema-reviews.ts` — `generateReviewsAndLocalBusinessForFooter()`
-- Adicionar `wikidata_id` ao array `sameAs` do LocalBusiness schema
+**3. Expandir `publish_method` em 5 arquivos:**
 
-### Arquivos alterados
-- Migração SQL (nova coluna)
-- `src/components/CompanyProfileManager.tsx`
-- `src/lib/company-profile-helper.ts`
-- `supabase/functions/_shared/seo-fine-tuning.ts`
-- `src/lib/schema-reviews.ts`
-- Edge Functions de geração HTML (footer link)
+| Arquivo | Mudança |
+|---------|---------|
+| `TrackingSEOTab.tsx` | Tipo L428 → `'cloudflare' \| 'ftp' \| 'git-deploy'`. Adicionar 3a opção "🔀 Git Deploy" no RadioGroup (L434-448). Adicionar seção config Git Deploy com campos `git_repo` (fixo: SmartDentUSA/landing-craftsman-76), `git_branch` (fixo: main), `git_base_path` (fixo: public). |
+| `LPPublishDialog.tsx` | Tipo L20 → incluir `'git-deploy'`. Roteamento L195 → adicionar caso `git-deploy` → `publish-git-deploy`. |
+| `LPClonePanel.tsx` | Tipo L89 → incluir `'git-deploy'`. Filtro L210-214 → incluir `git-deploy`. Roteamento L522-523 → caso `git-deploy`. Labels L966, L1148, L1482 → badge "🔀 Git". |
+| `ProductBlogPublisherPanel.tsx` | Tipo L25 → incluir `'git-deploy'`. Filtro L111-115 → incluir `git-deploy`. |
+| `CompanyProfileManager.tsx` | Tipo L83 → incluir `'git-deploy'`. |
+
+**4. Secret necessário**
+- `GITHUB_DEPLOY_TOKEN`: Personal Access Token com permissão `contents:write` no repo SmartDentUSA/landing-craftsman-76
+
+**5. Dados no banco**
+- No `seo_domains` do `company_profile`, para smartdent.com.br: mudar `publish_method` de `ftp` para `git-deploy`, adicionar `git_repo: "SmartDentUSA/landing-craftsman-76"`, `git_branch: "main"`, `git_base_path: "public"`
+
+### O que NÃO muda
+- Domínios Cloudflare permanecem inalterados
+- Edge functions FTP existentes permanecem
+- Nenhuma tabela alterada
 

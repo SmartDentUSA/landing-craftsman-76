@@ -96,6 +96,7 @@ export interface CompanyProfile {
   instagram_profile?: string;
   youtube_channel?: string;
   twitter_profile?: string;
+  wikidata_id?: string;
   social_media_links?: Array<{ url?: string; href?: string; platform?: string }>;
 }
 
@@ -141,6 +142,12 @@ export function expandFounderSameAs(company: CompanyProfile | any): string[] {
       ? company.twitter_profile
       : `https://twitter.com/${company.twitter_profile.replace('@', '')}`;
     if (!sameAs.includes(twUrl)) sameAs.push(twUrl);
+  }
+  
+  // Wikidata entity
+  if (company?.wikidata_id) {
+    const wikidataUrl = `https://www.wikidata.org/wiki/${company.wikidata_id}`;
+    if (!sameAs.includes(wikidataUrl)) sameAs.push(wikidataUrl);
   }
   
   // Social media links array
