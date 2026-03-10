@@ -18,7 +18,7 @@
  */
 export const WIKIDATA_ENTITIES: Record<string, { qid: string; label: string; description: string }> = {
   // Dental Specialties
-  'odontologia digital': { qid: 'Q2915883', label: 'Digital dentistry', description: 'Use of dental technologies' },
+  'odontologia digital': { qid: 'Q18351767', label: 'Digital dentistry', description: 'Use of dental technologies' },
   'odontologia': { qid: 'Q12128', label: 'Dentistry', description: 'Branch of medicine for teeth and oral cavity' },
   'implantodontia': { qid: 'Q1667294', label: 'Dental implant', description: 'Surgical component for dental prosthesis' },
   'ortodontia': { qid: 'Q181560', label: 'Orthodontics', description: 'Dental specialty for malpositioned teeth' },
