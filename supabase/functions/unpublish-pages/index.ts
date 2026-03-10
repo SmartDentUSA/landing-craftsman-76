@@ -331,6 +331,81 @@ window.__NAV_DATA__ = ${JSON.stringify(navItems, null, 2)};
         console.warn('⚠️ nav-data.js regeneration failed:', (navError as Error).message);
       }
 
+    } else if (publishMethod === 'git-deploy' || publishMethod === 'git') {
+      // Git Deploy: commit a redirect page via GitHub API
+      const GITHUB_PAT = Deno.env.get('GITHUB_PAT_DEPLOY');
+      if (!GITHUB_PAT) throw new Error('GITHUB_PAT_DEPLOY não configurado');
+
+      const gitRepo = domainConfig.git_repo || 'SmartDentUSA/landing-craftsman-76';
+      const gitBranch = domainConfig.git_branch || 'stable-website';
+      const [repoOwner, repoName] = gitRepo.split('/');
+      const GH_API = 'https://api.github.com';
+
+      const repoPath = isHomepage || pagePath === '/' ? 'index.html' : `${pagePath.replace(/^\//, '')}/index.html`;
+      console.log(`🐙 Git unpublish: ${repoOwner}/${repoName}@${gitBranch} → ${repoPath}`);
+
+      const ghHeaders = {
+        'Authorization': `Bearer ${GITHUB_PAT}`,
+        'Accept': 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+        'Content-Type': 'application/json',
+      };
+
+      // Get current branch ref
+      const refRes = await fetch(`${GH_API}/repos/${repoOwner}/${repoName}/git/ref/heads/${gitBranch}`, { headers: ghHeaders });
+      const refData = await refRes.json();
+      if (!refRes.ok) throw new Error(`GitHub ref failed: ${JSON.stringify(refData)}`);
+      const parentSha = refData.object.sha;
+
+      // Create blob with redirect HTML
+      const redirectHTML = generateRedirectHTML(targetDomain);
+      const blobRes = await fetch(`${GH_API}/repos/${repoOwner}/${repoName}/git/blobs`, {
+        method: 'POST',
+        headers: ghHeaders,
+        body: JSON.stringify({ content: redirectHTML, encoding: 'utf-8' }),
+      });
+      const blobData = await blobRes.json();
+      if (!blobRes.ok) throw new Error(`GitHub blob failed: ${JSON.stringify(blobData)}`);
+
+      // Create tree
+      const treeRes = await fetch(`${GH_API}/repos/${repoOwner}/${repoName}/git/trees`, {
+        method: 'POST',
+        headers: ghHeaders,
+        body: JSON.stringify({
+          base_tree: parentSha,
+          tree: [{ path: repoPath, mode: '100644', type: 'blob', sha: blobData.sha }],
+        }),
+      });
+      const treeData = await treeRes.json();
+      if (!treeRes.ok) throw new Error(`GitHub tree failed: ${JSON.stringify(treeData)}`);
+
+      // Create commit
+      const commitRes = await fetch(`${GH_API}/repos/${repoOwner}/${repoName}/git/commits`, {
+        method: 'POST',
+        headers: ghHeaders,
+        body: JSON.stringify({
+          message: `🗑️ Unpublish: ${repoPath}`,
+          tree: treeData.sha,
+          parents: [parentSha],
+        }),
+      });
+      const commitData = await commitRes.json();
+      if (!commitRes.ok) throw new Error(`GitHub commit failed: ${JSON.stringify(commitData)}`);
+
+      // Update branch ref
+      const updateRes = await fetch(`${GH_API}/repos/${repoOwner}/${repoName}/git/refs/heads/${gitBranch}`, {
+        method: 'PATCH',
+        headers: ghHeaders,
+        body: JSON.stringify({ sha: commitData.sha }),
+      });
+      if (!updateRes.ok) {
+        const updateData = await updateRes.json();
+        throw new Error(`GitHub ref update failed: ${JSON.stringify(updateData)}`);
+      }
+      await updateRes.text();
+
+      console.log(`✅ Git redirect committed: ${commitData.sha}`);
+
     } else if (publishMethod === 'cloudflare') {
       // Cloudflare: Deploy a redirect page to replace the content
       const CLOUDFLARE_API_TOKEN = Deno.env.get('CLOUDFLARE_API_TOKEN');
