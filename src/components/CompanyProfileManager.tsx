@@ -463,6 +463,7 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
           tax_id: profile.tax_id,
           duns_number: profile.duns_number,
           number_of_employees: profile.number_of_employees,
+          wikidata_id: profile.wikidata_id || null,
           
           updated_at: new Date().toISOString()
         };
