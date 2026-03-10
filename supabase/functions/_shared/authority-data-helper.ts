@@ -47,6 +47,9 @@ export interface AuthorityData {
   
   // ✅ NOVOS - Contexto SEO Estratégico
   seoContext: SEOContext;
+
+  // ✅ Wikidata Entity ID
+  wikidataId?: string;
 }
 
 export interface Partnership {
@@ -360,7 +363,8 @@ export async function fetchAuthorityData(supabase: any): Promise<AuthorityData |
       corporateIdentity,
       seoContext,
       companyName: companyProfile.company_name,
-      websiteUrl: companyProfile.website_url
+      websiteUrl: companyProfile.website_url,
+      wikidataId: companyProfile.wikidata_id || undefined
     };
   } catch (err) {
     console.error('❌ [Authority] Erro ao buscar dados:', err);
@@ -469,6 +473,12 @@ export function generateSameAsSchema(authority: AuthorityData): string[] {
       sameAs.push(link.url);
     }
   });
+
+  // ✅ Wikidata Entity
+  if (authority.wikidataId) {
+    const wikidataUrl = `https://www.wikidata.org/wiki/${authority.wikidataId}`;
+    if (!sameAs.includes(wikidataUrl)) sameAs.push(wikidataUrl);
+  }
   
   return sameAs;
 }
