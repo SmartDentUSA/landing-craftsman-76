@@ -367,6 +367,7 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
           tax_id: (data as any).tax_id || '',
           duns_number: (data as any).duns_number || '',
           number_of_employees: (data as any).number_of_employees || '',
+          wikidata_id: (data as any).wikidata_id || '',
         });
       } else {
         setProfile(prev => ({ ...prev, user_id: user.id }));
