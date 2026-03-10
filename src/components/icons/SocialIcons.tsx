@@ -84,6 +84,7 @@ export const SOCIAL_PLATFORMS = [
   { id: 'pinterest', label: 'Pinterest', icon: PinterestIcon, color: '#E60023', baseUrl: 'https://pinterest.com/' },
   { id: 'telegram', label: 'Telegram', icon: TelegramIcon, color: '#0088CC', baseUrl: 'https://t.me/' },
   { id: 'threads', label: 'Threads', icon: ThreadsIcon, color: '#000000', baseUrl: 'https://threads.net/@' },
+  { id: 'kwai', label: 'Kwai', icon: KwaiIcon, color: '#FF7E29', baseUrl: 'https://kwai.com/@' },
 ] as const;
 
 export type SocialPlatformId = typeof SOCIAL_PLATFORMS[number]['id'];
