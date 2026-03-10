@@ -8,48 +8,6 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "#1 - Institucional ",
-    "url": "https://smartdent.com.br",
-    "isHome": true,
-    "brand": null
-  },
-  {
-    "name": "#1 - Institucional ",
-    "url": "https://smartdent.com.br",
-    "isHome": true,
-    "brand": null
-  },
-  {
-    "name": "#1 - Institucional ",
-    "url": "https://smartdent.com.br",
-    "isHome": true,
-    "brand": null
-  },
-  {
-    "name": "#1 - Institucional ",
-    "url": "https://smartdent.com.br",
-    "isHome": true,
-    "brand": null
-  },
-  {
-    "name": "#1 - Institucional ",
-    "url": "https://smartdent.com.br",
-    "isHome": true,
-    "brand": null
-  },
-  {
-    "name": "#1 - Institucional ",
-    "url": "https://smartdent.com.br",
-    "isHome": true,
-    "brand": null
-  },
-  {
-    "name": "#1 - Institucional ",
-    "url": "https://smartdent.com.br",
-    "isHome": true,
-    "brand": null
-  },
-  {
-    "name": "#1 - Institucional ",
     "url": "https://smartdent.com.br/1-institucional",
     "isHome": false,
     "brand": null
@@ -60,7 +18,7 @@ window.__NAV_DATA__ = [
   if (!data || data.length < 2) return;
   var nav = document.createElement('nav');
   nav.id = 'smartdent-nav-footer';
-  nav.style.cssText = 'background:#1a1a2e;padding:24px 16px;text-align:center;margin-top:40px;border-top:2px solid #16213e;';
+  nav.style.cssText = 'background:#1a1a2e;padding:24px 16px;text-align:center;';
   var title = document.createElement('p');
   title.style.cssText = 'color:#e2e8f0;font-size:14px;font-weight:600;margin:0 0 12px 0;';
   title.textContent = 'Navegue por nossas páginas:';
@@ -80,5 +38,22 @@ window.__NAV_DATA__ = [
   nav.appendChild(links);
   var existing = document.getElementById('smartdent-nav-footer');
   if (existing) existing.remove();
-  document.body.appendChild(nav);
+  var footer = document.querySelector('footer');
+  if (footer) {
+    var copyright = null;
+    var allEls = footer.querySelectorAll('*');
+    for (var i = 0; i < allEls.length; i++) {
+      if (allEls[i].textContent && allEls[i].textContent.indexOf('\u00A9') !== -1 && allEls[i].children.length === 0) {
+        copyright = allEls[i];
+        break;
+      }
+    }
+    if (copyright) {
+      copyright.parentNode.insertBefore(nav, copyright);
+    } else {
+      footer.appendChild(nav);
+    }
+  } else {
+    document.body.appendChild(nav);
+  }
 })();
