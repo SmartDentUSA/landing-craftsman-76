@@ -162,12 +162,12 @@ export function LPPublishDialog({ open, onOpenChange, landingPage }: LPPublishDi
       if (!user) throw new Error('Usuário não autenticado');
 
       // 4. Insert into cloned_landing_pages
-      const insertPayload = {
+      // 4. Upsert into cloned_landing_pages (overwrite if same domain+path exists)
+      const basePayload = {
         name: landingPage.name,
         original_html: htmlCode,
         transformed_html: htmlCode,
         cta_url: previewUrl,
-        user_id: user.id,
         target_domain: selectedDomain,
         page_path: pagePath,
         is_homepage: isHomepage,
@@ -176,13 +176,38 @@ export function LPPublishDialog({ open, onOpenChange, landingPage }: LPPublishDi
         source_landing_page_id: landingPage.id,
       };
 
-      const { data: clonedLP, error: insertError } = await supabase
+      // Check for existing record with same domain + path
+      let existingQuery = supabase
         .from('cloned_landing_pages')
-        .insert(insertPayload)
         .select('id')
-        .single();
+        .eq('target_domain', selectedDomain);
 
-      if (insertError) throw insertError;
+      if (isHomepage) {
+        existingQuery = existingQuery.eq('is_homepage', true);
+      } else {
+        existingQuery = existingQuery.eq('page_path', pagePath);
+      }
+
+      const { data: existing } = await existingQuery.maybeSingle();
+
+      let clonedLPId: string;
+
+      if (existing) {
+        const { error: updateError } = await supabase
+          .from('cloned_landing_pages')
+          .update({ ...basePayload, updated_at: new Date().toISOString() })
+          .eq('id', existing.id);
+        if (updateError) throw updateError;
+        clonedLPId = existing.id;
+      } else {
+        const { data: newLP, error: insertError } = await supabase
+          .from('cloned_landing_pages')
+          .insert({ ...basePayload, user_id: user.id })
+          .select('id')
+          .single();
+        if (insertError) throw insertError;
+        clonedLPId = newLP.id;
+      }
 
       // 5. Call publish edge function
       const method = domainConfig?.publish_method;
@@ -194,7 +219,7 @@ export function LPPublishDialog({ open, onOpenChange, landingPage }: LPPublishDi
 
       const { error: fnError } = await supabase.functions.invoke(functionName, {
         body: {
-          lpId: clonedLP.id,
+          lpId: clonedLPId,
           domain: selectedDomain,
           pagePath,
           isHomepage,
