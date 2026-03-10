@@ -49,38 +49,35 @@ export function InfinitePartnersCarousel({
       className={`py-6 bg-transparent ${!visibleDesktop ? 'md:hidden' : ''} ${!visibleMobile ? 'hidden md:block' : ''}`}
       aria-label="Empresas Parceiras"
     >
-      <div className="container mx-auto px-4">
-        <div className="overflow-hidden">
-          <div className="animate-infinite-scroll flex gap-16 items-center">
-            {duplicatedPartners.map((partner, index) => {
-              const imageElement = (
-                <img 
-                  src={getImageUrl(partner.logo)}
-                  alt={partner.name || partner.seo_description || `Parceiro ${index + 1}`}
-                  title={partner.seo_description || partner.name}
-                  loading="lazy"
-                  className="h-12 md:h-16 object-contain grayscale hover:grayscale-0 transition-all duration-300 flex-shrink-0"
-                />
+      <div className="overflow-hidden">
+        <div className="animate-infinite-scroll flex gap-16 items-center">
+          {duplicatedPartners.map((partner, index) => {
+            const imageElement = (
+              <img 
+                src={getImageUrl(partner.logo)}
+                alt={partner.name || partner.seo_description || `Parceiro ${index + 1}`}
+                title={partner.seo_description || partner.name}
+                loading="lazy"
+                className="h-12 md:h-16 object-contain grayscale hover:grayscale-0 transition-all duration-300 flex-shrink-0"
+              />
+            );
+            
+            if (partner.logo?.href) {
+              return (
+                <a 
+                  key={`${partner.id}-${index}`}
+                  href={partner.logo.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-shrink-0"
+                >
+                  {imageElement}
+                </a>
               );
-              
-              // Se tem href, envolve em <a>
-              if (partner.logo?.href) {
-                return (
-                  <a 
-                    key={`${partner.id}-${index}`}
-                    href={partner.logo.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-shrink-0"
-                  >
-                    {imageElement}
-                  </a>
-                );
-              }
-              
-              return <span key={`${partner.id}-${index}`} className="flex-shrink-0">{imageElement}</span>;
-            })}
-          </div>
+            }
+            
+            return <span key={`${partner.id}-${index}`} className="flex-shrink-0">{imageElement}</span>;
+          })}
         </div>
       </div>
     </section>
