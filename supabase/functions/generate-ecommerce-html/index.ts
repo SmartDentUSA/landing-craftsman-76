@@ -1574,7 +1574,7 @@ function generateFAQSchemaForGraph(product: any): any | null {
 }
 
 // Build SEO Head section with meta tags
-function buildSEOHead(product: any): string {
+function buildSEOHead(product: any, company?: any): string {
   const title = product.seo_title_override || `${product.name} | Smartdent`;
   
   // ✅ Meta Description Otimizada: Keywords nos primeiros 160 caracteres
