@@ -17,6 +17,7 @@ interface ReviewsSchemaOptions {
   location?: string;
   instagram_profile?: string;
   youtube_channel?: string;
+  wikidata_id?: string;
   reviews: UnifiedReview[];
   maxReviews?: number;
 }

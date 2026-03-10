@@ -143,6 +143,12 @@ export function expandFounderSameAs(company: CompanyProfile | any): string[] {
     if (!sameAs.includes(twUrl)) sameAs.push(twUrl);
   }
   
+  // Wikidata entity
+  if (company?.wikidata_id) {
+    const wikidataUrl = `https://www.wikidata.org/wiki/${company.wikidata_id}`;
+    if (!sameAs.includes(wikidataUrl)) sameAs.push(wikidataUrl);
+  }
+  
   // Social media links array
   if (Array.isArray(company?.social_media_links)) {
     company.social_media_links.forEach((link: any) => {

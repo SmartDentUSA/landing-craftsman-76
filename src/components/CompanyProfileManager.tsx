@@ -164,6 +164,9 @@ interface CompanyProfile {
   tax_id?: string;
   duns_number?: string;
   number_of_employees?: string;
+  
+  // Wikidata
+  wikidata_id?: string;
 }
 
 interface CompanyProfileManagerProps {
