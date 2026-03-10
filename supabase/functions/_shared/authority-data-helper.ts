@@ -473,6 +473,12 @@ export function generateSameAsSchema(authority: AuthorityData): string[] {
       sameAs.push(link.url);
     }
   });
+
+  // ✅ Wikidata Entity
+  if (authority.wikidataId) {
+    const wikidataUrl = `https://www.wikidata.org/wiki/${authority.wikidataId}`;
+    if (!sameAs.includes(wikidataUrl)) sameAs.push(wikidataUrl);
+  }
   
   return sameAs;
 }
