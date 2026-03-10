@@ -673,6 +673,21 @@ const DashboardContent = () => {
                         </Button>
                       </>
                     )}
+                    {publishedMap[landingPage.id]?.publish_status === 'published' && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleUnpublish(landingPage.id)}
+                        disabled={unpublishingId === landingPage.id}
+                      >
+                        {unpublishingId === landingPage.id 
+                          ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> 
+                          : <CloudOff className="h-4 w-4 mr-2" />
+                        }
+                        Despublicar
+                      </Button>
+                      </>
+                    )}
                     
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
