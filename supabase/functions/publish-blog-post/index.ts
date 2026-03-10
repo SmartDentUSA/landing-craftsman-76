@@ -61,7 +61,7 @@ let currentAuthorData: PersonSchemaData | null = null;
 // ✅ FASE 10: Variáveis de módulo para Authority Data
 let currentAuthorityData: AuthorityData | null = null;
 let currentVideoTestimonials: VideoTestimonial[] = [];
-
+let currentCompanyTrackingPixels: TrackingPixels | null = null;
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
