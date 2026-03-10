@@ -51,6 +51,7 @@ const DashboardContent = () => {
   const [publishOpen, setPublishOpen] = useState(false);
   const [publishLP, setPublishLP] = useState<LandingPage | null>(null);
   const [publishedMap, setPublishedMap] = useState<Record<string, { publish_status: string; published_url: string | null }>>({});
+  const [unpublishingId, setUnpublishingId] = useState<string | null>(null);
 
   useEffect(() => {
     getTrackingConfig().then(setTrackingConfig);
