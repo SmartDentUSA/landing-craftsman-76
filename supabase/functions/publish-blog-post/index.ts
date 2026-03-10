@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+// ✅ Tracking Pixels Injection
+import { generateTrackingHeadScripts, generateGTMNoScript, type TrackingPixels } from '../_shared/tracking-injector.ts';
 import { fetchAggregateRating, type AggregateRatingData } from "../_shared/aggregate-rating-helper.ts";
 import { fetchLocalBusinessData, generateLocalBusinessSchema, type LocalBusinessData } from "../_shared/local-business-helper.ts";
 import { generateHowToSchema, type ProductWithWorkflow } from "../_shared/howto-schema-helper.ts";
