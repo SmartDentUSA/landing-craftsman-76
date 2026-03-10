@@ -91,11 +91,22 @@ class FTPClient {
 
   async ensureDirectory(path: string) {
     const parts = path.split('/').filter(Boolean);
-    let current = '';
+    // Navigate from root, creating directories as needed
+    await this.sendCommand('CWD /').catch(() => {});
     for (const part of parts) {
-      current += '/' + part;
-      await this.mkd(current);
-      // Ignore errors — directory may already exist
+      const cwdResp = await this.sendCommand(`CWD ${part}`);
+      if (!cwdResp.startsWith('250')) {
+        // Directory doesn't exist — create it
+        const mkdResp = await this.sendCommand(`MKD ${part}`);
+        if (!mkdResp.startsWith('257')) {
+          console.warn(`⚠️ MKD ${part} failed: ${mkdResp}`);
+        }
+        // Now CWD into it
+        const cwdRetry = await this.sendCommand(`CWD ${part}`);
+        if (!cwdRetry.startsWith('250')) {
+          throw new Error(`Cannot create/enter directory "${part}" in path "${path}". Response: ${cwdRetry}`);
+        }
+      }
     }
   }
 
@@ -355,9 +366,8 @@ serve(async (req) => {
         await ftp.login(ftpUser, ftpPass);
         await ftp.setBinary();
         
-        // Ensure directory exists
+        // Ensure directory exists (also CWDs into it)
         await ftp.ensureDirectory(remoteDirPath);
-        await ftp.cwd(remoteDirPath);
         
         // Upload HTML
         const htmlBytes = new TextEncoder().encode(html);
