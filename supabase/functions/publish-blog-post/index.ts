@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+// ✅ Tracking Pixels Injection
+import { generateTrackingHeadScripts, generateGTMNoScript, type TrackingPixels } from '../_shared/tracking-injector.ts';
 import { fetchAggregateRating, type AggregateRatingData } from "../_shared/aggregate-rating-helper.ts";
 import { fetchLocalBusinessData, generateLocalBusinessSchema, type LocalBusinessData } from "../_shared/local-business-helper.ts";
 import { generateHowToSchema, type ProductWithWorkflow } from "../_shared/howto-schema-helper.ts";
@@ -59,7 +61,7 @@ let currentAuthorData: PersonSchemaData | null = null;
 // ✅ FASE 10: Variáveis de módulo para Authority Data
 let currentAuthorityData: AuthorityData | null = null;
 let currentVideoTestimonials: VideoTestimonial[] = [];
-
+let currentCompanyTrackingPixels: TrackingPixels | null = null;
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -131,6 +133,23 @@ serve(async (req) => {
       const totalVideos = (currentAuthorityData.companyVideos?.youtube?.length || 0) + 
                          (currentAuthorityData.companyVideos?.technical?.length || 0);
       console.log(`✅ [Blog Post] Authority Data carregado: ${currentAuthorityData.partnerships?.length || 0} parceiros, ${totalVideos} vídeos empresa, ${currentVideoTestimonials.length} video testimonials`);
+    }
+
+    // ✅ Buscar tracking_pixels do perfil da empresa
+    try {
+      const { data: companyProfile } = await supabase
+        .from('company_profile')
+        .select('tracking_pixels')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+      
+      if (companyProfile?.tracking_pixels) {
+        currentCompanyTrackingPixels = companyProfile.tracking_pixels as TrackingPixels;
+        console.log('✅ [Blog Post] Tracking pixels carregados do perfil da empresa');
+      }
+    } catch (error) {
+      console.warn('⚠️ [Blog Post] Erro ao buscar tracking pixels:', error);
     }
 
     console.log(`🚀 Iniciando publicação do blog post: ${blog_post_id}`);
@@ -662,8 +681,12 @@ function generateHTMLContent(blogPost: any, productData: any = null): string {
         .cross-links a { color: #007cba; text-decoration: none; }
         .cross-links a:hover { text-decoration: underline; }
     </style>
+    
+    <!-- ✅ Tracking Pixels (GTM, GA4, Meta, TikTok) -->
+    ${generateTrackingHeadScripts(currentCompanyTrackingPixels)}
 </head>
 <body>
+    ${generateGTMNoScript(currentCompanyTrackingPixels)}
     <!-- Skip Link for Accessibility -->
     <a href="#main-content" class="skip-link">Pular para o conteúdo principal</a>
     <div class="container">

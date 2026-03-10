@@ -2,6 +2,8 @@ import "https://deno.land/x/xhr@0.3.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
 import { trackFromResponse } from '../_shared/track-ai-usage.ts';
+// ✅ Tracking Pixels Injection
+import { generateTrackingHeadScripts, generateGTMNoScript, type TrackingPixels } from '../_shared/tracking-injector.ts';
 import { fetchAggregateRating, type AggregateRatingData } from "../_shared/aggregate-rating-helper.ts";
 import { fetchLocalBusinessData, generateLocalBusinessSchema, generateGeoContextHTML, type LocalBusinessData } from "../_shared/local-business-helper.ts";
 import { generateHowToSchema, generateHowToMicrodataHTML, type ProductWithWorkflow } from "../_shared/howto-schema-helper.ts";
@@ -1572,7 +1574,7 @@ function generateFAQSchemaForGraph(product: any): any | null {
 }
 
 // Build SEO Head section with meta tags
-function buildSEOHead(product: any): string {
+function buildSEOHead(product: any, company?: any): string {
   const title = product.seo_title_override || `${product.name} | Smartdent`;
   
   // ✅ Meta Description Otimizada: Keywords nos primeiros 160 caracteres
@@ -1687,8 +1689,12 @@ function buildSEOHead(product: any): string {
     const faqSchema = generateFAQSchema(product);
     return faqSchema ? `<script type="application/ld+json">\n  ${faqSchema}\n  </script>` : '';
   })()}
+  
+  <!-- ✅ Tracking Pixels (GTM, GA4, Meta, TikTok) -->
+  ${generateTrackingHeadScripts(company?.tracking_pixels as TrackingPixels)}
 </head>
-<body>`;
+<body>
+  ${generateGTMNoScript(company?.tracking_pixels as TrackingPixels)}`;
 }
 
 /**
