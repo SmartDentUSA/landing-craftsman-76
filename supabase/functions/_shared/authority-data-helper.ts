@@ -363,7 +363,8 @@ export async function fetchAuthorityData(supabase: any): Promise<AuthorityData |
       corporateIdentity,
       seoContext,
       companyName: companyProfile.company_name,
-      websiteUrl: companyProfile.website_url
+      websiteUrl: companyProfile.website_url,
+      wikidataId: companyProfile.wikidata_id || undefined
     };
   } catch (err) {
     console.error('❌ [Authority] Erro ao buscar dados:', err);
