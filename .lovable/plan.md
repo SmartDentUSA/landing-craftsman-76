@@ -1,47 +1,37 @@
 
 
-## Plano: Substituir FTP por Git Deploy (KingHost) para www.smartdent.com.br
+# Corrigir Wikidata ID no HTML gerado — Pegar do Perfil da Empresa
 
-### Contexto da Imagem
-O KingHost Git Deploy usa o repo **SmartDentUSA/landing-craftsman-76** (este projeto Lovable), branch **main**, deploy em **/www/**. Ele cria automaticamente a branch `stable-website`, GitHub Actions e webhook.
+## Problema
 
-### Como funciona o fluxo
+O `generateSameAsSchema()` em `authority-data-helper.ts` **não inclui** o `wikidata_id` do perfil da empresa no array `sameAs` do Organization/LocalBusiness. O campo existe no banco (`company_profile.wikidata_id`) e no frontend, mas não é propagado para os geradores HTML.
 
-```text
-Edge Function gera HTML → Commit via GitHub API no repo (public/blog/...) → Push main → GitHub Actions build → KingHost sync /www/ → www.smartdent.com.br
+## Causa raiz
+
+1. `AuthorityData` interface não tem campo `wikidataId`
+2. `fetchAuthorityData()` não extrai `wikidata_id` do `companyProfile`
+3. `generateSameAsSchema()` não adiciona a URL Wikidata ao `sameAs`
+
+## Alterações
+
+### 1. `supabase/functions/_shared/authority-data-helper.ts`
+
+**Interface `AuthorityData`** (linha ~20): Adicionar `wikidataId?: string`
+
+**`fetchAuthorityData()`** (linha ~351): Adicionar `wikidataId: companyProfile.wikidata_id || undefined` ao objeto retornado
+
+**`generateSameAsSchema()`** (linha ~455): Receber `AuthorityData` inteiro (já recebe) e adicionar:
+```typescript
+if (authority.wikidataId) {
+  const wikidataUrl = `https://www.wikidata.org/wiki/${authority.wikidataId}`;
+  if (!sameAs.includes(wikidataUrl)) sameAs.push(wikidataUrl);
+}
 ```
 
-Os arquivos HTML gerados são commitados na pasta `public/` do repo. O Vite copia `public/` para `dist/` no build. O KingHost deploya `dist/` para `/www/`.
+### Resultado
 
-### Alterações
+Todos os geradores (Ecommerce, SPIN, Blog, Clone) que chamam `generateSameAsSchema(authorityData)` passarão automaticamente a incluir o Wikidata ID da empresa no `sameAs`, sem necessidade de alterar nenhum outro arquivo.
 
-**1. Nova Edge Function: `supabase/functions/publish-git-deploy/index.ts`**
-- Recebe `{ lpId, domain, pagePath, isHomepage }`
-- Busca HTML de `cloned_landing_pages`
-- Usa GitHub API (`PUT /repos/SmartDentUSA/landing-craftsman-76/contents/public{pagePath}`) para commitar o HTML
-- Atualiza `publish_status` para `published`
-- Requer secret `GITHUB_DEPLOY_TOKEN` (Personal Access Token com `contents:write`)
-
-**2. `supabase/config.toml`** — Adicionar `[functions.publish-git-deploy]` com `verify_jwt = true`
-
-**3. Expandir `publish_method` em 5 arquivos:**
-
-| Arquivo | Mudança |
-|---------|---------|
-| `TrackingSEOTab.tsx` | Tipo L428 → `'cloudflare' \| 'ftp' \| 'git-deploy'`. Adicionar 3a opção "🔀 Git Deploy" no RadioGroup (L434-448). Adicionar seção config Git Deploy com campos `git_repo` (fixo: SmartDentUSA/landing-craftsman-76), `git_branch` (fixo: main), `git_base_path` (fixo: public). |
-| `LPPublishDialog.tsx` | Tipo L20 → incluir `'git-deploy'`. Roteamento L195 → adicionar caso `git-deploy` → `publish-git-deploy`. |
-| `LPClonePanel.tsx` | Tipo L89 → incluir `'git-deploy'`. Filtro L210-214 → incluir `git-deploy`. Roteamento L522-523 → caso `git-deploy`. Labels L966, L1148, L1482 → badge "🔀 Git". |
-| `ProductBlogPublisherPanel.tsx` | Tipo L25 → incluir `'git-deploy'`. Filtro L111-115 → incluir `git-deploy`. |
-| `CompanyProfileManager.tsx` | Tipo L83 → incluir `'git-deploy'`. |
-
-**4. Secret necessário**
-- `GITHUB_DEPLOY_TOKEN`: Personal Access Token com permissão `contents:write` no repo SmartDentUSA/landing-craftsman-76
-
-**5. Dados no banco**
-- No `seo_domains` do `company_profile`, para smartdent.com.br: mudar `publish_method` de `ftp` para `git-deploy`, adicionar `git_repo: "SmartDentUSA/landing-craftsman-76"`, `git_branch: "main"`, `git_base_path: "public"`
-
-### O que NÃO muda
-- Domínios Cloudflare permanecem inalterados
-- Edge functions FTP existentes permanecem
-- Nenhuma tabela alterada
+### Arquivo alterado
+- `supabase/functions/_shared/authority-data-helper.ts`
 
