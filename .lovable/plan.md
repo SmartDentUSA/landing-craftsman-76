@@ -1,47 +1,72 @@
 
 
-## Plano: Substituir FTP por Git Deploy (KingHost) para www.smartdent.com.br
+# Adicionar botão "Despublicar" no card de Landing Pages do Dashboard
 
-### Contexto da Imagem
-O KingHost Git Deploy usa o repo **SmartDentUSA/landing-craftsman-76** (este projeto Lovable), branch **main**, deploy em **/www/**. Ele cria automaticamente a branch `stable-website`, GitHub Actions e webhook.
+## O que será feito
 
-### Como funciona o fluxo
+Adicionar um botão "Despublicar" nos cards de LP do Dashboard (`src/pages/Dashboard.tsx`) que aparece apenas quando a LP está publicada. Ao clicar, confirma com o usuário e chama a Edge Function `unpublish-pages` para remover do servidor, igual ao que já existe no `LPClonePanel`.
 
-```text
-Edge Function gera HTML → Commit via GitHub API no repo (public/blog/...) → Push main → GitHub Actions build → KingHost sync /www/ → www.smartdent.com.br
+## Mudanças — `src/pages/Dashboard.tsx`
+
+### 1. Adicionar imports
+- `Loader2` do lucide-react
+- `useMutation`, `useQueryClient` do `@tanstack/react-query`
+
+### 2. Adicionar mutation de despublicação
+Reutilizar a mesma lógica do `LPClonePanel`:
+```typescript
+const unpublishMutation = useMutation({
+  mutationFn: async (lpId: string) => {
+    // Buscar o cloned_landing_pages.id pelo source_landing_page_id
+    const { data: cloned } = await supabase
+      .from('cloned_landing_pages')
+      .select('id')
+      .eq('source_landing_page_id', lpId)
+      .eq('publish_status', 'published')
+      .single();
+    if (!cloned) throw new Error('Publicação não encontrada');
+    
+    const { data, error } = await supabase.functions.invoke('unpublish-pages', {
+      body: { lpId: cloned.id, entityType: 'lp' }
+    });
+    if (error) throw error;
+    if (!data?.success) throw new Error(data?.error || 'Erro');
+  },
+  onSuccess: () => {
+    toast({ title: 'Despublicado com sucesso!' });
+    // Refresh publishedMap
+    fetchPublishedInfo(); // need to extract this
+  },
+  onError: (error) => {
+    toast({ title: 'Erro ao despublicar', description: error.message, variant: 'destructive' });
+  }
+});
 ```
 
-Os arquivos HTML gerados são commitados na pasta `public/` do repo. O Vite copia `public/` para `dist/` no build. O KingHost deploya `dist/` para `/www/`.
+### 3. Extrair `fetchPublishedInfo` para função reutilizável
+Atualmente está inline no `useEffect`. Extrair para um `useCallback` que pode ser chamado após despublicação.
 
-### Alterações
+### 4. Adicionar botão no card (após o badge "Publicado", na área de ações)
+Quando `publishedMap[landingPage.id]?.publish_status === 'published'`, mostrar botão vermelho "Despublicar" com ícone e confirmação via `window.confirm`.
 
-**1. Nova Edge Function: `supabase/functions/publish-git-deploy/index.ts`**
-- Recebe `{ lpId, domain, pagePath, isHomepage }`
-- Busca HTML de `cloned_landing_pages`
-- Usa GitHub API (`PUT /repos/SmartDentUSA/landing-craftsman-76/contents/public{pagePath}`) para commitar o HTML
-- Atualiza `publish_status` para `published`
-- Requer secret `GITHUB_DEPLOY_TOKEN` (Personal Access Token com `contents:write`)
+```tsx
+{publishedMap[landingPage.id]?.publish_status === 'published' && (
+  <Button
+    variant="destructive"
+    size="sm"
+    onClick={() => {
+      if (window.confirm('Despublicar esta LP? O conteúdo será removido do servidor.')) {
+        unpublishMutation.mutate(landingPage.id);
+      }
+    }}
+    disabled={unpublishMutation.isPending}
+  >
+    {unpublishMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+    Despublicar
+  </Button>
+)}
+```
 
-**2. `supabase/config.toml`** — Adicionar `[functions.publish-git-deploy]` com `verify_jwt = true`
-
-**3. Expandir `publish_method` em 5 arquivos:**
-
-| Arquivo | Mudança |
-|---------|---------|
-| `TrackingSEOTab.tsx` | Tipo L428 → `'cloudflare' \| 'ftp' \| 'git-deploy'`. Adicionar 3a opção "🔀 Git Deploy" no RadioGroup (L434-448). Adicionar seção config Git Deploy com campos `git_repo` (fixo: SmartDentUSA/landing-craftsman-76), `git_branch` (fixo: main), `git_base_path` (fixo: public). |
-| `LPPublishDialog.tsx` | Tipo L20 → incluir `'git-deploy'`. Roteamento L195 → adicionar caso `git-deploy` → `publish-git-deploy`. |
-| `LPClonePanel.tsx` | Tipo L89 → incluir `'git-deploy'`. Filtro L210-214 → incluir `git-deploy`. Roteamento L522-523 → caso `git-deploy`. Labels L966, L1148, L1482 → badge "🔀 Git". |
-| `ProductBlogPublisherPanel.tsx` | Tipo L25 → incluir `'git-deploy'`. Filtro L111-115 → incluir `git-deploy`. |
-| `CompanyProfileManager.tsx` | Tipo L83 → incluir `'git-deploy'`. |
-
-**4. Secret necessário**
-- `GITHUB_DEPLOY_TOKEN`: Personal Access Token com permissão `contents:write` no repo SmartDentUSA/landing-craftsman-76
-
-**5. Dados no banco**
-- No `seo_domains` do `company_profile`, para smartdent.com.br: mudar `publish_method` de `ftp` para `git-deploy`, adicionar `git_repo: "SmartDentUSA/landing-craftsman-76"`, `git_branch: "main"`, `git_base_path: "public"`
-
-### O que NÃO muda
-- Domínios Cloudflare permanecem inalterados
-- Edge functions FTP existentes permanecem
-- Nenhuma tabela alterada
+### Arquivo alterado
+- `src/pages/Dashboard.tsx`
 
