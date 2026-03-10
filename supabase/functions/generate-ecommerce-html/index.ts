@@ -1689,8 +1689,12 @@ function buildSEOHead(product: any): string {
     const faqSchema = generateFAQSchema(product);
     return faqSchema ? `<script type="application/ld+json">\n  ${faqSchema}\n  </script>` : '';
   })()}
+  
+  <!-- ✅ Tracking Pixels (GTM, GA4, Meta, TikTok) -->
+  ${generateTrackingHeadScripts(company?.tracking_pixels as TrackingPixels)}
 </head>
-<body>`;
+<body>
+  ${generateGTMNoScript(company?.tracking_pixels as TrackingPixels)}`;
 }
 
 /**
