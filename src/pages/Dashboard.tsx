@@ -686,7 +686,6 @@ const DashboardContent = () => {
                         }
                         Despublicar
                       </Button>
-                      </>
                     )}
                     
                     <DropdownMenu>
