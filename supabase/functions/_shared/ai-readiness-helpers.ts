@@ -27,8 +27,8 @@ export const WIKIDATA_ENTITIES: Record<string, { qid: string; label: string; des
   'prostodontia': { qid: 'Q1479897', label: 'Prosthodontics', description: 'Dental prosthesis specialty' },
   
   // Technologies
-  'cad/cam': { qid: 'Q1071923', label: 'CAD/CAM', description: 'Computer-aided design and manufacturing' },
-  'cadcam': { qid: 'Q1071923', label: 'CAD/CAM', description: 'Computer-aided design and manufacturing' },
+  'cad/cam': { qid: 'Q3033573', label: 'CAD/CAM', description: 'Computer-aided design and manufacturing' },
+  'cadcam': { qid: 'Q3033573', label: 'CAD/CAM', description: 'Computer-aided design and manufacturing' },
   'impressão 3d': { qid: 'Q229367', label: '3D printing', description: 'Additive manufacturing process' },
   'impressora 3d': { qid: 'Q229367', label: '3D printing', description: 'Additive manufacturing process' },
   'scanner intraoral': { qid: 'Q113534653', label: 'Intraoral scanner', description: 'Digital dental impression device' },
