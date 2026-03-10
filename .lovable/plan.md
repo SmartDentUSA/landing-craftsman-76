@@ -1,72 +1,47 @@
 
 
-# Upsert homepage instead of duplicating
+## Plano: Substituir FTP por Git Deploy (KingHost) para www.smartdent.com.br
 
-## Problem
-When publishing with "Definir como página principal (/)", the code always `INSERT`s a new row in `cloned_landing_pages`. This creates duplicates. It should find any existing homepage for that domain and update it instead.
+### Contexto da Imagem
+O KingHost Git Deploy usa o repo **SmartDentUSA/landing-craftsman-76** (este projeto Lovable), branch **main**, deploy em **/www/**. Ele cria automaticamente a branch `stable-website`, GitHub Actions e webhook.
 
-## Solution
-In `LPPublishDialog.tsx`, before inserting, check if an existing `cloned_landing_pages` record exists with `target_domain = selectedDomain AND is_homepage = true`. If found, `UPDATE` that record. Otherwise, `INSERT` a new one.
+### Como funciona o fluxo
 
-Also apply the same logic for non-homepage pages: check by `target_domain + page_path` to prevent duplicates for any path.
-
-## Changes — `src/components/LPPublishDialog.tsx`
-
-Replace the insert block (lines 164-185) with:
-
-```typescript
-// 4. Upsert into cloned_landing_pages (overwrite if same domain+path exists)
-const basePayload = {
-  name: landingPage.name,
-  original_html: htmlCode,
-  transformed_html: htmlCode,
-  cta_url: previewUrl,
-  target_domain: selectedDomain,
-  page_path: pagePath,
-  is_homepage: isHomepage,
-  status: 'ready' as const,
-  publish_status: 'pending' as const,
-  source_landing_page_id: landingPage.id,
-};
-
-// Check for existing record with same domain + path
-let existingQuery = supabase
-  .from('cloned_landing_pages')
-  .select('id')
-  .eq('target_domain', selectedDomain);
-
-if (isHomepage) {
-  existingQuery = existingQuery.eq('is_homepage', true);
-} else {
-  existingQuery = existingQuery.eq('page_path', pagePath);
-}
-
-const { data: existing } = await existingQuery.maybeSingle();
-
-let clonedLPId: string;
-
-if (existing) {
-  // Update existing record
-  const { error: updateError } = await supabase
-    .from('cloned_landing_pages')
-    .update({ ...basePayload, updated_at: new Date().toISOString() })
-    .eq('id', existing.id);
-  if (updateError) throw updateError;
-  clonedLPId = existing.id;
-} else {
-  // Insert new record
-  const { data: newLP, error: insertError } = await supabase
-    .from('cloned_landing_pages')
-    .insert({ ...basePayload, user_id: user.id })
-    .select('id')
-    .single();
-  if (insertError) throw insertError;
-  clonedLPId = newLP.id;
-}
+```text
+Edge Function gera HTML → Commit via GitHub API no repo (public/blog/...) → Push main → GitHub Actions build → KingHost sync /www/ → www.smartdent.com.br
 ```
 
-Then use `clonedLPId` instead of `clonedLP.id` in the edge function call (line 197).
+Os arquivos HTML gerados são commitados na pasta `public/` do repo. O Vite copia `public/` para `dist/` no build. O KingHost deploya `dist/` para `/www/`.
 
-### File changed
-- `src/components/LPPublishDialog.tsx`
+### Alterações
+
+**1. Nova Edge Function: `supabase/functions/publish-git-deploy/index.ts`**
+- Recebe `{ lpId, domain, pagePath, isHomepage }`
+- Busca HTML de `cloned_landing_pages`
+- Usa GitHub API (`PUT /repos/SmartDentUSA/landing-craftsman-76/contents/public{pagePath}`) para commitar o HTML
+- Atualiza `publish_status` para `published`
+- Requer secret `GITHUB_DEPLOY_TOKEN` (Personal Access Token com `contents:write`)
+
+**2. `supabase/config.toml`** — Adicionar `[functions.publish-git-deploy]` com `verify_jwt = true`
+
+**3. Expandir `publish_method` em 5 arquivos:**
+
+| Arquivo | Mudança |
+|---------|---------|
+| `TrackingSEOTab.tsx` | Tipo L428 → `'cloudflare' \| 'ftp' \| 'git-deploy'`. Adicionar 3a opção "🔀 Git Deploy" no RadioGroup (L434-448). Adicionar seção config Git Deploy com campos `git_repo` (fixo: SmartDentUSA/landing-craftsman-76), `git_branch` (fixo: main), `git_base_path` (fixo: public). |
+| `LPPublishDialog.tsx` | Tipo L20 → incluir `'git-deploy'`. Roteamento L195 → adicionar caso `git-deploy` → `publish-git-deploy`. |
+| `LPClonePanel.tsx` | Tipo L89 → incluir `'git-deploy'`. Filtro L210-214 → incluir `git-deploy`. Roteamento L522-523 → caso `git-deploy`. Labels L966, L1148, L1482 → badge "🔀 Git". |
+| `ProductBlogPublisherPanel.tsx` | Tipo L25 → incluir `'git-deploy'`. Filtro L111-115 → incluir `git-deploy`. |
+| `CompanyProfileManager.tsx` | Tipo L83 → incluir `'git-deploy'`. |
+
+**4. Secret necessário**
+- `GITHUB_DEPLOY_TOKEN`: Personal Access Token com permissão `contents:write` no repo SmartDentUSA/landing-craftsman-76
+
+**5. Dados no banco**
+- No `seo_domains` do `company_profile`, para smartdent.com.br: mudar `publish_method` de `ftp` para `git-deploy`, adicionar `git_repo: "SmartDentUSA/landing-craftsman-76"`, `git_branch: "main"`, `git_base_path: "public"`
+
+### O que NÃO muda
+- Domínios Cloudflare permanecem inalterados
+- Edge functions FTP existentes permanecem
+- Nenhuma tabela alterada
 
