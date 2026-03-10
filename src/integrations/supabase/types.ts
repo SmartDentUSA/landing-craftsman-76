@@ -492,6 +492,7 @@ export type Database = {
           user_id: string
           vision_statement: string | null
           website_url: string | null
+          wikidata_id: string | null
           working_methodology: string | null
           youtube_channel: string | null
           youtube_company_footer: string | null
@@ -558,6 +559,7 @@ export type Database = {
           user_id: string
           vision_statement?: string | null
           website_url?: string | null
+          wikidata_id?: string | null
           working_methodology?: string | null
           youtube_channel?: string | null
           youtube_company_footer?: string | null
@@ -624,6 +626,7 @@ export type Database = {
           user_id?: string
           vision_statement?: string | null
           website_url?: string | null
+          wikidata_id?: string | null
           working_methodology?: string | null
           youtube_channel?: string | null
           youtube_company_footer?: string | null

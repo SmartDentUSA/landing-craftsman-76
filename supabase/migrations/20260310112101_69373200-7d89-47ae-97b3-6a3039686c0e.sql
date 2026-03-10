@@ -1,0 +1,1 @@
+ALTER TABLE company_profile ADD COLUMN wikidata_id text;
