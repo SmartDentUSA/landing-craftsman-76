@@ -44,6 +44,12 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "#1 - Institucional ",
+    "url": "https://smartdent.com.br",
+    "isHome": true,
+    "brand": null
+  },
+  {
+    "name": "#1 - Institucional ",
     "url": "https://smartdent.com.br/1-institucional",
     "isHome": false,
     "brand": null
