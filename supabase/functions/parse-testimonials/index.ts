@@ -1,4 +1,3 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { trackFromResponse } from '../_shared/track-ai-usage.ts';
 
 const corsHeaders = {
