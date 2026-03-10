@@ -883,6 +883,22 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
               </div>
             </div>
 
+            {/* Wikidata */}
+            <div>
+              <Label htmlFor="wikidata_id">Wikidata ID (Entidade de Conhecimento)</Label>
+              <Input
+                id="wikidata_id"
+                value={profile.wikidata_id || ''}
+                onChange={(e) => setProfile(prev => ({...prev, wikidata_id: e.target.value}))}
+                placeholder="Q138636902"
+              />
+              {profile.wikidata_id && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  → <a href={`https://www.wikidata.org/wiki/${profile.wikidata_id}`} target="_blank" rel="noopener" className="underline">Ver no Wikidata</a>
+                </p>
+              )}
+            </div>
+
             <div>
               <Label htmlFor="main_products_services">Principais Produtos/Serviços</Label>
               <Textarea
