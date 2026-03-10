@@ -248,6 +248,7 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
     tax_id: '',
     duns_number: '',
     number_of_employees: '',
+    wikidata_id: '',
   });
   
   const [loading, setLoading] = useState(true);
