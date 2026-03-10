@@ -1,64 +1,47 @@
 
 
-# Fix nav-data.js: Deduplicar URLs + Posicionar dentro do footer
+## Plano: Substituir FTP por Git Deploy (KingHost) para www.smartdent.com.br
 
-## Problema 1: Duplicatas
-A query retorna múltiplos registros com a mesma URL (ex: várias clones da mesma homepage). Sem deduplicação, o nav-data.js repete links.
+### Contexto da Imagem
+O KingHost Git Deploy usa o repo **SmartDentUSA/landing-craftsman-76** (este projeto Lovable), branch **main**, deploy em **/www/**. Ele cria automaticamente a branch `stable-website`, GitHub Actions e webhook.
 
-## Problema 2: Posição
-O script usa `document.body.appendChild(nav)` — isso coloca o bloco **depois** do footer. Deve ser inserido **antes** do copyright dentro do footer existente.
+### Como funciona o fluxo
 
-## Correções (2 arquivos, mesma lógica duplicada)
-
-### Ambos: `publish-git-kinghost/index.ts` e `publish-ftp-pages/index.ts`
-
-**1. Deduplicar navItems por URL** (após o `.map()`):
-```typescript
-// Deduplicate by URL, keep first occurrence
-const seen = new Set<string>();
-const uniqueNavItems = navItems.filter((item: any) => {
-  if (seen.has(item.url)) return false;
-  seen.add(item.url);
-  return true;
-});
-```
-Usar `uniqueNavItems` no lugar de `navItems` para gerar o JSON.
-
-**2. Posicionar dentro do footer, antes do copyright:**
-
-Substituir `document.body.appendChild(nav)` por lógica que:
-1. Procura um `<footer>` existente
-2. Dentro do footer, procura elemento com texto de copyright ("©" ou "direitos")
-3. Se encontrado, insere o nav **antes** do copyright
-4. Fallback: se não achar footer, usa `document.body.appendChild` como antes
-
-```javascript
-var footer = document.querySelector('footer');
-if (footer) {
-  var copyright = null;
-  var allEls = footer.querySelectorAll('*');
-  for (var i = 0; i < allEls.length; i++) {
-    if (allEls[i].textContent && allEls[i].textContent.indexOf('©') !== -1 && allEls[i].children.length === 0) {
-      copyright = allEls[i];
-      break;
-    }
-  }
-  if (copyright) {
-    copyright.parentNode.insertBefore(nav, copyright);
-  } else {
-    footer.appendChild(nav);
-  }
-} else {
-  document.body.appendChild(nav);
-}
+```text
+Edge Function gera HTML → Commit via GitHub API no repo (public/blog/...) → Push main → GitHub Actions build → KingHost sync /www/ → www.smartdent.com.br
 ```
 
-Também remover `margin-top:40px;` e `border-top` do nav style (já estará dentro do footer).
+Os arquivos HTML gerados são commitados na pasta `public/` do repo. O Vite copia `public/` para `dist/` no build. O KingHost deploya `dist/` para `/www/`.
 
-### Arquivos alterados
-- `supabase/functions/publish-git-kinghost/index.ts`
-- `supabase/functions/publish-ftp-pages/index.ts`
+### Alterações
 
-### Deploy
-Ambas as Edge Functions precisam ser re-deployed.
+**1. Nova Edge Function: `supabase/functions/publish-git-deploy/index.ts`**
+- Recebe `{ lpId, domain, pagePath, isHomepage }`
+- Busca HTML de `cloned_landing_pages`
+- Usa GitHub API (`PUT /repos/SmartDentUSA/landing-craftsman-76/contents/public{pagePath}`) para commitar o HTML
+- Atualiza `publish_status` para `published`
+- Requer secret `GITHUB_DEPLOY_TOKEN` (Personal Access Token com `contents:write`)
+
+**2. `supabase/config.toml`** — Adicionar `[functions.publish-git-deploy]` com `verify_jwt = true`
+
+**3. Expandir `publish_method` em 5 arquivos:**
+
+| Arquivo | Mudança |
+|---------|---------|
+| `TrackingSEOTab.tsx` | Tipo L428 → `'cloudflare' \| 'ftp' \| 'git-deploy'`. Adicionar 3a opção "🔀 Git Deploy" no RadioGroup (L434-448). Adicionar seção config Git Deploy com campos `git_repo` (fixo: SmartDentUSA/landing-craftsman-76), `git_branch` (fixo: main), `git_base_path` (fixo: public). |
+| `LPPublishDialog.tsx` | Tipo L20 → incluir `'git-deploy'`. Roteamento L195 → adicionar caso `git-deploy` → `publish-git-deploy`. |
+| `LPClonePanel.tsx` | Tipo L89 → incluir `'git-deploy'`. Filtro L210-214 → incluir `git-deploy`. Roteamento L522-523 → caso `git-deploy`. Labels L966, L1148, L1482 → badge "🔀 Git". |
+| `ProductBlogPublisherPanel.tsx` | Tipo L25 → incluir `'git-deploy'`. Filtro L111-115 → incluir `git-deploy`. |
+| `CompanyProfileManager.tsx` | Tipo L83 → incluir `'git-deploy'`. |
+
+**4. Secret necessário**
+- `GITHUB_DEPLOY_TOKEN`: Personal Access Token com permissão `contents:write` no repo SmartDentUSA/landing-craftsman-76
+
+**5. Dados no banco**
+- No `seo_domains` do `company_profile`, para smartdent.com.br: mudar `publish_method` de `ftp` para `git-deploy`, adicionar `git_repo: "SmartDentUSA/landing-craftsman-76"`, `git_branch: "main"`, `git_base_path: "public"`
+
+### O que NÃO muda
+- Domínios Cloudflare permanecem inalterados
+- Edge functions FTP existentes permanecem
+- Nenhuma tabela alterada
 
