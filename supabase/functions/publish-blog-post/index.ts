@@ -681,8 +681,12 @@ function generateHTMLContent(blogPost: any, productData: any = null): string {
         .cross-links a { color: #007cba; text-decoration: none; }
         .cross-links a:hover { text-decoration: underline; }
     </style>
+    
+    <!-- ✅ Tracking Pixels (GTM, GA4, Meta, TikTok) -->
+    ${generateTrackingHeadScripts(currentCompanyTrackingPixels)}
 </head>
 <body>
+    ${generateGTMNoScript(currentCompanyTrackingPixels)}
     <!-- Skip Link for Accessibility -->
     <a href="#main-content" class="skip-link">Pular para o conteúdo principal</a>
     <div class="container">
