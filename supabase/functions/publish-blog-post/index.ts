@@ -135,6 +135,23 @@ serve(async (req) => {
       console.log(`✅ [Blog Post] Authority Data carregado: ${currentAuthorityData.partnerships?.length || 0} parceiros, ${totalVideos} vídeos empresa, ${currentVideoTestimonials.length} video testimonials`);
     }
 
+    // ✅ Buscar tracking_pixels do perfil da empresa
+    try {
+      const { data: companyProfile } = await supabase
+        .from('company_profile')
+        .select('tracking_pixels')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+      
+      if (companyProfile?.tracking_pixels) {
+        currentCompanyTrackingPixels = companyProfile.tracking_pixels as TrackingPixels;
+        console.log('✅ [Blog Post] Tracking pixels carregados do perfil da empresa');
+      }
+    } catch (error) {
+      console.warn('⚠️ [Blog Post] Erro ao buscar tracking pixels:', error);
+    }
+
     console.log(`🚀 Iniciando publicação do blog post: ${blog_post_id}`);
 
     // Buscar dados do blog post
