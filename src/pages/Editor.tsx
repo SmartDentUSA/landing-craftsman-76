@@ -6,6 +6,7 @@ import { BannerSection } from "@/components/editor/BannerSection";
 import { SolutionsSection } from "@/components/editor/SolutionsSection";
 import { PDFContentImporter } from "@/components/editor/PDFContentImporter";
 import { SEOSection } from "@/components/editor/SEOSection";
+import { RestoreFromHTMLButton } from "@/components/editor/RestoreFromHTMLButton";
 import { KOLSection } from "@/components/editor/KOLSection";
 import { KnowledgeFeedSection } from "@/components/editor/KnowledgeFeedSection";
 import { KnowledgeFeed } from "@/components/KnowledgeFeed";
