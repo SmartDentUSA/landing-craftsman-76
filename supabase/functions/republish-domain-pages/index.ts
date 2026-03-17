@@ -98,20 +98,42 @@ function generateNoscriptLinks(navItems: any[]): string {
   return `<noscript><nav style="text-align:center;padding:12px;font-size:13px;">${links}</nav></noscript>`;
 }
 
+function generateStaticNavFooter(navItems: any[]): string {
+  if (!navItems || navItems.length < 2) return '';
+  const links = navItems
+    .map(item => `<a href="${item.url}" style="color:#60a5fa;text-decoration:none;font-size:13px;padding:4px 10px;background:#16213e;border-radius:4px;display:inline-block;">${item.isHome ? '🏠 Home' : item.name}</a>`)
+    .join('\n      ');
+  return `
+<!-- SmartDent Static Nav Footer -->
+<div id="smartdent-static-nav" style="background:#1a1a2e;padding:24px 16px;text-align:center;">
+  <p style="color:#e2e8f0;font-size:14px;font-weight:600;margin:0 0 12px 0;">Navegue por nossas páginas:</p>
+  <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px;">
+      ${links}
+  </div>
+</div>
+<!-- End SmartDent Static Nav Footer -->`;
+}
+
 function updateNoscriptInHtml(html: string, navItems: any[]): string {
   const newNoscript = generateNoscriptLinks(navItems);
+  const staticNav = generateStaticNavFooter(navItems);
   
   // Remove existing noscript nav block if present
   const noscriptRegex = /<noscript>\s*<nav[^>]*>[\s\S]*?<\/nav>\s*<\/noscript>/gi;
   html = html.replace(noscriptRegex, '');
   
-  // Inject new noscript before </body>
-  if (newNoscript) {
-    if (html.includes('</body>')) {
-      html = html.replace('</body>', `${newNoscript}\n</body>`);
-    } else {
-      html += newNoscript;
-    }
+  // Remove existing static nav footer if present
+  const staticNavRegex = /<!--\s*SmartDent Static Nav Footer\s*-->[\s\S]*?<!--\s*End SmartDent Static Nav Footer\s*-->/gi;
+  html = html.replace(staticNavRegex, '');
+  
+  // Inject before </body> using regex for whitespace tolerance
+  const bodyCloseRegex = /(<\/body>)/i;
+  const injection = `${staticNav}\n${newNoscript}\n`;
+  
+  if (bodyCloseRegex.test(html)) {
+    html = html.replace(bodyCloseRegex, `${injection}$1`);
+  } else {
+    html += injection;
   }
   
   return html;
