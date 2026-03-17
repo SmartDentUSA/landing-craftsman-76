@@ -1500,6 +1500,9 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             padding: 0.5rem 1.25rem;
             border-radius: 0.5rem;
             margin-bottom: 0.5rem;
+            position: relative;
+            z-index: 1;
+            text-shadow: none;
         }
         
         @media (min-width: 992px) {
