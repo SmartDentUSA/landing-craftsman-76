@@ -1,47 +1,68 @@
 
 
-## Plano: Substituir FTP por Git Deploy (KingHost) para www.smartdent.com.br
+# Publicação Incremental — Atualizar todas as páginas do domínio ao publicar uma nova
 
-### Contexto da Imagem
-O KingHost Git Deploy usa o repo **SmartDentUSA/landing-craftsman-76** (este projeto Lovable), branch **main**, deploy em **/www/**. Ele cria automaticamente a branch `stable-website`, GitHub Actions e webhook.
+## Problema atual
 
-### Como funciona o fluxo
+Quando uma nova página (não-homepage) é publicada em um domínio, o `nav-data.js` é atualizado no Git deploy, mas:
+1. **Git deploy**: O `nav-data.js` compartilhado funciona para navegação dinâmica (client-side JS), mas os links **estáticos** no HTML (`<noscript>`, rodapé embutido) das páginas já publicadas NÃO são atualizados
+2. **FTP deploy**: Cada página tem seu HTML independente — as demais páginas ficam desatualizadas completamente
+3. O template engine injeta links no footer via `institutional_links_html`, mas esses links são fixos no momento da geração
 
-```text
-Edge Function gera HTML → Commit via GitHub API no repo (public/blog/...) → Push main → GitHub Actions build → KingHost sync /www/ → www.smartdent.com.br
+## Plano de implementação
+
+### Etapa 1: Criar Edge Function `republish-domain-pages`
+
+Nova Edge Function que recebe um `domain` e republica **todas** as páginas publicadas naquele domínio:
+
+- Busca todos os registros em `cloned_landing_pages` com `target_domain = domain` e `publish_status = 'published'`
+- Para cada página, busca o `source_landing_page_id` na tabela `landing_pages`, regenera o HTML via o mesmo fluxo (ou reutiliza o `original_html` existente)
+- Injeta tracking + nav-data.js atualizado
+- Faz o deploy de todas as páginas em um **único commit** (Git) ou sequencialmente (FTP)
+- Para Git: cria todos os blobs + nav-data.js em uma única árvore/commit (atômico)
+- Para FTP: faz upload sequencial de cada página
+
+**Arquivo:** `supabase/functions/republish-domain-pages/index.ts`
+
+### Etapa 2: Modificar `LPPublishDialog` — Disparar republish após publicação
+
+Após a publicação bem-sucedida de uma página **não-homepage**, adicionar uma chamada assíncrona (fire-and-forget) à nova Edge Function:
+
+```
+// Após o publish principal ser bem-sucedido:
+if (!isHomepage) {
+  supabase.functions.invoke('republish-domain-pages', {
+    body: { domain: selectedDomain, excludeLpId: clonedLPId }
+  });
+}
 ```
 
-Os arquivos HTML gerados são commitados na pasta `public/` do repo. O Vite copia `public/` para `dist/` no build. O KingHost deploya `dist/` para `/www/`.
+Isso dispara a republicação em background sem bloquear o usuário. Um toast informativo é exibido.
 
-### Alterações
+**Arquivo:** `src/components/LPPublishDialog.tsx` (linhas ~229-235)
 
-**1. Nova Edge Function: `supabase/functions/publish-git-deploy/index.ts`**
-- Recebe `{ lpId, domain, pagePath, isHomepage }`
-- Busca HTML de `cloned_landing_pages`
-- Usa GitHub API (`PUT /repos/SmartDentUSA/landing-craftsman-76/contents/public{pagePath}`) para commitar o HTML
-- Atualiza `publish_status` para `published`
-- Requer secret `GITHUB_DEPLOY_TOKEN` (Personal Access Token com `contents:write`)
+### Etapa 3: Lógica da Edge Function `republish-domain-pages`
 
-**2. `supabase/config.toml`** — Adicionar `[functions.publish-git-deploy]` com `verify_jwt = true`
+Fluxo detalhado:
 
-**3. Expandir `publish_method` em 5 arquivos:**
+1. Recebe `{ domain, excludeLpId? }` 
+2. Busca `company_profile` para tracking pixels e `seo_domains` config
+3. Determina `publish_method` do domínio (git/ftp/cloudflare)
+4. Busca todas as páginas publicadas do domínio (`cloned_landing_pages`)
+5. Gera a lista de navegação atualizada (incluindo a nova página recém-publicada)
+6. Para cada página (exceto `excludeLpId` que acabou de ser publicada):
+   - Pega o HTML existente (`transformed_html`)
+   - Re-injeta o `<noscript>` com links estáticos atualizados no footer
+   - Re-injeta tracking pixels
+7. **Git deploy**: Cria blobs para todos os HTMLs + nav-data.js → um único commit atômico
+8. **FTP deploy**: Upload sequencial de cada HTML + nav-data.js na raiz
+9. Atualiza `published_at` de cada página republicada
 
-| Arquivo | Mudança |
-|---------|---------|
-| `TrackingSEOTab.tsx` | Tipo L428 → `'cloudflare' \| 'ftp' \| 'git-deploy'`. Adicionar 3a opção "🔀 Git Deploy" no RadioGroup (L434-448). Adicionar seção config Git Deploy com campos `git_repo` (fixo: SmartDentUSA/landing-craftsman-76), `git_branch` (fixo: main), `git_base_path` (fixo: public). |
-| `LPPublishDialog.tsx` | Tipo L20 → incluir `'git-deploy'`. Roteamento L195 → adicionar caso `git-deploy` → `publish-git-deploy`. |
-| `LPClonePanel.tsx` | Tipo L89 → incluir `'git-deploy'`. Filtro L210-214 → incluir `git-deploy`. Roteamento L522-523 → caso `git-deploy`. Labels L966, L1148, L1482 → badge "🔀 Git". |
-| `ProductBlogPublisherPanel.tsx` | Tipo L25 → incluir `'git-deploy'`. Filtro L111-115 → incluir `git-deploy`. |
-| `CompanyProfileManager.tsx` | Tipo L83 → incluir `'git-deploy'`. |
+### Resumo de arquivos
 
-**4. Secret necessário**
-- `GITHUB_DEPLOY_TOKEN`: Personal Access Token com permissão `contents:write` no repo SmartDentUSA/landing-craftsman-76
-
-**5. Dados no banco**
-- No `seo_domains` do `company_profile`, para smartdent.com.br: mudar `publish_method` de `ftp` para `git-deploy`, adicionar `git_repo: "SmartDentUSA/landing-craftsman-76"`, `git_branch: "main"`, `git_base_path: "public"`
-
-### O que NÃO muda
-- Domínios Cloudflare permanecem inalterados
-- Edge functions FTP existentes permanecem
-- Nenhuma tabela alterada
+| Arquivo | Ação |
+|---------|------|
+| `supabase/functions/republish-domain-pages/index.ts` | Criar (nova Edge Function) |
+| `supabase/config.toml` | Adicionar config da nova função |
+| `src/components/LPPublishDialog.tsx` | Adicionar chamada fire-and-forget após publish |
 
