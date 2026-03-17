@@ -1,62 +1,47 @@
 
 
-# Diagnóstico: Dados do Editor vs HTML Publicado
+## Plano: Substituir FTP por Git Deploy (KingHost) para www.smartdent.com.br
 
-## O que está acontecendo
+### Contexto da Imagem
+O KingHost Git Deploy usa o repo **SmartDentUSA/landing-craftsman-76** (este projeto Lovable), branch **main**, deploy em **/www/**. Ele cria automaticamente a branch `stable-website`, GitHub Actions e webhook.
 
-O campo `data` da LP institucional (`5f7bea68`) tem **estrutura preservada** mas muitos **campos de texto vazios**:
+### Como funciona o fluxo
 
-| Seção | Estado no editor | No HTML publicado |
-|-------|-----------------|-------------------|
-| Banner (title, subtitle) | Vazio | Tem conteúdo |
-| Advisory (title, paragraph) | Vazio | Tem conteúdo |
-| CTA Final (title, paragraph) | Vazio | Tem conteúdo |
-| Desktop Info (title, text) | Vazio | Tem conteúdo |
-| Video Section | Desabilitado | Pode ter |
-| **Solutions** (5 itens) | **OK** | OK |
-| **FAQ** (9 itens) | **OK** | OK |
-| **Partners** (9 itens) | **OK** | OK |
-| **Footer** (links, social, locations) | **OK** | OK |
-| **SEO** (title, description) | **OK** | OK |
+```text
+Edge Function gera HTML → Commit via GitHub API no repo (public/blog/...) → Push main → GitHub Actions build → KingHost sync /www/ → www.smartdent.com.br
+```
 
-Os campos de texto foram sobrescritos com strings vazias em algum update anterior, mas os arrays/objetos complexos foram preservados.
+Os arquivos HTML gerados são commitados na pasta `public/` do repo. O Vite copia `public/` para `dist/` no build. O KingHost deploya `dist/` para `/www/`.
 
-## Plano: Importar dados do HTML baixado
+### Alterações
 
-Criar uma funcionalidade "Restaurar do HTML" no editor que:
+**1. Nova Edge Function: `supabase/functions/publish-git-deploy/index.ts`**
+- Recebe `{ lpId, domain, pagePath, isHomepage }`
+- Busca HTML de `cloned_landing_pages`
+- Usa GitHub API (`PUT /repos/SmartDentUSA/landing-craftsman-76/contents/public{pagePath}`) para commitar o HTML
+- Atualiza `publish_status` para `published`
+- Requer secret `GITHUB_DEPLOY_TOKEN` (Personal Access Token com `contents:write`)
 
-1. Permite upload do arquivo HTML baixado
-2. Faz parsing do HTML usando DOMParser no browser
-3. Extrai textos das seções conhecidas (banner h1/h2, advisory, CTA final, etc.) usando seletores CSS
-4. Preenche os campos vazios do `data` sem sobrescrever campos que já têm dados
+**2. `supabase/config.toml`** — Adicionar `[functions.publish-git-deploy]` com `verify_jwt = true`
 
-### Implementação
+**3. Expandir `publish_method` em 5 arquivos:**
 
-**Arquivo: `src/components/editor/RestoreFromHTMLButton.tsx`** (novo)
-- Botão "Restaurar do HTML" no toolbar do editor
-- Input file para upload de `.html`
-- Função `extractDataFromHTML(html: string)` que usa DOMParser para extrair:
-  - Banner: `h1` → title, primeiro `p` após h1 → subtitle
-  - Advisory: seção advisory → title, paragraph
-  - CTA Final: seção cta → title, paragraph, buttons
-  - Desktop Info: seção desktop → title, text
-- Retorna um objeto parcial `Partial<LandingPageData>` com os campos extraídos
+| Arquivo | Mudança |
+|---------|---------|
+| `TrackingSEOTab.tsx` | Tipo L428 → `'cloudflare' \| 'ftp' \| 'git-deploy'`. Adicionar 3a opção "🔀 Git Deploy" no RadioGroup (L434-448). Adicionar seção config Git Deploy com campos `git_repo` (fixo: SmartDentUSA/landing-craftsman-76), `git_branch` (fixo: main), `git_base_path` (fixo: public). |
+| `LPPublishDialog.tsx` | Tipo L20 → incluir `'git-deploy'`. Roteamento L195 → adicionar caso `git-deploy` → `publish-git-deploy`. |
+| `LPClonePanel.tsx` | Tipo L89 → incluir `'git-deploy'`. Filtro L210-214 → incluir `git-deploy`. Roteamento L522-523 → caso `git-deploy`. Labels L966, L1148, L1482 → badge "🔀 Git". |
+| `ProductBlogPublisherPanel.tsx` | Tipo L25 → incluir `'git-deploy'`. Filtro L111-115 → incluir `git-deploy`. |
+| `CompanyProfileManager.tsx` | Tipo L83 → incluir `'git-deploy'`. |
 
-**Arquivo: `src/pages/LandingPageEditor.tsx`**
-- Adicionar o botão RestoreFromHTMLButton na toolbar
-- Ao restaurar, chamar `updateLandingPage(id, { data: mergedData })` com merge dos dados extraídos
+**4. Secret necessário**
+- `GITHUB_DEPLOY_TOKEN`: Personal Access Token com permissão `contents:write` no repo SmartDentUSA/landing-craftsman-76
 
-### Abordagem de parsing
+**5. Dados no banco**
+- No `seo_domains` do `company_profile`, para smartdent.com.br: mudar `publish_method` de `ftp` para `git-deploy`, adicionar `git_repo: "SmartDentUSA/landing-craftsman-76"`, `git_branch: "main"`, `git_base_path: "public"`
 
-O parser vai buscar padrões conhecidos do template SmartDent:
-- Seções identificadas por classes CSS ou IDs semânticos
-- Fallback: buscar por estrutura h1/h2/p dentro de sections
-- Só preenche campos que estão atualmente vazios (não sobrescreve dados existentes)
-
-### Arquivos a criar/editar
-
-| Arquivo | Ação |
-|---------|------|
-| `src/components/editor/RestoreFromHTMLButton.tsx` | Novo - componente de upload + parsing |
-| `src/pages/LandingPageEditor.tsx` | Adicionar botão na toolbar |
+### O que NÃO muda
+- Domínios Cloudflare permanecem inalterados
+- Edge functions FTP existentes permanecem
+- Nenhuma tabela alterada
 

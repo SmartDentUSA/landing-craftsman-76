@@ -6,6 +6,7 @@ import { BannerSection } from "@/components/editor/BannerSection";
 import { SolutionsSection } from "@/components/editor/SolutionsSection";
 import { PDFContentImporter } from "@/components/editor/PDFContentImporter";
 import { SEOSection } from "@/components/editor/SEOSection";
+import { RestoreFromHTMLButton } from "@/components/editor/RestoreFromHTMLButton";
 import { KOLSection } from "@/components/editor/KOLSection";
 import { KnowledgeFeedSection } from "@/components/editor/KnowledgeFeedSection";
 import { KnowledgeFeed } from "@/components/KnowledgeFeed";
@@ -3283,6 +3284,17 @@ const EditorPageContent = () => {
                 <Search className="h-4 w-4 mr-2" />
                 Validar SEO
               </Button>
+              <RestoreFromHTMLButton
+                currentData={data}
+                onRestore={(mergedData) => {
+                  setData(prev => ({ ...prev, ...mergedData }));
+                  dirtyRef.current = true;
+                  // Auto-save
+                  if (id) {
+                    updateLandingPage(id, { data: mergedData });
+                  }
+                }}
+              />
               <Button variant="outline" size="sm" onClick={handleSave} disabled={isSaving}>
                 {isSaving ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
