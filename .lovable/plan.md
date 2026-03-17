@@ -1,47 +1,60 @@
 
 
-## Plano: Substituir FTP por Git Deploy (KingHost) para www.smartdent.com.br
+# Backup do HTML Publicado da Institucional
 
-### Contexto da Imagem
-O KingHost Git Deploy usa o repo **SmartDentUSA/landing-craftsman-76** (este projeto Lovable), branch **main**, deploy em **/www/**. Ele cria automaticamente a branch `stable-website`, GitHub Actions e webhook.
+## Situação Atual
 
-### Como funciona o fluxo
+- A página institucional **está no ar** em `smartdent.com.br` e funcionando corretamente
+- O HTML publicado está salvo em `cloned_landing_pages` (id: `83de3354`, ~203KB)
+- Os dados do editor (LP `5f7bea68`) ainda existem com todas as chaves (faq, seo, menu, banner, solutions, etc.)
+- O que o usuário precisa: **uma forma de baixar/salvar o HTML que está publicado**
 
-```text
-Edge Function gera HTML → Commit via GitHub API no repo (public/blog/...) → Push main → GitHub Actions build → KingHost sync /www/ → www.smartdent.com.br
+## Plano
+
+### Adicionar botão "Baixar HTML" no Dashboard
+
+No card de cada LP publicada no Dashboard (`src/pages/Dashboard.tsx`), adicionar um botão que:
+
+1. Busca o `transformed_html` da `cloned_landing_pages` onde `source_landing_page_id` = LP id e `publish_status = 'published'`
+2. Gera um download do arquivo `.html` com o conteúdo
+
+Isso já existe parcialmente no `LPClonePanel` (função `handlePreviewSavedLP`), mas não está acessível no Dashboard principal.
+
+### Implementação
+
+**Arquivo: `src/pages/Dashboard.tsx`**
+
+- Adicionar botão "⬇ Baixar HTML" ao lado do badge "Publicado" nos cards de LP
+- Ao clicar, busca `transformed_html` do registro publicado em `cloned_landing_pages` e faz download como arquivo `.html`
+- Também adicionar botão "👁 Ver ao vivo" que abre a URL publicada
+
+### Código do handler
+
+```typescript
+const handleDownloadPublishedHTML = async (lpId: string, lpName: string) => {
+  const { data } = await supabase
+    .from('cloned_landing_pages')
+    .select('transformed_html, original_html')
+    .eq('source_landing_page_id', lpId)
+    .eq('publish_status', 'published')
+    .limit(1)
+    .maybeSingle();
+  
+  const html = data?.transformed_html || data?.original_html;
+  if (!html) { toast error; return; }
+  
+  const blob = new Blob([html], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${slugify(lpName)}.html`;
+  a.click();
+};
 ```
 
-Os arquivos HTML gerados são commitados na pasta `public/` do repo. O Vite copia `public/` para `dist/` no build. O KingHost deploya `dist/` para `/www/`.
+### Arquivo a editar
 
-### Alterações
-
-**1. Nova Edge Function: `supabase/functions/publish-git-deploy/index.ts`**
-- Recebe `{ lpId, domain, pagePath, isHomepage }`
-- Busca HTML de `cloned_landing_pages`
-- Usa GitHub API (`PUT /repos/SmartDentUSA/landing-craftsman-76/contents/public{pagePath}`) para commitar o HTML
-- Atualiza `publish_status` para `published`
-- Requer secret `GITHUB_DEPLOY_TOKEN` (Personal Access Token com `contents:write`)
-
-**2. `supabase/config.toml`** — Adicionar `[functions.publish-git-deploy]` com `verify_jwt = true`
-
-**3. Expandir `publish_method` em 5 arquivos:**
-
-| Arquivo | Mudança |
-|---------|---------|
-| `TrackingSEOTab.tsx` | Tipo L428 → `'cloudflare' \| 'ftp' \| 'git-deploy'`. Adicionar 3a opção "🔀 Git Deploy" no RadioGroup (L434-448). Adicionar seção config Git Deploy com campos `git_repo` (fixo: SmartDentUSA/landing-craftsman-76), `git_branch` (fixo: main), `git_base_path` (fixo: public). |
-| `LPPublishDialog.tsx` | Tipo L20 → incluir `'git-deploy'`. Roteamento L195 → adicionar caso `git-deploy` → `publish-git-deploy`. |
-| `LPClonePanel.tsx` | Tipo L89 → incluir `'git-deploy'`. Filtro L210-214 → incluir `git-deploy`. Roteamento L522-523 → caso `git-deploy`. Labels L966, L1148, L1482 → badge "🔀 Git". |
-| `ProductBlogPublisherPanel.tsx` | Tipo L25 → incluir `'git-deploy'`. Filtro L111-115 → incluir `git-deploy`. |
-| `CompanyProfileManager.tsx` | Tipo L83 → incluir `'git-deploy'`. |
-
-**4. Secret necessário**
-- `GITHUB_DEPLOY_TOKEN`: Personal Access Token com permissão `contents:write` no repo SmartDentUSA/landing-craftsman-76
-
-**5. Dados no banco**
-- No `seo_domains` do `company_profile`, para smartdent.com.br: mudar `publish_method` de `ftp` para `git-deploy`, adicionar `git_repo: "SmartDentUSA/landing-craftsman-76"`, `git_branch: "main"`, `git_base_path: "public"`
-
-### O que NÃO muda
-- Domínios Cloudflare permanecem inalterados
-- Edge functions FTP existentes permanecem
-- Nenhuma tabela alterada
+| Arquivo | Acao |
+|---------|------|
+| `src/pages/Dashboard.tsx` | Adicionar botao de download HTML publicado |
 
