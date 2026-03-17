@@ -705,18 +705,29 @@ const DashboardContent = () => {
                       </>
                     )}
                     {publishedMap[landingPage.id]?.publish_status === 'published' && (
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleUnpublish(landingPage.id)}
-                        disabled={unpublishingId === landingPage.id}
-                      >
-                        {unpublishingId === landingPage.id 
-                          ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> 
-                          : <CloudOff className="h-4 w-4 mr-2" />
-                        }
-                        Despublicar
-                      </Button>
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDownloadPublishedHTML(landingPage.id, landingPage.name)}
+                          className="border-primary/30 text-primary hover:bg-primary/10"
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Baixar HTML
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleUnpublish(landingPage.id)}
+                          disabled={unpublishingId === landingPage.id}
+                        >
+                          {unpublishingId === landingPage.id 
+                            ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> 
+                            : <CloudOff className="h-4 w-4 mr-2" />
+                          }
+                          Despublicar
+                        </Button>
+                      </>
                     )}
                     
                     <DropdownMenu>
