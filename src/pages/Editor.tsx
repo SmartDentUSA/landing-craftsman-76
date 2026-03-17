@@ -140,6 +140,7 @@ interface SEOData {
   intelligent_links?: { [keyword: string]: string };
   manual_reviews_enabled?: boolean;
   video_testimonials_enabled?: boolean;
+  reviews_section_visible?: boolean;
 }
 
 // Schema e Offers para JSON-LD
