@@ -5,6 +5,12 @@ window.__NAV_DATA__ = [
     "url": "https://smartdent.com.br",
     "isHome": true,
     "brand": null
+  },
+  {
+    "name": "Comparativo Scanners intraorais ",
+    "url": "https://smartdent.com.br/comparativo-scanners-intraorais",
+    "isHome": false,
+    "brand": null
   }
 ];
 (function() {
