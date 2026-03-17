@@ -5595,13 +5595,14 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
       if (all_reviews.length === 0) {
         console.warn('⚠️ Nenhum review encontrado, schema não gerado');
       } else {
-        // ✅ Injetar reviews na seção visual do template
+        // ✅ Injetar reviews na seção visual do template (respeitando toggle)
+        const reviewsSectionVisible = data.reviews_section_visible !== false;
         const generateStars = (rating: number) => '★'.repeat(Math.round(rating)) + '☆'.repeat(5 - Math.round(rating));
         const totalRating = all_reviews.reduce((sum, r) => sum + (r.rating || 5), 0);
         const avgRating = (totalRating / all_reviews.length).toFixed(1);
         
         processedData.reviews_section = {
-          has_reviews: true,
+          has_reviews: reviewsSectionVisible,
           total_reviews: all_reviews.length,
           avg_rating: avgRating,
           stars_display: generateStars(parseFloat(avgRating)),
