@@ -1,9 +1,9 @@
 /* Smart Dent Navigation Data - Auto-generated */
 window.__NAV_DATA__ = [
   {
-    "name": "#1 - Institucional ",
-    "url": "https://smartdent.com.br",
-    "isHome": true,
+    "name": "Comparativo Scanners intraorais ",
+    "url": "https://smartdent.com.br/comparativo-scanners-intraorais",
+    "isHome": false,
     "brand": null
   }
 ];
