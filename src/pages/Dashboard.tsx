@@ -441,6 +441,37 @@ const DashboardContent = () => {
     }
   };
 
+  const handleDownloadPublishedHTML = async (lpId: string, lpName: string) => {
+    try {
+      const { data } = await supabase
+        .from('cloned_landing_pages')
+        .select('transformed_html, original_html')
+        .eq('source_landing_page_id', lpId)
+        .eq('publish_status', 'published')
+        .limit(1)
+        .maybeSingle();
+      
+      const html = data?.transformed_html || data?.original_html;
+      if (!html) {
+        toast({ title: 'HTML não encontrado', description: 'Nenhum HTML publicado encontrado para esta LP.', variant: 'destructive' });
+        return;
+      }
+      
+      const slug = lpName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${slug}.html`;
+      a.click();
+      URL.revokeObjectURL(url);
+      
+      toast({ title: '✅ HTML baixado!', description: `Arquivo ${slug}.html salvo.` });
+    } catch (err: any) {
+      toast({ title: 'Erro ao baixar HTML', description: err.message, variant: 'destructive' });
+    }
+  };
+
   const getStatusColor = (status: string) => {
     return status === 'approved' ? 'success' : 'secondary';
   };
