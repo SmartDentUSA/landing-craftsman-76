@@ -80,19 +80,19 @@ serve(async (req) => {
 
     if (!html) throw new Error('No HTML content to publish');
 
-    // 2. Inject tracking pixels from domain config
+    // 2. Inject tracking pixels from company_profile (centralizado)
     const { data: companyData } = await supabase
       .from('company_profile')
-      .select('seo_domains')
+      .select('tracking_pixels, seo_domains')
       .limit(1)
       .maybeSingle();
 
-    if (companyData?.seo_domains && Array.isArray(companyData.seo_domains)) {
-      const domainConfig = (companyData.seo_domains as any[]).find((d: any) => d.domain === domain);
-      if (domainConfig?.tracking_pixels) {
-        console.log('📊 Injecting tracking pixels');
-        html = injectTrackingPixels(html, domainConfig.tracking_pixels);
-      }
+    if (companyData?.tracking_pixels) {
+      console.log('📊 Injecting tracking pixels via shared module');
+      html = injectTrackingIntoHTML(html, companyData.tracking_pixels as TrackingPixels, {
+        generatorName: 'publish-git-kinghost',
+        domain,
+      });
     }
 
     // 3. Inject nav-data.js script tag for incremental footer
