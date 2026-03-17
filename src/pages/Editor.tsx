@@ -384,6 +384,7 @@ interface LandingPageData {
     feed_url: string;
     limit: number;
   };
+  reviews_section_visible?: boolean;
 }
 
 // Função para criar ImageData padrão
