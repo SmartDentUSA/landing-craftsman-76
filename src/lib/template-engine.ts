@@ -1493,6 +1493,15 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             margin: 0;
         }
         
+        .service-text-overlay h2 {
+            background: var(--primary-color);
+            color: #ffffff;
+            display: inline-block;
+            padding: 0.5rem 1.25rem;
+            border-radius: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
         @media (min-width: 992px) {
             .service-content { grid-template-columns: 1fr; }
         }
