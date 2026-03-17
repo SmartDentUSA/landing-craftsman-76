@@ -1,55 +1,47 @@
 
 
-# Diagnóstico: Inserção Incremental no smartdent.com.br
+## Plano: Substituir FTP por Git Deploy (KingHost) para www.smartdent.com.br
 
-## O que aconteceu
+### Contexto da Imagem
+O KingHost Git Deploy usa o repo **SmartDentUSA/landing-craftsman-76** (este projeto Lovable), branch **main**, deploy em **/www/**. Ele cria automaticamente a branch `stable-website`, GitHub Actions e webhook.
 
-Analisando os logs e o site ao vivo, o sistema **de fato executou** a republicação incremental com sucesso:
+### Como funciona o fluxo
 
-- **Edge Function logs**: `republish-domain-pages` executou, encontrou 3 páginas, atualizou 2, e criou commit `1d23650e` no Git
-- **nav-data.js**: Está no servidor com 3 entradas corretas (Homepage, `/comparativo-scanners-intraorais`, `/produtos/comparativo-scanners-intraorais`)
-- **Homepage HTML**: Comentário mostra `Gerado por: republish-domain-pages` com timestamp `13:32:22`
-
-## Problemas Identificados
-
-### 1. Registros duplicados no banco de dados
-Existem **2 registros** para o mesmo conteúdo com paths diferentes:
-- `/comparativo-scanners-intraorais` (antigo)
-- `/produtos/comparativo-scanners-intraorais` (novo)
-
-Isso gera 2 links duplicados no nav-data.js com o mesmo nome.
-
-### 2. O nav footer JS pode não estar visível
-O `nav-data.js` cria um bloco dinâmico no **final absoluto da página** (dentro ou após o `<footer>`). Se o footer da homepage está vazio ou tem estrutura inesperada, o bloco pode estar renderizando mas invisível ou em posição estranha.
-
-### 3. Comparação de URL com trailing slash
-O JS usa `item.url === window.location.href` para filtrar a página atual. A homepage carrega como `https://smartdent.com.br/` (com `/`), mas o nav-data tem `https://smartdent.com.br` (sem `/`). O filtro não funciona e a homepage aparece como link em si mesma.
-
-### 4. Noscript links ausentes
-O HTML da homepage não contém o bloco `<noscript>` com links estáticos, apesar do código de injeção existir.
-
-## Plano de Correção
-
-### Etapa 1: Corrigir comparação de URL no nav-data.js
-No `republish-domain-pages/index.ts`, na função `generateNavDataJS`, normalizar URLs removendo trailing slash na comparação:
-
-```js
-// Antes: if (item.url === window.location.href) return;
-// Depois: 
-var currentUrl = window.location.href.replace(/\/$/, '');
-if (item.url.replace(/\/$/, '') === currentUrl) return;
+```text
+Edge Function gera HTML → Commit via GitHub API no repo (public/blog/...) → Push main → GitHub Actions build → KingHost sync /www/ → www.smartdent.com.br
 ```
 
-### Etapa 2: Deduplicar entradas no nav-data por nome
-Adicionar deduplicação por `name` além de `url` para evitar links duplicados quando o mesmo conteúdo está em paths diferentes.
+Os arquivos HTML gerados são commitados na pasta `public/` do repo. O Vite copia `public/` para `dist/` no build. O KingHost deploya `dist/` para `/www/`.
 
-### Etapa 3: Melhorar visibilidade do nav footer
-Adicionar um fallback que injeta links diretamente no HTML estático (dentro do footer existente), além do JS dinâmico. Na função `updateNoscriptInHtml`, também injetar links visíveis em `<div>` antes do `</body>` como fallback caso o JS não execute.
+### Alterações
 
-### Etapa 4: Garantir injeção do script tag
-Adicionar log de debug confirmando se o `nav-data.js` script tag foi injetado, e usar regex mais robusto para encontrar `</body>` mesmo com espaços/quebras de linha.
+**1. Nova Edge Function: `supabase/functions/publish-git-deploy/index.ts`**
+- Recebe `{ lpId, domain, pagePath, isHomepage }`
+- Busca HTML de `cloned_landing_pages`
+- Usa GitHub API (`PUT /repos/SmartDentUSA/landing-craftsman-76/contents/public{pagePath}`) para commitar o HTML
+- Atualiza `publish_status` para `published`
+- Requer secret `GITHUB_DEPLOY_TOKEN` (Personal Access Token com `contents:write`)
 
-### Arquivos a editar
-- `supabase/functions/republish-domain-pages/index.ts` — Corrigir URL comparison, deduplicação, injeção de links
-- `supabase/functions/publish-git-kinghost/index.ts` — Mesma correção no generateNavDataJS (se duplicado)
+**2. `supabase/config.toml`** — Adicionar `[functions.publish-git-deploy]` com `verify_jwt = true`
+
+**3. Expandir `publish_method` em 5 arquivos:**
+
+| Arquivo | Mudança |
+|---------|---------|
+| `TrackingSEOTab.tsx` | Tipo L428 → `'cloudflare' \| 'ftp' \| 'git-deploy'`. Adicionar 3a opção "🔀 Git Deploy" no RadioGroup (L434-448). Adicionar seção config Git Deploy com campos `git_repo` (fixo: SmartDentUSA/landing-craftsman-76), `git_branch` (fixo: main), `git_base_path` (fixo: public). |
+| `LPPublishDialog.tsx` | Tipo L20 → incluir `'git-deploy'`. Roteamento L195 → adicionar caso `git-deploy` → `publish-git-deploy`. |
+| `LPClonePanel.tsx` | Tipo L89 → incluir `'git-deploy'`. Filtro L210-214 → incluir `git-deploy`. Roteamento L522-523 → caso `git-deploy`. Labels L966, L1148, L1482 → badge "🔀 Git". |
+| `ProductBlogPublisherPanel.tsx` | Tipo L25 → incluir `'git-deploy'`. Filtro L111-115 → incluir `git-deploy`. |
+| `CompanyProfileManager.tsx` | Tipo L83 → incluir `'git-deploy'`. |
+
+**4. Secret necessário**
+- `GITHUB_DEPLOY_TOKEN`: Personal Access Token com permissão `contents:write` no repo SmartDentUSA/landing-craftsman-76
+
+**5. Dados no banco**
+- No `seo_domains` do `company_profile`, para smartdent.com.br: mudar `publish_method` de `ftp` para `git-deploy`, adicionar `git_repo: "SmartDentUSA/landing-craftsman-76"`, `git_branch: "main"`, `git_base_path: "public"`
+
+### O que NÃO muda
+- Domínios Cloudflare permanecem inalterados
+- Edge functions FTP existentes permanecem
+- Nenhuma tabela alterada
 

@@ -150,11 +150,15 @@ serve(async (req) => {
           brand: p.brand || null,
         }));
 
-        // Deduplicate by URL
-        const seen = new Set<string>();
+        // Deduplicate by URL and name
+        const seenUrls = new Set<string>();
+        const seenNames = new Set<string>();
         const navItems = rawNavItems.filter((item: any) => {
-          if (seen.has(item.url)) return false;
-          seen.add(item.url);
+          const normUrl = item.url.replace(/\/$/, '');
+          const key = item.name.toLowerCase().trim();
+          if (seenUrls.has(normUrl) || seenNames.has(key)) return false;
+          seenUrls.add(normUrl);
+          seenNames.add(key);
           return true;
         });
 
@@ -172,8 +176,9 @@ window.__NAV_DATA__ = ${JSON.stringify(navItems, null, 2)};
   nav.appendChild(title);
   var links = document.createElement('div');
   links.style.cssText = 'display:flex;flex-wrap:wrap;justify-content:center;gap:8px;';
-  data.forEach(function(item) {
-    if (item.url === window.location.href) return;
+   var currentUrl = window.location.href.replace(/\\/$/, '');
+   data.forEach(function(item) {
+    if (item.url.replace(/\\/$/, '') === currentUrl) return;
     var a = document.createElement('a');
     a.href = item.url;
     a.textContent = item.isHome ? '🏠 Home' : item.name;
