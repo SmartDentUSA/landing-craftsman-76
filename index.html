@@ -1,9 +1,9 @@
 <!--
-  Gerado por: republish-domain-pages
+  Gerado por: publish-git-kinghost
   Domínio esperado: smartdent.com.br
   Tracking principal: GTM-NZ64Q899 → server-side tagging
   Fallback pixels: Meta #167413567155597 + TikTok #D05CI83C77UE5QUU9FR0 (desabilitado)
-  Gerado em: 2026-03-17T13:32:22.404Z
+  Gerado em: 2026-03-17T13:41:46.433Z
 -->
 <!DOCTYPE html>
 <html lang="pt-br" translate="no" data-semantic-enhanced="true"><head>
@@ -1489,6 +1489,9 @@ Praticidade e Usabilidade: Soluções intuitivas que simplificam o fluxo digital
             padding: 0.5rem 1.25rem;
             border-radius: 0.5rem;
             margin-bottom: 0.5rem;
+            position: relative;
+            z-index: 1;
+            text-shadow: none;
         }
         
         @media (min-width: 992px) {
@@ -1506,7 +1509,34 @@ Praticidade e Usabilidade: Soluções intuitivas que simplificam o fluxo digital
         .faq-answer { display: none; padding: 0 1rem 1rem; color: #555; }
         .faq-item.active .faq-answer { display: block; }
         .faq-icon { font-size: 1.25rem; transform: rotate(180deg); transition: .2s; }
-        
+
+        /* Google Reviews Section */
+        .reviews-section { padding: 3rem 0; background: var(--background-color); }
+        .reviews-section h2 { text-align: center; margin-bottom: 0.5rem; color: var(--text-color); }
+        .reviews-section .reviews-subtitle { text-align: center; color: var(--secondary-color); margin-bottom: 2rem; font-size: 1rem; }
+        .reviews-section .reviews-aggregate { text-align: center; margin-bottom: 2rem; }
+        .reviews-section .reviews-aggregate .stars { color: #f5a623; font-size: 1.5rem; letter-spacing: 2px; }
+        .reviews-section .reviews-aggregate .rating-text { font-size: 1.1rem; color: var(--text-color); margin-top: 0.25rem; }
+        .reviews-grid { display: grid; grid-template-columns: 1fr; gap: 1.25rem; }
+        @media (min-width: 768px) { .reviews-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (min-width: 992px) { .reviews-grid { grid-template-columns: repeat(3, 1fr); } }
+        .review-card {
+            background: var(--white, #fff); border-radius: 1rem; padding: 1.5rem;
+            border: 1px solid rgba(0,0,0,0.08); box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .review-card:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+        .review-card .review-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; }
+        .review-card .review-avatar {
+            width: 40px; height: 40px; border-radius: 50%;
+            background: var(--primary-color); color: #fff; display: flex; align-items: center;
+            justify-content: center; font-weight: 700; font-size: 1rem; flex-shrink: 0;
+        }
+        .review-card .review-author { font-weight: 600; color: var(--text-color); font-size: 0.95rem; }
+        .review-card .review-stars { color: #f5a623; font-size: 0.9rem; letter-spacing: 1px; }
+        .review-card .review-text { color: var(--secondary-color); font-size: 0.9rem; line-height: 1.5; }
+        .review-card .review-source { margin-top: 0.75rem; font-size: 0.75rem; color: var(--secondary-color); opacity: 0.7; display: flex; align-items: center; gap: 0.25rem; }
+
         /* Knowledge Feed Section */
         .knowledge-feed-section {
           padding: 4rem 0;
@@ -2263,32 +2293,32 @@ Treinamentos e Suporte Técnico: Educação contínua (presencial/online) para d
                         <tbody>
                             <tr>
                                 <td>Etapa 1 · Captura Digital</td>
-                                <td>Scanners Intraorais: .Medit (i600, i700, i700W, i900); .BLZ Dental (INO200, INO100 Plus, Leap 500). Scanners de Bancada: .BLZ dental, Scanner Medit T310, Scanner BLZ LS100.</td>
+                                <td>Scanners Intraorais: Medit i600, i700, i700W, i900; BLZ INO200, INO100 Plus. Scanners de Bancada: Medit T310, BLZ LS100.</td>
                                 <td>Coleta de dados digitais do paciente, fundamental para a precisão do tratamento, utilizando dispositivos de captura de alta tecnologia.</td>
                             </tr>
                             <tr>
                                 <td>Etapa 2 · CAD</td>
-                                <td>Softwares CAD: exocad (DentalCAD - Software CAD da exocad I.A., DentalCAD - Smart Bundle I.A., exoplan - Software para planejamento de cirurgias guiadas); Medit Clinic APP; BLZ dental CAD.</td>
+                                <td>Softwares CAD: DentalCAD, Créditos I.A. CAD, exoplan (Software para cirurgias guiadas); Maestro 3D, Medit Clinic APP.</td>
                                 <td>Planejamento digital e design das próteses ou alinhadores. Utiliza softwares e, em alguns casos, inteligência artificial (I.A. CAD) para otimização e precisão do design.</td>
                             </tr>
                             <tr>
                                 <td>Etapa 3 · Impressão 3D</td>
-                                <td>Impressora 3D RayShape Edge Mini, Resinas 3D Odontológicas de Alta Tecnologia, Software ShapeWare 2.0 (com IA), Acessórios e Peças.</td>
+                                <td>Impressora 3D RayShape Edge Mini, Resinas 3D de Alta Tecnologia (ex: Bio Vitality), Impressoras Asiga, Software ShapeWare 2.0.</td>
                                 <td>Manufatura aditiva de alta tecnologia junção utilizando resinas e softwares específicos.</td>
                             </tr>
                             <tr>
                                 <td>Etapa 4 · Pós-Impressão</td>
-                                <td>Sistema de Limpezarevolucionário, o  NanoClean Pod, Equipamentos Pós-Cura (Pós-Cura Lite / Pro), Acabamento, cursos online e presenciais.</td>
+                                <td>Sistema de Limpeza NanoClean Pod, Equipamentos Pós-Cura (ex: Asiga Cure, Magna Box), Cuba Ultrassônica, Acabamento.</td>
                                 <td>Processo de tratamento das peças impressas. Inclui a simples e eficiente para resinas com alta carga inorgânica com o NanoClean Pod e a cura final com equipamentos especializados (pós-cura) para garantir as propriedades físicas, mecânicas e sanitárias ideais do dispositivo.</td>
                             </tr>
                             <tr>
                                 <td>Etapa 5 - Finalização</td>
-                                <td>Sistema de caracterização para próteses, cimentos especiais, resinas diretas, resinas para uso acadêmico, cursos online e presenciais.</td>
+                                <td>Impressão	Sistema de Limpeza NanoClean Pod, Equipamentos Pós-Cura (ex: Asiga Cure, Magna Box), Cuba Ultrassônica, Acabame</td>
                                 <td>Etapa final que envolve a aplicação de materiais estéticos e funcionais, como sistemas de caracterização e resinas diretas, para a conclusão, personalização e cimentação (entrega) do trabalho protético.</td>
                             </tr>
                             <tr>
                                 <td>Etapa 6 - Cursos	</td>
-                                <td>Oferta de treinamento e capacitação profissional em todas as etapas do fluxo, incluindo Imersões práticas e avançadas em softwares e técnicas, garantindo o domínio das tecnologias e a autonomia do profissional.</td>
+                                <td>Cursos online e presenciais (incluindo Imersões), Formação em Exocad.</td>
                                 <td>Oferta de treinamento e capacitação profissional em todas as etapas do fluxo, incluindo Imersões práticas e avançadas em softwares e técnicas, garantindo o domínio das tecnologias e a autonomia do profissional.</td>
                             </tr>
                             <tr>
@@ -2404,6 +2434,188 @@ Treinamentos e Suporte Técnico: Educação contínua (presencial/online) para d
                     </div>
                     <div class="faq-answer" itemscope="" itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
                         <div itemprop="text"><p>Você pode entrar em contato diretamente para <a target="_blank" rel="noopener noreferrer" class="text-primary underline hover:text-primary/80 transition-colors" href="https://www.google.com/url?source=gmail&amp;sa=E&amp;q=https://www.google.com/url%3Fsource%3Dgmail%26sa%3DE%26q%3Dhttps://api.whatsapp.com/send/%253Fphone%253D5516993831794%2526text%253DOl%2525C3%2525A1%252BSmart%252BDent%25252C%252Bgostaria%252Bde%252Bmais%252Binforma%2525C3%2525A7%2525C3%2525B5es%2526type%253Dphone_number%2526app_absent%253D0"><u>Saiba mais</u></a> ou <a target="_blank" rel="noopener noreferrer" class="text-primary underline hover:text-primary/80 transition-colors" href="https://www.google.com/url?source=gmail&amp;sa=E&amp;q=https://www.google.com/url%3Fsource%3Dgmail%26sa%3DE%26q%3Dhttps://api.whatsapp.com/send/%253Fphone%253D5516993831794%2526text%253DOl%2525C3%2525A1%252BSmart%252BDent%25252C%252Bgostaria%252Bde%252Bmais%252Binforma%2525C3%2525A7%2525C3%2525B5es%2526type%253Dphone_number%2526app_absent%253D0"><u>Agende uma consultoria gratuíta</u></a> através do nosso canal de comunicação. Nossa consultoria é fundamental para analisar suas necessidades e mostrar como o Fluxo Digital Completo e produtos como a RayShape Edge Mini e o NanoClean Pod podem garantir um retorno imediato em seu negócio.</p></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Google Reviews Section -->
+    <section class="reviews-section" id="avaliacoes">
+        <div class="container">
+            <h2>⭐ Avaliações de Clientes</h2>
+            <p class="reviews-subtitle">Veja o que nossos clientes dizem sobre nosso trabalho</p>
+            <div class="reviews-aggregate">
+                <div class="stars">★★★★★</div>
+                <div class="rating-text">4.9 de 5 — 92 avaliações</div>
+            </div>
+            <div class="reviews-grid">
+                <div class="review-card" itemscope="" itemtype="https://schema.org/Review">
+                    <div class="review-header">
+                        <div class="review-avatar">T</div>
+                        <div>
+                            <div class="review-author" itemprop="author" itemscope="" itemtype="https://schema.org/Person"><span itemprop="name">Tatiane Moura</span></div>
+                            <div class="review-stars">★★★★★</div>
+                        </div>
+                    </div>
+                    <p class="review-text" itemprop="reviewBody">Serviço de alta qualidade. Voltarei sempre que precisar!</p>
+                    <div class="review-source">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--primary-color)"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"></path><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"></path><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"></path><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"></path></svg>
+                        Google
+                    </div>
+                </div>
+                <div class="review-card" itemscope="" itemtype="https://schema.org/Review">
+                    <div class="review-header">
+                        <div class="review-avatar">B</div>
+                        <div>
+                            <div class="review-author" itemprop="author" itemscope="" itemtype="https://schema.org/Person"><span itemprop="name">Bruno Dias</span></div>
+                            <div class="review-stars">★★★★★</div>
+                        </div>
+                    </div>
+                    <p class="review-text" itemprop="reviewBody">Excelente experiência! Equipe dedicada e preocupada com o cliente.</p>
+                    <div class="review-source">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--primary-color)"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"></path><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"></path><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"></path><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"></path></svg>
+                        Google
+                    </div>
+                </div>
+                <div class="review-card" itemscope="" itemtype="https://schema.org/Review">
+                    <div class="review-header">
+                        <div class="review-avatar">L</div>
+                        <div>
+                            <div class="review-author" itemprop="author" itemscope="" itemtype="https://schema.org/Person"><span itemprop="name">Larissa Cunha</span></div>
+                            <div class="review-stars">★★★★☆</div>
+                        </div>
+                    </div>
+                    <p class="review-text" itemprop="reviewBody">Profissionais qualificados e equipamentos modernos. Recomendo!</p>
+                    <div class="review-source">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--primary-color)"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"></path><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"></path><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"></path><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"></path></svg>
+                        Google
+                    </div>
+                </div>
+                <div class="review-card" itemscope="" itemtype="https://schema.org/Review">
+                    <div class="review-header">
+                        <div class="review-avatar">D</div>
+                        <div>
+                            <div class="review-author" itemprop="author" itemscope="" itemtype="https://schema.org/Person"><span itemprop="name">Diego Martins</span></div>
+                            <div class="review-stars">★★★★★</div>
+                        </div>
+                    </div>
+                    <p class="review-text" itemprop="reviewBody">Atendimento diferenciado e resultados excepcionais. Muito satisfeito!</p>
+                    <div class="review-source">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--primary-color)"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"></path><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"></path><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"></path><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"></path></svg>
+                        Google
+                    </div>
+                </div>
+                <div class="review-card" itemscope="" itemtype="https://schema.org/Review">
+                    <div class="review-header">
+                        <div class="review-avatar">C</div>
+                        <div>
+                            <div class="review-author" itemprop="author" itemscope="" itemtype="https://schema.org/Person"><span itemprop="name">Camila Barbosa</span></div>
+                            <div class="review-stars">★★★★★</div>
+                        </div>
+                    </div>
+                    <p class="review-text" itemprop="reviewBody">Trabalho impecável! Superou todas as minhas expectativas.</p>
+                    <div class="review-source">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--primary-color)"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"></path><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"></path><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"></path><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"></path></svg>
+                        Google
+                    </div>
+                </div>
+                <div class="review-card" itemscope="" itemtype="https://schema.org/Review">
+                    <div class="review-header">
+                        <div class="review-avatar">R</div>
+                        <div>
+                            <div class="review-author" itemprop="author" itemscope="" itemtype="https://schema.org/Person"><span itemprop="name">Rafael Almeida</span></div>
+                            <div class="review-stars">★★★★☆</div>
+                        </div>
+                    </div>
+                    <p class="review-text" itemprop="reviewBody">Ótimo custo-benefício. Profissionais preparados e atenciosos.</p>
+                    <div class="review-source">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--primary-color)"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"></path><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"></path><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"></path><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"></path></svg>
+                        Google
+                    </div>
+                </div>
+                <div class="review-card" itemscope="" itemtype="https://schema.org/Review">
+                    <div class="review-header">
+                        <div class="review-avatar">J</div>
+                        <div>
+                            <div class="review-author" itemprop="author" itemscope="" itemtype="https://schema.org/Person"><span itemprop="name">Juliana Rodrigues</span></div>
+                            <div class="review-stars">★★★★★</div>
+                        </div>
+                    </div>
+                    <p class="review-text" itemprop="reviewBody">Recomendo a todos! Profissionalismo e competência em primeiro lugar.</p>
+                    <div class="review-source">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--primary-color)"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"></path><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"></path><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"></path><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"></path></svg>
+                        Google
+                    </div>
+                </div>
+                <div class="review-card" itemscope="" itemtype="https://schema.org/Review">
+                    <div class="review-header">
+                        <div class="review-avatar">M</div>
+                        <div>
+                            <div class="review-author" itemprop="author" itemscope="" itemtype="https://schema.org/Person"><span itemprop="name">Marcos Pereira</span></div>
+                            <div class="review-stars">★★★★★</div>
+                        </div>
+                    </div>
+                    <p class="review-text" itemprop="reviewBody">Equipe experiente e cuidadosa. Trabalho de excelente qualidade.</p>
+                    <div class="review-source">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--primary-color)"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"></path><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"></path><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"></path><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"></path></svg>
+                        Google
+                    </div>
+                </div>
+                <div class="review-card" itemscope="" itemtype="https://schema.org/Review">
+                    <div class="review-header">
+                        <div class="review-avatar">F</div>
+                        <div>
+                            <div class="review-author" itemprop="author" itemscope="" itemtype="https://schema.org/Person"><span itemprop="name">Fernanda Souza</span></div>
+                            <div class="review-stars">★★★★☆</div>
+                        </div>
+                    </div>
+                    <p class="review-text" itemprop="reviewBody">Muito bom! Atendimento personalizado e atenção aos detalhes.</p>
+                    <div class="review-source">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--primary-color)"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"></path><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"></path><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"></path><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"></path></svg>
+                        Google
+                    </div>
+                </div>
+                <div class="review-card" itemscope="" itemtype="https://schema.org/Review">
+                    <div class="review-header">
+                        <div class="review-avatar">R</div>
+                        <div>
+                            <div class="review-author" itemprop="author" itemscope="" itemtype="https://schema.org/Person"><span itemprop="name">Roberto Costa</span></div>
+                            <div class="review-stars">★★★★★</div>
+                        </div>
+                    </div>
+                    <p class="review-text" itemprop="reviewBody">Serviço rápido e eficiente. Preço compatível com a qualidade oferecida.</p>
+                    <div class="review-source">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--primary-color)"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"></path><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"></path><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"></path><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"></path></svg>
+                        Google
+                    </div>
+                </div>
+                <div class="review-card" itemscope="" itemtype="https://schema.org/Review">
+                    <div class="review-header">
+                        <div class="review-avatar">P</div>
+                        <div>
+                            <div class="review-author" itemprop="author" itemscope="" itemtype="https://schema.org/Person"><span itemprop="name">Patricia Lima</span></div>
+                            <div class="review-stars">★★★★★</div>
+                        </div>
+                    </div>
+                    <p class="review-text" itemprop="reviewBody">Ambiente limpo, organizado e profissionais qualificados. Nota 10!</p>
+                    <div class="review-source">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--primary-color)"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"></path><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"></path><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"></path><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"></path></svg>
+                        Google
+                    </div>
+                </div>
+                <div class="review-card" itemscope="" itemtype="https://schema.org/Review">
+                    <div class="review-header">
+                        <div class="review-avatar">C</div>
+                        <div>
+                            <div class="review-author" itemprop="author" itemscope="" itemtype="https://schema.org/Person"><span itemprop="name">Carlos Ferreira</span></div>
+                            <div class="review-stars">★★★★★</div>
+                        </div>
+                    </div>
+                    <p class="review-text" itemprop="reviewBody">Profissionais dedicados e resultados surpreendentes. Superou minhas expectativas.</p>
+                    <div class="review-source">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--primary-color)"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"></path><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"></path><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"></path><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"></path></svg>
+                        Google
                     </div>
                 </div>
             </div>
@@ -3040,6 +3252,5 @@ Não vendemos produtos — entregamos performance clínica real e lucratividade 
       Atendendo: Dentistas, Clínicas Odontológicas, Laboratório de próteses, Radiologias odontológicas.
     </p>
   </aside>
-<noscript><nav style="text-align:center;padding:12px;font-size:13px;"><a href="https://smartdent.com.br">Página Inicial</a> | <a href="https://smartdent.com.br/comparativo-scanners-intraorais">Comparativo Scanners intraorais </a> | <a href="https://smartdent.com.br/produtos/comparativo-scanners-intraorais">Comparativo Scanners intraorais </a></nav></noscript>
 <script src="/nav-data.js" defer></script>
 </body></html>
