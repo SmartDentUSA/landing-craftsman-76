@@ -310,7 +310,30 @@ window.__NAV_DATA__ = ${JSON.stringify(navItems, null, 2)};
   nav.appendChild(links);
   var existing = document.getElementById('smartdent-nav-footer');
   if (existing) existing.remove();
-  document.body.appendChild(nav);
+  var footer = document.querySelector('footer');
+  if (footer) {
+    var socialBlock = footer.querySelector('.footer-social-inline');
+    if (socialBlock) {
+      socialBlock.parentNode.insertBefore(nav, socialBlock.nextSibling);
+    } else {
+      var copyright = null;
+      var allEls = footer.querySelectorAll('*');
+      for (var i = 0; i < allEls.length; i++) {
+        var txt = allEls[i].textContent || '';
+        if ((txt.indexOf('©') !== -1 || txt.toLowerCase().indexOf('direitos') !== -1) && allEls[i].children.length === 0) {
+          copyright = allEls[i];
+          break;
+        }
+      }
+      if (copyright) {
+        copyright.parentNode.insertBefore(nav, copyright);
+      } else {
+        footer.appendChild(nav);
+      }
+    }
+  } else {
+    document.body.appendChild(nav);
+  }
 })();`;
 
         const navBytes = new TextEncoder().encode(navScript);

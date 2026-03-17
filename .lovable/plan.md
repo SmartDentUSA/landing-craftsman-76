@@ -1,52 +1,47 @@
 
 
-# Plano: Desabilitar Reviews + Reposicionar Navegação no Rodapé
+## Plano: Substituir FTP por Git Deploy (KingHost) para www.smartdent.com.br
 
-## 1. Desabilitar seção "Avaliações de Clientes" no template engine
+### Contexto da Imagem
+O KingHost Git Deploy usa o repo **SmartDentUSA/landing-craftsman-76** (este projeto Lovable), branch **main**, deploy em **/www/**. Ele cria automaticamente a branch `stable-website`, GitHub Actions e webhook.
 
-**Arquivo:** `src/lib/template-engine.ts` (linhas ~5583-5617)
+### Como funciona o fluxo
 
-Comentar/desabilitar o bloco que popula `processedData.reviews_section` com `has_reviews: true`. Sem esse campo, o template condicional `{{#reviews_section.has_reviews}}` não renderiza a seção. Basta forçar `has_reviews: false` ou simplesmente não atribuir o `reviews_section` ao `processedData`.
-
-Abordagem: envolver o bloco em um flag `const ENABLE_REVIEWS_SECTION = false;` para facilitar reativação futura.
-
-## 2. Reposicionar "Navegue por nossas páginas" dentro do footer
-
-**Problema atual:** O JS do `nav-data.js` procura um elemento com `©` ou `direitos` dentro do `<footer>` para inserir antes dele. Na homepage ao vivo, o footer parece estar ausente ou o script está adicionando ao `document.body` como fallback (ficando no fim absoluto da página).
-
-**Solução:** Alterar a lógica de inserção no `generateNavDataJS` em **4 arquivos** para buscar especificamente o bloco `.footer-social-inline` e inserir **após** ele (antes do `.footer-copyright`):
-
-```js
-// Nova lógica de posicionamento:
-var socialBlock = footer.querySelector('.footer-social-inline');
-if (socialBlock) {
-  socialBlock.parentNode.insertBefore(nav, socialBlock.nextSibling);
-} else if (copyright) {
-  copyright.parentNode.insertBefore(nav, copyright);
-} else {
-  footer.appendChild(nav);
-}
+```text
+Edge Function gera HTML → Commit via GitHub API no repo (public/blog/...) → Push main → GitHub Actions build → KingHost sync /www/ → www.smartdent.com.br
 ```
 
-Também atualizar o bloco estático `generateStaticNavFooter` para ser injetado no HTML **entre** `.footer-social-inline` e `.footer-copyright` em vez de antes do `</body>`.
+Os arquivos HTML gerados são commitados na pasta `public/` do repo. O Vite copia `public/` para `dist/` no build. O KingHost deploya `dist/` para `/www/`.
 
-**Arquivos a editar:**
-- `supabase/functions/republish-domain-pages/index.ts`
-- `supabase/functions/publish-git-kinghost/index.ts`
-- `supabase/functions/publish-ftp-pages/index.ts`
-- `supabase/functions/unpublish-pages/index.ts`
+### Alterações
 
-## 3. Atualizar injeção do HTML estático
+**1. Nova Edge Function: `supabase/functions/publish-git-deploy/index.ts`**
+- Recebe `{ lpId, domain, pagePath, isHomepage }`
+- Busca HTML de `cloned_landing_pages`
+- Usa GitHub API (`PUT /repos/SmartDentUSA/landing-craftsman-76/contents/public{pagePath}`) para commitar o HTML
+- Atualiza `publish_status` para `published`
+- Requer secret `GITHUB_DEPLOY_TOKEN` (Personal Access Token com `contents:write`)
 
-Na função `updateNoscriptInHtml`, em vez de injetar o bloco `smartdent-static-nav` antes de `</body>`, injetá-lo dentro do `<footer>`, especificamente após o bloco que contém "Redes Sociais" e antes do `footer-copyright`. Usar regex para encontrar `</div>\s*</div>\s*<div class="footer-copyright"` e inserir os links ali.
+**2. `supabase/config.toml`** — Adicionar `[functions.publish-git-deploy]` com `verify_jwt = true`
 
-## Resumo
+**3. Expandir `publish_method` em 5 arquivos:**
 
 | Arquivo | Mudança |
 |---------|---------|
-| `src/lib/template-engine.ts` | Desabilitar `reviews_section` com flag |
-| `supabase/functions/republish-domain-pages/index.ts` | Reposicionar nav após `.footer-social-inline` |
-| `supabase/functions/publish-git-kinghost/index.ts` | Mesma correção de posicionamento |
-| `supabase/functions/publish-ftp-pages/index.ts` | Mesma correção de posicionamento |
-| `supabase/functions/unpublish-pages/index.ts` | Mesma correção de posicionamento |
+| `TrackingSEOTab.tsx` | Tipo L428 → `'cloudflare' \| 'ftp' \| 'git-deploy'`. Adicionar 3a opção "🔀 Git Deploy" no RadioGroup (L434-448). Adicionar seção config Git Deploy com campos `git_repo` (fixo: SmartDentUSA/landing-craftsman-76), `git_branch` (fixo: main), `git_base_path` (fixo: public). |
+| `LPPublishDialog.tsx` | Tipo L20 → incluir `'git-deploy'`. Roteamento L195 → adicionar caso `git-deploy` → `publish-git-deploy`. |
+| `LPClonePanel.tsx` | Tipo L89 → incluir `'git-deploy'`. Filtro L210-214 → incluir `git-deploy`. Roteamento L522-523 → caso `git-deploy`. Labels L966, L1148, L1482 → badge "🔀 Git". |
+| `ProductBlogPublisherPanel.tsx` | Tipo L25 → incluir `'git-deploy'`. Filtro L111-115 → incluir `git-deploy`. |
+| `CompanyProfileManager.tsx` | Tipo L83 → incluir `'git-deploy'`. |
+
+**4. Secret necessário**
+- `GITHUB_DEPLOY_TOKEN`: Personal Access Token com permissão `contents:write` no repo SmartDentUSA/landing-craftsman-76
+
+**5. Dados no banco**
+- No `seo_domains` do `company_profile`, para smartdent.com.br: mudar `publish_method` de `ftp` para `git-deploy`, adicionar `git_repo: "SmartDentUSA/landing-craftsman-76"`, `git_branch: "main"`, `git_base_path: "public"`
+
+### O que NÃO muda
+- Domínios Cloudflare permanecem inalterados
+- Edge functions FTP existentes permanecem
+- Nenhuma tabela alterada
 
