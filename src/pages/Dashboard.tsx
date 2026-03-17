@@ -2,7 +2,7 @@ import { ContentQualityDashboard } from "@/components/ContentQualityDashboard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FileText, Copy, Edit, ExternalLink, MoreVertical, Trash2, Shield, PenTool, Database, Globe, Upload, Loader2, CloudOff } from "lucide-react";
+import { Plus, FileText, Copy, Edit, ExternalLink, MoreVertical, Trash2, Shield, PenTool, Database, Globe, Upload, Loader2, CloudOff, Download } from "lucide-react";
 import { CompanyReviewsManager } from "@/components/CompanyReviewsManager";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
@@ -441,6 +441,37 @@ const DashboardContent = () => {
     }
   };
 
+  const handleDownloadPublishedHTML = async (lpId: string, lpName: string) => {
+    try {
+      const { data } = await supabase
+        .from('cloned_landing_pages')
+        .select('transformed_html, original_html')
+        .eq('source_landing_page_id', lpId)
+        .eq('publish_status', 'published')
+        .limit(1)
+        .maybeSingle();
+      
+      const html = data?.transformed_html || data?.original_html;
+      if (!html) {
+        toast({ title: 'HTML não encontrado', description: 'Nenhum HTML publicado encontrado para esta LP.', variant: 'destructive' });
+        return;
+      }
+      
+      const slug = lpName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${slug}.html`;
+      a.click();
+      URL.revokeObjectURL(url);
+      
+      toast({ title: '✅ HTML baixado!', description: `Arquivo ${slug}.html salvo.` });
+    } catch (err: any) {
+      toast({ title: 'Erro ao baixar HTML', description: err.message, variant: 'destructive' });
+    }
+  };
+
   const getStatusColor = (status: string) => {
     return status === 'approved' ? 'success' : 'secondary';
   };
@@ -674,18 +705,29 @@ const DashboardContent = () => {
                       </>
                     )}
                     {publishedMap[landingPage.id]?.publish_status === 'published' && (
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleUnpublish(landingPage.id)}
-                        disabled={unpublishingId === landingPage.id}
-                      >
-                        {unpublishingId === landingPage.id 
-                          ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> 
-                          : <CloudOff className="h-4 w-4 mr-2" />
-                        }
-                        Despublicar
-                      </Button>
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDownloadPublishedHTML(landingPage.id, landingPage.name)}
+                          className="border-primary/30 text-primary hover:bg-primary/10"
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Baixar HTML
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleUnpublish(landingPage.id)}
+                          disabled={unpublishingId === landingPage.id}
+                        >
+                          {unpublishingId === landingPage.id 
+                            ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> 
+                            : <CloudOff className="h-4 w-4 mr-2" />
+                          }
+                          Despublicar
+                        </Button>
+                      </>
                     )}
                     
                     <DropdownMenu>
