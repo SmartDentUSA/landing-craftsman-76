@@ -17,8 +17,8 @@ import { generateProductItemListSchema, convertToItemListProducts, type ItemList
 // ✅ FASE 8: Video Schema Helper - re-export do systemBIntegration usa este helper
 // ✅ FASE 9: BreadcrumbList Schema Helper centralizado
 import { generateSolutionBreadcrumbs } from '../_shared/breadcrumb-schema-helper.ts';
-// ✅ TRACKING: GTM, GA4, Meta Pixel, TikTok Pixel
-import { generateTrackingHeadScripts, generateGTMNoScript, getTrackingSummary, type TrackingPixels } from '../_shared/tracking-injector.ts';
+// ✅ TRACKING v2.0: GTM, GA4, Meta Pixel, TikTok Pixel
+import { generateTrackingHeadScripts, generateGTMNoScript, generateTrackingDebugComment, getTrackingSummary, type TrackingPixels } from '../_shared/tracking-injector.ts';
 // ✅ FASE 10: Authority Data Helper completo
 import { 
   type AuthorityData,
