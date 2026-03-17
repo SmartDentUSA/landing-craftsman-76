@@ -233,6 +233,23 @@ export function LPPublishDialog({ open, onOpenChange, landingPage }: LPPublishDi
         description: `"${landingPage.name}" está sendo publicada em ${selectedDomain}${pagePath}`,
       });
 
+      // Fire-and-forget: republish all other pages to update nav links
+      if (!isHomepage) {
+        supabase.functions.invoke('republish-domain-pages', {
+          body: { domain: selectedDomain, excludeLpId: clonedLPId },
+        }).then((res) => {
+          if (res.error) {
+            console.warn('⚠️ Republish background failed:', res.error);
+          } else {
+            console.log('🔄 Republish background completed:', res.data);
+            toast({
+              title: '🔄 Navegação atualizada',
+              description: 'Todas as páginas do domínio foram atualizadas com os novos links.',
+            });
+          }
+        });
+      }
+
       onOpenChange(false);
     } catch (error: any) {
       console.error('Erro ao publicar:', error);
