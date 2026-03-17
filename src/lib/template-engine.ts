@@ -1520,7 +1520,34 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         .faq-answer { display: none; padding: 0 1rem 1rem; color: #555; }
         .faq-item.active .faq-answer { display: block; }
         .faq-icon { font-size: 1.25rem; transform: rotate(180deg); transition: .2s; }
-        
+
+        /* Google Reviews Section */
+        .reviews-section { padding: 3rem 0; background: var(--background-color); }
+        .reviews-section h2 { text-align: center; margin-bottom: 0.5rem; color: var(--text-color); }
+        .reviews-section .reviews-subtitle { text-align: center; color: var(--secondary-color); margin-bottom: 2rem; font-size: 1rem; }
+        .reviews-section .reviews-aggregate { text-align: center; margin-bottom: 2rem; }
+        .reviews-section .reviews-aggregate .stars { color: #f5a623; font-size: 1.5rem; letter-spacing: 2px; }
+        .reviews-section .reviews-aggregate .rating-text { font-size: 1.1rem; color: var(--text-color); margin-top: 0.25rem; }
+        .reviews-grid { display: grid; grid-template-columns: 1fr; gap: 1.25rem; }
+        @media (min-width: 768px) { .reviews-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (min-width: 992px) { .reviews-grid { grid-template-columns: repeat(3, 1fr); } }
+        .review-card {
+            background: var(--white, #fff); border-radius: 1rem; padding: 1.5rem;
+            border: 1px solid rgba(0,0,0,0.08); box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .review-card:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+        .review-card .review-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; }
+        .review-card .review-avatar {
+            width: 40px; height: 40px; border-radius: 50%;
+            background: var(--primary-color); color: #fff; display: flex; align-items: center;
+            justify-content: center; font-weight: 700; font-size: 1rem; flex-shrink: 0;
+        }
+        .review-card .review-author { font-weight: 600; color: var(--text-color); font-size: 0.95rem; }
+        .review-card .review-stars { color: #f5a623; font-size: 0.9rem; letter-spacing: 1px; }
+        .review-card .review-text { color: var(--secondary-color); font-size: 0.9rem; line-height: 1.5; }
+        .review-card .review-source { margin-top: 0.75rem; font-size: 0.75rem; color: var(--secondary-color); opacity: 0.7; display: flex; align-items: center; gap: 0.25rem; }
+
         /* Knowledge Feed Section */
         .knowledge-feed-section {
           padding: 4rem 0;
@@ -2357,6 +2384,38 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     </section>
     {{/faq_section.has_content}}
     {{/faq_section.visible_any}}
+
+    <!-- Google Reviews Section -->
+    {{#reviews_section.has_reviews}}
+    <section class="reviews-section" id="avaliacoes">
+        <div class="container">
+            <h2>⭐ Avaliações de Clientes</h2>
+            <p class="reviews-subtitle">Veja o que nossos clientes dizem sobre nosso trabalho</p>
+            <div class="reviews-aggregate">
+                <div class="stars">{{reviews_section.stars_display}}</div>
+                <div class="rating-text">{{reviews_section.avg_rating}} de 5 — {{reviews_section.total_reviews}} avaliações</div>
+            </div>
+            <div class="reviews-grid">
+                {{#reviews_section.reviews}}
+                <div class="review-card" itemscope itemtype="https://schema.org/Review">
+                    <div class="review-header">
+                        <div class="review-avatar">{{initial}}</div>
+                        <div>
+                            <div class="review-author" itemprop="author" itemscope itemtype="https://schema.org/Person"><span itemprop="name">{{author_name}}</span></div>
+                            <div class="review-stars">{{stars}}</div>
+                        </div>
+                    </div>
+                    <p class="review-text" itemprop="reviewBody">{{review_text}}</p>
+                    <div class="review-source">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--primary-color)"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                        Google
+                    </div>
+                </div>
+                {{/reviews_section.reviews}}
+            </div>
+        </div>
+    </section>
+    {{/reviews_section.has_reviews}}
 
     <!-- Ofertas Section -->
     {{#offers_section.visible_any}}
@@ -5536,6 +5595,27 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
       if (all_reviews.length === 0) {
         console.warn('⚠️ Nenhum review encontrado, schema não gerado');
       } else {
+        // ✅ Injetar reviews na seção visual do template
+        const generateStars = (rating: number) => '★'.repeat(Math.round(rating)) + '☆'.repeat(5 - Math.round(rating));
+        const totalRating = all_reviews.reduce((sum, r) => sum + (r.rating || 5), 0);
+        const avgRating = (totalRating / all_reviews.length).toFixed(1);
+        
+        processedData.reviews_section = {
+          has_reviews: true,
+          total_reviews: all_reviews.length,
+          avg_rating: avgRating,
+          stars_display: generateStars(parseFloat(avgRating)),
+          reviews: all_reviews.slice(0, 12).map((review: any) => ({
+            author_name: review.author_name || 'Cliente',
+            rating: review.rating || 5,
+            review_text: review.review_text || '',
+            stars: generateStars(review.rating || 5),
+            initial: (review.author_name || 'C').charAt(0).toUpperCase()
+          }))
+        };
+        
+        console.log(`✅ Reviews visuais injetados: ${all_reviews.length} reviews`);
+
         console.log(`📊 Reviews encontrados: ${stats.total} (Google: ${stats.google_approved}, Manual: ${stats.manual}, Vídeo: ${stats.video_testimonial})`);
 
         // Gerar schema

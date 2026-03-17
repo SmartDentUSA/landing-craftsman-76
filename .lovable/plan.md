@@ -1,41 +1,47 @@
 
 
-# Por que as avaliações do Google não aparecem na página
+## Plano: Substituir FTP por Git Deploy (KingHost) para www.smartdent.com.br
 
-## Diagnóstico
+### Contexto da Imagem
+O KingHost Git Deploy usa o repo **SmartDentUSA/landing-craftsman-76** (este projeto Lovable), branch **main**, deploy em **/www/**. Ele cria automaticamente a branch `stable-website`, GitHub Actions e webhook.
 
-Encontrei **dois problemas distintos**:
+### Como funciona o fluxo
 
-### Problema 1: Nenhuma review foi aprovada para esta Landing Page
+```text
+Edge Function gera HTML → Commit via GitHub API no repo (public/blog/...) → Push main → GitHub Actions build → KingHost sync /www/ → www.smartdent.com.br
+```
 
-A tabela `raw_reviews` tem **10+ reviews** no banco de dados, mas a tabela `approved_reviews` está **completamente vazia**. O sistema exige que reviews sejam explicitamente aprovadas (vinculadas a uma landing page) antes de aparecerem. Nenhuma review foi aprovada para a LP `#1 - Institucional`.
+Os arquivos HTML gerados são commitados na pasta `public/` do repo. O Vite copia `public/` para `dist/` no build. O KingHost deploya `dist/` para `/www/`.
 
-### Problema 2: Não existe seção visual de reviews no template
+### Alterações
 
-O template engine (`src/lib/template-engine.ts`) **não possui uma seção HTML visual** para exibir reviews na página. As reviews só são usadas no **JSON-LD Schema** (dados estruturados invisíveis para SEO), mas não há cards, estrelas ou textos de avaliação renderizados visualmente no HTML da página.
+**1. Nova Edge Function: `supabase/functions/publish-git-deploy/index.ts`**
+- Recebe `{ lpId, domain, pagePath, isHomepage }`
+- Busca HTML de `cloned_landing_pages`
+- Usa GitHub API (`PUT /repos/SmartDentUSA/landing-craftsman-76/contents/public{pagePath}`) para commitar o HTML
+- Atualiza `publish_status` para `published`
+- Requer secret `GITHUB_DEPLOY_TOKEN` (Personal Access Token com `contents:write`)
 
-O campo `data.schema.google_reviews` na LP está com `auto_extract: false` e `status: idle` — nunca foi ativado.
+**2. `supabase/config.toml`** — Adicionar `[functions.publish-git-deploy]` com `verify_jwt = true`
 
-## Plano de Correção
+**3. Expandir `publish_method` em 5 arquivos:**
 
-### Etapa 1: Aprovar reviews existentes para esta LP (SQL migration)
+| Arquivo | Mudança |
+|---------|---------|
+| `TrackingSEOTab.tsx` | Tipo L428 → `'cloudflare' \| 'ftp' \| 'git-deploy'`. Adicionar 3a opção "🔀 Git Deploy" no RadioGroup (L434-448). Adicionar seção config Git Deploy com campos `git_repo` (fixo: SmartDentUSA/landing-craftsman-76), `git_branch` (fixo: main), `git_base_path` (fixo: public). |
+| `LPPublishDialog.tsx` | Tipo L20 → incluir `'git-deploy'`. Roteamento L195 → adicionar caso `git-deploy` → `publish-git-deploy`. |
+| `LPClonePanel.tsx` | Tipo L89 → incluir `'git-deploy'`. Filtro L210-214 → incluir `git-deploy`. Roteamento L522-523 → caso `git-deploy`. Labels L966, L1148, L1482 → badge "🔀 Git". |
+| `ProductBlogPublisherPanel.tsx` | Tipo L25 → incluir `'git-deploy'`. Filtro L111-115 → incluir `git-deploy`. |
+| `CompanyProfileManager.tsx` | Tipo L83 → incluir `'git-deploy'`. |
 
-Inserir as 10 reviews existentes em `approved_reviews` vinculadas à LP `5f7bea68-ae2e-4e6f-a725-61f0c1908bba`.
+**4. Secret necessário**
+- `GITHUB_DEPLOY_TOKEN`: Personal Access Token com permissão `contents:write` no repo SmartDentUSA/landing-craftsman-76
 
-### Etapa 2: Criar seção visual de reviews no template engine
+**5. Dados no banco**
+- No `seo_domains` do `company_profile`, para smartdent.com.br: mudar `publish_method` de `ftp` para `git-deploy`, adicionar `git_repo: "SmartDentUSA/landing-craftsman-76"`, `git_branch: "main"`, `git_base_path: "public"`
 
-Adicionar uma nova seção HTML no `src/lib/template-engine.ts` que renderize as reviews visualmente na página, incluindo:
-
-- Cards com nome do autor, nota (estrelas), texto da review
-- Layout responsivo (grid 3 colunas desktop, 1 coluna mobile)
-- Estilo consistente com o design existente (cores `var(--primary-color)`, fontes do template)
-- Dados alimentados pelo campo `data.schema.google_reviews.reviews` ou `data.schema.manual_reviews`
-
-### Etapa 3: Atualizar dados da LP no banco
-
-Atualizar o campo `data->'schema'->'google_reviews'` da LP para incluir as reviews extraídas de `raw_reviews`, com `status: 'synced'`.
-
-### Resultado esperado
-
-Após regenerar a página, uma seção visual "Avaliações de Clientes" aparecerá com as 10 reviews do Google, incluindo estrelas, nomes e textos. O JSON-LD Schema também será populado corretamente para SEO.
+### O que NÃO muda
+- Domínios Cloudflare permanecem inalterados
+- Edge functions FTP existentes permanecem
+- Nenhuma tabela alterada
 
