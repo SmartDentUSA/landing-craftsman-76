@@ -1520,7 +1520,34 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         .faq-answer { display: none; padding: 0 1rem 1rem; color: #555; }
         .faq-item.active .faq-answer { display: block; }
         .faq-icon { font-size: 1.25rem; transform: rotate(180deg); transition: .2s; }
-        
+
+        /* Google Reviews Section */
+        .reviews-section { padding: 3rem 0; background: var(--background-color); }
+        .reviews-section h2 { text-align: center; margin-bottom: 0.5rem; color: var(--text-color); }
+        .reviews-section .reviews-subtitle { text-align: center; color: var(--secondary-color); margin-bottom: 2rem; font-size: 1rem; }
+        .reviews-section .reviews-aggregate { text-align: center; margin-bottom: 2rem; }
+        .reviews-section .reviews-aggregate .stars { color: #f5a623; font-size: 1.5rem; letter-spacing: 2px; }
+        .reviews-section .reviews-aggregate .rating-text { font-size: 1.1rem; color: var(--text-color); margin-top: 0.25rem; }
+        .reviews-grid { display: grid; grid-template-columns: 1fr; gap: 1.25rem; }
+        @media (min-width: 768px) { .reviews-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (min-width: 992px) { .reviews-grid { grid-template-columns: repeat(3, 1fr); } }
+        .review-card {
+            background: var(--white, #fff); border-radius: 1rem; padding: 1.5rem;
+            border: 1px solid rgba(0,0,0,0.08); box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .review-card:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+        .review-card .review-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; }
+        .review-card .review-avatar {
+            width: 40px; height: 40px; border-radius: 50%;
+            background: var(--primary-color); color: #fff; display: flex; align-items: center;
+            justify-content: center; font-weight: 700; font-size: 1rem; flex-shrink: 0;
+        }
+        .review-card .review-author { font-weight: 600; color: var(--text-color); font-size: 0.95rem; }
+        .review-card .review-stars { color: #f5a623; font-size: 0.9rem; letter-spacing: 1px; }
+        .review-card .review-text { color: var(--secondary-color); font-size: 0.9rem; line-height: 1.5; }
+        .review-card .review-source { margin-top: 0.75rem; font-size: 0.75rem; color: var(--secondary-color); opacity: 0.7; display: flex; align-items: center; gap: 0.25rem; }
+
         /* Knowledge Feed Section */
         .knowledge-feed-section {
           padding: 4rem 0;
