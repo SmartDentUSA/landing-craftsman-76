@@ -150,11 +150,15 @@ serve(async (req) => {
           brand: p.brand || null,
         }));
 
-        // Deduplicate by URL
-        const seen = new Set<string>();
+        // Deduplicate by URL and name
+        const seenUrls = new Set<string>();
+        const seenNames = new Set<string>();
         const navItems = rawNavItems.filter((item: any) => {
-          if (seen.has(item.url)) return false;
-          seen.add(item.url);
+          const normUrl = item.url.replace(/\/$/, '');
+          const key = item.name.toLowerCase().trim();
+          if (seenUrls.has(normUrl) || seenNames.has(key)) return false;
+          seenUrls.add(normUrl);
+          seenNames.add(key);
           return true;
         });
 
