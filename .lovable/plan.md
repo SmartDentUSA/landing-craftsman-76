@@ -1,47 +1,43 @@
 
 
-## Plano: Substituir FTP por Git Deploy (KingHost) para www.smartdent.com.br
+# Corrigir Tracking Pixels — Atualizar Banco de Dados
 
-### Contexto da Imagem
-O KingHost Git Deploy usa o repo **SmartDentUSA/landing-craftsman-76** (este projeto Lovable), branch **main**, deploy em **/www/**. Ele cria automaticamente a branch `stable-website`, GitHub Actions e webhook.
+## Causa Raiz
 
-### Como funciona o fluxo
+O banco de dados **nunca foi atualizado** com a configuração correta. Estado atual:
 
-```text
-Edge Function gera HTML → Commit via GitHub API no repo (public/blog/...) → Push main → GitHub Actions build → KingHost sync /www/ → www.smartdent.com.br
+| Campo | Valor atual | Valor necessário |
+|-------|------------|-----------------|
+| `google_tag_manager.enabled` | `false` | `true` |
+| `tiktok_pixel.pixel_id` | `null` | `D05CI83C77UE5QUU9FR0` |
+| `enable_fallback_pixels` | inexistente | `false` (ou `true` se quiser fallback) |
+
+O código nos geradores está correto — todos chamam `generateTrackingHeadScripts()` que verifica `enabled === true` antes de injetar. Como está `false`, retorna string vazia.
+
+## Plano
+
+### Única alteração necessária: UPDATE no banco
+
+Executar via SQL migration:
+
+```sql
+UPDATE company_profile 
+SET tracking_pixels = '{
+  "google_tag_manager": {"enabled": true, "container_id": "GTM-NZ64Q899", "note": "GTM principal - server-side tagging"},
+  "google_analytics": {"enabled": false, "measurement_id": "G-59WWJQN34P", "note": "Gerenciado via GTM"},
+  "meta_pixel": {"enabled": false, "pixel_id": "167413567155597", "note": "Fallback - controlado por enable_fallback_pixels"},
+  "tiktok_pixel": {"enabled": false, "pixel_id": "D05CI83C77UE5QUU9FR0", "note": "Fallback - controlado por enable_fallback_pixels"},
+  "enable_fallback_pixels": false
+}'::jsonb;
 ```
 
-Os arquivos HTML gerados são commitados na pasta `public/` do repo. O Vite copia `public/` para `dist/` no build. O KingHost deploya `dist/` para `/www/`.
+Isso ativa o GTM imediatamente. Os geradores (E-commerce, SPIN, Blog, Clone LP, Git KingHost, FTP) já estão configurados para ler `tracking_pixels` e injetar via o módulo compartilhado.
 
-### Alterações
+### Resultado esperado após o UPDATE
 
-**1. Nova Edge Function: `supabase/functions/publish-git-deploy/index.ts`**
-- Recebe `{ lpId, domain, pagePath, isHomepage }`
-- Busca HTML de `cloned_landing_pages`
-- Usa GitHub API (`PUT /repos/SmartDentUSA/landing-craftsman-76/contents/public{pagePath}`) para commitar o HTML
-- Atualiza `publish_status` para `published`
-- Requer secret `GITHUB_DEPLOY_TOKEN` (Personal Access Token com `contents:write`)
+- **GTM-NZ64Q899** será injetado no `<head>` + noscript após `<body>` em todas as páginas geradas
+- **Meta Pixel + TikTok** ficam prontos mas só injetam se você mudar `enable_fallback_pixels` para `true`
+- **Comentário de debug** aparece no topo do HTML
 
-**2. `supabase/config.toml`** — Adicionar `[functions.publish-git-deploy]` com `verify_jwt = true`
-
-**3. Expandir `publish_method` em 5 arquivos:**
-
-| Arquivo | Mudança |
-|---------|---------|
-| `TrackingSEOTab.tsx` | Tipo L428 → `'cloudflare' \| 'ftp' \| 'git-deploy'`. Adicionar 3a opção "🔀 Git Deploy" no RadioGroup (L434-448). Adicionar seção config Git Deploy com campos `git_repo` (fixo: SmartDentUSA/landing-craftsman-76), `git_branch` (fixo: main), `git_base_path` (fixo: public). |
-| `LPPublishDialog.tsx` | Tipo L20 → incluir `'git-deploy'`. Roteamento L195 → adicionar caso `git-deploy` → `publish-git-deploy`. |
-| `LPClonePanel.tsx` | Tipo L89 → incluir `'git-deploy'`. Filtro L210-214 → incluir `git-deploy`. Roteamento L522-523 → caso `git-deploy`. Labels L966, L1148, L1482 → badge "🔀 Git". |
-| `ProductBlogPublisherPanel.tsx` | Tipo L25 → incluir `'git-deploy'`. Filtro L111-115 → incluir `git-deploy`. |
-| `CompanyProfileManager.tsx` | Tipo L83 → incluir `'git-deploy'`. |
-
-**4. Secret necessário**
-- `GITHUB_DEPLOY_TOKEN`: Personal Access Token com permissão `contents:write` no repo SmartDentUSA/landing-craftsman-76
-
-**5. Dados no banco**
-- No `seo_domains` do `company_profile`, para smartdent.com.br: mudar `publish_method` de `ftp` para `git-deploy`, adicionar `git_repo: "SmartDentUSA/landing-craftsman-76"`, `git_branch: "main"`, `git_base_path: "public"`
-
-### O que NÃO muda
-- Domínios Cloudflare permanecem inalterados
-- Edge functions FTP existentes permanecem
-- Nenhuma tabela alterada
+Nenhum arquivo de código precisa ser alterado — apenas o dado no banco.
 
