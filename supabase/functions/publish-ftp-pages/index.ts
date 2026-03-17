@@ -294,10 +294,13 @@ serve(async (req) => {
       throw new Error(`Incomplete FTP credentials for profile "${ftpProfile}"`);
     }
 
-    // ─── 4. Inject tracking pixels ───
-    const trackingPixels = company?.tracking_pixels;
-    html = injectTrackingPixels(html, trackingPixels);
-    console.log('✅ Tracking pixels injected');
+    // ─── 4. Inject tracking pixels (v2.0 centralizado) ───
+    const trackingPixels = company?.tracking_pixels as TrackingPixels;
+    html = injectTrackingIntoHTML(html, trackingPixels, {
+      generatorName: 'publish-ftp-pages',
+      domain,
+    });
+    console.log('✅ Tracking pixels injected via shared module');
 
     // ─── 4b. Inject nav-data.js script for incremental footer ───
     const navScript = `<script src="/nav-data.js" defer></script>`;
