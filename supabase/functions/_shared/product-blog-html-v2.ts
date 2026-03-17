@@ -19,6 +19,7 @@ import { marked } from "https://esm.sh/marked@12.0.0";
 import { 
   generateTrackingHeadScripts, 
   generateGTMNoScript,
+  generateTrackingDebugComment,
   type TrackingPixels 
 } from './tracking-injector.ts';
 import { 

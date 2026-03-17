@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+// ✅ Tracking v2.0: usar módulo centralizado
+import { injectTrackingIntoHTML, type TrackingPixels } from "../_shared/tracking-injector.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -38,52 +40,7 @@ async function ghFetch(path: string, token: string, options: RequestInit = {}) {
   return JSON.parse(body);
 }
 
-function injectTrackingPixels(html: string, trackingPixels: any): string {
-  if (!trackingPixels || typeof trackingPixels !== 'object') return html;
-
-  const snippets: string[] = [];
-
-  // GTM
-  if (trackingPixels.gtm_id) {
-    snippets.push(`<!-- Google Tag Manager -->
-<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-})(window,document,'script','dataLayer','${trackingPixels.gtm_id}');</script>
-<!-- End Google Tag Manager -->`);
-  }
-
-  // GA4
-  if (trackingPixels.ga4_id) {
-    snippets.push(`<!-- Google Analytics 4 -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=${trackingPixels.ga4_id}"></script>
-<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
-gtag('js',new Date());gtag('config','${trackingPixels.ga4_id}');</script>`);
-  }
-
-  // Meta Pixel
-  if (trackingPixels.meta_pixel_id) {
-    snippets.push(`<!-- Meta Pixel -->
-<script>!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;
-n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;
-s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script',
-'https://connect.facebook.net/en_US/fbevents.js');
-fbq('init','${trackingPixels.meta_pixel_id}');fbq('track','PageView');</script>`);
-  }
-
-  if (snippets.length === 0) return html;
-
-  const injection = snippets.join('\n');
-
-  // Inject before </head>
-  if (html.includes('</head>')) {
-    return html.replace('</head>', `${injection}\n</head>`);
-  }
-  // Fallback: prepend
-  return injection + '\n' + html;
-}
+// ✅ Tracking inline removido — agora usa _shared/tracking-injector.ts
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -123,19 +80,19 @@ serve(async (req) => {
 
     if (!html) throw new Error('No HTML content to publish');
 
-    // 2. Inject tracking pixels from domain config
+    // 2. Inject tracking pixels from company_profile (centralizado)
     const { data: companyData } = await supabase
       .from('company_profile')
-      .select('seo_domains')
+      .select('tracking_pixels, seo_domains')
       .limit(1)
       .maybeSingle();
 
-    if (companyData?.seo_domains && Array.isArray(companyData.seo_domains)) {
-      const domainConfig = (companyData.seo_domains as any[]).find((d: any) => d.domain === domain);
-      if (domainConfig?.tracking_pixels) {
-        console.log('📊 Injecting tracking pixels');
-        html = injectTrackingPixels(html, domainConfig.tracking_pixels);
-      }
+    if (companyData?.tracking_pixels) {
+      console.log('📊 Injecting tracking pixels via shared module');
+      html = injectTrackingIntoHTML(html, companyData.tracking_pixels as TrackingPixels, {
+        generatorName: 'publish-git-kinghost',
+        domain,
+      });
     }
 
     // 3. Inject nav-data.js script tag for incremental footer

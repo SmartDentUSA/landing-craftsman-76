@@ -13,7 +13,7 @@ import { generateFAQPageSchema, type FAQItem } from "../_shared/faq-schema-helpe
 import { generateProductItemListSchema, generateGenericItemListSchema, type ItemListProduct } from "../_shared/itemlist-schema-helper.ts";
 // ✅ FASE 8: VideoObject Schema Helper
 import { generateVideoObjectSchema, extractYouTubeId, getYouTubeThumbnail, getYouTubeEmbedUrl, type VideoSchemaData } from "../_shared/video-schema-helper.ts";
-// ✅ TRACKING: GTM, GA4, Meta Pixel, TikTok Pixel
+// ✅ TRACKING v2.0: GTM, GA4, Meta Pixel, TikTok Pixel
 import { injectTrackingIntoHTML, getTrackingSummary, type TrackingPixels } from "../_shared/tracking-injector.ts";
 // ✅ FASE 10: Authority Data Helper (E-E-A-T, Trust Signals, GEO SEO) - VERSÃO COMPLETA
 import { 

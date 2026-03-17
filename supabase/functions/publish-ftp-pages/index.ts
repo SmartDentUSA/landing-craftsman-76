@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+// ✅ Tracking v2.0: usar módulo centralizado
+import { injectTrackingIntoHTML, type TrackingPixels } from "../_shared/tracking-injector.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -183,48 +185,7 @@ class FTPClient {
 }
 
 // ─── Tracking pixel injection (inline, same as publish-cloudflare-pages) ───
-function injectTrackingPixels(html: string, trackingPixels: any): string {
-  if (!trackingPixels) return html;
-  
-  const scripts: string[] = [];
-  
-  // GTM
-  if (trackingPixels.google_tag_manager?.enabled && trackingPixels.google_tag_manager?.container_id) {
-    const gtmId = trackingPixels.google_tag_manager.container_id;
-    scripts.push(`<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','${gtmId}');</script>`);
-  }
-  
-  // GA4 (only if GTM not active)
-  if (!trackingPixels.google_tag_manager?.enabled && trackingPixels.google_analytics?.enabled && trackingPixels.google_analytics?.measurement_id) {
-    const gaId = trackingPixels.google_analytics.measurement_id;
-    scripts.push(`<script async src="https://www.googletagmanager.com/gtag/js?id=${gaId}"></script><script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${gaId}');</script>`);
-  }
-  
-  // Meta Pixel
-  if (trackingPixels.meta_pixel?.enabled && trackingPixels.meta_pixel?.pixel_id) {
-    const pixelId = trackingPixels.meta_pixel.pixel_id;
-    scripts.push(`<script>!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','${pixelId}');fbq('track','PageView');</script>`);
-  }
-  
-  // TikTok Pixel
-  if (trackingPixels.tiktok_pixel?.enabled && trackingPixels.tiktok_pixel?.pixel_id) {
-    const pixelId = trackingPixels.tiktok_pixel.pixel_id;
-    scripts.push(`<script>!function(w,d,t){w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=[\"page\",\"track\",\"identify\",\"instances\",\"debug\",\"on\",\"off\",\"once\",\"ready\",\"alias\",\"group\",\"enableCookie\",\"disableCookie\"];ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e};ttq.load=function(e,n){var i=\"https://analytics.tiktok.com/i18n/pixel/events.js\";ttq._i=ttq._i||{};ttq._i[e]=[];ttq._i[e]._u=i;ttq._t=ttq._t||{};ttq._t[e]=+new Date;ttq._o=ttq._o||{};ttq._o[e]=n||{};var o=document.createElement(\"script\");o.type=\"text/javascript\";o.async=!0;o.src=i+\"?sdkid=\"+e+\"&lib=\"+t;var a=document.getElementsByTagName(\"script\")[0];a.parentNode.insertBefore(o,a)};ttq.load('${pixelId}');ttq.page()}(window,document,'ttq');</script>`);
-  }
-  
-  if (scripts.length === 0) return html;
-  
-  const trackingBlock = scripts.join('\n');
-  
-  if (html.includes('</head>')) {
-    return html.replace('</head>', `${trackingBlock}\n</head>`);
-  }
-  if (html.includes('</body>')) {
-    return html.replace('</body>', `${trackingBlock}\n</body>`);
-  }
-  
-  return html + trackingBlock;
-}
+// ✅ Tracking inline removido — agora usa _shared/tracking-injector.ts
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -333,10 +294,13 @@ serve(async (req) => {
       throw new Error(`Incomplete FTP credentials for profile "${ftpProfile}"`);
     }
 
-    // ─── 4. Inject tracking pixels ───
-    const trackingPixels = company?.tracking_pixels;
-    html = injectTrackingPixels(html, trackingPixels);
-    console.log('✅ Tracking pixels injected');
+    // ─── 4. Inject tracking pixels (v2.0 centralizado) ───
+    const trackingPixels = company?.tracking_pixels as TrackingPixels;
+    html = injectTrackingIntoHTML(html, trackingPixels, {
+      generatorName: 'publish-ftp-pages',
+      domain,
+    });
+    console.log('✅ Tracking pixels injected via shared module');
 
     // ─── 4b. Inject nav-data.js script for incremental footer ───
     const navScript = `<script src="/nav-data.js" defer></script>`;
