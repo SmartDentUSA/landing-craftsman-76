@@ -1,38 +1,47 @@
 
 
-# Adicionar Toggle de Visualização de Avaliações no HTML
+## Plano: Substituir FTP por Git Deploy (KingHost) para www.smartdent.com.br
 
-## Situação Atual
+### Contexto da Imagem
+O KingHost Git Deploy usa o repo **SmartDentUSA/landing-craftsman-76** (este projeto Lovable), branch **main**, deploy em **/www/**. Ele cria automaticamente a branch `stable-website`, GitHub Actions e webhook.
 
-- Existe um toggle `reviews_enabled` na aba **Schema** do editor, mas ele controla apenas o JSON-LD schema, não a seção visual de avaliações no HTML
-- O template engine (`template-engine.ts`) **sempre** renderiza a seção visual de reviews se existirem reviews no banco — não há como desabilitar
-- O usuário precisa de um controle claro para habilitar/desabilitar a **seção visual** de avaliações no HTML gerado
+### Como funciona o fluxo
 
-## Plano
+```text
+Edge Function gera HTML → Commit via GitHub API no repo (public/blog/...) → Push main → GitHub Actions build → KingHost sync /www/ → www.smartdent.com.br
+```
 
-### 1. Adicionar campo `reviews_section_visible` ao tipo de dados da LP
+Os arquivos HTML gerados são commitados na pasta `public/` do repo. O Vite copia `public/` para `dist/` no build. O KingHost deploya `dist/` para `/www/`.
 
-**Arquivo: `src/pages/Editor.tsx`** (interface principal de dados)
-- Adicionar `reviews_section_visible?: boolean` na interface de dados (nível raiz ou dentro de `seo`)
+### Alterações
 
-### 2. Adicionar toggle visível na aba principal (Básico ou Banner)
+**1. Nova Edge Function: `supabase/functions/publish-git-deploy/index.ts`**
+- Recebe `{ lpId, domain, pagePath, isHomepage }`
+- Busca HTML de `cloned_landing_pages`
+- Usa GitHub API (`PUT /repos/SmartDentUSA/landing-craftsman-76/contents/public{pagePath}`) para commitar o HTML
+- Atualiza `publish_status` para `published`
+- Requer secret `GITHUB_DEPLOY_TOKEN` (Personal Access Token com `contents:write`)
 
-**Arquivo: `src/pages/Editor.tsx`**
-- Adicionar um Card com Switch na aba **Básico** (ou no topo do editor), com label claro:
-  - "Exibir Avaliações de Clientes no HTML"
-  - Descrição: "Quando ativado, a seção de avaliações será incluída na página gerada"
-- Posicionar junto aos outros toggles de seção (vídeo, FAQ, etc.)
+**2. `supabase/config.toml`** — Adicionar `[functions.publish-git-deploy]` com `verify_jwt = true`
 
-### 3. Respeitar o toggle no template engine
+**3. Expandir `publish_method` em 5 arquivos:**
 
-**Arquivo: `src/lib/template-engine.ts`**
-- Na lógica que popula `processedData.reviews_section` (~linha 5603), checar se `data.reviews_section_visible !== false` antes de injetar os dados
-- Se desabilitado, setar `reviews_section.has_reviews = false` para que o template Mustache não renderize a seção
+| Arquivo | Mudança |
+|---------|---------|
+| `TrackingSEOTab.tsx` | Tipo L428 → `'cloudflare' \| 'ftp' \| 'git-deploy'`. Adicionar 3a opção "🔀 Git Deploy" no RadioGroup (L434-448). Adicionar seção config Git Deploy com campos `git_repo` (fixo: SmartDentUSA/landing-craftsman-76), `git_branch` (fixo: main), `git_base_path` (fixo: public). |
+| `LPPublishDialog.tsx` | Tipo L20 → incluir `'git-deploy'`. Roteamento L195 → adicionar caso `git-deploy` → `publish-git-deploy`. |
+| `LPClonePanel.tsx` | Tipo L89 → incluir `'git-deploy'`. Filtro L210-214 → incluir `git-deploy`. Roteamento L522-523 → caso `git-deploy`. Labels L966, L1148, L1482 → badge "🔀 Git". |
+| `ProductBlogPublisherPanel.tsx` | Tipo L25 → incluir `'git-deploy'`. Filtro L111-115 → incluir `git-deploy`. |
+| `CompanyProfileManager.tsx` | Tipo L83 → incluir `'git-deploy'`. |
 
-### Arquivos a editar
+**4. Secret necessário**
+- `GITHUB_DEPLOY_TOKEN`: Personal Access Token com permissão `contents:write` no repo SmartDentUSA/landing-craftsman-76
 
-| Arquivo | Ação |
-|---------|------|
-| `src/pages/Editor.tsx` | Adicionar toggle + campo no estado |
-| `src/lib/template-engine.ts` | Condicionar renderização ao flag |
+**5. Dados no banco**
+- No `seo_domains` do `company_profile`, para smartdent.com.br: mudar `publish_method` de `ftp` para `git-deploy`, adicionar `git_repo: "SmartDentUSA/landing-craftsman-76"`, `git_branch: "main"`, `git_base_path: "public"`
+
+### O que NÃO muda
+- Domínios Cloudflare permanecem inalterados
+- Edge functions FTP existentes permanecem
+- Nenhuma tabela alterada
 

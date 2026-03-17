@@ -140,6 +140,7 @@ interface SEOData {
   intelligent_links?: { [keyword: string]: string };
   manual_reviews_enabled?: boolean;
   video_testimonials_enabled?: boolean;
+  reviews_section_visible?: boolean;
 }
 
 // Schema e Offers para JSON-LD
@@ -383,6 +384,7 @@ interface LandingPageData {
     feed_url: string;
     limit: number;
   };
+  reviews_section_visible?: boolean;
 }
 
 // Função para criar ImageData padrão
@@ -3416,6 +3418,37 @@ const EditorPageContent = () => {
                   </AccordionContent>
                 </AccordionItem>
                 
+                {/* Toggle Avaliações Visíveis */}
+                <AccordionItem value="reviews-visibility">
+                  <AccordionTrigger>
+                    <div className="flex items-center gap-2">
+                      <Star className="h-4 w-4" />
+                      Avaliações de Clientes
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <Card>
+                      <CardContent className="pt-4">
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label>Exibir Avaliações no HTML</Label>
+                            <p className="text-xs text-muted-foreground">
+                              Quando ativado, a seção visual de avaliações será incluída na página gerada
+                            </p>
+                          </div>
+                          <Switch
+                            checked={data.reviews_section_visible !== false}
+                            onCheckedChange={(checked) => {
+                              setData(prev => ({ ...prev, reviews_section_visible: checked }));
+                              dirtyRef.current = true;
+                            }}
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </AccordionContent>
+                </AccordionItem>
+
                 {/* SEO Básico */}
                 <AccordionItem value="seo">
                   <AccordionTrigger>SEO Básico</AccordionTrigger>
