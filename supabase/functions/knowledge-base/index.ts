@@ -1825,9 +1825,11 @@ serve(async (req) => {
 
     // Products
     if (params.include_products) {
+      const essentialColumns = 'id,name,description,category,subcategory,price,promo_price,currency,brand,image_url,images_gallery,product_url,slug,canonical_url,keywords,benefits,features,target_audience,search_intent_keywords,market_keywords,tags,sales_pitch,faq,youtube_videos,workflow_stages,competitors,clinical_brain_rules,anti_hallucination_rules,required_products,forbidden_products,seo_title_override,seo_description_override,approved,use_in_ai,availability,condition,gtin,mpn,google_product_category,display_order,created_at';
+      
       let query = supabase
         .from('products_repository')
-        .select('*')
+        .select(essentialColumns)
         .order('name');
       
       if (params.approved_only) {
@@ -1843,11 +1845,29 @@ serve(async (req) => {
         query = query.range(params.offset, params.offset + (params.limit || 50) - 1);
       }
       
-      const { data: products, error: productsError } = await query;
+      let { data: products, error: productsError } = await query;
       
       if (productsError) {
-        console.error('Error fetching products:', productsError);
-        throw productsError;
+        if (productsError.code === '57014') {
+          // Timeout — retry with minimal columns
+          console.warn('⚠️ Product query timeout, retrying with minimal columns...');
+          const { data: minProducts, error: retryError } = await supabase
+            .from('products_repository')
+            .select('id,name,description,category,subcategory,price,promo_price,brand,keywords,benefits,features,faq,slug,image_url,product_url,approved,use_in_ai,anti_hallucination_rules')
+            .eq('approved', true)
+            .order('name')
+            .limit(100);
+          
+          if (retryError) {
+            console.error('Error on retry fetch:', retryError);
+            throw retryError;
+          }
+          products = minProducts;
+          console.log(`✅ Retry succeeded with ${products?.length || 0} products (minimal columns)`);
+        } else {
+          console.error('Error fetching products:', productsError);
+          throw productsError;
+        }
       }
       
       // Format products to match expected structure

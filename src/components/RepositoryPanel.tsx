@@ -815,7 +815,7 @@ export function RepositoryPanel({
           include_kols: true,
           include_spin_solutions: true,
           approved_only: true,
-          limit: 1000
+          limit: 200
         }
       });
 
