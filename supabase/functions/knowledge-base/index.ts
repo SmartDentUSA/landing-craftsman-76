@@ -1845,11 +1845,29 @@ serve(async (req) => {
         query = query.range(params.offset, params.offset + (params.limit || 50) - 1);
       }
       
-      const { data: products, error: productsError } = await query;
+      let { data: products, error: productsError } = await query;
       
       if (productsError) {
-        console.error('Error fetching products:', productsError);
-        throw productsError;
+        if (productsError.code === '57014') {
+          // Timeout — retry with minimal columns
+          console.warn('⚠️ Product query timeout, retrying with minimal columns...');
+          const { data: minProducts, error: retryError } = await supabase
+            .from('products_repository')
+            .select('id,name,description,category,subcategory,price,promo_price,brand,keywords,benefits,features,faq,slug,image_url,product_url,approved,use_in_ai,anti_hallucination_rules')
+            .eq('approved', true)
+            .order('name')
+            .limit(100);
+          
+          if (retryError) {
+            console.error('Error on retry fetch:', retryError);
+            throw retryError;
+          }
+          products = minProducts;
+          console.log(`✅ Retry succeeded with ${products?.length || 0} products (minimal columns)`);
+        } else {
+          console.error('Error fetching products:', productsError);
+          throw productsError;
+        }
       }
       
       // Format products to match expected structure
