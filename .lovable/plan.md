@@ -1,47 +1,74 @@
 
 
-## Plano: Substituir FTP por Git Deploy (KingHost) para www.smartdent.com.br
+# Fix: Exportação LLM falhando por timeout no banco de dados
 
-### Contexto da Imagem
-O KingHost Git Deploy usa o repo **SmartDentUSA/landing-craftsman-76** (este projeto Lovable), branch **main**, deploy em **/www/**. Ele cria automaticamente a branch `stable-website`, GitHub Actions e webhook.
+## Causa raiz
 
-### Como funciona o fluxo
-
-```text
-Edge Function gera HTML → Commit via GitHub API no repo (public/blog/...) → Push main → GitHub Actions build → KingHost sync /www/ → www.smartdent.com.br
+Os logs da Edge Function `knowledge-base` mostram:
+```
+"canceling statement due to statement timeout"
 ```
 
-Os arquivos HTML gerados são commitados na pasta `public/` do repo. O Vite copia `public/` para `dist/` no build. O KingHost deploya `dist/` para `/www/`.
+A query `SELECT * FROM products_repository` com `limit: 1000` está retornando **todas as colunas** (incluindo campos JSONB massivos como `technical_documents`, `clinical_brain`, `original_data`, etc.), causando timeout no Supabase.
 
-### Alterações
+O cache está expirado (3h TTL), então toda chamada bate direto no banco.
 
-**1. Nova Edge Function: `supabase/functions/publish-git-deploy/index.ts`**
-- Recebe `{ lpId, domain, pagePath, isHomepage }`
-- Busca HTML de `cloned_landing_pages`
-- Usa GitHub API (`PUT /repos/SmartDentUSA/landing-craftsman-76/contents/public{pagePath}`) para commitar o HTML
-- Atualiza `publish_status` para `published`
-- Requer secret `GITHUB_DEPLOY_TOKEN` (Personal Access Token com `contents:write`)
+## Plano de correção
 
-**2. `supabase/config.toml`** — Adicionar `[functions.publish-git-deploy]` com `verify_jwt = true`
+### 1. Otimizar query de produtos — selecionar apenas colunas necessárias
 
-**3. Expandir `publish_method` em 5 arquivos:**
+**Arquivo:** `supabase/functions/knowledge-base/index.ts` (linhas 1828-1831)
 
-| Arquivo | Mudança |
-|---------|---------|
-| `TrackingSEOTab.tsx` | Tipo L428 → `'cloudflare' \| 'ftp' \| 'git-deploy'`. Adicionar 3a opção "🔀 Git Deploy" no RadioGroup (L434-448). Adicionar seção config Git Deploy com campos `git_repo` (fixo: SmartDentUSA/landing-craftsman-76), `git_branch` (fixo: main), `git_base_path` (fixo: public). |
-| `LPPublishDialog.tsx` | Tipo L20 → incluir `'git-deploy'`. Roteamento L195 → adicionar caso `git-deploy` → `publish-git-deploy`. |
-| `LPClonePanel.tsx` | Tipo L89 → incluir `'git-deploy'`. Filtro L210-214 → incluir `git-deploy`. Roteamento L522-523 → caso `git-deploy`. Labels L966, L1148, L1482 → badge "🔀 Git". |
-| `ProductBlogPublisherPanel.tsx` | Tipo L25 → incluir `'git-deploy'`. Filtro L111-115 → incluir `git-deploy`. |
-| `CompanyProfileManager.tsx` | Tipo L83 → incluir `'git-deploy'`. |
+Substituir `select('*')` por uma lista explícita de colunas essenciais para RAG/LLM, excluindo campos pesados desnecessários:
 
-**4. Secret necessário**
-- `GITHUB_DEPLOY_TOKEN`: Personal Access Token com permissão `contents:write` no repo SmartDentUSA/landing-craftsman-76
+```typescript
+const essentialColumns = 'id,name,description,category,subcategory,price,promo_price,currency,brand,image_url,images_gallery,product_url,slug,canonical_url,keywords,benefits,features,target_audience,search_intent_keywords,market_keywords,tags,sales_pitch,faq,youtube_videos,workflow_stages,competitors,clinical_brain_rules,anti_hallucination_rules,required_products,forbidden_products,seo_title_override,seo_description_override,approved,use_in_ai,availability,condition,gtin,mpn,google_product_category,display_order,created_at';
 
-**5. Dados no banco**
-- No `seo_domains` do `company_profile`, para smartdent.com.br: mudar `publish_method` de `ftp` para `git-deploy`, adicionar `git_repo: "SmartDentUSA/landing-craftsman-76"`, `git_branch: "main"`, `git_base_path: "public"`
+let query = supabase
+  .from('products_repository')
+  .select(essentialColumns)
+  .order('name');
+```
 
-### O que NÃO muda
-- Domínios Cloudflare permanecem inalterados
-- Edge functions FTP existentes permanecem
-- Nenhuma tabela alterada
+Isso exclui `original_data`, `technical_documents` (já buscados separadamente), `resource_cta1/2/3`, e outros campos pesados não usados no RAG.
+
+### 2. Reduzir limit padrão no frontend
+
+**Arquivo:** `src/components/RepositoryPanel.tsx` (linha 818)
+
+Mudar `limit: 1000` para `limit: 200` (mais razoável para exportação).
+
+### 3. Adicionar tratamento de timeout com retry
+
+**Arquivo:** `supabase/functions/knowledge-base/index.ts` (linhas 1846-1851)
+
+Adicionar retry com select reduzido caso a primeira query falhe:
+
+```typescript
+let { data: products, error: productsError } = await query;
+
+if (productsError?.code === '57014') {
+  // Timeout — retry com colunas mínimas
+  console.warn('⚠️ Product query timeout, retrying with minimal columns...');
+  const { data: minProducts, error: retryError } = await supabase
+    .from('products_repository')
+    .select('id,name,description,category,price,keywords,benefits,features,slug,image_url,approved')
+    .eq('approved', true)
+    .limit(100);
+  
+  if (retryError) throw retryError;
+  products = minProducts;
+}
+```
+
+### 4. Remover busca duplicada de technical_documents
+
+A query principal já busca tudo com `SELECT *`, e depois linhas 1948-1970 fazem **outra query** para `technical_documents`. Com a otimização do passo 1, essa segunda query se torna o único local onde buscamos docs técnicos — mantê-la mas apenas se necessário.
+
+## Resultado esperado
+
+- Query de produtos reduzida de ~50 colunas para ~35 colunas essenciais
+- Limit reduzido de 1000 para 200
+- Fallback automático em caso de timeout
+- Exportação LLM volta a funcionar
 
