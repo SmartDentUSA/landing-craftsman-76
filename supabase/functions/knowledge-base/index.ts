@@ -1825,9 +1825,11 @@ serve(async (req) => {
 
     // Products
     if (params.include_products) {
+      const essentialColumns = 'id,name,description,category,subcategory,price,promo_price,currency,brand,image_url,images_gallery,product_url,slug,canonical_url,keywords,benefits,features,target_audience,search_intent_keywords,market_keywords,tags,sales_pitch,faq,youtube_videos,workflow_stages,competitors,clinical_brain_rules,anti_hallucination_rules,required_products,forbidden_products,seo_title_override,seo_description_override,approved,use_in_ai,availability,condition,gtin,mpn,google_product_category,display_order,created_at';
+      
       let query = supabase
         .from('products_repository')
-        .select('*')
+        .select(essentialColumns)
         .order('name');
       
       if (params.approved_only) {
