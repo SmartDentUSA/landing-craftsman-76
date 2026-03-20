@@ -1,74 +1,40 @@
 
 
-# Fix: Exportação LLM falhando por timeout no banco de dados
+# Fix: Repositório não carrega — 2 problemas encontrados
 
-## Causa raiz
+## Diagnóstico
 
-Os logs da Edge Function `knowledge-base` mostram:
-```
-"canceling statement due to statement timeout"
-```
+### Problema 1: Tabela `company_profile` tem 2 registros
+Existem 2 linhas:
+- `edeec15d` — "Nova Empresa" (criada em 14/out, 00:26 — registro fantasma)
+- `3b20b85d` — "Smart Dent" (criada em 14/out, 02:15 — o registro real)
 
-A query `SELECT * FROM products_repository` com `limit: 1000` está retornando **todas as colunas** (incluindo campos JSONB massivos como `technical_documents`, `clinical_brain`, `original_data`, etc.), causando timeout no Supabase.
+Isso causa o erro `PGRST116: JSON object requested, multiple (or no) rows returned` que aparece repetidamente nos logs. Qualquer código que use `.single()` ou `.maybeSingle()` na tabela `company_profile` falha ou retorna resultado inesperado.
 
-O cache está expirado (3h TTL), então toda chamada bate direto no banco.
+### Problema 2: Query de produtos usa `SELECT *` com join de `variations`
+O `RepositoryPanel.tsx` faz `select('*, variations')` sem limitar colunas, puxando campos JSONB pesados (`original_data`, `technical_documents`, `clinical_brain`, etc.) de 120+ produtos. Isso causa timeout (erro `57014`) no Supabase, como já visto nos logs do `save-landing-page`.
 
 ## Plano de correção
 
-### 1. Otimizar query de produtos — selecionar apenas colunas necessárias
+### Etapa 1: Remover registro duplicado de `company_profile`
+SQL migration para deletar o registro "Nova Empresa" (`id = edeec15d-4147-4382-bda4-e640e243ed19`), mantendo apenas o "Smart Dent".
 
-**Arquivo:** `supabase/functions/knowledge-base/index.ts` (linhas 1828-1831)
+### Etapa 2: Otimizar query de produtos no RepositoryPanel
+**Arquivo:** `src/components/RepositoryPanel.tsx` (linhas 364-371)
 
-Substituir `select('*')` por uma lista explícita de colunas essenciais para RAG/LLM, excluindo campos pesados desnecessários:
+Substituir `select('*, variations')` por uma lista explícita de colunas necessárias para o painel, excluindo campos pesados como `original_data`, `technical_documents`, `clinical_brain`:
 
 ```typescript
-const essentialColumns = 'id,name,description,category,subcategory,price,promo_price,currency,brand,image_url,images_gallery,product_url,slug,canonical_url,keywords,benefits,features,target_audience,search_intent_keywords,market_keywords,tags,sales_pitch,faq,youtube_videos,workflow_stages,competitors,clinical_brain_rules,anti_hallucination_rules,required_products,forbidden_products,seo_title_override,seo_description_override,approved,use_in_ai,availability,condition,gtin,mpn,google_product_category,display_order,created_at';
-
-let query = supabase
+const { data, error } = await supabase
   .from('products_repository')
-  .select(essentialColumns)
-  .order('name');
+  .select('id,name,description,category,subcategory,price,promo_price,currency,brand,image_url,images_gallery,product_url,slug,canonical_url,keywords,benefits,features,target_audience,search_intent_keywords,market_keywords,tags,sales_pitch,faq,youtube_videos,instagram_videos,technical_videos,testimonial_videos,video_captions,technical_specifications,bot_trigger_words,approved,use_in_ai,availability,condition,gtin,mpn,google_product_category,display_order,created_at,selected,show_in_resources,resource_cta1,resource_cta2,resource_cta3,offer_discount_cta,individual_blog_content,seo_title_override,seo_description_override,ai_generated_keywords,ai_generated_category,stock_managed,stock_quantity,min_order_quantity,max_order_quantity,variations')
+  .eq('approved', showUnapproved ? false : true)
+  .order('display_order', { ascending: true });
 ```
 
-Isso exclui `original_data`, `technical_documents` (já buscados separadamente), `resource_cta1/2/3`, e outros campos pesados não usados no RAG.
-
-### 2. Reduzir limit padrão no frontend
-
-**Arquivo:** `src/components/RepositoryPanel.tsx` (linha 818)
-
-Mudar `limit: 1000` para `limit: 200` (mais razoável para exportação).
-
-### 3. Adicionar tratamento de timeout com retry
-
-**Arquivo:** `supabase/functions/knowledge-base/index.ts` (linhas 1846-1851)
-
-Adicionar retry com select reduzido caso a primeira query falhe:
-
-```typescript
-let { data: products, error: productsError } = await query;
-
-if (productsError?.code === '57014') {
-  // Timeout — retry com colunas mínimas
-  console.warn('⚠️ Product query timeout, retrying with minimal columns...');
-  const { data: minProducts, error: retryError } = await supabase
-    .from('products_repository')
-    .select('id,name,description,category,price,keywords,benefits,features,slug,image_url,approved')
-    .eq('approved', true)
-    .limit(100);
-  
-  if (retryError) throw retryError;
-  products = minProducts;
-}
-```
-
-### 4. Remover busca duplicada de technical_documents
-
-A query principal já busca tudo com `SELECT *`, e depois linhas 1948-1970 fazem **outra query** para `technical_documents`. Com a otimização do passo 1, essa segunda query se torna o único local onde buscamos docs técnicos — mantê-la mas apenas se necessário.
-
-## Resultado esperado
-
-- Query de produtos reduzida de ~50 colunas para ~35 colunas essenciais
-- Limit reduzido de 1000 para 200
-- Fallback automático em caso de timeout
-- Exportação LLM volta a funcionar
+### Arquivos a editar
+| Arquivo | Acao |
+|---------|------|
+| SQL Migration | Deletar registro "Nova Empresa" duplicado |
+| `src/components/RepositoryPanel.tsx` | Otimizar select de produtos |
 
