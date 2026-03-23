@@ -25,8 +25,8 @@ window.__NAV_DATA__ = [
   nav.appendChild(title);
   var links = document.createElement('div');
   links.style.cssText = 'display:flex;flex-wrap:wrap;justify-content:center;gap:8px;';
-  var currentUrl = window.location.href.replace(/\/$/, '');
-  data.forEach(function(item) {
+   var currentUrl = window.location.href.replace(/\/$/, '');
+   data.forEach(function(item) {
     if (item.url.replace(/\/$/, '') === currentUrl) return;
     var a = document.createElement('a');
     a.href = item.url;
@@ -41,24 +41,29 @@ window.__NAV_DATA__ = [
   if (existing) existing.remove();
   var footer = document.querySelector('footer');
   if (footer) {
-    var socialBlock = footer.querySelector('.footer-social-inline');
-    if (socialBlock) {
-      socialBlock.parentNode.insertBefore(nav, socialBlock.nextSibling);
-    } else {
-      var copyright = null;
-      var allEls = footer.querySelectorAll('*');
-      for (var i = 0; i < allEls.length; i++) {
-        var txt = allEls[i].textContent || '';
-        if ((txt.indexOf('©') !== -1 || txt.toLowerCase().indexOf('direitos') !== -1) && allEls[i].children.length === 0) {
-          copyright = allEls[i];
+    var copyright = null;
+    var allEls = footer.querySelectorAll('*');
+    for (var i = 0; i < allEls.length; i++) {
+      var txt = allEls[i].textContent || '';
+      if ((txt.indexOf('©') !== -1 || txt.toLowerCase().indexOf('direitos') !== -1) && allEls[i].children.length === 0) {
+        copyright = allEls[i];
+        break;
+      }
+    }
+    if (!copyright) {
+      var directChildren = footer.children;
+      for (var j = directChildren.length - 1; j >= 0; j--) {
+        var t = directChildren[j].textContent || '';
+        if (t.indexOf('©') !== -1 || t.toLowerCase().indexOf('direitos') !== -1) {
+          copyright = directChildren[j];
           break;
         }
       }
-      if (copyright) {
-        copyright.parentNode.insertBefore(nav, copyright);
-      } else {
-        footer.appendChild(nav);
-      }
+    }
+    if (copyright) {
+      copyright.parentNode.insertBefore(nav, copyright);
+    } else {
+      footer.appendChild(nav);
     }
   } else {
     document.body.appendChild(nav);
