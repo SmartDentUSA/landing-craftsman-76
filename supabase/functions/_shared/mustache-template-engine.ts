@@ -844,6 +844,16 @@ function renderFullTemplate(data: TemplateData, schemas: Record<string, string>)
       });
     });
   </script>
+  ${company.wikidata_id ? `<script type="application/ld+json">
+${JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "Thing",
+  "@id": `${company.website_url || 'https://smartdent.com.br'}/#smartdent`,
+  "sameAs": `https://www.wikidata.org/wiki/${company.wikidata_id}`,
+  "name": company.company_name,
+  "description": (company.company_description || '').substring(0, 200)
+}, null, 2)}
+</script>` : ''}
 </body>
 </html>`;
 }
