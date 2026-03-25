@@ -77,6 +77,7 @@ export interface CompanyTemplateData {
   };
   seo_domains?: Array<{ domain: string; name: string }>;
   opening_hours?: string; // Ex: "Mo-Fr 08:00-18:00"
+  wikidata_id?: string;
 }
 
 export interface AuthorTemplateData {
