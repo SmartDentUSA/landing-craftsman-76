@@ -866,6 +866,10 @@ function generateProductBlogHTML(options: {
   <meta name="author" content="${escapeHtml(companyName)}">
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="${escapeHtml(canonicalUrl)}">
+  ${companyProfile?.wikidata_id ? `
+  <!-- Wikidata Entity Integration -->
+  <meta name="wikidata-id" content="${escapeHtml(companyProfile.wikidata_id)}">
+  <link rel="alternate" type="application/ld+json" href="https://www.wikidata.org/wiki/Special:EntityData/${escapeHtml(companyProfile.wikidata_id)}.json">` : ''}
   
   <!-- ═══════════════════════════════════════════════════════════ -->
   <!-- META TAGS PARA IA GENERATIVA (SGE/AEO) -->
