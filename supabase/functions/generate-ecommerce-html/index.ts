@@ -1685,13 +1685,27 @@ function buildSEOHead(product: any, company?: any): string {
   
   <!-- Product Schema JSON-LD -->
   <script type="application/ld+json">
-  ${generateProductSchema(product)}
-  </script>
-  
-  <!-- FAQPage Schema JSON-LD -->
+  <!-- Product + FAQ Schema JSON-LD (unified @graph) -->
   ${(() => {
+    const productSchemaStr = generateProductSchema(product);
     const faqSchema = generateFAQSchema(product);
-    return faqSchema ? `<script type="application/ld+json">\n  ${faqSchema}\n  </script>` : '';
+    try {
+      const productObj = JSON.parse(productSchemaStr);
+      const items: any[] = [];
+      // Remove @context from product
+      const { '@context': _, ...productRest } = productObj;
+      items.push(productRest);
+      if (faqSchema) {
+        const faqObj = JSON.parse(faqSchema);
+        const { '@context': _2, ...faqRest } = faqObj;
+        items.push(faqRest);
+      }
+      return `<script type="application/ld+json">\n  ${JSON.stringify({ "@context": "https://schema.org", "@graph": items }, null, 2)}\n  </script>`;
+    } catch (e) {
+      // Fallback: separate blocks
+      return `<script type="application/ld+json">\n  ${productSchemaStr}\n  </script>` + 
+        (faqSchema ? `\n  <script type="application/ld+json">\n  ${faqSchema}\n  </script>` : '');
+    }
   })()}
   
   <!-- ✅ Tracking Pixels (GTM, GA4, Meta, TikTok) -->
