@@ -2614,6 +2614,20 @@ function buildEcommerceHTML(
   // ✅ Fechar <article> + <main> wrapper semântico
   html += `\n</article>\n</main>`;
 
+  // 🧠 Entity Linking Thing (Wikidata) before closing
+  if (companyData?.wikidata_id) {
+    html += `\n<script type="application/ld+json">
+${JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "Thing",
+  "@id": `${companyData?.website_url || 'https://smartdent.com.br'}/#smartdent`,
+  "sameAs": `https://www.wikidata.org/wiki/${companyData.wikidata_id}`,
+  "name": companyName,
+  "description": (companyData?.company_description || '').substring(0, 200)
+}, null, 2)}
+</script>`;
+  }
+
   console.log('✅ SPIN Design System aplicado ao HTML final');
   console.log('✅ [E-commerce] JSON-LD com WebPage + Product + mainEntity/about/mentions + DefinedTermSet injetado');
   console.log('🤖 [AI-Readiness] AI Summary, LLM Knowledge Layer, Entity Index injetados');
