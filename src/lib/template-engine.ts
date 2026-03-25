@@ -5067,6 +5067,16 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
           "item": crumb.url
         }))
       });
+    } else if (processedData.canonical_url && processedData.seo_title) {
+      // ✅ Auto-generate minimal breadcrumb [Home → Current Page]
+      const baseUrl = processedData.canonical_url.split('/').slice(0, 3).join('/');
+      schemaGraph.push({
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": baseUrl },
+          { "@type": "ListItem", "position": 2, "name": processedData.seo_title }
+        ]
+      });
     }
 
     // Adicionar WebPage Schema
@@ -5660,10 +5670,27 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
           const sizeKB = estimateJsonSizeKB(JSON.parse(reviewsSchema));
           console.log(`✅ Schema de reviews gerado: ${sizeKB.toFixed(2)}KB`);
 
-          // Adicionar ao schema_json_ld existente
+          // Adicionar ao schema_json_ld existente — unificando no @graph
           if (processedData.schema_json_ld) {
-            // Se já existe schema, combinar
-            processedData.schema_json_ld += '\n' + reviewsSchema;
+            try {
+              const existing = JSON.parse(processedData.schema_json_ld);
+              const reviewsParsed = JSON.parse(reviewsSchema);
+              if (existing['@graph'] && reviewsParsed['@graph']) {
+                existing['@graph'].push(...reviewsParsed['@graph']);
+              } else if (existing['@graph']) {
+                const { '@context': _, ...rest } = reviewsParsed;
+                existing['@graph'].push(rest);
+              } else {
+                // Fallback: concatenate
+                processedData.schema_json_ld += '\n' + reviewsSchema;
+                console.log('✅ Reviews schema concatenado (fallback)');
+                return;
+              }
+              processedData.schema_json_ld = JSON.stringify(existing, null, 2);
+            } catch (e) {
+              // Fallback if parse fails
+              processedData.schema_json_ld += '\n' + reviewsSchema;
+            }
           } else {
             processedData.schema_json_ld = reviewsSchema;
           }
