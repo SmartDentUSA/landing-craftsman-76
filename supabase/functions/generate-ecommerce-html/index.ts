@@ -1609,7 +1609,7 @@ function buildSEOHead(product: any, company?: any): string {
   const aiTopic = aiTopicKeywords.length > 0 ? aiTopicKeywords.join(', ') : product.name;
   
   return `<!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" itemscope itemtype="https://schema.org/WebPage">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1673,6 +1673,10 @@ function buildSEOHead(product: any, company?: any): string {
   
   <!-- ✅ FASE 10: Authority Meta Tags (Twitter, Facebook, Expertise) -->
   ${currentAuthorityData ? generateAuthorityMetaTags(currentAuthorityData) : ''}
+  
+  <!-- Wikidata Entity Integration -->
+  ${companyData?.wikidata_id ? `<meta name="wikidata-id" content="${companyData.wikidata_id}">
+  <link rel="alternate" type="application/ld+json" href="https://www.wikidata.org/wiki/Special:EntityData/${companyData.wikidata_id}.json">` : ''}
   
   <!-- Google Fonts Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
