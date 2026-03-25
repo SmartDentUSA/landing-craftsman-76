@@ -17,7 +17,7 @@ export function generateSpeakableSpecification(cssSelectors: string[] = []): obj
     "@type": "SpeakableSpecification",
     "cssSelector": cssSelectors.length > 0 
       ? cssSelectors 
-      : [
+       : [
           "h1", 
           ".banner-title", 
           ".banner-subtitle",
@@ -26,9 +26,15 @@ export function generateSpeakableSpecification(cssSelectors: string[] = []): obj
           ".blog-content p:first-of-type", 
           "article h1", 
           "article h2",
+          "article p:first-of-type",
           ".offers-section h2",
           ".faq-section h2",
-          ".solutions-section h2"
+          ".solutions-section h2",
+          ".reviews-section h2",
+          ".knowledge-feed h2",
+          ".footer .footer-company-name",
+          ".spin-hero h1",
+          ".product-title"
         ]
   };
 }
