@@ -6143,6 +6143,10 @@ export const generateBlogHTML = (blogData: any, landingPageData: any) => {
     <meta name="expertise" content="${founderTitle} - ${companyName}">
     ${cp.brand_values ? `<meta name="brand-values" content="${cp.brand_values}">` : ''}
     
+    <!-- ✅ Wikidata Entity Integration -->
+    ${blogWikidataId ? `<meta name="wikidata-id" content="${blogWikidataId}">
+    <link rel="alternate" type="application/ld+json" href="https://www.wikidata.org/wiki/Special:EntityData/${blogWikidataId}.json">` : ''}
+    
     <!-- ✅ Geo Location Tags -->
     <meta name="geo.region" content="${geoRegion}">
     ${geoPlacename ? `<meta name="geo.placename" content="${geoPlacename}">` : ''}
