@@ -2189,6 +2189,22 @@ function injectSEO(
     }
   }
   
+  // 🧠 Entity Linking Thing (Wikidata) before </body>
+  if (companyData?.wikidata_id) {
+    const entityThingBlock = `<script type="application/ld+json">
+${JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "Thing",
+  "@id": `${websiteUrl}/#smartdent`,
+  "sameAs": `https://www.wikidata.org/wiki/${companyData.wikidata_id}`,
+  "name": company,
+  "description": (description || '').substring(0, 200)
+}, null, 2)}
+</script>`;
+    result = result.replace('</body>', `${entityThingBlock}\n</body>`);
+    console.log('🧠 [Wikidata] Entity Thing block injected');
+  }
+  
   console.log(`📝 SEO Premium v3.0 injected (FASES 1-10): ${title}`);
   
   return result;
