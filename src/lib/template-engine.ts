@@ -3819,7 +3819,20 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
     ? `<script type="application/ld+json" data-ai-hint="entity-index">${JSON.stringify({ "@type": "ItemList", "name": "Entidades Relacionadas", "numberOfItems": entityJsonLdItems.length, "itemListElement": entityJsonLdItems.map((e, i) => ({ "@type": "ListItem", "position": i + 1, "item": { "@type": e.type, "name": e.name } })) })}</script>`
     : '';
 
-  // Processa os dados para adicionar os ícones SVG corretos e lógica de duas colunas
+  // 🧠 Wikidata Entity Integration
+  const wikidataId = data.company_profile?.wikidata_id || '';
+  const entityThingBlock = wikidataId && data.company_profile?.company_name
+    ? JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "Thing",
+        "@id": `${data.company_profile?.website_url || 'https://smartdent.com.br'}/#smartdent`,
+        "sameAs": `https://www.wikidata.org/wiki/${wikidataId}`,
+        "name": data.company_profile.company_name,
+        "description": (data.company_profile.company_description || '').substring(0, 200)
+      }, null, 2)
+    : '';
+
+
   const processedData = {
     ...data,
     // 🤖 AI-Readiness Blocks
