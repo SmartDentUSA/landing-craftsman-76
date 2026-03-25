@@ -31,7 +31,7 @@ const SOCIAL_ICONS: Record<string, string> = {
 
 // Template HTML base
 const TEMPLATE_HTML = `<!DOCTYPE html>
-<html lang="pt-br" translate="no">
+<html lang="pt-br" translate="no" itemscope itemtype="https://schema.org/WebPage">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -84,6 +84,10 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     
     <!-- Entity Reference Meta Tags (Knowledge System) -->
     {{{entity_reference_metas}}}
+    
+    <!-- Wikidata Entity Integration -->
+    {{#wikidata_id}}<meta name="wikidata-id" content="{{wikidata_id}}">
+    <link rel="alternate" type="application/ld+json" href="https://www.wikidata.org/wiki/Special:EntityData/{{wikidata_id}}.json">{{/wikidata_id}}
     
     <!-- Geo Location Tags (Local SEO) -->
     {{#geo_region}}<meta name="geo.region" content="{{geo_region}}">{{/geo_region}}
@@ -2602,6 +2606,13 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     
     <!-- 🧠 Entity Index JSON-LD (ItemList) -->
     {{{entity_index_jsonld_block}}}
+    
+    <!-- 🧠 Entity Linking Thing (Wikidata) -->
+    {{#entity_thing_block}}
+    <script type="application/ld+json">
+    {{{entity_thing_block}}}
+    </script>
+    {{/entity_thing_block}}
     
       </article>
     
