@@ -865,7 +865,7 @@ export function generateLandingPageHTML(
   };
 
   return `<!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" itemscope itemtype="https://schema.org/WebPage">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -914,6 +914,10 @@ export function generateLandingPageHTML(
   ${solution.metadata?.artifact_chain?.timestamp ? `<meta name="content-generated" content="${solution.metadata.artifact_chain.timestamp}">` : ''}
   <link rel="canonical" href="${escapeHtml(canonicalUrl)}">
   <meta name="robots" content="index, follow">
+  ${company?.wikidata_id ? `
+  <!-- Wikidata Entity Integration -->
+  <meta name="wikidata-id" content="${escapeHtml(company.wikidata_id)}">
+  <link rel="alternate" type="application/ld+json" href="https://www.wikidata.org/wiki/Special:EntityData/${escapeHtml(company.wikidata_id)}.json">` : ''}
   
   <!-- ═══════════════════════════════════════════════════════════ -->
   <!-- OPEN GRAPH (Facebook, LinkedIn) -->
@@ -3426,6 +3430,17 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
   
   <!-- ✅ FASE 10: Authority Context Completo (Parcerias, NPS, Videos, Testimonials) -->
   ${authorityData ? generateAuthorityContextHTML(authorityData, videoTestimonials || []) : ''}
+  ${company?.wikidata_id ? `
+  <script type="application/ld+json">
+  ${JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "Thing",
+    "@id": `${company?.website_url || 'https://smartdent.com.br'}/#smartdent`,
+    "sameAs": `https://www.wikidata.org/wiki/${company.wikidata_id}`,
+    "name": sanitizeCompanyName(company?.company_name),
+    "description": (company?.company_description || '').substring(0, 200)
+  }, null, 2)}
+  </script>` : ''}
 </body>
 </html>`;
 }
