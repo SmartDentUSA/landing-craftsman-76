@@ -6528,6 +6528,16 @@ export const generateBlogHTML = (blogData: any, landingPageData: any) => {
             <a href="${landing_page_url}" class="cta-button">Saiba Mais</a>
         </div>
     </div>
+    ${blogWikidataId ? `<script type="application/ld+json">
+    ${JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Thing",
+      "@id": `${baseUrl}/#smartdent`,
+      "sameAs": `https://www.wikidata.org/wiki/${blogWikidataId}`,
+      "name": companyName,
+      "description": (companyDescription || '').substring(0, 200)
+    }, null, 2)}
+    </script>` : ''}
 </body>
 </html>`;
 
