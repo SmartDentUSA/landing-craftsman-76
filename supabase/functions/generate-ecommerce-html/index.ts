@@ -1609,7 +1609,7 @@ function buildSEOHead(product: any, company?: any): string {
   const aiTopic = aiTopicKeywords.length > 0 ? aiTopicKeywords.join(', ') : product.name;
   
   return `<!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" itemscope itemtype="https://schema.org/WebPage">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1674,6 +1674,10 @@ function buildSEOHead(product: any, company?: any): string {
   <!-- ✅ FASE 10: Authority Meta Tags (Twitter, Facebook, Expertise) -->
   ${currentAuthorityData ? generateAuthorityMetaTags(currentAuthorityData) : ''}
   
+  <!-- Wikidata Entity Integration -->
+  ${companyData?.wikidata_id ? `<meta name="wikidata-id" content="${companyData.wikidata_id}">
+  <link rel="alternate" type="application/ld+json" href="https://www.wikidata.org/wiki/Special:EntityData/${companyData.wikidata_id}.json">` : ''}
+  
   <!-- Google Fonts Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1681,13 +1685,27 @@ function buildSEOHead(product: any, company?: any): string {
   
   <!-- Product Schema JSON-LD -->
   <script type="application/ld+json">
-  ${generateProductSchema(product)}
-  </script>
-  
-  <!-- FAQPage Schema JSON-LD -->
+  <!-- Product + FAQ Schema JSON-LD (unified @graph) -->
   ${(() => {
+    const productSchemaStr = generateProductSchema(product);
     const faqSchema = generateFAQSchema(product);
-    return faqSchema ? `<script type="application/ld+json">\n  ${faqSchema}\n  </script>` : '';
+    try {
+      const productObj = JSON.parse(productSchemaStr);
+      const items: any[] = [];
+      // Remove @context from product
+      const { '@context': _, ...productRest } = productObj;
+      items.push(productRest);
+      if (faqSchema) {
+        const faqObj = JSON.parse(faqSchema);
+        const { '@context': _2, ...faqRest } = faqObj;
+        items.push(faqRest);
+      }
+      return `<script type="application/ld+json">\n  ${JSON.stringify({ "@context": "https://schema.org", "@graph": items }, null, 2)}\n  </script>`;
+    } catch (e) {
+      // Fallback: separate blocks
+      return `<script type="application/ld+json">\n  ${productSchemaStr}\n  </script>` + 
+        (faqSchema ? `\n  <script type="application/ld+json">\n  ${faqSchema}\n  </script>` : '');
+    }
   })()}
   
   <!-- ✅ Tracking Pixels (GTM, GA4, Meta, TikTok) -->
@@ -2595,6 +2613,20 @@ function buildEcommerceHTML(
 
   // ✅ Fechar <article> + <main> wrapper semântico
   html += `\n</article>\n</main>`;
+
+  // 🧠 Entity Linking Thing (Wikidata) before closing
+  if (companyData?.wikidata_id) {
+    html += `\n<script type="application/ld+json">
+${JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "Thing",
+  "@id": `${companyData?.website_url || 'https://smartdent.com.br'}/#smartdent`,
+  "sameAs": `https://www.wikidata.org/wiki/${companyData.wikidata_id}`,
+  "name": companyName,
+  "description": (companyData?.company_description || '').substring(0, 200)
+}, null, 2)}
+</script>`;
+  }
 
   console.log('✅ SPIN Design System aplicado ao HTML final');
   console.log('✅ [E-commerce] JSON-LD com WebPage + Product + mainEntity/about/mentions + DefinedTermSet injetado');

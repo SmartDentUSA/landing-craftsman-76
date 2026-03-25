@@ -31,7 +31,7 @@ const SOCIAL_ICONS: Record<string, string> = {
 
 // Template HTML base
 const TEMPLATE_HTML = `<!DOCTYPE html>
-<html lang="pt-br" translate="no">
+<html lang="pt-br" translate="no" itemscope itemtype="https://schema.org/WebPage">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -84,6 +84,10 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     
     <!-- Entity Reference Meta Tags (Knowledge System) -->
     {{{entity_reference_metas}}}
+    
+    <!-- Wikidata Entity Integration -->
+    {{#wikidata_id}}<meta name="wikidata-id" content="{{wikidata_id}}">
+    <link rel="alternate" type="application/ld+json" href="https://www.wikidata.org/wiki/Special:EntityData/{{wikidata_id}}.json">{{/wikidata_id}}
     
     <!-- Geo Location Tags (Local SEO) -->
     {{#geo_region}}<meta name="geo.region" content="{{geo_region}}">{{/geo_region}}
@@ -2603,6 +2607,13 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     <!-- 🧠 Entity Index JSON-LD (ItemList) -->
     {{{entity_index_jsonld_block}}}
     
+    <!-- 🧠 Entity Linking Thing (Wikidata) -->
+    {{#entity_thing_block}}
+    <script type="application/ld+json">
+    {{{entity_thing_block}}}
+    </script>
+    {{/entity_thing_block}}
+    
       </article>
     
     <!-- Footer - Smart Dent SPIN Style with LocalBusiness Microdata -->
@@ -3808,7 +3819,20 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
     ? `<script type="application/ld+json" data-ai-hint="entity-index">${JSON.stringify({ "@type": "ItemList", "name": "Entidades Relacionadas", "numberOfItems": entityJsonLdItems.length, "itemListElement": entityJsonLdItems.map((e, i) => ({ "@type": "ListItem", "position": i + 1, "item": { "@type": e.type, "name": e.name } })) })}</script>`
     : '';
 
-  // Processa os dados para adicionar os ícones SVG corretos e lógica de duas colunas
+  // 🧠 Wikidata Entity Integration
+  const wikidataId = data.company_profile?.wikidata_id || '';
+  const entityThingBlock = wikidataId && data.company_profile?.company_name
+    ? JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "Thing",
+        "@id": `${data.company_profile?.website_url || 'https://smartdent.com.br'}/#smartdent`,
+        "sameAs": `https://www.wikidata.org/wiki/${wikidataId}`,
+        "name": data.company_profile.company_name,
+        "description": (data.company_profile.company_description || '').substring(0, 200)
+      }, null, 2)
+    : '';
+
+
   const processedData = {
     ...data,
     // 🤖 AI-Readiness Blocks
@@ -3821,6 +3845,9 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
     expanded_knowledge_block: expandedKnowledgeBlock,
     citation_block: citationBlock,
     entity_index_jsonld_block: entityIndexJsonldBlock,
+    // 🧠 Wikidata Entity
+    wikidata_id: wikidataId,
+    entity_thing_block: entityThingBlock,
     // 🆕 Hero Image Preload (LCP)
     banner_first_image: data.banner?.images?.[0]?.src || '',
     // 🔧 CORREÇÃO CRÍTICA: Mapear TODOS os campos SEO para nível raiz onde o template espera
@@ -5040,6 +5067,16 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
           "item": crumb.url
         }))
       });
+    } else if (processedData.canonical_url && processedData.seo_title) {
+      // ✅ Auto-generate minimal breadcrumb [Home → Current Page]
+      const baseUrl = processedData.canonical_url.split('/').slice(0, 3).join('/');
+      schemaGraph.push({
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": baseUrl },
+          { "@type": "ListItem", "position": 2, "name": processedData.seo_title }
+        ]
+      });
     }
 
     // Adicionar WebPage Schema
@@ -5633,10 +5670,27 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
           const sizeKB = estimateJsonSizeKB(JSON.parse(reviewsSchema));
           console.log(`✅ Schema de reviews gerado: ${sizeKB.toFixed(2)}KB`);
 
-          // Adicionar ao schema_json_ld existente
+          // Adicionar ao schema_json_ld existente — unificando no @graph
           if (processedData.schema_json_ld) {
-            // Se já existe schema, combinar
-            processedData.schema_json_ld += '\n' + reviewsSchema;
+            try {
+              const existing = JSON.parse(processedData.schema_json_ld);
+              const reviewsParsed = JSON.parse(reviewsSchema);
+              if (existing['@graph'] && reviewsParsed['@graph']) {
+                existing['@graph'].push(...reviewsParsed['@graph']);
+              } else if (existing['@graph']) {
+                const { '@context': _, ...rest } = reviewsParsed;
+                existing['@graph'].push(rest);
+              } else {
+                // Fallback: concatenate
+                processedData.schema_json_ld += '\n' + reviewsSchema;
+                console.log('✅ Reviews schema concatenado (fallback)');
+                return;
+              }
+              processedData.schema_json_ld = JSON.stringify(existing, null, 2);
+            } catch (e) {
+              // Fallback if parse fails
+              processedData.schema_json_ld += '\n' + reviewsSchema;
+            }
           } else {
             processedData.schema_json_ld = reviewsSchema;
           }
@@ -6040,8 +6094,10 @@ export const generateBlogHTML = (blogData: any, landingPageData: any) => {
     ]
   };
 
+  const blogWikidataId = cp.wikidata_id || '';
+
   const blogTemplate = `<!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-br" itemscope itemtype="https://schema.org/WebPage">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -6086,6 +6142,10 @@ export const generateBlogHTML = (blogData: any, landingPageData: any) => {
     <!-- ✅ E-E-A-T Authority -->
     <meta name="expertise" content="${founderTitle} - ${companyName}">
     ${cp.brand_values ? `<meta name="brand-values" content="${cp.brand_values}">` : ''}
+    
+    <!-- ✅ Wikidata Entity Integration -->
+    ${blogWikidataId ? `<meta name="wikidata-id" content="${blogWikidataId}">
+    <link rel="alternate" type="application/ld+json" href="https://www.wikidata.org/wiki/Special:EntityData/${blogWikidataId}.json">` : ''}
     
     <!-- ✅ Geo Location Tags -->
     <meta name="geo.region" content="${geoRegion}">
@@ -6468,6 +6528,16 @@ export const generateBlogHTML = (blogData: any, landingPageData: any) => {
             <a href="${landing_page_url}" class="cta-button">Saiba Mais</a>
         </div>
     </div>
+    ${blogWikidataId ? `<script type="application/ld+json">
+    ${JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Thing",
+      "@id": `${baseUrl}/#smartdent`,
+      "sameAs": `https://www.wikidata.org/wiki/${blogWikidataId}`,
+      "name": companyName,
+      "description": (companyDescription || '').substring(0, 200)
+    }, null, 2)}
+    </script>` : ''}
 </body>
 </html>`;
 

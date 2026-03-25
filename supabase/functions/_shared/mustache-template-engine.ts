@@ -77,6 +77,7 @@ export interface CompanyTemplateData {
   };
   seo_domains?: Array<{ domain: string; name: string }>;
   opening_hours?: string; // Ex: "Mo-Fr 08:00-18:00"
+  wikidata_id?: string;
 }
 
 export interface AuthorTemplateData {
@@ -621,7 +622,7 @@ function renderFullTemplate(data: TemplateData, schemas: Record<string, string>)
   const canonicalUrl = product.canonical_url || `${company.website_url}/${product.slug}`;
 
   return `<!DOCTYPE html>
-<html lang="pt-BR" data-theme="light">
+<html lang="pt-BR" data-theme="light" itemscope itemtype="https://schema.org/WebPage">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -645,15 +646,20 @@ function renderFullTemplate(data: TemplateData, schemas: Record<string, string>)
   <meta name="twitter:description" content="${escapeHtml(metaDescription)}">
   <meta name="twitter:image" content="${escapeHtml(product.image_url || '')}">
   
-  <!-- Schema.org -->
-  <script type="application/ld+json">${schemas.organization}</script>
-  <script type="application/ld+json">${schemas.product}</script>
-  <script type="application/ld+json">${schemas.article}</script>
-  <script type="application/ld+json">${schemas.breadcrumb}</script>
-  ${schemas.faq ? `<script type="application/ld+json">${schemas.faq}</script>` : ''}
-  ${schemas.localBusiness ? `<script type="application/ld+json">${schemas.localBusiness}</script>` : ''}
-  ${schemas.video ? `<script type="application/ld+json">${schemas.video}</script>` : ''}
-  ${schemas.howTo ? `<script type="application/ld+json">${schemas.howTo}</script>` : ''}
+  <!-- Wikidata Entity Integration -->
+  ${company.wikidata_id ? `<meta name="wikidata-id" content="${escapeHtml(company.wikidata_id)}">
+  <link rel="alternate" type="application/ld+json" href="https://www.wikidata.org/wiki/Special:EntityData/${escapeHtml(company.wikidata_id)}.json">` : ''}
+  
+  <!-- Schema.org (unified @graph) -->
+  <script type="application/ld+json">${(() => {
+    const allSchemas = [schemas.organization, schemas.product, schemas.article, schemas.breadcrumb, schemas.faq, schemas.localBusiness, schemas.video, schemas.howTo].filter(Boolean);
+    try {
+      const items = allSchemas.map(s => { const parsed = JSON.parse(s as string); const { '@context': _, ...rest } = parsed; return rest; });
+      return JSON.stringify({ "@context": "https://schema.org", "@graph": items }, null, 2);
+    } catch (e) {
+      return allSchemas.join('</script>\n<script type="application/ld+json">');
+    }
+  })()}</script>
   
   <!-- Tracking -->
   ${trackingScripts.head}
@@ -839,6 +845,16 @@ function renderFullTemplate(data: TemplateData, schemas: Record<string, string>)
       });
     });
   </script>
+  ${company.wikidata_id ? `<script type="application/ld+json">
+${JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "Thing",
+  "@id": `${company.website_url || 'https://smartdent.com.br'}/#smartdent`,
+  "sameAs": `https://www.wikidata.org/wiki/${company.wikidata_id}`,
+  "name": company.company_name,
+  "description": (company.company_description || '').substring(0, 200)
+}, null, 2)}
+</script>` : ''}
 </body>
 </html>`;
 }
