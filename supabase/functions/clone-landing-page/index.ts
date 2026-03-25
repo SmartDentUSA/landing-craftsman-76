@@ -1980,6 +1980,10 @@ function injectSEO(
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
     <meta name="author" content="${company}">
     <meta name="generator" content="Smart Dent LP Clone v3.0">
+    ${companyData?.wikidata_id ? `
+    <!-- Wikidata Entity Integration -->
+    <meta name="wikidata-id" content="${companyData.wikidata_id}">
+    <link rel="alternate" type="application/ld+json" href="https://www.wikidata.org/wiki/Special:EntityData/${companyData.wikidata_id}.json">` : ''}
     
     <!-- ═══════════════════════════════════════════════════════════ -->
     <!-- META TAGS PARA IA GENERATIVA (SGE/AEO) -->
