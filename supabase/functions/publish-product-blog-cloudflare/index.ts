@@ -1954,6 +1954,16 @@ ${JSON.stringify({ "@context": "https://schema.org", "@graph": schemas.map(s => 
   <!-- 🏢 FASE 10: Authority Context COMPLETO (E-E-A-T, Trust Signals, Videos) -->
   <!-- ═══════════════════════════════════════════════════════════ -->
   ${authorityData ? generateAuthorityContextHTML(authorityData, videoTestimonials) : ''}
+  ${companyProfile?.wikidata_id ? `<script type="application/ld+json">
+${JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "Thing",
+  "@id": `${companyProfile?.website_url || 'https://smartdent.com.br'}/#smartdent`,
+  "sameAs": `https://www.wikidata.org/wiki/${companyProfile.wikidata_id}`,
+  "name": companyName,
+  "description": (companyProfile?.company_description || '').substring(0, 200)
+}, null, 2)}
+</script>` : ''}
 </body>
 </html>`;
 }
