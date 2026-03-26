@@ -10,7 +10,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { TagInput } from "@/components/ui/tag-input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Save, Building2, Video, Instagram, Youtube, Search, Plus, Trash2, Activity, Globe, Target, Zap, Calendar, CheckCircle2, Menu, User, Clock, MapPin } from "lucide-react";
+import { Loader2, Save, Building2, Video, Instagram, Youtube, Search, Plus, Trash2, Activity, Globe, Target, Zap, Calendar, CheckCircle2, Menu, User, Clock, MapPin, RefreshCw } from "lucide-react";
+import { syncCompanyToWikidata } from "@/services/wikidata-sync";
 import { SOCIAL_PLATFORMS, SocialIcon } from "@/components/icons/SocialIcons";
 import { VideoSection } from "./VideoSection";
 import { ReviewsSection } from "./ReviewsSection";
@@ -253,6 +254,7 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [wikidataSyncing, setWikidataSyncing] = useState(false);
   const { toast } = useToast();
   const { saveCompanyVideos, loadCompanyVideos, updateCompanyProfile } = useCompanyVideos();
   const { aggregateTargetAudiences, loading: aggregatingAudiences } = useTargetAudienceAggregator();
@@ -525,6 +527,39 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleWikidataSync = async (dryRun = false) => {
+    setWikidataSyncing(true);
+    try {
+      const result = await syncCompanyToWikidata(dryRun);
+      if (result.success && result.report?.company?.wikidataQid) {
+        const qid = result.report.company.wikidataQid;
+        if (qid !== 'DRY_RUN') {
+          setProfile(prev => ({ ...prev, wikidata_id: qid }));
+        }
+        toast({
+          title: dryRun ? 'Simulação Wikidata concluída' : 'Sincronizado com Wikidata',
+          description: dryRun
+            ? `Dry-run OK — QID seria ${qid} (${result.report.company.statementsCreated} statements)`
+            : `Empresa sincronizada: ${qid} (${result.report.company.statementsCreated} statements criados)`,
+        });
+      } else {
+        toast({
+          title: 'Erro ao sincronizar Wikidata',
+          description: result.report?.company?.error ?? result.error ?? 'Erro desconhecido',
+          variant: 'destructive',
+        });
+      }
+    } catch (err) {
+      toast({
+        title: 'Erro ao sincronizar Wikidata',
+        description: err instanceof Error ? err.message : 'Erro desconhecido',
+        variant: 'destructive',
+      });
+    } finally {
+      setWikidataSyncing(false);
     }
   };
 
@@ -886,12 +921,28 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
             {/* Wikidata */}
             <div>
               <Label htmlFor="wikidata_id">Wikidata ID (Entidade de Conhecimento)</Label>
-              <Input
-                id="wikidata_id"
-                value={profile.wikidata_id || ''}
-                onChange={(e) => setProfile(prev => ({...prev, wikidata_id: e.target.value}))}
-                placeholder="Q138636902"
-              />
+              <div className="flex gap-2 mt-1">
+                <Input
+                  id="wikidata_id"
+                  value={profile.wikidata_id || ''}
+                  onChange={(e) => setProfile(prev => ({...prev, wikidata_id: e.target.value}))}
+                  placeholder="Q138636902"
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleWikidataSync(false)}
+                  disabled={wikidataSyncing || saving}
+                  title="Sincronizar empresa com Wikidata"
+                >
+                  {wikidataSyncing
+                    ? <Loader2 className="h-4 w-4 animate-spin" />
+                    : <RefreshCw className="h-4 w-4" />}
+                  <span className="ml-1 hidden sm:inline">Wikidata</span>
+                </Button>
+              </div>
               {profile.wikidata_id && (
                 <p className="text-xs text-muted-foreground mt-1">
                   → <a href={`https://www.wikidata.org/wiki/${profile.wikidata_id}`} target="_blank" rel="noopener" className="underline">Ver no Wikidata</a>
