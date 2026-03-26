@@ -928,7 +928,7 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => handleWikidataSync(false)}
+                  onClick={() => handleWikidataSync()}
                   disabled={wikidataSyncing || saving}
                   title="Sincronizar empresa com Wikidata"
                 >
