@@ -216,7 +216,7 @@ export function RepositoryPanel({
         .from('company_profile')
         .select('*')
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (error && error.code !== 'PGRST116') {
         console.error('Erro ao carregar perfil da empresa:', error);

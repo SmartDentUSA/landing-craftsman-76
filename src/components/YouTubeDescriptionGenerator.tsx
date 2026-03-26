@@ -135,11 +135,11 @@ export const YouTubeDescriptionGenerator: React.FC<YouTubeDescriptionGeneratorPr
         .from('company_profile')
         .select('youtube_company_footer')
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
 
-      const template = data.youtube_company_footer || '';
+      const template = data?.youtube_company_footer || '';
       setCompanyTemplate(template);
       setEditingTemplate(template);
     } catch (error) {
@@ -378,7 +378,7 @@ CENA ${i + 1}:
       const { error } = await supabase
         .from('company_profile')
         .update({ youtube_company_footer: editingTemplate })
-        .eq('id', (await supabase.from('company_profile').select('id').limit(1).single()).data?.id);
+        .eq('id', (await supabase.from('company_profile').select('id').limit(1).maybeSingle()).data?.id);
 
       if (error) throw error;
 

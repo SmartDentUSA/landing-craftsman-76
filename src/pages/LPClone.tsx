@@ -106,7 +106,7 @@ const LPClone = () => {
         .from('company_profile')
         .select('seo_domains, website_url')
         .limit(1)
-        .single();
+        .maybeSingle();
       return data;
     },
   });

@@ -67,7 +67,8 @@ export const GoogleMerchantManager = () => {
       const { data: company } = await supabase
         .from('company_profile')
         .select('company_name, website_url')
-        .single();
+        .limit(1)
+        .maybeSingle();
 
       // ✨ ESTATÍSTICAS GOOGLE MERCHANT COMPLETAS
       const seoEnhancedProducts = products?.filter(p => p.seo_enhanced) || [];

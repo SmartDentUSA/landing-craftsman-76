@@ -201,7 +201,7 @@ export const LPClonePanel = () => {
         .from('company_profile')
         .select('seo_domains')
         .limit(1)
-        .single();
+        .maybeSingle();
       return data;
     },
   });

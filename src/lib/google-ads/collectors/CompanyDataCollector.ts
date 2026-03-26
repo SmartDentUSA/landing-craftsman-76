@@ -9,7 +9,8 @@ export class CompanyDataCollector {
       const { data: companyProfile } = await supabase
         .from('company_profile')
         .select('social_media_links, website_url, instagram_profile, youtube_channel')
-        .single();
+        .limit(1)
+        .maybeSingle();
 
       if (!companyProfile) return [];
 
@@ -65,7 +66,8 @@ export class CompanyDataCollector {
       const { data: companyProfile } = await supabase
         .from('company_profile')
         .select('company_videos')
-        .single();
+        .limit(1)
+        .maybeSingle();
 
       if (!companyProfile?.company_videos) return [];
 
@@ -113,7 +115,8 @@ export class CompanyDataCollector {
       const { data: companyProfile } = await supabase
         .from('company_profile')
         .select('target_audience')
-        .single();
+        .limit(1)
+        .maybeSingle();
 
       if (!companyProfile?.target_audience) return [];
 

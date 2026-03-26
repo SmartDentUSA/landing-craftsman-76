@@ -102,7 +102,7 @@ export const ProductBlogPublisherPanel = () => {
         .from('company_profile')
         .select('seo_domains')
         .limit(1)
-        .single();
+        .maybeSingle();
       return data;
     },
   });
