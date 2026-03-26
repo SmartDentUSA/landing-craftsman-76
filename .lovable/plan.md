@@ -74,3 +74,4 @@ Campos que existem em `products_repository` mas não aparecem no modal
 
 Script que escreve o .MD completo em `/mnt/documents/product-card-mapping.md`.
 
+
