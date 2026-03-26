@@ -271,7 +271,7 @@ async function exportCompanyProfile(supabase: any): Promise<string> {
     .from('company_profile')
     .select('*')
     .limit(1)
-    .single()
+    .maybeSingle()
 
   if (error) throw error
 

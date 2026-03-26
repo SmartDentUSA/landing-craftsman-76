@@ -168,7 +168,7 @@ serve(async (req) => {
       .from('company_profile')
       .select('*')
       .limit(1)
-      .single();
+      .maybeSingle();
 
     // 7. Construir contexto adicional (manual_context)
     const manualContext = solution.manual_context || '';

@@ -220,7 +220,8 @@ serve(async (req) => {
     const { data: companyProfile, error: companyError } = await supabase
       .from('company_profile')
       .select('company_videos, created_at')
-      .single();
+      .limit(1)
+      .maybeSingle();
 
     if (companyError) {
       console.log('No company profile found or error:', companyError);

@@ -244,8 +244,8 @@ export async function fetchLocalBusinessData(supabase: any): Promise<LocalBusine
         seo_service_areas, seo_technical_expertise
       `)
       .limit(1)
-      .single();
-    
+      .maybeSingle();
+
     if (error || !data) {
       console.warn('⚠️ [LocalBusiness] Usando dados padrão Smart Dent (sem dados no banco)');
       return DEFAULT_LOCAL_BUSINESS;

@@ -407,7 +407,7 @@ Deno.serve(async (req) => {
           .from('company_profile')
           .select('company_reviews')
           .limit(1)
-          .single();
+          .maybeSingle();
 
         const currentReviews = currentProfile?.company_reviews || {};
         const manualReviews = currentReviews.manual_reviews || [];

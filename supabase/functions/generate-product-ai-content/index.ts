@@ -348,7 +348,7 @@ async function generateProductBenefits(apiKey: string, product: any, existingBen
     .from('company_profile')
     .select('*')
     .limit(1)
-    .single();
+    .maybeSingle();
   
   let prompt = '';
   
@@ -463,7 +463,7 @@ async function generateProductKeywords(apiKey: string, product: any, existingKey
     .from('company_profile')
     .select('*')
     .limit(1)
-    .single();
+    .maybeSingle();
   
   // FASE 5: Extrair keywords de video_captions + OTIMIZAÇÃO
   const { extractKeywordsFromVideoCaptions, hasCaptions } = await import('../_shared/video-captions-processor.ts');
@@ -644,7 +644,7 @@ async function generateProductFeatures(apiKey: string, product: any, existingFea
     .from('company_profile')
     .select('*')
     .limit(1)
-    .single();
+    .maybeSingle();
   
   let prompt = '';
   

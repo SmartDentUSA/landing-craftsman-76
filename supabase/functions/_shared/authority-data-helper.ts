@@ -168,13 +168,15 @@ export interface VideoTestimonial {
 // FETCH AUTHORITY DATA - VERSÃO COMPLETA
 // ═══════════════════════════════════════════════════════════
 
-export async function fetchAuthorityData(supabase: any): Promise<AuthorityData | null> {
+export async function fetchAuthorityData(supabase: any, userId?: string): Promise<AuthorityData | null> {
   try {
-    const { data: companyProfile, error } = await supabase
+    let query = supabase
       .from('company_profile')
-      .select('*')
-      .limit(1)
-      .single();
+      .select('*');
+    if (userId) {
+      query = query.eq('user_id', userId);
+    }
+    const { data: companyProfile, error } = await query.limit(1).maybeSingle();
     
     if (error || !companyProfile) {
       console.warn('⚠️ [Authority] Não foi possível carregar company_profile:', error?.message);

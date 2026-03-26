@@ -26,14 +26,16 @@ const DEFAULT_RATING: AggregateRatingData = {
  * 2. Cálculo interno de approved_reviews + video_testimonials
  * 3. Valores padrão
  */
-export async function fetchAggregateRating(supabase: any): Promise<AggregateRatingData> {
+export async function fetchAggregateRating(supabase: any, userId?: string): Promise<AggregateRatingData> {
   try {
     // ✅ PRIORIDADE 1: Verificar se há dados diretos do Google no company_profile
-    const { data: companyProfile, error: companyError } = await supabase
+    let cpQuery = supabase
       .from('company_profile')
-      .select('google_aggregate_rating, company_reviews')
-      .limit(1)
-      .single();
+      .select('google_aggregate_rating, company_reviews');
+    if (userId) {
+      cpQuery = cpQuery.eq('user_id', userId);
+    }
+    const { data: companyProfile, error: companyError } = await cpQuery.limit(1).maybeSingle();
 
     // Se tem dados do Google configurados, usar eles
     if (!companyError && companyProfile?.google_aggregate_rating) {

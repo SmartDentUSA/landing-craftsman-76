@@ -133,7 +133,7 @@ serve(async (req) => {
       .from('company_profile')
       .select('*')
       .limit(1)
-      .single();
+      .maybeSingle();
 
     // Get blog content from individual_blog_content
     const blogContent = product.individual_blog_content as any;

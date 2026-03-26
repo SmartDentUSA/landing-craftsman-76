@@ -142,7 +142,7 @@ serve(async (req) => {
         .select('tracking_pixels')
         .order('created_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
       
       if (companyProfile?.tracking_pixels) {
         currentCompanyTrackingPixels = companyProfile.tracking_pixels as TrackingPixels;

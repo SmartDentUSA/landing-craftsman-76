@@ -485,7 +485,7 @@ serve(async (req) => {
         .from('company_profile')
         .select('*')
         .limit(1)
-        .single();
+        .maybeSingle();
       data.company = company;
     }
     

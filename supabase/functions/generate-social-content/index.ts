@@ -60,7 +60,7 @@ serve(async (req) => {
       .from('company_profile')
       .select('*')
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (companyError) {
       console.warn('Dados da empresa não encontrados:', companyError.message);
@@ -499,7 +499,7 @@ async function generateVariationWithApproach(
     .from('company_profile')
     .select('*')
     .limit(1)
-    .single();
+    .maybeSingle();
 
   // Construir prompt com a abordagem específica
   const prompt = buildPromptWithApproach(product, company, type, approach);

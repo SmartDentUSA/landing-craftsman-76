@@ -253,7 +253,7 @@ serve(async (req) => {
       .from('company_profile')
       .select('seo_domains, tracking_pixels')
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (companyError) throw new Error(`Company profile error: ${companyError.message}`);
 
