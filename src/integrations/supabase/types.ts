@@ -2035,6 +2035,7 @@ export type Database = {
           gtin: string | null
           height: number | null
           id: string
+          image_alt: string | null
           image_url: string | null
           image_url_original: string | null
           images_gallery: Json | null
@@ -2103,6 +2104,7 @@ export type Database = {
           whatsapp_messages: Json | null
           whatsapp_sequences: Json | null
           width: number | null
+          wikidata_item_id: string | null
           workflow_stages: Json | null
           youtube_descriptions: Json | null
           youtube_scripts: Json | null
@@ -2152,6 +2154,7 @@ export type Database = {
           gtin?: string | null
           height?: number | null
           id?: string
+          image_alt?: string | null
           image_url?: string | null
           image_url_original?: string | null
           images_gallery?: Json | null
@@ -2220,6 +2223,7 @@ export type Database = {
           whatsapp_messages?: Json | null
           whatsapp_sequences?: Json | null
           width?: number | null
+          wikidata_item_id?: string | null
           workflow_stages?: Json | null
           youtube_descriptions?: Json | null
           youtube_scripts?: Json | null
@@ -2269,6 +2273,7 @@ export type Database = {
           gtin?: string | null
           height?: number | null
           id?: string
+          image_alt?: string | null
           image_url?: string | null
           image_url_original?: string | null
           images_gallery?: Json | null
@@ -2337,6 +2342,7 @@ export type Database = {
           whatsapp_messages?: Json | null
           whatsapp_sequences?: Json | null
           width?: number | null
+          wikidata_item_id?: string | null
           workflow_stages?: Json | null
           youtube_descriptions?: Json | null
           youtube_scripts?: Json | null
