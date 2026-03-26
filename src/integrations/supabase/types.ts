@@ -2035,6 +2035,7 @@ export type Database = {
           gtin: string | null
           height: number | null
           id: string
+          image_alt: string | null
           image_url: string | null
           image_url_original: string | null
           images_gallery: Json | null
@@ -2153,6 +2154,7 @@ export type Database = {
           gtin?: string | null
           height?: number | null
           id?: string
+          image_alt?: string | null
           image_url?: string | null
           image_url_original?: string | null
           images_gallery?: Json | null
@@ -2271,6 +2273,7 @@ export type Database = {
           gtin?: string | null
           height?: number | null
           id?: string
+          image_alt?: string | null
           image_url?: string | null
           image_url_original?: string | null
           images_gallery?: Json | null

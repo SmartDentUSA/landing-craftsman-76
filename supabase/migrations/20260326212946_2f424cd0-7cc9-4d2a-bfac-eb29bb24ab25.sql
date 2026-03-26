@@ -1,0 +1,1 @@
+ALTER TABLE public.products_repository ADD COLUMN IF NOT EXISTS image_alt TEXT;
