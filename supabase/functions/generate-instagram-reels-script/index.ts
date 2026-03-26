@@ -45,7 +45,7 @@ serve(async (req) => {
       .from('company_profile')
       .select('*')
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (companyError) {
       console.warn('Dados da empresa não encontrados:', companyError.message);

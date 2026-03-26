@@ -868,7 +868,7 @@ serve(async (req) => {
       .not('website_url', 'is', null)
       .order('created_at', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     // Fallback: se não encontrou empresa válida ou é "Nova Empresa", buscar outra
     if (companyError || !company || company.company_name === 'Nova Empresa') {
@@ -880,7 +880,7 @@ serve(async (req) => {
         .not('company_name', 'is', null)
         .order('created_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
       
       if (fallbackCompany) {
         company = fallbackCompany;

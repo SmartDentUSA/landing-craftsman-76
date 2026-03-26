@@ -207,7 +207,7 @@ serve(async (req) => {
       .from('company_profile')
       .select('seo_domains')
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (companyError) throw new Error(`Erro ao buscar perfil: ${companyError.message}`);
 

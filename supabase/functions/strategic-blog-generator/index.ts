@@ -205,8 +205,8 @@ async function buildStrategicContext(supabase: any, landingPageId: string, repos
         seo_service_areas
       `)
       .limit(1)
-      .single();
-    
+      .maybeSingle();
+
     context.companyProfile = companyProfile;
     
     // Extract SEO Hidden fields for enhanced context

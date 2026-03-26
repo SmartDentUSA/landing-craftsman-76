@@ -188,7 +188,7 @@ serve(async (req) => {
       .select('*')
       .order('created_at', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (companyError) {
       console.warn('⚠️ Erro ao buscar company_profile:', companyError);

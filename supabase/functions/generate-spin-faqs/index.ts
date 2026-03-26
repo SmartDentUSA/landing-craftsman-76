@@ -76,7 +76,7 @@ serve(async (req) => {
       .from('company_profile')
       .select('company_name, business_segment')
       .limit(1)
-      .single();
+      .maybeSingle();
 
     // Montar contexto para IA
     const successCasesCount = solution.success_cases?.length || 0;

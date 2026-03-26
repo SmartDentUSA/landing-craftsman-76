@@ -193,7 +193,8 @@ serve(async (req) => {
       const { data: company, error: companyError } = await supabase
         .from('company_profile')
         .select('*')
-        .single();
+        .limit(1)
+        .maybeSingle();
 
       if (companyError || !company) {
         throw new Error('Company profile not found');

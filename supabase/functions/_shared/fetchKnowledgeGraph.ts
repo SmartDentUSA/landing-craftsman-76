@@ -249,6 +249,7 @@ export async function fetchKnowledgeGraph(
     landingPageId?: string;
     includeUnpublishedBlogs?: boolean;
     limit?: number;
+    userId?: string;
   }
 ): Promise<KnowledgeGraph> {
   const limit = options?.limit || 500;
@@ -270,11 +271,15 @@ export async function fetchKnowledgeGraph(
     milestonesResult
   ] = await Promise.all([
     // 1. Company Profile
-    supabase
-      .from('company_profile')
-      .select('*')
-      .limit(1)
-      .single(),
+    (() => {
+      let query = supabase
+        .from('company_profile')
+        .select('*');
+      if (options?.userId) {
+        query = query.eq('user_id', options.userId);
+      }
+      return query.limit(1).maybeSingle();
+    })(),
 
     // 2. Products Repository
     (() => {

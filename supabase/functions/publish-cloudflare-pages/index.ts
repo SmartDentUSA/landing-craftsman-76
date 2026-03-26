@@ -215,7 +215,7 @@ serve(async (req) => {
       .from('company_profile')
       .select('seo_domains')
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (profileError) {
       console.error('[publish-cloudflare-pages] Profile error:', profileError);

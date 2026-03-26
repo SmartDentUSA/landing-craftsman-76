@@ -185,7 +185,7 @@ serve(async (req) => {
       .from('company_profile')
       .select('*')
       .limit(1)
-      .single();
+      .maybeSingle();
 
     // 4. Determinar URL final (custom_url ou product_url)
     const finalUrl = solution.custom_url?.enabled && solution.custom_url?.url

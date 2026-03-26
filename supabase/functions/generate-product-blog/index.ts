@@ -86,7 +86,7 @@ serve(async (req) => {
       .from('company_profile')
       .select('*')
       .limit(1)
-      .single();
+      .maybeSingle();
 
     // 📡 Broadcast: Gerando conteúdo
     await broadcastProgress(supabase, productId, 'generating-content', 

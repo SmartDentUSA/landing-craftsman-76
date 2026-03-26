@@ -29,7 +29,7 @@ serve(async (req) => {
       .from('company_profile')
       .select('*')
       .limit(1)
-      .single();
+      .maybeSingle();
 
     // Fetch products (approved only, key fields for RAG)
     const { data: products } = await supabase

@@ -2385,7 +2385,7 @@ serve(async (req) => {
       .from('company_profile')
       .select('*')
       .limit(1)
-      .single();
+      .maybeSingle();
 
     const companyVideos = companyProfile?.company_videos || null;
     console.log(`🏢 Company Profile carregado:`, {

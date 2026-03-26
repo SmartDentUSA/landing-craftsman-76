@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
       .from('company_profile')
       .select('*')
       .limit(1)
-      .single()
+      .maybeSingle()
 
     if (companyError) {
       console.error('❌ Error fetching company profile:', companyError)
