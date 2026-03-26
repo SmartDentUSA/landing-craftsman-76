@@ -12,7 +12,8 @@ import { Progress } from "@/components/ui/progress";
 import { TagInput, TagInputHandle } from "@/components/ui/tag-input";
 import { Badge } from "@/components/ui/badge";
 import { ImageUploader } from "@/components/ImageUploader";
-import { Save, Trash2, Plus, X, Sparkles, Download, Check, ChevronsUpDown, FileText, Package, AlertCircle, Info, Loader2, RefreshCw, CheckCircle2 } from "lucide-react";
+import { Save, Trash2, Plus, X, Sparkles, Download, Check, ChevronsUpDown, FileText, Package, AlertCircle, Info, Loader2, RefreshCw, CheckCircle2, Globe } from "lucide-react";
+import { syncProductToWikidata } from "@/services/wikidata-sync";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { VideoSection } from "@/components/VideoSection";
@@ -28,6 +29,7 @@ import { useCallback } from 'react';
 import { ProductAISmartMerge } from './ProductAISmartMerge';
 import { FAQEditor } from './FAQEditor';
 import { ProductLojaIntegradaImporter } from './ProductLojaIntegradaImporter';
+import { WikidataSyncButton } from './WikidataSyncButton';
 import { VariationCard } from './VariationCard';
 import { GalleryImageUploader } from './GalleryImageUploader';
 import { useProductAutoSave } from '@/hooks/useProductAutoSave';
@@ -4547,7 +4549,8 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
               )}
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-center">
+              <WikidataSyncButton productId={product?.id} wikidataItemId={(product as any)?.wikidata_item_id} />
               <Button variant="outline" onClick={onClose}>
                 Cancelar
               </Button>
