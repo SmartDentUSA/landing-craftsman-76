@@ -530,25 +530,20 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
     }
   };
 
-  const handleWikidataSync = async (dryRun = false) => {
+  const handleWikidataSync = async () => {
     setWikidataSyncing(true);
     try {
-      const result = await syncCompanyToWikidata(dryRun);
-      if (result.success && result.report?.company?.wikidataQid) {
-        const qid = result.report.company.wikidataQid;
-        if (qid !== 'DRY_RUN') {
-          setProfile(prev => ({ ...prev, wikidata_id: qid }));
-        }
+      const result = await syncCompanyToWikidata();
+      if (result.success && result.wikidataQid) {
+        setProfile(prev => ({ ...prev, wikidata_id: result.wikidataQid }));
         toast({
-          title: dryRun ? 'Simulação Wikidata concluída' : 'Sincronizado com Wikidata',
-          description: dryRun
-            ? `Dry-run OK — QID seria ${qid} (${result.report.company.statementsCreated} statements)`
-            : `Empresa sincronizada: ${qid} (${result.report.company.statementsCreated} statements criados)`,
+          title: '✓ Sincronizado com Wikidata',
+          description: `Empresa sincronizada: ${result.wikidataQid}`,
         });
       } else {
         toast({
           title: 'Erro ao sincronizar Wikidata',
-          description: result.report?.company?.error ?? result.error ?? 'Erro desconhecido',
+          description: result.error ?? 'Erro desconhecido',
           variant: 'destructive',
         });
       }
