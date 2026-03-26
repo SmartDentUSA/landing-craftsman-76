@@ -2103,6 +2103,7 @@ export type Database = {
           whatsapp_messages: Json | null
           whatsapp_sequences: Json | null
           width: number | null
+          wikidata_item_id: string | null
           workflow_stages: Json | null
           youtube_descriptions: Json | null
           youtube_scripts: Json | null
@@ -2220,6 +2221,7 @@ export type Database = {
           whatsapp_messages?: Json | null
           whatsapp_sequences?: Json | null
           width?: number | null
+          wikidata_item_id?: string | null
           workflow_stages?: Json | null
           youtube_descriptions?: Json | null
           youtube_scripts?: Json | null
@@ -2337,6 +2339,7 @@ export type Database = {
           whatsapp_messages?: Json | null
           whatsapp_sequences?: Json | null
           width?: number | null
+          wikidata_item_id?: string | null
           workflow_stages?: Json | null
           youtube_descriptions?: Json | null
           youtube_scripts?: Json | null
