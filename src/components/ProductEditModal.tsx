@@ -29,6 +29,7 @@ import { useCallback } from 'react';
 import { ProductAISmartMerge } from './ProductAISmartMerge';
 import { FAQEditor } from './FAQEditor';
 import { ProductLojaIntegradaImporter } from './ProductLojaIntegradaImporter';
+import { WikidataSyncButton } from './WikidataSyncButton';
 import { VariationCard } from './VariationCard';
 import { GalleryImageUploader } from './GalleryImageUploader';
 import { useProductAutoSave } from '@/hooks/useProductAutoSave';
