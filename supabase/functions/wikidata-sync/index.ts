@@ -1,5 +1,14 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  buildCompanyPayload,
+  buildProductPayload,
+  extractTechSpecs,
+  validatePayload,
+  summarizePayload,
+  type CompanyProfileInput,
+  type ProductInput,
+} from "../_shared/wikidata-payload-builder.ts";
 
 type EntitySearchHit = {
   id: string;
@@ -81,6 +90,14 @@ serve(async (req) => {
 
     if (action === "sync_product") {
       return await handleProductSync(db, body?.productId);
+    }
+
+    if (action === "build_company_payload") {
+      return await handleBuildCompanyPayload(db);
+    }
+
+    if (action === "build_product_payload") {
+      return await handleBuildProductPayload(db, body?.productId);
     }
 
     return jsonResponse({ success: false, error: "Invalid action" }, 400);
@@ -616,6 +633,96 @@ function normalizeText(value?: string | null): string {
 
 function uniqueStrings(values: Array<string | null | undefined>): string[] {
   return [...new Set(values.map((value) => (value ?? "").trim()).filter(Boolean))];
+}
+
+// ── Payload Builder Handlers (Dry-Run) ──────────────────────
+
+async function handleBuildCompanyPayload(db: ReturnType<typeof createClient>) {
+  const { data: company, error } = await db
+    .from("company_profile")
+    .select("*")
+    .order("updated_at", { ascending: false, nullsFirst: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[wikidata-sync] Failed to load company for payload build", error);
+    return jsonResponse({ success: false, error: `Erro ao carregar empresa: ${error.message}` }, 500);
+  }
+
+  if (!company) {
+    return jsonResponse({ success: false, error: "Nenhum perfil de empresa encontrado" }, 404);
+  }
+
+  const payload = buildCompanyPayload(company as CompanyProfileInput);
+  const techSpecs = {};
+  const summary = summarizePayload(payload, techSpecs);
+
+  console.log("[wikidata-sync] Company payload built", {
+    claimCount: summary.claimCount,
+    isValid: summary.isValid,
+    errors: summary.validationErrors,
+  });
+
+  return jsonResponse({
+    success: true,
+    action: "build_company_payload",
+    dryRun: true,
+    payload,
+    summary,
+  });
+}
+
+async function handleBuildProductPayload(db: ReturnType<typeof createClient>, productId?: string) {
+  if (!productId || typeof productId !== "string") {
+    return jsonResponse({ success: false, error: "productId é obrigatório" }, 400);
+  }
+
+  const { data: product, error } = await db
+    .from("products_repository")
+    .select("*")
+    .eq("id", productId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[wikidata-sync] Failed to load product for payload build", error);
+    return jsonResponse({ success: false, error: `Erro ao carregar produto: ${error.message}` }, 500);
+  }
+
+  if (!product) {
+    return jsonResponse({ success: false, error: "Produto não encontrado" }, 404);
+  }
+
+  // Get company QID
+  const { data: company } = await db
+    .from("company_profile")
+    .select("wikidata_id")
+    .order("updated_at", { ascending: false, nullsFirst: false })
+    .limit(1)
+    .maybeSingle();
+
+  const companyQid = company?.wikidata_id || "Q138636902";
+  const payload = buildProductPayload(product as ProductInput, companyQid);
+  const techSpecs = extractTechSpecs(product.features, product.description);
+  const summary = summarizePayload(payload, techSpecs);
+
+  console.log("[wikidata-sync] Product payload built", {
+    productId,
+    productName: product.name,
+    claimCount: summary.claimCount,
+    isValid: summary.isValid,
+    techSpecs,
+  });
+
+  return jsonResponse({
+    success: true,
+    action: "build_product_payload",
+    dryRun: true,
+    productId,
+    productName: product.name,
+    payload,
+    summary,
+  });
 }
 
 function jsonResponse(payload: unknown, status = 200) {
