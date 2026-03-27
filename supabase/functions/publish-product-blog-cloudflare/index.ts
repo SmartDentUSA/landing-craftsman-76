@@ -804,8 +804,18 @@ function generateProductBlogHTML(options: {
       "image": product.image_url,
       "brand": {
         "@type": "Brand",
-        "name": product.brand || companyName
+        "name": product.brand || companyName,
+        ...(companyProfile?.wikidata_id && { "sameAs": `https://www.wikidata.org/entity/${companyProfile.wikidata_id}` })
       },
+      ...(product.wikidata_item_id && { "sameAs": `https://www.wikidata.org/entity/${product.wikidata_item_id}` }),
+      ...(companyName && {
+        "manufacturer": {
+          "@type": "Organization",
+          "name": companyName,
+          ...(companyProfile?.website_url && { "url": companyProfile.website_url }),
+          ...(companyProfile?.wikidata_id && { "sameAs": `https://www.wikidata.org/entity/${companyProfile.wikidata_id}` })
+        }
+      }),
       // ✅ MELHORIA 5: AggregateRating DINÂMICO via aggregateRating helper
       "aggregateRating": aggregateRating ? {
         "@type": "AggregateRating",

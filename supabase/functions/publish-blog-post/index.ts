@@ -781,8 +781,18 @@ async function generateSchemaLD(blogPost: any, productData: any = null) {
       "description": productData.description || '',
       "brand": productData.brand ? {
         "@type": "Brand",
-        "name": productData.brand
+        "name": productData.brand,
+        ...(companyProfile?.wikidata_id && { "sameAs": `https://www.wikidata.org/entity/${companyProfile.wikidata_id}` })
       } : undefined,
+      ...(productData.wikidata_item_id && { "sameAs": `https://www.wikidata.org/entity/${productData.wikidata_item_id}` }),
+      ...(companyProfile?.company_name && {
+        "manufacturer": {
+          "@type": "Organization",
+          "name": companyProfile.company_name,
+          ...(companyProfile.website_url && { "url": companyProfile.website_url }),
+          ...(companyProfile.wikidata_id && { "sameAs": `https://www.wikidata.org/entity/${companyProfile.wikidata_id}` })
+        }
+      }),
       "gtin": productData.gtin || undefined,
       "mpn": productData.mpn || undefined,
       "category": productData.category || undefined,

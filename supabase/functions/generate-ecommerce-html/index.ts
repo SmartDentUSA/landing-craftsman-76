@@ -1430,8 +1430,18 @@ function generateProductSchema(product: any): string {
         "image": product.image_url || (product.images_gallery?.[0] || ''),
         "brand": {
           "@type": "Brand",
-          "name": product.brand || "Smartdent"
+          "name": product.brand || "Smartdent",
+          ...(companyData?.wikidata_id && { "sameAs": `https://www.wikidata.org/entity/${companyData.wikidata_id}` })
         },
+        ...(product.wikidata_item_id && { "sameAs": `https://www.wikidata.org/entity/${product.wikidata_item_id}` }),
+        ...(companyData?.company_name && {
+          "manufacturer": {
+            "@type": "Organization",
+            "name": companyData.company_name,
+            ...(companyData.website_url && { "url": companyData.website_url }),
+            ...(companyData.wikidata_id && { "sameAs": `https://www.wikidata.org/entity/${companyData.wikidata_id}` })
+          }
+        }),
         // ✅ AggregateRating para Rich Snippets com estrelas no Google (dinâmico)
         "aggregateRating": {
           "@type": "AggregateRating",
@@ -2544,7 +2554,9 @@ function buildEcommerceHTML(
         "name": product.name,
         "description": (product.seo_description || product.description || '').substring(0, 300),
         "image": product.image_url,
-        "brand": { "@type": "Brand", "name": product.brand || companyName },
+        "brand": { "@type": "Brand", "name": product.brand || companyName, ...(company?.wikidata_id && { "sameAs": `https://www.wikidata.org/entity/${company.wikidata_id}` }) },
+        ...(product.wikidata_item_id && { "sameAs": `https://www.wikidata.org/entity/${product.wikidata_item_id}` }),
+        ...(companyName && { "manufacturer": { "@type": "Organization", "name": companyName, ...(company?.website_url && { "url": company.website_url }), ...(company?.wikidata_id && { "sameAs": `https://www.wikidata.org/entity/${company.wikidata_id}` }) } }),
         ...(product.category && { "category": product.category }),
         "offers": {
           "@type": "Offer",
