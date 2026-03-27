@@ -178,7 +178,7 @@ async function findExistingEntity(label: string): Promise<string | null> {
   const exactMatch = json.search?.find(
     (r: { id?: string; label?: string }) =>
       normalizeLabel(r.label || "") === normalizeLabel(label) &&
-      !CATEGORY_QIDS.has(r.id),
+      !getCategoryQids().has(r.id),
   );
   if (exactMatch) {
     console.log(`[wikidata-sync] findExistingEntity: matched "${label}" → ${exactMatch.id}`);
