@@ -281,3 +281,6 @@ verify_jwt = false
 
 [functions.republish-domain-pages]
 verify_jwt = false
+
+[functions.wikidata-sync]
+verify_jwt = false
