@@ -1,45 +1,70 @@
 
 
-# Fix: Pipeline Blocked — `existing` Variable Out of Scope
+# Fix: Anti-dup matching category QIDs instead of creating product items
+
+## Problem
+
+`findExistingEntity` searches Wikidata via `wbsearchentities` and finds category items like Q1780993 (dental composite) as "exact matches" for product labels like "Resina Composta Direta - DA2". This causes the system to:
+
+1. Set `writeDecision = "update"` instead of `"create"`
+2. Update the **category item** (Q1780993) with product-specific data instead of creating a new product item
+
+This happens in 3 places:
+- Edit 5 anti-dup (line 1207)
+- Pre-write anti-dup (line 1258)
+- Anti-dup recheck (line 1271)
 
 ## Root Cause
 
-Line 1235 in `supabase/functions/wikidata-sync/index.ts` references `existing` which is `const`-declared inside the `if (upsertError)` block (line 1099). Since `const` is block-scoped, accessing it on line 1235 (outside that block) throws a `ReferenceError`, crashing the function.
+`findExistingEntity` does a naive label comparison without checking what **type** of entity it found. Category QIDs (Q1780993, Q3834994, Q2631097, etc.) are well-known class items, not product instances.
 
-The outer `catch` (line 1375) catches it and returns a 400 status with `INTERNAL_ERROR`, which the client surfaces as "Edge Function returned a non-2xx status code" → "Pipeline bloqueado".
+## Fix (2 changes in `supabase/functions/wikidata-sync/index.ts`)
 
-## Evidence
+### 1. Add a blocklist of known category QIDs
 
-Logs show:
-1. `Repair: orphan QID Q1780993 from source` (line 1192 — last log before crash)
-2. **No** "Decision context" log (line 1236 — never reached because line 1235 crashes)
-3. **No** explicit error log (the `catch` at 1375 should log, but may be suppressed)
+Extract all QIDs from `CATEGORY_FALLBACK_MAP` into a Set, and filter them out of anti-dup results:
 
-## Fix (1 Edit)
-
-**File**: `supabase/functions/wikidata-sync/index.ts`
-
-Hoist `existing` declaration to the same scope as `writeDecision` (line 1094), and assign it inside the block:
-
-```
-// Line 1094: Add declaration
-let existingRecord: any = null;
-
-// Inside if (upsertError) block, after line 1099:
-// Change: const { data: existing } = await db...
-// To:     const { data: existingData } = await db...
-//         existingRecord = existingData;
-// Then replace all references to `existing` within that block with `existingRecord`
-
-// Line 1235: Fix reference
-const sameHashFlag = existingRecord?.payload_hash === payloadHash;
+```typescript
+const CATEGORY_QIDS = new Set(Object.values(CATEGORY_FALLBACK_MAP));
 ```
 
-This is a single variable rename + hoist. All 11 references to `existing` inside the `if (upsertError)` block get updated to `existingRecord`, and the structured logging on line 1235 uses `existingRecord` which is now in scope.
+### 2. Update `findExistingEntity` to reject category QIDs
 
-## Impact
+After finding an exact match, check if it's a known category QID. If so, skip it and continue searching:
 
-- Unblocks the entire Wikidata sync pipeline
-- Orphan recovery, anti-dup, payload guard, and structured logging will all execute correctly
-- No behavior change — just fixes the scoping bug
+```typescript
+async function findExistingEntity(label: string): Promise<string | null> {
+  const res = await fetch(
+    `https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${encodeURIComponent(label)}&language=pt&format=json&limit=5`,
+  );
+  if (!res.ok) return null;
+
+  const json = await res.json();
+  const matches = json.search?.filter(
+    (r: { id?: string; label?: string }) =>
+      normalizeLabel(r.label || "") === normalizeLabel(label) &&
+      !CATEGORY_QIDS.has(r.id)
+  );
+  
+  if (matches?.length > 0) {
+    return matches[0].id;
+  }
+  return null;
+}
+```
+
+This ensures:
+- Category items (Q1780993, Q3834994, Q2631097, etc.) are never treated as duplicates
+- Products with genuinely matching labels are still caught
+- The `CATEGORY_FALLBACK_MAP` acts as both the P279 resolver **and** the anti-dup exclusion list -- single source of truth
+
+### Summary
+
+| What | Before | After |
+|---|---|---|
+| Product "Resina Composta X" | Matches Q1780993 → update category | Skips Q1780993 → creates new item |
+| Actual duplicate product | Matches correctly | Still matches correctly |
+| Category QIDs | Treated as duplicates | Excluded from anti-dup |
+
+One file changed. No migrations needed.
 
