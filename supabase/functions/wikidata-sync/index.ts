@@ -35,6 +35,186 @@ const corsHeaders = {
   "Content-Type": "application/json",
 };
 
+// ── OAuth 1.0a + Wikidata Write Helpers ─────────────────────
+
+interface WikidataOAuthSecrets {
+  consumerKey: string;
+  consumerSecret: string;
+  accessToken: string;
+  accessSecret: string;
+}
+
+function getWikidataSecrets(): WikidataOAuthSecrets | null {
+  const consumerKey = Deno.env.get("WIKIDATA_CONSUMER_KEY");
+  const consumerSecret = Deno.env.get("WIKIDATA_CONSUMER_SECRET");
+  const accessToken = Deno.env.get("WIKIDATA_ACCESS_TOKEN");
+  const accessSecret = Deno.env.get("WIKIDATA_ACCESS_SECRET");
+
+  if (!consumerKey || !consumerSecret || !accessToken || !accessSecret) {
+    return null;
+  }
+  return { consumerKey, consumerSecret, accessToken, accessSecret };
+}
+
+function percentEncode(str: string): string {
+  return encodeURIComponent(str)
+    .replace(/!/g, "%21")
+    .replace(/\*/g, "%2A")
+    .replace(/'/g, "%27")
+    .replace(/\(/g, "%28")
+    .replace(/\)/g, "%29");
+}
+
+async function signOAuth1a(
+  method: string,
+  url: string,
+  params: Record<string, string>,
+  secrets: WikidataOAuthSecrets,
+): Promise<Record<string, string>> {
+  const encoder = new TextEncoder();
+
+  const baseParams: Record<string, string> = {
+    oauth_consumer_key: secrets.consumerKey,
+    oauth_token: secrets.accessToken,
+    oauth_nonce: crypto.randomUUID().replace(/-/g, ""),
+    oauth_timestamp: Math.floor(Date.now() / 1000).toString(),
+    oauth_signature_method: "HMAC-SHA1",
+    oauth_version: "1.0",
+    ...params,
+  };
+
+  const sorted = Object.keys(baseParams)
+    .sort()
+    .map((k) => `${percentEncode(k)}=${percentEncode(baseParams[k])}`)
+    .join("&");
+
+  const baseString = [
+    method.toUpperCase(),
+    percentEncode(url),
+    percentEncode(sorted),
+  ].join("&");
+
+  const signingKey = `${percentEncode(secrets.consumerSecret)}&${percentEncode(secrets.accessSecret)}`;
+
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(signingKey),
+    { name: "HMAC", hash: "SHA-1" },
+    false,
+    ["sign"],
+  );
+
+  const signatureBuffer = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    encoder.encode(baseString),
+  );
+
+  const signature = btoa(String.fromCharCode(...new Uint8Array(signatureBuffer)));
+
+  return {
+    ...baseParams,
+    oauth_signature: signature,
+  };
+}
+
+async function getWikidataCsrfToken(secrets: WikidataOAuthSecrets): Promise<string> {
+  const url = "https://www.wikidata.org/w/api.php";
+  const params: Record<string, string> = {
+    action: "query",
+    meta: "tokens",
+    type: "csrf",
+    format: "json",
+  };
+
+  const signed = await signOAuth1a("GET", url, params, secrets);
+  const query = new URLSearchParams(signed).toString();
+
+  const res = await fetch(`${url}?${query}`);
+  if (!res.ok) {
+    throw new Error(`CSRF token request failed: HTTP ${res.status}`);
+  }
+
+  const json = await res.json();
+  const token = json?.query?.tokens?.csrftoken;
+
+  if (!token || token === "+\\") {
+    throw new Error(`Invalid CSRF token received: ${JSON.stringify(json?.query?.tokens)}`);
+  }
+
+  console.log("[wikidata-sync] CSRF token obtained successfully");
+  return token;
+}
+
+async function findExistingEntity(label: string): Promise<string | null> {
+  const res = await fetch(
+    `https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${encodeURIComponent(label)}&language=pt&format=json&limit=5`,
+  );
+  if (!res.ok) return null;
+
+  const json = await res.json();
+  // Return exact match only
+  const exactMatch = json.search?.find(
+    (r: { label?: string }) => r.label?.toLowerCase().trim() === label.toLowerCase().trim(),
+  );
+  return exactMatch?.id || null;
+}
+
+async function executeWbEditEntity(
+  payload: WikidataPayload,
+  secrets: WikidataOAuthSecrets,
+  qid?: string | null,
+): Promise<string> {
+  // Rate limit
+  await new Promise((resolve) => setTimeout(resolve, 600));
+
+  const url = "https://www.wikidata.org/w/api.php";
+  const csrf = await getWikidataCsrfToken(secrets);
+
+  const params: Record<string, string> = {
+    action: "wbeditentity",
+    format: "json",
+    token: csrf,
+    bot: "1",
+    data: JSON.stringify(payload),
+    summary: "Automated sync via SmartDent Authority Publisher",
+  };
+
+  if (qid) {
+    params.id = qid;
+  } else {
+    params.new = "item";
+  }
+
+  const signed = await signOAuth1a("POST", url, params, secrets);
+  const body = new URLSearchParams(signed);
+
+  console.log(`[wikidata-sync] Executing wbeditentity: ${qid ? `UPDATE ${qid}` : "CREATE NEW"}`);
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body,
+  });
+
+  const json = await res.json();
+
+  if (json.error) {
+    const errInfo = json.error.info || json.error.code || JSON.stringify(json.error);
+    throw Object.assign(new Error(`Wikidata API Error: ${errInfo}`), { code: "WIKIDATA_API_ERROR" });
+  }
+
+  const resultQid = json.entity?.id;
+  if (!resultQid) {
+    throw new Error(`No entity ID in wbeditentity response: ${JSON.stringify(json).slice(0, 500)}`);
+  }
+
+  console.log(`[wikidata-sync] ✅ wbeditentity SUCCESS: ${resultQid}`);
+  return resultQid;
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -105,6 +285,10 @@ serve(async (req) => {
 
     if (action === "resolve_and_persist") {
       return await handleResolveAndPersist(db, body?.entityType, body?.internalId);
+    }
+
+    if (action === "execute_write") {
+      return await handleExecuteWrite(db, body?.entityType, body?.internalId);
     }
 
     return jsonResponse({ success: false, error: "Invalid action" }, 400);
@@ -946,7 +1130,91 @@ async function handleResolveAndPersist(
       entityMapId = entityMap?.id || null;
     }
 
-    // 6. Log and return
+    // 6. If write enabled and decision is create/update, execute real write
+    if (writeEnabled && (writeDecision === "create" || writeDecision === "update")) {
+      const secrets = getWikidataSecrets();
+      if (secrets) {
+        try {
+          // Anti-duplication: check if entity already exists on Wikidata
+          const ptLabel = payload.labels?.pt?.value || payload.labels?.["pt-br"]?.value;
+          let existingQid: string | null = null;
+
+          if (writeDecision === "create" && ptLabel) {
+            existingQid = await findExistingEntity(ptLabel);
+            if (existingQid) {
+              console.log(`[wikidata-sync] Anti-duplication: found existing ${existingQid} for "${ptLabel}"`);
+            }
+          }
+
+          const targetQid = wikidataQid || existingQid || null;
+          const finalQid = await withRetry(
+            () => executeWbEditEntity(payload, secrets, targetQid),
+            { max: 3, delays: [600, 1500, 3000], retryOn: ["API_RATE_LIMIT", "NETWORK_ERROR"] },
+          );
+
+          // Persist QID back to entity_map
+          if (entityMapId) {
+            await db
+              .from("wikidata_entity_map")
+              .update({
+                wikidata_qid: finalQid,
+                sync_status: "synced",
+                last_synced_at: new Date().toISOString(),
+              })
+              .eq("id", entityMapId);
+          }
+
+          // Also persist to source table
+          if (entityType === "company") {
+            await db
+              .from("company_profile")
+              .update({ wikidata_id: finalQid, updated_at: new Date().toISOString() })
+              .eq("id", internalId);
+          } else {
+            await db
+              .from("products_repository")
+              .update({ wikidata_item_id: finalQid, updated_at: new Date().toISOString() })
+              .eq("id", internalId);
+          }
+
+          wikidataQid = finalQid;
+          syncStatus = "synced";
+          console.log(`[wikidata-sync] ✅ Live write complete: ${finalQid}`);
+        } catch (writeErr) {
+          console.error("[wikidata-sync] Live write FAILED", writeErr);
+
+          // Update entity_map status to failed
+          if (entityMapId) {
+            await db
+              .from("wikidata_entity_map")
+              .update({ sync_status: "failed", retry_count: 1 })
+              .eq("id", entityMapId);
+          }
+
+          syncStatus = "failed";
+          return logAndReturn(db, {
+            action: "resolve_and_persist",
+            entityType, internalId, payloadHash,
+            writeDecision,
+            success: false,
+            semanticScore: score.overall,
+            semanticGrade: score.grade,
+            wikidataQid,
+            entityMapId,
+            syncStatus: "failed",
+            writeEnabled,
+            errorCode: "WRITE_FAILED",
+            errorMessage: writeErr instanceof Error ? writeErr.message : "Write failed",
+            durationMs: Date.now() - startTime,
+            requestPayload: payload,
+          });
+        }
+      } else {
+        console.warn("[wikidata-sync] Write enabled but OAuth secrets missing — staying in preview mode");
+      }
+    }
+
+    // 7. Log and return
     return logAndReturn(db, {
       action: "resolve_and_persist",
       entityType, internalId, payloadHash,
@@ -970,6 +1238,178 @@ async function handleResolveAndPersist(
       writeDecision: "abort",
       success: false,
       errorCode: "INTERNAL_ERROR",
+      errorMessage: err instanceof Error ? err.message : "Unknown error",
+      durationMs: Date.now() - startTime,
+    });
+  }
+}
+
+// ── execute_write Action (Manual Publish) ───────────────────
+
+async function handleExecuteWrite(
+  db: ReturnType<typeof createClient>,
+  entityType?: string,
+  internalId?: string,
+) {
+  const startTime = Date.now();
+
+  if (!entityType || !internalId) {
+    return jsonResponse({ success: false, error: "entityType and internalId required" }, 400);
+  }
+
+  if (entityType !== "company" && entityType !== "product") {
+    return jsonResponse({ success: false, error: "entityType must be 'company' or 'product'" }, 400);
+  }
+
+  // 1. Circuit breaker
+  const { data: flag } = await db
+    .from("system_flags")
+    .select("value")
+    .eq("key", "WIKIDATA_WRITE_ENABLED")
+    .maybeSingle();
+
+  if (flag?.value?.enabled !== true) {
+    return logAndReturn(db, {
+      action: "execute_write",
+      entityType, internalId,
+      writeDecision: "abort",
+      success: false,
+      errorCode: "CIRCUIT_BREAKER_OFF",
+      errorMessage: "WIKIDATA_WRITE_ENABLED is not enabled",
+      durationMs: Date.now() - startTime,
+    });
+  }
+
+  // 2. Check OAuth secrets
+  const secrets = getWikidataSecrets();
+  if (!secrets) {
+    return logAndReturn(db, {
+      action: "execute_write",
+      entityType, internalId,
+      writeDecision: "abort",
+      success: false,
+      errorCode: "MISSING_SECRETS",
+      errorMessage: "Wikidata OAuth secrets not configured",
+      durationMs: Date.now() - startTime,
+    });
+  }
+
+  try {
+    // 3. Build payload
+    let payload: WikidataPayload;
+
+    if (entityType === "company") {
+      const { data: company, error } = await db.from("company_profile").select("*").eq("id", internalId).maybeSingle();
+      if (error || !company) {
+        return logAndReturn(db, { action: "execute_write", entityType, internalId, writeDecision: "abort", success: false, errorCode: "ENTITY_NOT_FOUND", errorMessage: "Company not found", durationMs: Date.now() - startTime });
+      }
+      payload = buildCompanyPayload(company as CompanyProfileInput);
+    } else {
+      const { data: product, error } = await db.from("products_repository").select("*").eq("id", internalId).maybeSingle();
+      if (error || !product) {
+        return logAndReturn(db, { action: "execute_write", entityType, internalId, writeDecision: "abort", success: false, errorCode: "ENTITY_NOT_FOUND", errorMessage: "Product not found", durationMs: Date.now() - startTime });
+      }
+      const { data: company } = await db.from("company_profile").select("wikidata_id, country").order("updated_at", { ascending: false, nullsFirst: false }).limit(1).maybeSingle();
+      const companyQid = company?.wikidata_id || "Q138636902";
+      payload = buildProductPayload({ ...(product as ProductInput), country: company?.country || "Brasil" }, companyQid);
+    }
+
+    // 4. Semantic guard
+    const score = evaluateSemanticScore(payload, entityType as "company" | "product");
+    if (!score.passed) {
+      return logAndReturn(db, {
+        action: "execute_write", entityType, internalId,
+        writeDecision: "abort", success: false,
+        semanticScore: score.overall, semanticGrade: score.grade,
+        errorCode: "SEMANTIC_BLOCK",
+        errorMessage: `Score ${score.overall} < 0.7`,
+        durationMs: Date.now() - startTime,
+        requestPayload: payload,
+      });
+    }
+
+    // 5. Anti-duplication check
+    const ptLabel = payload.labels?.pt?.value || payload.labels?.["pt-br"]?.value;
+    let existingQid: string | null = null;
+
+    // Check entity_map first
+    const { data: entityMap } = await db
+      .from("wikidata_entity_map")
+      .select("wikidata_qid")
+      .eq("entity_type", entityType)
+      .eq("internal_id", internalId)
+      .maybeSingle();
+
+    existingQid = entityMap?.wikidata_qid || null;
+
+    // Also check source table
+    if (!existingQid) {
+      if (entityType === "company") {
+        const { data } = await db.from("company_profile").select("wikidata_id").eq("id", internalId).maybeSingle();
+        existingQid = data?.wikidata_id || null;
+      } else {
+        const { data } = await db.from("products_repository").select("wikidata_item_id").eq("id", internalId).maybeSingle();
+        existingQid = data?.wikidata_item_id || null;
+      }
+    }
+
+    // Search Wikidata for duplicates if creating new
+    if (!existingQid && ptLabel) {
+      existingQid = await findExistingEntity(ptLabel);
+      if (existingQid) {
+        console.log(`[wikidata-sync] Anti-duplication found: ${existingQid} for "${ptLabel}"`);
+      }
+    }
+
+    // 6. Execute write
+    const payloadHash = await hashPayload(payload);
+    const finalQid = await withRetry(
+      () => executeWbEditEntity(payload, secrets, existingQid),
+      { max: 3, delays: [600, 1500, 3000], retryOn: ["API_RATE_LIMIT", "NETWORK_ERROR"] },
+    );
+
+    // 7. Persist QID
+    // Update entity_map
+    await db.from("wikidata_entity_map").upsert({
+      entity_type: entityType,
+      internal_id: internalId,
+      wikidata_qid: finalQid,
+      payload_hash: payloadHash,
+      sync_status: "synced",
+      last_synced_at: new Date().toISOString(),
+      resolution_score: score.overall,
+      resolution_decision: existingQid ? "link" : "create",
+    }, { onConflict: "entity_type,internal_id" });
+
+    // Update source table
+    if (entityType === "company") {
+      await db.from("company_profile").update({ wikidata_id: finalQid, updated_at: new Date().toISOString() }).eq("id", internalId);
+    } else {
+      await db.from("products_repository").update({ wikidata_item_id: finalQid, updated_at: new Date().toISOString() }).eq("id", internalId);
+    }
+
+    // 8. Log
+    return logAndReturn(db, {
+      action: "execute_write",
+      entityType, internalId, payloadHash,
+      writeDecision: existingQid ? "update" : "create",
+      success: true,
+      semanticScore: score.overall,
+      semanticGrade: score.grade,
+      wikidataQid: finalQid,
+      syncStatus: "synced",
+      writeEnabled: true,
+      durationMs: Date.now() - startTime,
+      requestPayload: payload,
+    });
+  } catch (err) {
+    console.error("[wikidata-sync] execute_write error", err);
+    return logAndReturn(db, {
+      action: "execute_write",
+      entityType, internalId,
+      writeDecision: "abort",
+      success: false,
+      errorCode: "WRITE_FAILED",
       errorMessage: err instanceof Error ? err.message : "Unknown error",
       durationMs: Date.now() - startTime,
     });

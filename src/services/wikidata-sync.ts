@@ -181,3 +181,50 @@ export async function resolveWikidataEntity(
     return { success: false, error: err instanceof Error ? err.message : 'Erro desconhecido' };
   }
 }
+
+export interface WikidataWriteResult {
+  success: boolean;
+  wikidataQid?: string;
+  writeDecision?: string;
+  syncStatus?: string;
+  semanticScore?: number;
+  semanticGrade?: string;
+  durationMs?: number;
+  error?: string;
+  errorCode?: string;
+}
+
+export async function executeWikidataWrite(
+  entityType: 'company' | 'product',
+  internalId: string,
+): Promise<WikidataWriteResult> {
+  try {
+    const { data, error } = await invokeWikidataSync({
+      action: 'execute_write',
+      entityType,
+      internalId,
+    });
+
+    console.log('[Wikidata] execute_write response:', { data, error, entityType, internalId });
+
+    if (error) {
+      console.error('[Wikidata] execute_write error:', error);
+      return { success: false, error: error.message || 'Erro na edge function' };
+    }
+
+    return {
+      success: data?.success ?? false,
+      wikidataQid: data?.wikidataQid,
+      writeDecision: data?.writeDecision,
+      syncStatus: data?.syncStatus,
+      semanticScore: data?.semanticScore,
+      semanticGrade: data?.semanticGrade,
+      durationMs: data?.durationMs,
+      error: data?.error,
+      errorCode: data?.errorCode,
+    };
+  } catch (err) {
+    console.error('[Wikidata] execute_write exception:', err);
+    return { success: false, error: err instanceof Error ? err.message : 'Erro desconhecido' };
+  }
+}

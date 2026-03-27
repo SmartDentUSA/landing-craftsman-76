@@ -9,12 +9,13 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Globe, Loader2, Eye, Shield, AlertTriangle, CheckCircle, Database, Zap } from "lucide-react";
+import { Globe, Loader2, Eye, Shield, AlertTriangle, CheckCircle, Database, Zap, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   syncProductToWikidata,
   buildProductWikidataPayload,
   resolveWikidataEntity,
+  executeWikidataWrite,
   type WikidataResolveResult,
 } from "@/services/wikidata-sync";
 
@@ -44,6 +45,7 @@ export function WikidataSyncButton({ productId, wikidataItemId, onSyncSuccess }:
   const [syncing, setSyncing] = useState(false);
   const [previewing, setPreviewing] = useState(false);
   const [resolving, setResolving] = useState(false);
+  const [publishing, setPublishing] = useState(false);
   const [localQid, setLocalQid] = useState<string | null>(null);
   const [payloadDialogOpen, setPayloadDialogOpen] = useState(false);
   const [payloadData, setPayloadData] = useState<{ payload: unknown; summary: unknown } | null>(null);
@@ -51,6 +53,9 @@ export function WikidataSyncButton({ productId, wikidataItemId, onSyncSuccess }:
   const { toast } = useToast();
 
   const displayQid = localQid || wikidataItemId;
+  const isAnyLoading = syncing || previewing || resolving || publishing;
+  const isLiveMode = resolveResult?.writeEnabled === true;
+  const canPublish = isLiveMode && resolveResult?.syncStatus === "pending" && resolveResult?.writeDecision !== "abort";
 
   if (!productId) return null;
 
@@ -64,29 +69,16 @@ export function WikidataSyncButton({ productId, wikidataItemId, onSyncSuccess }:
         toast({
           title: `✓ Sincronizado: ${result.wikidataQid}`,
           description: (
-            <a
-              href={`https://www.wikidata.org/wiki/${result.wikidataQid}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline"
-            >
+            <a href={`https://www.wikidata.org/wiki/${result.wikidataQid}`} target="_blank" rel="noopener noreferrer" className="underline">
               Ver no Wikidata →
             </a>
           ),
         });
       } else {
-        toast({
-          title: "Erro ao sincronizar Wikidata",
-          description: result.error ?? "Erro desconhecido",
-          variant: "destructive",
-        });
+        toast({ title: "Erro ao sincronizar", description: result.error ?? "Erro desconhecido", variant: "destructive" });
       }
     } catch (err) {
-      toast({
-        title: "Erro ao sincronizar Wikidata",
-        description: err instanceof Error ? err.message : "Erro desconhecido",
-        variant: "destructive",
-      });
+      toast({ title: "Erro ao sincronizar", description: err instanceof Error ? err.message : "Erro desconhecido", variant: "destructive" });
     } finally {
       setSyncing(false);
     }
@@ -100,18 +92,10 @@ export function WikidataSyncButton({ productId, wikidataItemId, onSyncSuccess }:
         setPayloadData({ payload: result.payload, summary: result.summary });
         setPayloadDialogOpen(true);
       } else {
-        toast({
-          title: "Erro ao gerar payload",
-          description: result.error ?? "Erro desconhecido",
-          variant: "destructive",
-        });
+        toast({ title: "Erro ao gerar payload", description: result.error ?? "Erro desconhecido", variant: "destructive" });
       }
     } catch (err) {
-      toast({
-        title: "Erro ao gerar payload",
-        description: err instanceof Error ? err.message : "Erro desconhecido",
-        variant: "destructive",
-      });
+      toast({ title: "Erro ao gerar payload", description: err instanceof Error ? err.message : "Erro desconhecido", variant: "destructive" });
     } finally {
       setPreviewing(false);
     }
@@ -122,26 +106,55 @@ export function WikidataSyncButton({ productId, wikidataItemId, onSyncSuccess }:
     try {
       const result = await resolveWikidataEntity("product", productId);
       setResolveResult(result);
+
+      if (result.success && result.wikidataQid) {
+        setLocalQid(result.wikidataQid);
+        onSyncSuccess?.(result.wikidataQid);
+      }
+
       if (result.success) {
         toast({
-          title: `Pipeline: ${result.writeDecision?.toUpperCase()}`,
-          description: `Score: ${result.semanticGrade} (${((result.semanticScore || 0) * 100).toFixed(0)}%) | Hash: ${result.payloadHash?.slice(0, 8)}...`,
+          title: `Pipeline: ${result.writeDecision?.toUpperCase()} ${result.syncStatus === "synced" ? "✅" : ""}`,
+          description: `Score: ${result.semanticGrade} (${((result.semanticScore || 0) * 100).toFixed(0)}%) | ${result.writeEnabled ? "🟢 Live" : "🔴 Preview"} | ${result.wikidataQid || "No QID yet"}`,
+        });
+      } else {
+        toast({ title: "Pipeline bloqueado", description: result.error || result.errorCode || "Erro desconhecido", variant: "destructive" });
+      }
+    } catch (err) {
+      toast({ title: "Erro no pipeline", description: err instanceof Error ? err.message : "Erro desconhecido", variant: "destructive" });
+    } finally {
+      setResolving(false);
+    }
+  };
+
+  const handlePublish = async () => {
+    setPublishing(true);
+    try {
+      const result = await executeWikidataWrite("product", productId);
+
+      if (result.success && result.wikidataQid) {
+        setLocalQid(result.wikidataQid);
+        onSyncSuccess?.(result.wikidataQid);
+        setResolveResult((prev) => prev ? { ...prev, syncStatus: "synced", wikidataQid: result.wikidataQid } : prev);
+        toast({
+          title: `✅ Publicado: ${result.wikidataQid}`,
+          description: (
+            <a href={`https://www.wikidata.org/wiki/${result.wikidataQid}`} target="_blank" rel="noopener noreferrer" className="underline">
+              Ver no Wikidata →
+            </a>
+          ),
         });
       } else {
         toast({
-          title: "Pipeline bloqueado",
+          title: "Erro ao publicar",
           description: result.error || result.errorCode || "Erro desconhecido",
           variant: "destructive",
         });
       }
     } catch (err) {
-      toast({
-        title: "Erro no pipeline",
-        description: err instanceof Error ? err.message : "Erro desconhecido",
-        variant: "destructive",
-      });
+      toast({ title: "Erro ao publicar", description: err instanceof Error ? err.message : "Erro desconhecido", variant: "destructive" });
     } finally {
-      setResolving(false);
+      setPublishing(false);
     }
   };
 
@@ -157,48 +170,49 @@ export function WikidataSyncButton({ productId, wikidataItemId, onSyncSuccess }:
   return (
     <>
       <div className="flex items-center gap-1 flex-wrap">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleSync}
-          disabled={syncing || previewing || resolving}
-          className="gap-1"
-          title="Sincronizar produto com Wikidata"
-        >
+        <Button variant="outline" size="sm" onClick={handleSync} disabled={isAnyLoading} className="gap-1" title="Sincronizar produto com Wikidata">
           {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Globe className="h-4 w-4" />}
           Wikidata
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handlePreviewPayload}
-          disabled={syncing || previewing || resolving}
-          className="gap-1"
-          title="Preview do payload wbeditentity"
-        >
+        <Button variant="ghost" size="sm" onClick={handlePreviewPayload} disabled={isAnyLoading} className="gap-1" title="Preview do payload wbeditentity">
           {previewing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
           Payload
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleResolve}
-          disabled={syncing || previewing || resolving}
-          className="gap-1"
-          title="Resolve & Persist pipeline"
-        >
+        <Button variant="ghost" size="sm" onClick={handleResolve} disabled={isAnyLoading} className="gap-1" title="Resolve & Persist pipeline">
           {resolving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
           Resolve
         </Button>
-        {displayQid && (
-          <a
-            href={`https://www.wikidata.org/wiki/${displayQid}`}
-            target="_blank"
-            rel="noopener noreferrer"
+
+        {/* Publish button — only visible in Live Mode */}
+        {(canPublish || publishing) && (
+          <Button
+            variant="default"
+            size="sm"
+            onClick={handlePublish}
+            disabled={isAnyLoading}
+            className="gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+            title="Publicar no Wikidata (escrita real)"
           >
-            <Badge className="bg-success text-success-foreground cursor-pointer">W</Badge>
+            {publishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+            Publish
+          </Button>
+        )}
+
+        {/* QID badge */}
+        {displayQid && (
+          <a href={`https://www.wikidata.org/wiki/${displayQid}`} target="_blank" rel="noopener noreferrer">
+            <Badge className="bg-emerald-600 text-white cursor-pointer">{displayQid}</Badge>
           </a>
         )}
+
+        {/* Live/Preview mode indicator */}
+        {resolveResult && (
+          <Badge variant={isLiveMode ? "default" : "outline"} className={`text-[10px] ${isLiveMode ? "bg-emerald-600 text-white" : ""}`}>
+            {isLiveMode ? "🟢 Live" : "🔴 Preview"}
+          </Badge>
+        )}
+
+        {/* Status badges */}
         {statusConfig && (
           <Badge variant={statusConfig.variant} className="text-[10px]">
             {statusConfig.label}
@@ -226,15 +240,14 @@ export function WikidataSyncButton({ productId, wikidataItemId, onSyncSuccess }:
               Payload wbeditentity — Preview v4.0
             </DialogTitle>
             <DialogDescription>
-              JSON validado, canonicalizado e auditável. Modo dry-run — nenhuma escrita é realizada.
+              JSON validado, canonicalizado e auditável. {isLiveMode ? "🟢 Modo Live — escrita real habilitada." : "🔴 Modo Preview — nenhuma escrita é realizada."}
             </DialogDescription>
           </DialogHeader>
 
-          {/* Status Badges */}
           {summary && (
             <div className="flex flex-wrap gap-2 text-xs">
               {summary.isValid ? (
-                <Badge className="bg-success text-success-foreground gap-1">
+                <Badge className="bg-emerald-600 text-white gap-1">
                   <CheckCircle className="h-3 w-3" /> Válido
                 </Badge>
               ) : (
@@ -242,30 +255,20 @@ export function WikidataSyncButton({ productId, wikidataItemId, onSyncSuccess }:
                   <AlertTriangle className="h-3 w-3" /> {hardErrors.length} erro(s)
                 </Badge>
               )}
-              <Badge variant="secondary">
-                {String(summary.claimCount ?? 0)} claims
-              </Badge>
+              <Badge variant="secondary">{String(summary.claimCount ?? 0)} claims</Badge>
               {semanticScore && (
-                <Badge
-                  variant={semanticScore.passed ? "default" : "destructive"}
-                  className="gap-1"
-                >
+                <Badge variant={semanticScore.passed ? "default" : "destructive"} className="gap-1">
                   <Shield className="h-3 w-3" />
                   Score: {String(semanticScore.grade)} ({((semanticScore.overall as number) * 100).toFixed(0)}%)
                 </Badge>
               )}
               {(summary.duplicatesRemoved as number) > 0 && (
-                <Badge variant="outline">
-                  {String(summary.duplicatesRemoved)} duplicatas removidas
-                </Badge>
+                <Badge variant="outline">{String(summary.duplicatesRemoved)} duplicatas removidas</Badge>
               )}
-              <Badge variant="outline">
-                Whitelist: ✓
-              </Badge>
+              <Badge variant="outline">Whitelist: ✓</Badge>
             </div>
           )}
 
-          {/* Semantic Score Details */}
           {semanticScore?.details && (
             <div className="rounded border p-2 bg-muted/30 text-xs space-y-1">
               <p className="font-semibold text-foreground">Semantic Score Details:</p>
@@ -277,7 +280,6 @@ export function WikidataSyncButton({ productId, wikidataItemId, onSyncSuccess }:
             </div>
           )}
 
-          {/* Warnings */}
           {warnings.length > 0 && (
             <div className="rounded border border-destructive/30 p-2 bg-destructive/5 text-xs space-y-1">
               <p className="font-semibold text-destructive">⚠ Warnings ({warnings.length}):</p>
@@ -289,25 +291,22 @@ export function WikidataSyncButton({ productId, wikidataItemId, onSyncSuccess }:
             </div>
           )}
 
-          {/* Payload JSON */}
           <ScrollArea className="flex-1 rounded border bg-muted p-3 max-h-[40vh]">
             <pre className="text-xs font-mono whitespace-pre-wrap break-all text-foreground">
               {JSON.stringify(payloadData?.payload, null, 2)}
             </pre>
           </ScrollArea>
 
-          {/* Tech Specs */}
-          {summary?.techSpecsExtracted &&
-            Object.keys(summary.techSpecsExtracted as object).length > 0 && (
-              <div className="rounded border p-3 bg-muted/50">
-                <p className="text-xs font-semibold mb-1 text-foreground">
-                  Specs técnicos extraídos (description enrichment only — NOT claims):
-                </p>
-                <pre className="text-xs font-mono text-muted-foreground">
-                  {JSON.stringify(summary.techSpecsExtracted, null, 2)}
-                </pre>
-              </div>
-            )}
+          {summary?.techSpecsExtracted && Object.keys(summary.techSpecsExtracted as object).length > 0 && (
+            <div className="rounded border p-3 bg-muted/50">
+              <p className="text-xs font-semibold mb-1 text-foreground">
+                Specs técnicos extraídos (description enrichment only — NOT claims):
+              </p>
+              <pre className="text-xs font-mono text-muted-foreground">
+                {JSON.stringify(summary.techSpecsExtracted, null, 2)}
+              </pre>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </>
