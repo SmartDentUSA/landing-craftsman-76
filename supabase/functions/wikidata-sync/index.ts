@@ -4,8 +4,8 @@ import {
   buildCompanyPayload,
   buildProductPayload,
   extractTechSpecs,
-  validatePayload,
   summarizePayload,
+  evaluateSemanticScore,
   type CompanyProfileInput,
   type ProductInput,
 } from "../_shared/wikidata-payload-builder.ts";
@@ -654,23 +654,32 @@ async function handleBuildCompanyPayload(db: ReturnType<typeof createClient>) {
     return jsonResponse({ success: false, error: "Nenhum perfil de empresa encontrado" }, 404);
   }
 
-  const payload = buildCompanyPayload(company as CompanyProfileInput);
-  const techSpecs = {};
-  const summary = summarizePayload(payload, techSpecs, "company");
+  try {
+    const payload = buildCompanyPayload(company as CompanyProfileInput);
+    const techSpecs = {};
+    const summary = summarizePayload(payload, techSpecs, "company");
 
-  console.log("[wikidata-sync] Company payload built", {
-    claimCount: summary.claimCount,
-    isValid: summary.isValid,
-    errors: summary.validationErrors,
-  });
+    console.log("[wikidata-sync] Company payload built", {
+      claimCount: summary.claimCount,
+      isValid: summary.isValid,
+      semanticGrade: summary.semanticScore.grade,
+      semanticOverall: summary.semanticScore.overall,
+    });
 
-  return jsonResponse({
-    success: true,
-    action: "build_company_payload",
-    dryRun: true,
-    payload,
-    summary,
-  });
+    return jsonResponse({
+      success: true,
+      action: "build_company_payload",
+      dryRun: true,
+      payload,
+      summary,
+    });
+  } catch (buildError) {
+    console.error("[wikidata-sync] Company payload build FAILED", buildError);
+    return jsonResponse({
+      success: false,
+      error: buildError instanceof Error ? buildError.message : "Build error",
+    }, 400);
+  }
 }
 
 async function handleBuildProductPayload(db: ReturnType<typeof createClient>, productId?: string) {
@@ -693,38 +702,50 @@ async function handleBuildProductPayload(db: ReturnType<typeof createClient>, pr
     return jsonResponse({ success: false, error: "Produto não encontrado" }, 404);
   }
 
-  // Get company QID
+  // Get company QID and country
   const { data: company } = await db
     .from("company_profile")
-    .select("wikidata_id")
+    .select("wikidata_id, country")
     .order("updated_at", { ascending: false, nullsFirst: false })
     .limit(1)
     .maybeSingle();
 
   const companyQid = company?.wikidata_id || "Q138636902";
-  // Inject country from company profile for conditional P495
-  const productWithCountry = { ...(product as ProductInput), country: "Brasil" };
-  const payload = buildProductPayload(productWithCountry, companyQid);
-  const techSpecs = extractTechSpecs(product.features, product.description);
-  const summary = summarizePayload(payload, techSpecs, "product");
+  const companyCountry = company?.country || "Brasil";
 
-  console.log("[wikidata-sync] Product payload built", {
-    productId,
-    productName: product.name,
-    claimCount: summary.claimCount,
-    isValid: summary.isValid,
-    techSpecs,
-  });
+  try {
+    const productWithCountry = { ...(product as ProductInput), country: companyCountry };
+    const payload = buildProductPayload(productWithCountry, companyQid);
+    const techSpecs = extractTechSpecs(product.features, product.description);
+    const summary = summarizePayload(payload, techSpecs, "product");
 
-  return jsonResponse({
-    success: true,
-    action: "build_product_payload",
-    dryRun: true,
-    productId,
-    productName: product.name,
-    payload,
-    summary,
-  });
+    console.log("[wikidata-sync] Product payload built", {
+      productId,
+      productName: product.name,
+      claimCount: summary.claimCount,
+      isValid: summary.isValid,
+      semanticGrade: summary.semanticScore.grade,
+      semanticOverall: summary.semanticScore.overall,
+      techSpecs,
+    });
+
+    return jsonResponse({
+      success: true,
+      action: "build_product_payload",
+      dryRun: true,
+      productId,
+      productName: product.name,
+      payload,
+      summary,
+    });
+  } catch (buildError) {
+    console.error("[wikidata-sync] Product payload build FAILED", buildError);
+    return jsonResponse({
+      success: false,
+      error: buildError instanceof Error ? buildError.message : "Build error",
+      productId,
+    }, 400);
+  }
 }
 
 function jsonResponse(payload: unknown, status = 200) {

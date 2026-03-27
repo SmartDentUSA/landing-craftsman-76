@@ -8,7 +8,8 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Globe, Loader2, Eye } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Globe, Loader2, Eye, Shield, AlertTriangle, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { syncProductToWikidata, buildProductWikidataPayload } from "@/services/wikidata-sync";
 
@@ -93,6 +94,12 @@ export function WikidataSyncButton({ productId, wikidataItemId, onSyncSuccess }:
     }
   };
 
+  const summary = payloadData?.summary as Record<string, unknown> | undefined;
+  const semanticScore = summary?.semanticScore as Record<string, unknown> | undefined;
+  const validationErrors = (summary?.validationErrors as Array<{ severity: string; path: string; message: string }>) || [];
+  const hardErrors = validationErrors.filter(e => e.severity === "error");
+  const warnings = validationErrors.filter(e => e.severity === "warning");
+
   return (
     <>
       <div className="flex items-center gap-1">
@@ -134,43 +141,88 @@ export function WikidataSyncButton({ productId, wikidataItemId, onSyncSuccess }:
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Globe className="h-5 w-5" />
-              Payload wbeditentity — Preview
+              Payload wbeditentity — Preview v3.0
             </DialogTitle>
             <DialogDescription>
-              JSON validado pronto para envio ao Wikidata API. Modo dry-run (nenhuma escrita é realizada).
+              JSON validado e auditável. Modo dry-run — nenhuma escrita é realizada.
             </DialogDescription>
           </DialogHeader>
 
-          {payloadData?.summary && (
+          {/* Status Badges */}
+          {summary && (
             <div className="flex flex-wrap gap-2 text-xs">
-              {(payloadData.summary as any)?.isValid ? (
-                <Badge className="bg-success text-success-foreground">✓ Válido</Badge>
+              {summary.isValid ? (
+                <Badge className="bg-success text-success-foreground gap-1">
+                  <CheckCircle className="h-3 w-3" /> Válido
+                </Badge>
               ) : (
-                <Badge variant="destructive">✗ Erros de validação</Badge>
-              )}
-              <Badge variant="secondary">
-                {(payloadData.summary as any)?.claimCount ?? 0} claims
-              </Badge>
-              {(payloadData.summary as any)?.labels?.length > 0 && (
-                <Badge variant="outline">
-                  Labels: {(payloadData.summary as any).labels.join(", ")}
+                <Badge variant="destructive" className="gap-1">
+                  <AlertTriangle className="h-3 w-3" /> {hardErrors.length} erro(s)
                 </Badge>
               )}
+              <Badge variant="secondary">
+                {summary.claimCount ?? 0} claims
+              </Badge>
+              {semanticScore && (
+                <Badge
+                  variant={semanticScore.passed ? "default" : "destructive"}
+                  className="gap-1"
+                >
+                  <Shield className="h-3 w-3" />
+                  Score: {semanticScore.grade} ({((semanticScore.overall as number) * 100).toFixed(0)}%)
+                </Badge>
+              )}
+              {(summary.duplicatesRemoved as number) > 0 && (
+                <Badge variant="outline">
+                  {summary.duplicatesRemoved} duplicatas removidas
+                </Badge>
+              )}
+              <Badge variant="outline">
+                Whitelist: ✓
+              </Badge>
             </div>
           )}
 
-          <div className="flex-1 overflow-auto rounded border bg-muted p-3">
+          {/* Semantic Score Details */}
+          {semanticScore?.details && (
+            <div className="rounded border p-2 bg-muted/30 text-xs space-y-1">
+              <p className="font-semibold text-foreground">Semantic Score Details:</p>
+              {(semanticScore.details as string[]).map((d, i) => (
+                <p key={i} className={`text-muted-foreground ${d.startsWith("⚠️") || d.startsWith("MISSING") ? "text-destructive font-medium" : ""}`}>
+                  {d}
+                </p>
+              ))}
+            </div>
+          )}
+
+          {/* Warnings */}
+          {warnings.length > 0 && (
+            <div className="rounded border border-yellow-500/30 p-2 bg-yellow-50/5 text-xs space-y-1">
+              <p className="font-semibold text-yellow-600">⚠ Warnings ({warnings.length}):</p>
+              {warnings.map((w, i) => (
+                <p key={i} className="text-muted-foreground">
+                  <span className="font-mono">{w.path}</span>: {w.message}
+                </p>
+              ))}
+            </div>
+          )}
+
+          {/* Payload JSON */}
+          <ScrollArea className="flex-1 rounded border bg-muted p-3 max-h-[40vh]">
             <pre className="text-xs font-mono whitespace-pre-wrap break-all text-foreground">
               {JSON.stringify(payloadData?.payload, null, 2)}
             </pre>
-          </div>
+          </ScrollArea>
 
-          {(payloadData?.summary as any)?.techSpecsExtracted &&
-            Object.keys((payloadData.summary as any).techSpecsExtracted).length > 0 && (
+          {/* Tech Specs */}
+          {summary?.techSpecsExtracted &&
+            Object.keys(summary.techSpecsExtracted as object).length > 0 && (
               <div className="rounded border p-3 bg-muted/50">
-                <p className="text-xs font-semibold mb-1 text-foreground">Specs técnicos extraídos:</p>
+                <p className="text-xs font-semibold mb-1 text-foreground">
+                  Specs técnicos extraídos (description enrichment only — NOT claims):
+                </p>
                 <pre className="text-xs font-mono text-muted-foreground">
-                  {JSON.stringify((payloadData.summary as any).techSpecsExtracted, null, 2)}
+                  {JSON.stringify(summary.techSpecsExtracted, null, 2)}
                 </pre>
               </div>
             )}
