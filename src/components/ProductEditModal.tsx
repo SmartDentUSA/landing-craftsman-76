@@ -239,6 +239,7 @@ interface Product {
   clinical_brain_validated_at?: string;
   clinical_brain_validator_name?: string;
   clinical_brain_validation_notes?: string;
+  wikidata_item_id?: string | null;
 }
 
 interface WorkflowStage {
@@ -4550,7 +4551,7 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
             </div>
 
             <div className="flex gap-2 items-center">
-              <WikidataSyncButton productId={product?.id} wikidataItemId={(product as any)?.wikidata_item_id} />
+              <WikidataSyncButton productId={product?.id} wikidataItemId={product?.wikidata_item_id} />
               <Button variant="outline" onClick={onClose}>
                 Cancelar
               </Button>

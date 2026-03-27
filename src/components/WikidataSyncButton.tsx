@@ -7,12 +7,16 @@ import { syncProductToWikidata } from "@/services/wikidata-sync";
 
 interface WikidataSyncButtonProps {
   productId?: string;
-  wikidataItemId?: string;
+  wikidataItemId?: string | null;
+  onSyncSuccess?: (qid: string) => void;
 }
 
-export function WikidataSyncButton({ productId, wikidataItemId }: WikidataSyncButtonProps) {
+export function WikidataSyncButton({ productId, wikidataItemId, onSyncSuccess }: WikidataSyncButtonProps) {
   const [syncing, setSyncing] = useState(false);
+  const [localQid, setLocalQid] = useState<string | null>(null);
   const { toast } = useToast();
+
+  const displayQid = localQid || wikidataItemId;
 
   if (!productId) return null;
 
@@ -21,6 +25,8 @@ export function WikidataSyncButton({ productId, wikidataItemId }: WikidataSyncBu
     try {
       const result = await syncProductToWikidata(productId);
       if (result.success && result.wikidataQid) {
+        setLocalQid(result.wikidataQid);
+        onSyncSuccess?.(result.wikidataQid);
         toast({
           title: `✓ Sincronizado: ${result.wikidataQid}`,
           description: (
@@ -65,9 +71,9 @@ export function WikidataSyncButton({ productId, wikidataItemId }: WikidataSyncBu
         {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Globe className="h-4 w-4" />}
         Wikidata
       </Button>
-      {wikidataItemId && (
+      {displayQid && (
         <a
-          href={`https://www.wikidata.org/wiki/${wikidataItemId}`}
+          href={`https://www.wikidata.org/wiki/${displayQid}`}
           target="_blank"
           rel="noopener noreferrer"
         >
