@@ -498,7 +498,7 @@ export function buildCompanyPayload(company: CompanyProfileInput): WikidataPaylo
     payload.descriptions = {
       pt: { language: "pt", value: shortDesc },
       "pt-br": { language: "pt-br", value: shortDesc },
-      // EN/ES placeholders - ready for Gemini integration
+      en: { language: "en", value: shortDesc },
     };
   }
 
@@ -508,7 +508,7 @@ export function buildCompanyPayload(company: CompanyProfileInput): WikidataPaylo
     aliasValues.push({ language: "pt", value: company.legal_name.trim() });
   }
   if (aliasValues.length > 0) {
-    payload.aliases = { pt: aliasValues };
+    payload.aliases = { pt: aliasValues, en: aliasValues };
   }
 
   // ── Claims ──
@@ -684,7 +684,7 @@ export function buildProductPayload(
     aliasValues.push({ language: "pt", value: `Shore ${specs.shoreHardness.scale} ${specs.shoreHardness.value}` });
   }
   if (aliasValues.length > 0) {
-    payload.aliases = { pt: aliasValues };
+    payload.aliases = { pt: aliasValues, en: aliasValues };
   }
 
   // ── Claims (whitelist-enforced, NO P2076/P1306 EVER) ──
@@ -778,12 +778,11 @@ export function extractTechSpecs(
 // ── 9. MULTILINGUAGEM ──────────────────────────────────────
 
 function buildMultilingualLabels(name: string): Record<string, WikidataLabel> {
-  // PT-BR: obrigatório. EN/ES: placeholder estrutural (não inventar traduções)
+  // PT-BR + EN mirror (commercial names are universal). ES: future Gemini integration
   return {
     pt: { language: "pt", value: name },
     "pt-br": { language: "pt-br", value: name },
-    // EN placeholder — ready for Gemini integration
-    // es placeholder — ready for Gemini integration
+    en: { language: "en", value: name },
   };
 }
 
