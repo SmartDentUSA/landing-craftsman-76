@@ -1,7 +1,55 @@
 // ============================================================
-// Wikidata Payload Builder — wbeditentity spec-compliant
-// Builds validated payloads from company_profile & products_repository
+// Wikidata Payload Builder v2.0 — Hardened & Spec-Compliant
+// Whitelist-enforced, QID-validated, authority-grade references
 // ============================================================
+
+// ── Property Whitelist (Hard Enforcement) ───────────────────
+
+const PROPERTY_WHITELIST = {
+  company: [
+    "P31",   // instance of
+    "P17",   // country
+    "P856",  // official website
+    "P571",  // inception
+    "P625",  // coordinate location
+    "P1651", // YouTube video ID
+    "P2003", // Instagram username
+    "P2013", // Facebook ID
+    "P4264", // LinkedIn company ID
+    "P2397", // YouTube channel ID
+    "P1327", // partner organization
+    "P154",  // logo image (Commons)
+    "P968",  // email address
+    "P1329", // phone number
+    "P3225", // DUNS number
+    "P6204", // CNPJ (tax ID)
+    "P973",  // described at URL
+  ] as const,
+  product: [
+    "P31",   // instance of (MUST be Q2424752 = product model)
+    "P176",  // manufacturer
+    "P973",  // described at URL
+    "P495",  // country of origin (conditional: only if Brasil)
+  ] as const,
+} as const;
+
+type EntityType = keyof typeof PROPERTY_WHITELIST;
+
+function isPropertyAllowed(entityType: EntityType, property: string): boolean {
+  return (PROPERTY_WHITELIST[entityType] as readonly string[]).includes(property);
+}
+
+// ── QID Validator ───────────────────────────────────────────
+
+function isValidQID(value: string): boolean {
+  return /^Q\d+$/.test(value);
+}
+
+function assertValidQID(value: string, context: string): void {
+  if (!isValidQID(value)) {
+    throw new Error(`Invalid QID "${value}" in ${context}. Must match /^Q\\d+$/`);
+  }
+}
 
 // ── Wikidata API Types ──────────────────────────────────────
 
@@ -19,11 +67,11 @@ export interface WikidataStringValue {
 export interface WikidataTimeValue {
   type: "time";
   value: {
-    time: string; // "+YYYY-MM-DDT00:00:00Z"
+    time: string;
     timezone: 0;
     before: 0;
     after: 0;
-    precision: number; // 9=year, 10=month, 11=day
+    precision: number;
     calendarmodel: "http://www.wikidata.org/entity/Q1985727";
   };
 }
@@ -31,8 +79,8 @@ export interface WikidataTimeValue {
 export interface WikidataQuantityValue {
   type: "quantity";
   value: {
-    amount: string; // "+147" or "+82"
-    unit: string; // "http://www.wikidata.org/entity/Q..." or "1" for dimensionless
+    amount: string;
+    unit: string;
   };
 }
 
@@ -45,11 +93,6 @@ export interface WikidataGlobeCoordinateValue {
     precision: number;
     globe: "http://www.wikidata.org/entity/Q2";
   };
-}
-
-export interface WikidataUrlValue {
-  type: "string";
-  value: string;
 }
 
 export type WikidataDataValue =
@@ -91,7 +134,7 @@ export interface WikidataPayload {
   claims?: Record<string, WikidataClaim[]>;
 }
 
-// ── Extracted Tech Specs ────────────────────────────────────
+// ── Extracted Tech Specs (for description enrichment only) ──
 
 export interface TechSpecs {
   flexuralStrengthMPa?: number;
@@ -105,6 +148,7 @@ export interface TechSpecs {
 // ── Claim Builders ──────────────────────────────────────────
 
 function entityId(qid: string): WikidataDataValue {
+  assertValidQID(qid, "entityId builder");
   const numericId = parseInt(qid.replace("Q", ""), 10);
   return {
     type: "wikibase-entityid",
@@ -124,20 +168,8 @@ function timeVal(year: number): WikidataDataValue {
       timezone: 0,
       before: 0,
       after: 0,
-      precision: 9, // year
+      precision: 9,
       calendarmodel: "http://www.wikidata.org/entity/Q1985727",
-    },
-  };
-}
-
-function quantityVal(amount: number, unitQid?: string): WikidataDataValue {
-  return {
-    type: "quantity",
-    value: {
-      amount: amount >= 0 ? `+${amount}` : `${amount}`,
-      unit: unitQid
-        ? `http://www.wikidata.org/entity/${unitQid}`
-        : "1",
     },
   };
 }
@@ -171,27 +203,65 @@ function buildClaim(
   return claim;
 }
 
-function buildReference(url: string): WikidataReference {
-  return {
-    snaks: {
-      P854: [
-        {
-          snaktype: "value",
-          property: "P854", // reference URL
-          datavalue: stringVal(url),
-        },
-      ],
+// ── Structured Authority Reference Builder ──────────────────
+// Full reference with P248 (stated in), P854 (reference URL), P813 (retrieved)
+
+function buildAuthorityReference(url: string, sourceQID?: string): WikidataReference {
+  const snaks: Record<string, WikidataMainSnak[]> = {};
+  const snaksOrder: string[] = [];
+
+  // P248: stated in (source entity)
+  if (sourceQID && isValidQID(sourceQID)) {
+    snaks["P248"] = [{
+      snaktype: "value",
+      property: "P248",
+      datavalue: entityId(sourceQID),
+    }];
+    snaksOrder.push("P248");
+  }
+
+  // P854: reference URL
+  snaks["P854"] = [{
+    snaktype: "value",
+    property: "P854",
+    datavalue: stringVal(url),
+  }];
+  snaksOrder.push("P854");
+
+  // P813: retrieved (today's date)
+  const today = new Date();
+  const dateStr = `+${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}T00:00:00Z`;
+  snaks["P813"] = [{
+    snaktype: "value",
+    property: "P813",
+    datavalue: {
+      type: "time",
+      value: {
+        time: dateStr,
+        timezone: 0,
+        before: 0,
+        after: 0,
+        precision: 11, // day precision
+        calendarmodel: "http://www.wikidata.org/entity/Q1985727",
+      },
     },
-    "snaks-order": ["P854"],
-  };
+  }];
+  snaksOrder.push("P813");
+
+  return { snaks, "snaks-order": snaksOrder };
 }
 
-function addClaim(
+function addClaimWhitelisted(
+  entityType: EntityType,
   claims: Record<string, WikidataClaim[]>,
   property: string,
   datavalue: WikidataDataValue,
   references?: WikidataReference[],
 ) {
+  if (!isPropertyAllowed(entityType, property)) {
+    console.warn(`[PayloadBuilder] BLOCKED: Property ${property} not in ${entityType} whitelist`);
+    return;
+  }
   if (!claims[property]) claims[property] = [];
   claims[property].push(buildClaim(property, datavalue, references));
 }
@@ -204,7 +274,6 @@ function extractYouTubeIds(videos: unknown): string[] {
   for (const v of videos) {
     if (!v || typeof v !== "object") continue;
     const record = v as Record<string, unknown>;
-    // Try known field patterns
     for (const key of ["youtube_id", "youtubeId", "video_id", "videoId", "url"]) {
       const val = record[key];
       if (typeof val === "string" && val.trim()) {
@@ -222,7 +291,9 @@ function extractYouTubeIds(videos: unknown): string[] {
   return [...new Set(ids)];
 }
 
-// ── Tech Spec Parser ────────────────────────────────────────
+// ── Tech Spec Parser (for description enrichment ONLY) ──────
+// IMPORTANT: These values are NOT sent as claims (P2076/P1306 removed).
+// They enrich labels/descriptions/aliases for semantic discoverability.
 
 export function extractTechSpecs(
   features?: unknown,
@@ -231,7 +302,6 @@ export function extractTechSpecs(
   const specs: TechSpecs = {};
   const texts: string[] = [];
 
-  // Collect text from features array
   if (Array.isArray(features)) {
     for (const f of features) {
       if (typeof f === "string") texts.push(f);
@@ -248,16 +318,11 @@ export function extractTechSpecs(
   }
 
   if (description) texts.push(description);
-
   const combined = texts.join(" ");
 
-  // Flexural Strength (MPa)
   const mpaMatch = combined.match(/(\d+(?:[.,]\d+)?)\s*MPa/i);
-  if (mpaMatch) {
-    specs.flexuralStrengthMPa = parseFloat(mpaMatch[1].replace(",", "."));
-  }
+  if (mpaMatch) specs.flexuralStrengthMPa = parseFloat(mpaMatch[1].replace(",", "."));
 
-  // Shore Hardness
   const shoreMatch = combined.match(/Shore\s*([AD])\s*(\d+)/i);
   if (shoreMatch) {
     specs.shoreHardness = {
@@ -266,31 +331,52 @@ export function extractTechSpecs(
     };
   }
 
-  // Radiopacity percentage
   const radioMatch = combined.match(/(\d+(?:[.,]\d+)?)\s*%\s*(?:de\s+)?radiopac/i);
-  if (radioMatch) {
-    specs.radiopacity = parseFloat(radioMatch[1].replace(",", "."));
-  }
+  if (radioMatch) specs.radiopacity = parseFloat(radioMatch[1].replace(",", "."));
 
-  // Translucency percentage
   const transMatch = combined.match(/(\d+(?:[.,]\d+)?)\s*%\s*(?:de\s+)?transluc/i);
-  if (transMatch) {
-    specs.translucency = parseFloat(transMatch[1].replace(",", "."));
-  }
+  if (transMatch) specs.translucency = parseFloat(transMatch[1].replace(",", "."));
 
-  // Depth of cure (mm)
   const depthMatch = combined.match(/(?:profundidade|depth)\s*(?:de\s+)?(?:cura|cure)\s*(?:de\s+)?(\d+(?:[.,]\d+)?)\s*mm/i);
-  if (depthMatch) {
-    specs.depthOfCureMm = parseFloat(depthMatch[1].replace(",", "."));
-  }
+  if (depthMatch) specs.depthOfCureMm = parseFloat(depthMatch[1].replace(",", "."));
 
-  // Working time (seconds)
   const workMatch = combined.match(/(?:tempo|time)\s*(?:de\s+)?(?:trabalho|work)\s*(?:de\s+)?(\d+)\s*(?:s|seg|sec)/i);
-  if (workMatch) {
-    specs.workingTimeSeconds = parseInt(workMatch[1], 10);
-  }
+  if (workMatch) specs.workingTimeSeconds = parseInt(workMatch[1], 10);
 
   return specs;
+}
+
+// ── Description Enrichment with Tech Specs ──────────────────
+// Instead of claims, embed tech data into multilingual descriptions
+
+function buildEnrichedDescription(
+  baseDesc: string,
+  specs: TechSpecs,
+  lang: "pt" | "en" | "es",
+): string {
+  const parts: string[] = [];
+
+  if (specs.flexuralStrengthMPa) {
+    const labels = { pt: "resistência flexural", en: "flexural strength", es: "resistencia flexural" };
+    parts.push(`${labels[lang]} ${specs.flexuralStrengthMPa} MPa`);
+  }
+  if (specs.shoreHardness) {
+    const labels = { pt: "dureza", en: "hardness", es: "dureza" };
+    parts.push(`${labels[lang]} Shore ${specs.shoreHardness.scale} ${specs.shoreHardness.value}`);
+  }
+  if (specs.radiopacity) {
+    const labels = { pt: "radiopacidade", en: "radiopacity", es: "radiopacidad" };
+    parts.push(`${labels[lang]} ${specs.radiopacity}%`);
+  }
+  if (specs.depthOfCureMm) {
+    const labels = { pt: "profundidade de cura", en: "depth of cure", es: "profundidad de curado" };
+    parts.push(`${labels[lang]} ${specs.depthOfCureMm} mm`);
+  }
+
+  if (parts.length === 0) return baseDesc;
+
+  const enriched = `${baseDesc} (${parts.join(", ")})`;
+  return enriched.length > 250 ? enriched.slice(0, 247) + "..." : enriched;
 }
 
 // ── Company Payload Builder ─────────────────────────────────
@@ -320,6 +406,13 @@ export interface CompanyProfileInput {
 export function buildCompanyPayload(company: CompanyProfileInput): WikidataPayload {
   const payload: WikidataPayload = {};
   const claims: Record<string, WikidataClaim[]> = {};
+  const add = (p: string, v: WikidataDataValue, refs?: WikidataReference[]) =>
+    addClaimWhitelisted("company", claims, p, v, refs);
+
+  // Website reference for authority
+  const siteRef = company.website_url
+    ? [buildAuthorityReference(company.website_url, "Q138636902")]
+    : undefined;
 
   // Labels
   const name = company.company_name?.trim();
@@ -328,7 +421,6 @@ export function buildCompanyPayload(company: CompanyProfileInput): WikidataPaylo
       pt: { language: "pt", value: name },
       "pt-br": { language: "pt-br", value: name },
     };
-    // TODO: Gemini translation for EN/ES
   }
 
   // Descriptions
@@ -348,27 +440,22 @@ export function buildCompanyPayload(company: CompanyProfileInput): WikidataPaylo
     };
   }
 
-  // ── Claims ──
+  // ── Claims (whitelist-enforced) ──
 
   // P31: instance of → Q4830453 (business enterprise)
-  addClaim(claims, "P31", entityId("Q4830453"));
+  add("P31", entityId("Q4830453"));
 
   // P17: country → Q155 (Brazil)
-  addClaim(claims, "P17", entityId("Q155"));
+  add("P17", entityId("Q155"));
 
   // P856: official website
   if (company.website_url) {
-    addClaim(claims, "P856", stringVal(company.website_url));
+    add("P856", stringVal(company.website_url), siteRef);
   }
 
   // P571: inception (founded year)
   if (company.founded_year && company.founded_year > 1800 && company.founded_year <= new Date().getFullYear()) {
-    addClaim(claims, "P571", timeVal(company.founded_year));
-  }
-
-  // P112: founded by
-  if (company.founder_name?.trim()) {
-    addClaim(claims, "P112", stringVal(company.founder_name.trim()));
+    add("P571", timeVal(company.founded_year), siteRef);
   }
 
   // P625: coordinate location
@@ -378,38 +465,43 @@ export function buildCompanyPayload(company: CompanyProfileInput): WikidataPaylo
     company.latitude >= -90 && company.latitude <= 90 &&
     company.longitude >= -180 && company.longitude <= 180
   ) {
-    addClaim(claims, "P625", globeCoordinate(company.latitude, company.longitude));
+    add("P625", globeCoordinate(company.latitude, company.longitude));
   }
 
-  // P154: logo image (Commons filename placeholder)
+  // P154: logo image (Commons filename)
   if (company.company_logo_url) {
-    addClaim(claims, "P154", stringVal(company.company_logo_url));
+    add("P154", stringVal(company.company_logo_url));
   }
 
   // P968: email address
   if (company.contact_email) {
-    addClaim(claims, "P968", stringVal(company.contact_email));
+    add("P968", stringVal(company.contact_email));
   }
 
   // P1329: phone number
   if (company.contact_phone) {
-    addClaim(claims, "P1329", stringVal(company.contact_phone));
+    add("P1329", stringVal(company.contact_phone));
   }
 
   // P3225: DUNS number
   if (company.duns_number) {
-    addClaim(claims, "P3225", stringVal(company.duns_number));
+    add("P3225", stringVal(company.duns_number));
   }
 
-  // P6204: tax ID (CNPJ)
+  // P6204: CNPJ (tax ID)
   if (company.tax_id) {
-    addClaim(claims, "P6204", stringVal(company.tax_id));
+    add("P6204", stringVal(company.tax_id));
+  }
+
+  // P973: described at URL
+  if (company.website_url) {
+    add("P973", stringVal(company.website_url));
   }
 
   // P1651: YouTube video IDs
   const ytIds = extractYouTubeIds(company.company_videos);
   for (const id of ytIds.slice(0, 10)) {
-    addClaim(claims, "P1651", stringVal(id));
+    add("P1651", stringVal(id));
   }
 
   // P2397: YouTube channel ID
@@ -418,7 +510,7 @@ export function buildCompanyPayload(company: CompanyProfileInput): WikidataPaylo
       /youtube\.com\/(?:channel\/|c\/|@)([a-zA-Z0-9_-]+)/,
     );
     if (channelMatch) {
-      addClaim(claims, "P2397", stringVal(channelMatch[1]));
+      add("P2397", stringVal(channelMatch[1]));
     }
   }
 
@@ -429,24 +521,18 @@ export function buildCompanyPayload(company: CompanyProfileInput): WikidataPaylo
         const rec = link as Record<string, unknown>;
         const url = (rec.url || rec.link) as string | undefined;
         if (typeof url === "string" && url.startsWith("http")) {
-          addClaim(claims, "P1327", stringVal(url));
+          add("P1327", stringVal(url));
         }
       }
     }
   }
 
-  // P553/P554: social media (Instagram, Facebook, etc.)
+  // P2003: Instagram username
   if (company.social_media_links && typeof company.social_media_links === "object") {
     const social = company.social_media_links as Record<string, unknown>;
     if (typeof social.instagram === "string" && social.instagram) {
-      const igMatch = (social.instagram as string).match(/instagram\.com\/([a-zA-Z0-9_.]+)/);
-      if (igMatch) addClaim(claims, "P2003", stringVal(igMatch[1])); // P2003 = Instagram username
-    }
-    if (typeof social.facebook === "string" && social.facebook) {
-      addClaim(claims, "P2013", stringVal(social.facebook as string)); // P2013 = Facebook ID
-    }
-    if (typeof social.linkedin === "string" && social.linkedin) {
-      addClaim(claims, "P4264", stringVal(social.linkedin as string)); // P4264 = LinkedIn company ID
+      const igMatch = social.instagram.match(/instagram\.com\/([a-zA-Z0-9_.]+)/);
+      if (igMatch) add("P2003", stringVal(igMatch[1]));
     }
   }
 
@@ -471,6 +557,7 @@ export interface ProductInput {
   technical_specifications?: unknown;
   image_url?: string | null;
   product_url?: string | null;
+  country?: string | null;
   ean?: string | null;
   gtin?: string | null;
   mpn?: string | null;
@@ -480,8 +567,15 @@ export function buildProductPayload(
   product: ProductInput,
   companyQid: string = "Q138636902",
 ): WikidataPayload {
+  assertValidQID(companyQid, "buildProductPayload companyQid");
+
   const payload: WikidataPayload = {};
   const claims: Record<string, WikidataClaim[]> = {};
+  const add = (p: string, v: WikidataDataValue, refs?: WikidataReference[]) =>
+    addClaimWhitelisted("product", claims, p, v, refs);
+
+  // Extract tech specs for description enrichment (NOT for claims)
+  const specs = extractTechSpecs(product.features, product.description);
 
   // Labels
   const name = product.name?.trim();
@@ -492,81 +586,56 @@ export function buildProductPayload(
     };
   }
 
-  // Description
+  // Description — enriched with tech specs instead of claims
   const desc = product.description?.trim();
   if (desc) {
     const shortDesc = desc.length > 250 ? desc.slice(0, 247) + "..." : desc;
+    const enrichedPt = buildEnrichedDescription(shortDesc, specs, "pt");
     payload.descriptions = {
-      pt: { language: "pt", value: shortDesc },
-      "pt-br": { language: "pt-br", value: shortDesc },
+      pt: { language: "pt", value: enrichedPt },
+      "pt-br": { language: "pt-br", value: enrichedPt },
     };
   }
 
-  // ── Claims ──
-
-  // P31: instance of → product's wikidata category (e.g. Q1780993 = dental composite)
-  if (product.wikidata_item_id && /^Q\d+$/.test(product.wikidata_item_id)) {
-    addClaim(claims, "P31", entityId(product.wikidata_item_id));
+  // Aliases — include tech spec keywords for discoverability
+  const aliasValues: string[] = [];
+  if (product.brand && product.brand !== product.name) {
+    aliasValues.push(product.brand);
   }
+  if (specs.flexuralStrengthMPa) {
+    aliasValues.push(`${specs.flexuralStrengthMPa} MPa`);
+  }
+  if (specs.shoreHardness) {
+    aliasValues.push(`Shore ${specs.shoreHardness.scale} ${specs.shoreHardness.value}`);
+  }
+  if (aliasValues.length > 0) {
+    payload.aliases = {
+      pt: aliasValues.map(v => ({ language: "pt", value: v })),
+    };
+  }
+
+  // Build authority reference from product URL
+  const productRef = product.product_url
+    ? [buildAuthorityReference(product.product_url, companyQid)]
+    : undefined;
+
+  // ── Claims (whitelist-enforced, NO P2076/P1306) ──
+
+  // P31: instance of → Q2424752 (product model) — FIXED, always product model
+  add("P31", entityId("Q2424752"), productRef);
 
   // P176: manufacturer → company QID
-  if (/^Q\d+$/.test(companyQid)) {
-    addClaim(claims, "P176", entityId(companyQid));
-  }
+  add("P176", entityId(companyQid), productRef);
 
-  // P495: country of origin → Q155 (Brazil)
-  addClaim(claims, "P495", entityId("Q155"));
-
-  // P3931: copyright holder → company QID
-  if (/^Q\d+$/.test(companyQid)) {
-    addClaim(claims, "P3931", entityId(companyQid));
-  }
-
-  // Build reference from technical documents
-  const techDocRefs = extractTechDocReferences(product.technical_documents);
-
-  // Tech specs extraction
-  const specs = extractTechSpecs(product.features, product.description);
-
-  // P2076: flexural strength (unit: Q11570 = MPa / megapascal)
-  if (specs.flexuralStrengthMPa != null) {
-    addClaim(
-      claims,
-      "P2076",
-      quantityVal(specs.flexuralStrengthMPa, "Q11570"),
-      techDocRefs.length ? techDocRefs : undefined,
-    );
-  }
-
-  // P1306: Shore hardness (unit: Q28924869 = Shore durometer for D, dimensionless fallback)
-  if (specs.shoreHardness) {
-    const unitQid = specs.shoreHardness.scale === "D" ? "Q28924869" : "Q28924869";
-    addClaim(
-      claims,
-      "P1306",
-      quantityVal(specs.shoreHardness.value, unitQid),
-      techDocRefs.length ? techDocRefs : undefined,
-    );
-  }
-
-  // P18: image
-  if (product.image_url) {
-    addClaim(claims, "P18", stringVal(product.image_url));
-  }
-
-  // P856: official website (product URL)
+  // P973: described at URL
   if (product.product_url) {
-    addClaim(claims, "P856", stringVal(product.product_url));
+    add("P973", stringVal(product.product_url));
   }
 
-  // P3962: EAN-13
-  if (product.ean || product.gtin) {
-    addClaim(claims, "P3962", stringVal((product.ean || product.gtin)!));
-  }
-
-  // P1055: MPN (manufacturer part number)
-  if (product.mpn) {
-    addClaim(claims, "P1055", stringVal(product.mpn));
+  // P495: country of origin → Q155 ONLY if explicitly "Brasil"
+  const country = product.country?.trim().toLowerCase();
+  if (country === "brasil" || country === "brazil") {
+    add("P495", entityId("Q155"), productRef);
   }
 
   if (Object.keys(claims).length > 0) {
@@ -576,40 +645,28 @@ export function buildProductPayload(
   return payload;
 }
 
-// ── Tech Document Reference Extractor ───────────────────────
-
-function extractTechDocReferences(docs: unknown): WikidataReference[] {
-  if (!Array.isArray(docs)) return [];
-  const refs: WikidataReference[] = [];
-  for (const doc of docs) {
-    if (!doc || typeof doc !== "object") continue;
-    const rec = doc as Record<string, unknown>;
-    const url = (rec.url_download || rec.url || rec.file_url) as string | undefined;
-    if (typeof url === "string" && url.startsWith("http")) {
-      refs.push(buildReference(url));
-    }
-  }
-  return refs.slice(0, 3); // Max 3 references
-}
-
 // ── Payload Validator ───────────────────────────────────────
 
 export interface ValidationError {
   path: string;
   message: string;
+  severity: "error" | "warning";
 }
 
-export function validatePayload(payload: WikidataPayload): ValidationError[] {
+export function validatePayload(
+  payload: WikidataPayload,
+  entityType?: EntityType,
+): ValidationError[] {
   const errors: ValidationError[] = [];
 
   // Validate labels
   if (payload.labels) {
     for (const [lang, label] of Object.entries(payload.labels)) {
       if (!label.value?.trim()) {
-        errors.push({ path: `labels.${lang}`, message: "Label value is empty" });
+        errors.push({ path: `labels.${lang}`, message: "Label value is empty", severity: "error" });
       }
       if (label.value && label.value.length > 250) {
-        errors.push({ path: `labels.${lang}`, message: `Label too long: ${label.value.length} chars (max 250)` });
+        errors.push({ path: `labels.${lang}`, message: `Label too long: ${label.value.length} chars (max 250)`, severity: "error" });
       }
     }
   }
@@ -618,7 +675,7 @@ export function validatePayload(payload: WikidataPayload): ValidationError[] {
   if (payload.descriptions) {
     for (const [lang, desc] of Object.entries(payload.descriptions)) {
       if (desc.value && desc.value.length > 250) {
-        errors.push({ path: `descriptions.${lang}`, message: `Description too long: ${desc.value.length} chars (max 250)` });
+        errors.push({ path: `descriptions.${lang}`, message: `Description too long: ${desc.value.length} chars (max 250)`, severity: "error" });
       }
     }
   }
@@ -626,15 +683,22 @@ export function validatePayload(payload: WikidataPayload): ValidationError[] {
   // Validate claims
   if (payload.claims) {
     for (const [property, claimArray] of Object.entries(payload.claims)) {
+      // Validate property format
       if (!property.match(/^P\d+$/)) {
-        errors.push({ path: `claims.${property}`, message: `Invalid property ID: ${property}` });
+        errors.push({ path: `claims.${property}`, message: `Invalid property ID: ${property}`, severity: "error" });
       }
+
+      // Whitelist enforcement
+      if (entityType && !isPropertyAllowed(entityType, property)) {
+        errors.push({ path: `claims.${property}`, message: `Property ${property} NOT in ${entityType} whitelist — will be blocked`, severity: "error" });
+      }
+
       for (let i = 0; i < claimArray.length; i++) {
         const claim = claimArray[i];
         const claimPath = `claims.${property}[${i}]`;
 
         if (claim.mainsnak.snaktype !== "value") {
-          errors.push({ path: claimPath, message: `snaktype must be "value", got "${claim.mainsnak.snaktype}"` });
+          errors.push({ path: claimPath, message: `snaktype must be "value"`, severity: "error" });
         }
 
         const dv = claim.mainsnak.datavalue;
@@ -642,8 +706,8 @@ export function validatePayload(payload: WikidataPayload): ValidationError[] {
         // Validate QIDs
         if (dv.type === "wikibase-entityid") {
           const qid = (dv.value as WikidataEntityId).id;
-          if (!qid?.match(/^Q\d+$/)) {
-            errors.push({ path: claimPath, message: `Invalid QID: ${qid}` });
+          if (!isValidQID(qid)) {
+            errors.push({ path: claimPath, message: `Invalid QID: "${qid}"`, severity: "error" });
           }
         }
 
@@ -651,7 +715,7 @@ export function validatePayload(payload: WikidataPayload): ValidationError[] {
         if (dv.type === "time") {
           const timeStr = (dv as WikidataTimeValue).value.time;
           if (!timeStr.match(/^\+\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/)) {
-            errors.push({ path: claimPath, message: `Invalid time format: ${timeStr}` });
+            errors.push({ path: claimPath, message: `Invalid time format: ${timeStr}`, severity: "error" });
           }
         }
 
@@ -659,18 +723,24 @@ export function validatePayload(payload: WikidataPayload): ValidationError[] {
         if (dv.type === "globecoordinate") {
           const coord = (dv as WikidataGlobeCoordinateValue).value;
           if (coord.latitude < -90 || coord.latitude > 90) {
-            errors.push({ path: claimPath, message: `Invalid latitude: ${coord.latitude}` });
+            errors.push({ path: claimPath, message: `Invalid latitude: ${coord.latitude}`, severity: "error" });
           }
           if (coord.longitude < -180 || coord.longitude > 180) {
-            errors.push({ path: claimPath, message: `Invalid longitude: ${coord.longitude}` });
+            errors.push({ path: claimPath, message: `Invalid longitude: ${coord.longitude}`, severity: "error" });
           }
         }
 
-        // Validate quantity
-        if (dv.type === "quantity") {
-          const amt = (dv as WikidataQuantityValue).value.amount;
-          if (!amt.match(/^[+-]?\d+(\.\d+)?$/)) {
-            errors.push({ path: claimPath, message: `Invalid quantity amount: ${amt}` });
+        // Validate references structure
+        if (claim.references) {
+          for (let r = 0; r < claim.references.length; r++) {
+            const ref = claim.references[r];
+            if (!ref["snaks-order"]?.length) {
+              errors.push({ path: `${claimPath}.references[${r}]`, message: "Reference missing snaks-order", severity: "warning" });
+            }
+            // Check P813 (retrieved date) exists
+            if (!ref.snaks["P813"]) {
+              errors.push({ path: `${claimPath}.references[${r}]`, message: "Reference missing P813 (retrieved date) — weakens authority", severity: "warning" });
+            }
           }
         }
       }
@@ -678,6 +748,62 @@ export function validatePayload(payload: WikidataPayload): ValidationError[] {
   }
 
   return errors;
+}
+
+// ── Confidence Score ────────────────────────────────────────
+
+export interface ConfidenceScore {
+  hasReferences: boolean;
+  hasQIDs: boolean;
+  hasMultilang: boolean;
+  completeness: number;
+  grade: "A" | "B" | "C" | "D";
+}
+
+function calculateConfidence(payload: WikidataPayload, specs: TechSpecs): ConfidenceScore {
+  let total = 0;
+  let filled = 0;
+
+  // Labels
+  total += 3; // pt, en, es
+  filled += payload.labels ? Object.keys(payload.labels).length : 0;
+
+  // Descriptions
+  total += 3;
+  filled += payload.descriptions ? Object.keys(payload.descriptions).length : 0;
+
+  // Claims
+  const claimCount = payload.claims
+    ? Object.values(payload.claims).reduce((sum, arr) => sum + arr.length, 0)
+    : 0;
+  total += 4; // expect at least 4 claims
+  filled += Math.min(claimCount, 4);
+
+  // References
+  const hasRefs = payload.claims
+    ? Object.values(payload.claims).some(arr => arr.some(c => c.references?.length))
+    : false;
+  total += 1;
+  filled += hasRefs ? 1 : 0;
+
+  const completeness = total > 0 ? Math.round((filled / total) * 100) / 100 : 0;
+
+  const hasQIDs = payload.claims
+    ? Object.values(payload.claims).some(arr =>
+        arr.some(c => c.mainsnak.datavalue.type === "wikibase-entityid")
+      )
+    : false;
+
+  const hasMultilang = payload.labels
+    ? Object.keys(payload.labels).length >= 2
+    : false;
+
+  let grade: "A" | "B" | "C" | "D" = "D";
+  if (completeness >= 0.9 && hasRefs && hasQIDs) grade = "A";
+  else if (completeness >= 0.7 && hasQIDs) grade = "B";
+  else if (completeness >= 0.5) grade = "C";
+
+  return { hasReferences: hasRefs, hasQIDs, hasMultilang, completeness, grade };
 }
 
 // ── Summary Generator ───────────────────────────────────────
@@ -689,20 +815,29 @@ export interface PayloadSummary {
   claimCount: number;
   claimsByProperty: Record<string, number>;
   techSpecsExtracted: TechSpecs;
+  techSpecsUsage: "description_enrichment_only";
   validationErrors: ValidationError[];
   isValid: boolean;
+  confidence: ConfidenceScore;
+  whitelistEnforced: boolean;
+  blockedProperties: string[];
 }
 
 export function summarizePayload(
   payload: WikidataPayload,
   techSpecs: TechSpecs = {},
+  entityType?: EntityType,
 ): PayloadSummary {
-  const validationErrors = validatePayload(payload);
+  const validationErrors = validatePayload(payload, entityType);
   const claimsByProperty: Record<string, number> = {};
   let claimCount = 0;
+  const blockedProperties: string[] = [];
 
   if (payload.claims) {
     for (const [prop, arr] of Object.entries(payload.claims)) {
+      if (entityType && !isPropertyAllowed(entityType, prop)) {
+        blockedProperties.push(prop);
+      }
       claimsByProperty[prop] = arr.length;
       claimCount += arr.length;
     }
@@ -715,7 +850,11 @@ export function summarizePayload(
     claimCount,
     claimsByProperty,
     techSpecsExtracted: techSpecs,
+    techSpecsUsage: "description_enrichment_only",
     validationErrors,
-    isValid: validationErrors.length === 0,
+    isValid: validationErrors.filter(e => e.severity === "error").length === 0,
+    confidence: calculateConfidence(payload, techSpecs),
+    whitelistEnforced: true,
+    blockedProperties,
   };
 }
