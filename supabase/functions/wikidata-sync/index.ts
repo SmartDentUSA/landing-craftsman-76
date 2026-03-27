@@ -1235,7 +1235,7 @@ async function handleResolveAndPersist(
     }
 
     // --- Structured logging ---
-    const sameHashFlag = existing?.payload_hash === payloadHash;
+    const sameHashFlag = existingRecord?.payload_hash === payloadHash;
     console.log("[wikidata-sync] Decision context:", JSON.stringify({
       phase: "pre_write", entityType, internalId,
       decision: writeDecision, syncStatus,
