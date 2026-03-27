@@ -162,6 +162,11 @@ async function getWikidataCsrfToken(secrets: WikidataOAuthSecrets): Promise<stri
   return token;
 }
 
+function normalizeLabel(label: string): string {
+  return label.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ").trim();
+}
+
 async function findExistingEntity(label: string): Promise<string | null> {
   const res = await fetch(
     `https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${encodeURIComponent(label)}&language=pt&format=json&limit=5`,
@@ -171,7 +176,7 @@ async function findExistingEntity(label: string): Promise<string | null> {
   const json = await res.json();
   // Return exact match only
   const exactMatch = json.search?.find(
-    (r: { label?: string }) => r.label?.toLowerCase().trim() === label.toLowerCase().trim(),
+    (r: { label?: string }) => normalizeLabel(r.label || "") === normalizeLabel(label),
   );
   return exactMatch?.id || null;
 }
@@ -1098,10 +1103,22 @@ async function handleResolveAndPersist(
         .eq("internal_id", internalId)
         .maybeSingle();
 
-      if (existing?.payload_hash === payloadHash) {
+      const sameHash = existing?.payload_hash === payloadHash;
+      const hasQid = !!existing?.wikidata_qid;
+
+      if (sameHash && hasQid && existing?.sync_status === "synced") {
         writeDecision = "skip";
+        syncStatus = "synced";
+        wikidataQid = existing.wikidata_qid;
+        entityMapId = existing.id;
+      } else if (sameHash && hasQid) {
+        writeDecision = "update";
         syncStatus = existing.sync_status;
         wikidataQid = existing.wikidata_qid;
+        entityMapId = existing.id;
+      } else if (sameHash && !hasQid) {
+        writeDecision = "create";
+        syncStatus = existing.sync_status;
         entityMapId = existing.id;
       } else {
         const upsertData = {
@@ -1159,8 +1176,74 @@ async function handleResolveAndPersist(
       entityMapId = entityMap?.id || null;
     }
 
-    // 6. If write enabled and decision is create/update, execute real write
-    if (writeEnabled && (writeDecision === "create" || writeDecision === "update")) {
+    // --- Orphan QID recovery ---
+    let repairSource: string | null = null;
+    if (!wikidataQid) {
+      if (entityType === "company") {
+        const { data: srcData } = await db.from("company_profile").select("wikidata_id").eq("id", internalId).maybeSingle();
+        if (srcData?.wikidata_id) wikidataQid = srcData.wikidata_id;
+      } else {
+        const { data: srcData } = await db.from("products_repository").select("wikidata_item_id").eq("id", internalId).maybeSingle();
+        if (srcData?.wikidata_item_id) wikidataQid = srcData.wikidata_item_id;
+      }
+      if (wikidataQid) {
+        writeDecision = "update";
+        repairSource = "orphan_qid";
+        console.log(`[wikidata-sync] Repair: orphan QID ${wikidataQid} from source`);
+      }
+    }
+
+    // --- Anti-dup multi-label + aliases ---
+    if (!wikidataQid && writeDecision === "create") {
+      const labelCandidates = [
+        payload.labels?.pt?.value,
+        payload.labels?.en?.value,
+        ...(payload.aliases?.pt || []).map((a: any) => a.value || a),
+        ...(payload.aliases?.en || []).map((a: any) => a.value || a),
+      ].filter(Boolean) as string[];
+      for (const lbl of labelCandidates) {
+        const found = await findExistingEntity(normalizeLabel(lbl));
+        if (found) {
+          wikidataQid = found;
+          writeDecision = "update";
+          repairSource = "anti_dup_match";
+          console.log(`[wikidata-sync] Anti-dup: ${found} via "${lbl}"`);
+          break;
+        }
+      }
+    }
+
+    // --- Payload validation guard ---
+    if (writeDecision !== "skip" && writeDecision !== "abort") {
+      const requiredLangs = ["pt", "en"];
+      const missingLangs = requiredLangs.filter(lang => {
+        const val = payload.labels?.[lang]?.value;
+        return !val || !val.trim() || val.trim().length < 2;
+      });
+      if (missingLangs.length) {
+        return logAndReturn(db, {
+          action: "resolve_and_persist", entityType, internalId, payloadHash,
+          writeDecision: "abort", success: false,
+          errorCode: "INVALID_PAYLOAD",
+          errorMessage: `Missing/invalid labels for: ${missingLangs.join(", ")}`,
+          durationMs: Date.now() - startTime,
+        });
+      }
+    }
+
+    // --- Structured logging ---
+    const sameHashFlag = existing?.payload_hash === payloadHash;
+    console.log("[wikidata-sync] Decision context:", JSON.stringify({
+      phase: "pre_write", entityType, internalId,
+      decision: writeDecision, syncStatus,
+      hasQid: !!wikidataQid, sameHash: sameHashFlag ?? null,
+      targetQid: wikidataQid, entityMapId, writeEnabled,
+      repairMode: writeDecision === "update" && (sameHashFlag ?? false),
+      repairSource,
+    }));
+
+    // 6. If write enabled and decision requires write, execute real write
+    if (writeEnabled && writeDecision !== "skip" && writeDecision !== "abort") {
       const secrets = getWikidataSecrets();
       if (secrets) {
         try {
@@ -1176,9 +1259,23 @@ async function handleResolveAndPersist(
           }
 
           const targetQid = wikidataQid || existingQid || null;
+
+          if (targetQid && writeDecision === "create") writeDecision = "update";
+
+          // Anti-dup recheck (race condition mitigation)
+          let finalTargetQid = targetQid;
+          if (!finalTargetQid && writeDecision === "create" && ptLabel) {
+            const recheck = await findExistingEntity(normalizeLabel(ptLabel));
+            if (recheck) {
+              finalTargetQid = recheck;
+              writeDecision = "update";
+              console.log("[wikidata-sync] Anti-dup recheck:", recheck);
+            }
+          }
+
           const finalQid = await withRetry(
-            () => executeWbEditEntity(payload, secrets, targetQid),
-            { max: 3, delays: [600, 1500, 3000], retryOn: ["API_RATE_LIMIT", "NETWORK_ERROR"] },
+            () => executeWbEditEntity(payload, secrets, finalTargetQid),
+            { max: 3, delays: [600, 1500, 3000], retryOn: ["API_RATE_LIMIT", "NETWORK_ERROR", "maxlag", "readonly", "timeout"] },
           );
 
           // Persist QID back to entity_map
@@ -1209,6 +1306,22 @@ async function handleResolveAndPersist(
           wikidataQid = finalQid;
           syncStatus = "synced";
           console.log(`[wikidata-sync] ✅ Live write complete: ${finalQid}`);
+
+          // Read-after-write verification (non-blocking)
+          const capturedQid = finalQid;
+          setTimeout(async () => {
+            try {
+              const vRes = await fetch(`https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${capturedQid}&props=labels|descriptions|claims&format=json`);
+              const vJson = await vRes.json();
+              const e = vJson?.entities?.[capturedQid];
+              const labelPt = e?.labels?.pt?.value;
+              const labelEn = e?.labels?.en?.value;
+              const validLabels = [labelPt, labelEn].filter((v: string | undefined) => v && v.trim().length >= 2);
+              const hasCoreData = validLabels.length > 0 && Object.keys(e?.claims || {}).length > 0;
+              console.log(`[wikidata-sync] Verify: ${capturedQid} hasCoreData=${hasCoreData} labels=${validLabels.length}`);
+              if (!hasCoreData) console.warn(`[wikidata-sync] ⚠ Weak write: ${capturedQid}`);
+            } catch { /* non-blocking */ }
+          }, 1500);
         } catch (writeErr) {
           console.error("[wikidata-sync] Live write FAILED", writeErr);
 
@@ -1515,7 +1628,7 @@ export async function withRetry<T>(
   fn: () => Promise<T>,
   options: { max?: number; delays?: number[]; retryOn?: string[] } = {},
 ): Promise<T> {
-  const { max = 3, delays = [500, 1500, 3000], retryOn = ["API_RATE_LIMIT", "NETWORK_ERROR"] } = options;
+  const { max = 3, delays = [600, 1500, 3000], retryOn = ["API_RATE_LIMIT", "NETWORK_ERROR", "maxlag", "readonly", "timeout"] } = options;
 
   for (let attempt = 0; attempt < max; attempt++) {
     try {
