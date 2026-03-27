@@ -442,38 +442,20 @@ async function handleProductSync(db: ReturnType<typeof createClient>, productId?
 
   const best = candidates[0];
   if (!best || best.score < 35) {
-    // Try category fallback
+    // Try category fallback — return as suggestion only, do NOT persist to DB
     const fallbackQid = getCategoryFallbackQid(product.category, product.subcategory, product.name);
     if (fallbackQid) {
-      console.log("[wikidata-sync] Using category fallback", { productId, fallbackQid });
+      console.log("[wikidata-sync] Category fallback (suggestion only, not persisted)", { productId, fallbackQid });
       const fallbackDetails = await fetchEntityDetails(fallbackQid);
-      const fallbackCandidate: Candidate = {
-        qid: fallbackQid,
-        label: fallbackDetails.label,
-        description: fallbackDetails.description,
-        website: fallbackDetails.website,
-        score: 30,
-        reasons: ["category_fallback"],
-      };
-
-      const { error: updateError } = await db
-        .from("products_repository")
-        .update({ wikidata_item_id: fallbackQid, updated_at: new Date().toISOString() })
-        .eq("id", product.id);
-
-      if (updateError) {
-        console.error("[wikidata-sync] Failed to update product Wikidata ID (fallback)", updateError);
-        return jsonResponse({ success: false, error: `Erro ao salvar Wikidata do produto: ${updateError.message}` }, 500);
-      }
 
       return jsonResponse({
-        success: true,
-        wikidataQid: fallbackCandidate.qid,
-        label: fallbackCandidate.label,
-        description: fallbackCandidate.description,
-        score: fallbackCandidate.score,
-        reasons: fallbackCandidate.reasons,
-        source: "category_fallback",
+        success: false,
+        needsCreate: true,
+        reason: "generic_category_only",
+        fallbackQid,
+        fallbackLabel: fallbackDetails.label,
+        fallbackDescription: fallbackDetails.description,
+        message: "Categoria identificada, mas nenhum item específico encontrado. Use Resolve + Publish para criar.",
       });
     }
 
@@ -1194,20 +1176,25 @@ async function handleResolveAndPersist(
       entityMapId = entityMap?.id || null;
     }
 
-    // --- Orphan QID recovery ---
+    // --- Orphan QID recovery (skip category QIDs) ---
     let repairSource: string | null = null;
     if (!wikidataQid) {
+      let candidateQid: string | null = null;
       if (entityType === "company") {
         const { data: srcData } = await db.from("company_profile").select("wikidata_id").eq("id", internalId).maybeSingle();
-        if (srcData?.wikidata_id) wikidataQid = srcData.wikidata_id;
+        candidateQid = srcData?.wikidata_id || null;
       } else {
         const { data: srcData } = await db.from("products_repository").select("wikidata_item_id").eq("id", internalId).maybeSingle();
-        if (srcData?.wikidata_item_id) wikidataQid = srcData.wikidata_item_id;
+        candidateQid = srcData?.wikidata_item_id || null;
       }
-      if (wikidataQid) {
+      // Block category QIDs from being treated as orphan product QIDs
+      if (candidateQid && !getCategoryQids().has(candidateQid)) {
+        wikidataQid = candidateQid;
         writeDecision = "update";
         repairSource = "orphan_qid";
         console.log(`[wikidata-sync] Repair: orphan QID ${wikidataQid} from source`);
+      } else if (candidateQid && getCategoryQids().has(candidateQid)) {
+        console.log(`[wikidata-sync] Skipped orphan recovery: ${candidateQid} is a category QID`);
       }
     }
 

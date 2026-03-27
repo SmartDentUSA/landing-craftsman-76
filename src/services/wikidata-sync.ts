@@ -4,6 +4,11 @@ interface WikidataSyncResult {
   success: boolean;
   wikidataQid?: string;
   error?: string;
+  needsCreate?: boolean;
+  reason?: string;
+  fallbackQid?: string;
+  fallbackLabel?: string;
+  fallbackDescription?: string;
 }
 
 interface WikidataPayloadResult {
