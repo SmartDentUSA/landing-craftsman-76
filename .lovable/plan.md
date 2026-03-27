@@ -1,77 +1,62 @@
 
 
-# Vincular produtos ao Wikidata da empresa nos geradores HTML
+# Gerar documentação técnica completa da integração Wikidata
 
-## Problema atual
+## Objetivo
 
-O campo `wikidata_item_id` dos produtos é salvo no banco mas **nunca consumido**. Os geradores de HTML/JSON-LD não criam nenhum vínculo semântico entre o produto e a empresa. O dado está "morto".
+Criar um arquivo `.md` detalhado documentando todo o fluxo da integração com o Wikidata: origem dos dados, sincronização, armazenamento, e consumo nos geradores de HTML.
 
-## O que precisa existir
+## Conteúdo do documento
 
-Nos HTMLs gerados (Landing Pages, E-commerce, Blog), cada produto deve ter um bloco JSON-LD que:
+O arquivo `/mnt/documents/WIKIDATA_INTEGRATION_DOCS.md` cobrirá:
 
-1. Identifique o produto como instância da categoria Wikidata (ex: `sameAs: wikidata.org/entity/Q1780993`)
-2. Vincule à empresa como `manufacturer` / `brand` com `sameAs` apontando para o QID da empresa (Q138636902)
-3. Crie a relação semântica completa para IAs e motores de busca
+### 1. Visão geral da arquitetura
+Diagrama ASCII do fluxo completo: UI → Service → Edge Function → Wikidata API → Supabase → Geradores HTML
 
-Exemplo do JSON-LD desejado:
-```text
-{
-  "@type": "Product",
-  "name": "Atos Resina Composta Direta - DA2",
-  "category": "Dental Composite",
-  "sameAs": "https://www.wikidata.org/entity/Q1780993",
-  "manufacturer": {
-    "@type": "Organization",
-    "name": "Smart Dent",
-    "sameAs": "https://www.wikidata.org/entity/Q138636902"
-  },
-  "brand": {
-    "@type": "Brand",
-    "name": "Smart Dent"
-  }
-}
-```
+### 2. Componentes do sistema
+- **Frontend**: `WikidataSyncButton.tsx` (botão no modal de produto)
+- **Service Layer**: `src/services/wikidata-sync.ts` (invocação autenticada)
+- **Edge Function**: `supabase/functions/wikidata-sync/index.ts` (lógica de busca e scoring)
+- **Helpers**: `ai-readiness-helpers.ts` (enriquecimento semântico)
 
-## Plano
+### 3. Fluxo de sincronização da empresa
+- Origem: `company_profile` (company_name, website_url, company_description)
+- Busca na Wikidata API (wbsearchentities) em PT e EN
+- Scoring: domain match (+100), label match (+40), description signals (+8/+15)
+- Threshold: score >= 45
+- Destino: `company_profile.wikidata_id`
 
-### 1. Atualizar `fetchKnowledgeGraph.ts` para incluir `wikidata_item_id`
+### 4. Fluxo de sincronização de produtos
+- Origem: `products_repository` (name, brand, category, subcategory, description)
+- Extração de termos genéricos (remove códigos DA2, medidas ml/g)
+- Busca dinâmica + Category Fallback Map (20 categorias mapeadas)
+- Scoring: label match (+45), category match (+12/+18), dental context (+8)
+- Threshold: score >= 35 (ou fallback com score 30)
+- Destino: `products_repository.wikidata_item_id`
 
-O Knowledge Graph já puxa dados dos produtos mas não inclui o campo `wikidata_item_id`. Adicionar ao select para que os geradores tenham acesso.
+### 5. Category Fallback Map completo
+Tabela com todas as 20+ categorias e seus QIDs validados
 
-### 2. Atualizar `mustache-template-engine.ts` — bloco Product JSON-LD
+### 6. Consumo nos geradores de HTML
+- `mustache-template-engine.ts`: Product JSON-LD com sameAs + manufacturer + brand
+- `product-blog-html-v2.ts`: Mesmo padrão para blogs de produto
+- `generate-ecommerce-html`: E-commerce pages
+- `publish-product-blog-cloudflare`: Blog publicado
+- `clone-landing-page` e `publish-blog-post`: Landing pages e blog posts
 
-No template engine que gera o HTML das landing pages, enriquecer o JSON-LD de cada produto com:
-- `sameAs` apontando para `wikidata.org/entity/{wikidata_item_id}` (quando disponível)
-- `manufacturer` com `sameAs` apontando para `wikidata.org/entity/{company.wikidata_id}`
-- `brand` com nome da empresa
+### 7. JSON-LD resultante
+Exemplo completo do grafo semântico gerado
 
-### 3. Atualizar `ai-readiness-helpers.ts` — enriquecer entidades de produto
+### 8. Autenticação e segurança
+- JWT validation via `auth.getClaims()`
+- Admin-only via `has_role()` RPC
+- Service role key para escrita no banco
 
-Criar uma função `enrichProductWithWikidata()` que receba o produto + company profile e retorne o bloco JSON-LD completo com os vínculos semânticos.
+## Arquivo gerado
 
-### 4. Atualizar os demais geradores de HTML
+| Arquivo | Local |
+|---------|-------|
+| `WIKIDATA_INTEGRATION_DOCS.md` | `/mnt/documents/` |
 
-Verificar e aplicar o mesmo padrão nos outros geradores (blog, e-commerce, SPIN) que referenciam produtos, garantindo que o vínculo `produto → categoria Wikidata → empresa` esteja presente em todas as páginas.
-
-### Arquivos alterados
-
-| Arquivo | Alteração |
-|---------|-----------|
-| `supabase/functions/_shared/fetchKnowledgeGraph.ts` | Incluir `wikidata_item_id` no select de produtos |
-| `supabase/functions/_shared/mustache-template-engine.ts` | Adicionar `sameAs`, `manufacturer`, `brand` no JSON-LD de Product |
-| `supabase/functions/_shared/ai-readiness-helpers.ts` | Nova função `enrichProductWithWikidata()` |
-| Geradores HTML (blog, e-commerce, SPIN) | Consumir `wikidata_item_id` nos blocos JSON-LD |
-
-### Resultado
-
-Após a implementação, cada página gerada terá o grafo semântico completo:
-
-```text
-Smart Dent (Q138636902) --[manufacturer]--> Atos Resina Composta
-                                              |
-                                              sameAs → Q1780993 (dental composite)
-```
-
-Isso cria **autoridade semântica**: motores de busca e IAs entendem que a Smart Dent é fabricante/distribuidora de produtos da categoria "dental composite", reforçando E-E-A-T.
+Será gerado via script, sem alterações no codebase.
 
