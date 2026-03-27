@@ -2656,6 +2656,24 @@ export type Database = {
         }
         Relationships: []
       }
+      system_flags: {
+        Row: {
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value?: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
       system_monitoring: {
         Row: {
           component_name: string
@@ -2781,6 +2799,134 @@ export type Database = {
           youtube_url?: string | null
         }
         Relationships: []
+      }
+      wikidata_entity_map: {
+        Row: {
+          collision_candidates: Json | null
+          created_at: string
+          entity_type: string
+          id: string
+          internal_id: string
+          last_synced_at: string | null
+          lock_version: number
+          payload_hash: string | null
+          resolution_decision: string | null
+          resolution_score: number | null
+          resolution_source: string | null
+          retry_count: number
+          sync_status: string
+          updated_at: string
+          wikidata_qid: string | null
+        }
+        Insert: {
+          collision_candidates?: Json | null
+          created_at?: string
+          entity_type: string
+          id?: string
+          internal_id: string
+          last_synced_at?: string | null
+          lock_version?: number
+          payload_hash?: string | null
+          resolution_decision?: string | null
+          resolution_score?: number | null
+          resolution_source?: string | null
+          retry_count?: number
+          sync_status?: string
+          updated_at?: string
+          wikidata_qid?: string | null
+        }
+        Update: {
+          collision_candidates?: Json | null
+          created_at?: string
+          entity_type?: string
+          id?: string
+          internal_id?: string
+          last_synced_at?: string | null
+          lock_version?: number
+          payload_hash?: string | null
+          resolution_decision?: string | null
+          resolution_score?: number | null
+          resolution_source?: string | null
+          retry_count?: number
+          sync_status?: string
+          updated_at?: string
+          wikidata_qid?: string | null
+        }
+        Relationships: []
+      }
+      wikidata_sync_logs: {
+        Row: {
+          action: string
+          created_at: string
+          duration_ms: number | null
+          entity_map_id: string | null
+          entity_type: string
+          error_code: string | null
+          error_context: Json | null
+          error_message: string | null
+          expires_at: string
+          id: string
+          internal_id: string | null
+          payload_hash: string | null
+          request_payload: Json | null
+          response_data: Json | null
+          semantic_grade: string | null
+          semantic_score: number | null
+          success: boolean
+          wikidata_qid: string | null
+          write_decision: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          duration_ms?: number | null
+          entity_map_id?: string | null
+          entity_type: string
+          error_code?: string | null
+          error_context?: Json | null
+          error_message?: string | null
+          expires_at?: string
+          id?: string
+          internal_id?: string | null
+          payload_hash?: string | null
+          request_payload?: Json | null
+          response_data?: Json | null
+          semantic_grade?: string | null
+          semantic_score?: number | null
+          success?: boolean
+          wikidata_qid?: string | null
+          write_decision?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          duration_ms?: number | null
+          entity_map_id?: string | null
+          entity_type?: string
+          error_code?: string | null
+          error_context?: Json | null
+          error_message?: string | null
+          expires_at?: string
+          id?: string
+          internal_id?: string | null
+          payload_hash?: string | null
+          request_payload?: Json | null
+          response_data?: Json | null
+          semantic_grade?: string | null
+          semantic_score?: number | null
+          success?: boolean
+          wikidata_qid?: string | null
+          write_decision?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wikidata_sync_logs_entity_map_id_fkey"
+            columns: ["entity_map_id"]
+            isOneToOne: false
+            referencedRelation: "wikidata_entity_map"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

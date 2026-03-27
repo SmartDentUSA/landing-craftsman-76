@@ -9,9 +9,14 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Globe, Loader2, Eye, Shield, AlertTriangle, CheckCircle } from "lucide-react";
+import { Globe, Loader2, Eye, Shield, AlertTriangle, CheckCircle, Database, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { syncProductToWikidata, buildProductWikidataPayload } from "@/services/wikidata-sync";
+import {
+  syncProductToWikidata,
+  buildProductWikidataPayload,
+  resolveWikidataEntity,
+  type WikidataResolveResult,
+} from "@/services/wikidata-sync";
 
 interface WikidataSyncButtonProps {
   productId?: string;
@@ -19,12 +24,30 @@ interface WikidataSyncButtonProps {
   onSyncSuccess?: (qid: string) => void;
 }
 
+const SYNC_STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+  synced: { label: "Synced", variant: "default" },
+  pending: { label: "Pending", variant: "secondary" },
+  collision: { label: "Collision", variant: "destructive" },
+  failed: { label: "Failed", variant: "destructive" },
+  skipped: { label: "Skipped", variant: "outline" },
+  processing: { label: "Processing", variant: "secondary" },
+};
+
+const WRITE_DECISION_CONFIG: Record<string, { label: string; icon: typeof CheckCircle }> = {
+  create: { label: "Create", icon: Zap },
+  update: { label: "Update", icon: Database },
+  skip: { label: "Skip", icon: CheckCircle },
+  abort: { label: "Abort", icon: AlertTriangle },
+};
+
 export function WikidataSyncButton({ productId, wikidataItemId, onSyncSuccess }: WikidataSyncButtonProps) {
   const [syncing, setSyncing] = useState(false);
   const [previewing, setPreviewing] = useState(false);
+  const [resolving, setResolving] = useState(false);
   const [localQid, setLocalQid] = useState<string | null>(null);
   const [payloadDialogOpen, setPayloadDialogOpen] = useState(false);
   const [payloadData, setPayloadData] = useState<{ payload: unknown; summary: unknown } | null>(null);
+  const [resolveResult, setResolveResult] = useState<WikidataResolveResult | null>(null);
   const { toast } = useToast();
 
   const displayQid = localQid || wikidataItemId;
@@ -94,20 +117,51 @@ export function WikidataSyncButton({ productId, wikidataItemId, onSyncSuccess }:
     }
   };
 
+  const handleResolve = async () => {
+    setResolving(true);
+    try {
+      const result = await resolveWikidataEntity("product", productId);
+      setResolveResult(result);
+      if (result.success) {
+        toast({
+          title: `Pipeline: ${result.writeDecision?.toUpperCase()}`,
+          description: `Score: ${result.semanticGrade} (${((result.semanticScore || 0) * 100).toFixed(0)}%) | Hash: ${result.payloadHash?.slice(0, 8)}...`,
+        });
+      } else {
+        toast({
+          title: "Pipeline bloqueado",
+          description: result.error || result.errorCode || "Erro desconhecido",
+          variant: "destructive",
+        });
+      }
+    } catch (err) {
+      toast({
+        title: "Erro no pipeline",
+        description: err instanceof Error ? err.message : "Erro desconhecido",
+        variant: "destructive",
+      });
+    } finally {
+      setResolving(false);
+    }
+  };
+
   const summary = payloadData?.summary as Record<string, unknown> | undefined;
   const semanticScore = summary?.semanticScore as Record<string, unknown> | undefined;
   const validationErrors = (summary?.validationErrors as Array<{ severity: string; path: string; message: string }>) || [];
   const hardErrors = validationErrors.filter(e => e.severity === "error");
   const warnings = validationErrors.filter(e => e.severity === "warning");
 
+  const statusConfig = resolveResult?.syncStatus ? SYNC_STATUS_CONFIG[resolveResult.syncStatus] : null;
+  const decisionConfig = resolveResult?.writeDecision ? WRITE_DECISION_CONFIG[resolveResult.writeDecision] : null;
+
   return (
     <>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 flex-wrap">
         <Button
           variant="outline"
           size="sm"
           onClick={handleSync}
-          disabled={syncing || previewing}
+          disabled={syncing || previewing || resolving}
           className="gap-1"
           title="Sincronizar produto com Wikidata"
         >
@@ -118,12 +172,23 @@ export function WikidataSyncButton({ productId, wikidataItemId, onSyncSuccess }:
           variant="ghost"
           size="sm"
           onClick={handlePreviewPayload}
-          disabled={syncing || previewing}
+          disabled={syncing || previewing || resolving}
           className="gap-1"
           title="Preview do payload wbeditentity"
         >
           {previewing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
           Payload
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleResolve}
+          disabled={syncing || previewing || resolving}
+          className="gap-1"
+          title="Resolve & Persist pipeline"
+        >
+          {resolving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
+          Resolve
         </Button>
         {displayQid && (
           <a
@@ -134,6 +199,23 @@ export function WikidataSyncButton({ productId, wikidataItemId, onSyncSuccess }:
             <Badge className="bg-success text-success-foreground cursor-pointer">W</Badge>
           </a>
         )}
+        {statusConfig && (
+          <Badge variant={statusConfig.variant} className="text-[10px]">
+            {statusConfig.label}
+          </Badge>
+        )}
+        {decisionConfig && (
+          <Badge variant="outline" className="text-[10px] gap-0.5">
+            <decisionConfig.icon className="h-3 w-3" />
+            {decisionConfig.label}
+          </Badge>
+        )}
+        {resolveResult?.writeDecision === "abort" && resolveResult.semanticScore != null && resolveResult.semanticScore < 0.7 && (
+          <Badge variant="destructive" className="text-[10px] gap-0.5">
+            <AlertTriangle className="h-3 w-3" />
+            Score &lt; 0.7
+          </Badge>
+        )}
       </div>
 
       <Dialog open={payloadDialogOpen} onOpenChange={setPayloadDialogOpen}>
@@ -141,10 +223,10 @@ export function WikidataSyncButton({ productId, wikidataItemId, onSyncSuccess }:
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Globe className="h-5 w-5" />
-              Payload wbeditentity — Preview v3.0
+              Payload wbeditentity — Preview v4.0
             </DialogTitle>
             <DialogDescription>
-              JSON validado e auditável. Modo dry-run — nenhuma escrita é realizada.
+              JSON validado, canonicalizado e auditável. Modo dry-run — nenhuma escrita é realizada.
             </DialogDescription>
           </DialogHeader>
 
