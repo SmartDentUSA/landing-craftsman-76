@@ -1,70 +1,76 @@
 
+Problema confirmado: o bloqueio não está mais no `findExistingEntity`. O QID `Q1780993` agora está vindo de outro caminho: o fluxo `sync_product` ainda usa `category fallback` e grava esse QID no produto.
 
-# Fix: Anti-dup matching category QIDs instead of creating product items
+O que encontrei
+- `findExistingEntity` já exclui `CATEGORY_QIDS`, então a correção anti-dup foi aplicada.
+- Mas em `supabase/functions/wikidata-sync/index.ts`, o método `handleProductSync()` ainda faz isto:
+  1. busca candidatos
+  2. se não houver match forte (`best.score < 35`)
+  3. chama `getCategoryFallbackQid(...)`
+  4. salva `wikidata_item_id = fallbackQid` no produto
+- Os logs confirmam exatamente isso:
+  - `Using category fallback { fallbackQid: "Q1780993" }`
 
-## Problem
+Root cause real
+- Existem dois fluxos diferentes:
+  - `sync_product`: resolve e grava um QID “melhor esforço”, e ainda aceita category fallback
+  - `resolve_and_persist`: pipeline de escrita com anti-dup corrigido
+- O usuário está vendo `Q1780993` porque `sync_product` continua persistindo categoria genérica antes da criação real do item.
 
-`findExistingEntity` searches Wikidata via `wbsearchentities` and finds category items like Q1780993 (dental composite) as "exact matches" for product labels like "Resina Composta Direta - DA2". This causes the system to:
+Plano de correção
+1. Remover a gravação automática de category fallback em `handleProductSync`
+- Quando só existir fallback de categoria, não atualizar `products_repository.wikidata_item_id`.
+- Em vez disso, retornar uma resposta explícita de “fallback suggestion” / “no exact entity found”.
+- Manter o fallback apenas como contexto semântico para payload/classe, não como item resolvido do produto.
 
-1. Set `writeDecision = "update"` instead of `"create"`
-2. Update the **category item** (Q1780993) with product-specific data instead of creating a new product item
+2. Restringir `handleProductSync` para só persistir QIDs específicos
+- Persistir `best.qid` apenas quando houver match forte real.
+- Se o melhor resultado vier de categoria genérica, tratar como não resolvido.
+- Opcionalmente reaproveitar `getCategoryQids()` para bloquear qualquer persistência de QID genérico também nesse fluxo.
 
-This happens in 3 places:
-- Edit 5 anti-dup (line 1207)
-- Pre-write anti-dup (line 1258)
-- Anti-dup recheck (line 1271)
+3. Ajustar a resposta da edge function
+- Hoje ela retorna sucesso com `source: "category_fallback"`.
+- Alterar para algo como:
+  - `success: false`
+  - `needsCreate: true`
+  - `fallbackQid`
+  - `reason: "generic_category_only"`
+- Assim a UI não interpreta categoria como item existente.
 
-## Root Cause
+4. Revisar o cliente que chama `sync_product`
+- Em `src/services/wikidata-sync.ts` e `src/components/WikidataSyncButton.tsx`, garantir que só exiba “sincronizado” quando houver um QID válido de item realmente resolvido/criado.
+- Se vier `generic_category_only`, mostrar mensagem do tipo:
+  - “Categoria identificada, mas nenhum item específico encontrado. Use publicar/criar item.”
 
-`findExistingEntity` does a naive label comparison without checking what **type** of entity it found. Category QIDs (Q1780993, Q3834994, Q2631097, etc.) are well-known class items, not product instances.
+5. Proteger o pipeline contra resíduos antigos
+- No `resolve_and_persist`, se `products_repository.wikidata_item_id` já contiver um QID que esteja em `getCategoryQids()`, não tratá-lo como QID órfão válido para update.
+- Isso evita que produtos já contaminados com `Q1780993` entrem no fluxo como se fossem item existente.
 
-## Fix (2 changes in `supabase/functions/wikidata-sync/index.ts`)
+Resultado esperado
+- `Q1780993` continua podendo ser usado como classe/categoria de referência.
+- Mas nunca mais será salvo como `wikidata_item_id` de um produto específico.
+- Quando não houver item exato no Wikidata, o sistema seguirá para criação de um novo item, em vez de “localizar e retornar” a categoria genérica.
 
-### 1. Add a blocklist of known category QIDs
+Arquivos envolvidos
+- `supabase/functions/wikidata-sync/index.ts`
+- `src/services/wikidata-sync.ts`
+- `src/components/WikidataSyncButton.tsx`
 
-Extract all QIDs from `CATEGORY_FALLBACK_MAP` into a Set, and filter them out of anti-dup results:
+Detalhe técnico
+```text
+Hoje:
+sync_product
+  -> sem match forte
+  -> category fallback Q1780993
+  -> salva no produto
+  -> resolve_and_persist depois enxerga QID existente
+  -> update em vez de create
 
-```typescript
-const CATEGORY_QIDS = new Set(Object.values(CATEGORY_FALLBACK_MAP));
+Após correção:
+sync_product
+  -> sem match forte
+  -> category fallback só como dica semântica
+  -> NÃO salva no produto
+  -> resolve_and_persist sem QID específico
+  -> create
 ```
-
-### 2. Update `findExistingEntity` to reject category QIDs
-
-After finding an exact match, check if it's a known category QID. If so, skip it and continue searching:
-
-```typescript
-async function findExistingEntity(label: string): Promise<string | null> {
-  const res = await fetch(
-    `https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${encodeURIComponent(label)}&language=pt&format=json&limit=5`,
-  );
-  if (!res.ok) return null;
-
-  const json = await res.json();
-  const matches = json.search?.filter(
-    (r: { id?: string; label?: string }) =>
-      normalizeLabel(r.label || "") === normalizeLabel(label) &&
-      !CATEGORY_QIDS.has(r.id)
-  );
-  
-  if (matches?.length > 0) {
-    return matches[0].id;
-  }
-  return null;
-}
-```
-
-This ensures:
-- Category items (Q1780993, Q3834994, Q2631097, etc.) are never treated as duplicates
-- Products with genuinely matching labels are still caught
-- The `CATEGORY_FALLBACK_MAP` acts as both the P279 resolver **and** the anti-dup exclusion list -- single source of truth
-
-### Summary
-
-| What | Before | After |
-|---|---|---|
-| Product "Resina Composta X" | Matches Q1780993 → update category | Skips Q1780993 → creates new item |
-| Actual duplicate product | Matches correctly | Still matches correctly |
-| Category QIDs | Treated as duplicates | Excluded from anti-dup |
-
-One file changed. No migrations needed.
-
