@@ -279,10 +279,15 @@ async function searchCompanyCandidates(input: { name?: string | null; descriptio
   );
 }
 
-async function searchProductCandidates(input: { name?: string | null; brand?: string | null; description?: string | null }) {
+async function searchProductCandidates(input: { name?: string | null; brand?: string | null; description?: string | null; category?: string | null; subcategory?: string | null }) {
+  const genericTerms = extractGenericProductTerms(input.name);
   const queries = uniqueStrings([
     input.brand && input.name ? `${input.brand} ${input.name}` : null,
     input.name,
+    genericTerms,
+    input.subcategory,
+    input.category,
+    input.subcategory ? `${input.subcategory} dental` : null,
   ]);
 
   return await collectBestCandidates(queries, (candidate) =>
@@ -290,8 +295,73 @@ async function searchProductCandidates(input: { name?: string | null; brand?: st
       name: input.name ?? "",
       brand: input.brand ?? "",
       description: input.description ?? "",
+      category: input.category ?? "",
+      subcategory: input.subcategory ?? "",
     })
   );
+}
+
+const CATEGORY_FALLBACK_MAP: Record<string, string> = {
+  "resina composta": "Q2648150",
+  "resinas compostas": "Q2648150",
+  "composite resin": "Q2648150",
+  "dental composite": "Q2648150",
+  "impressora 3d": "Q59890062",
+  "impressoras 3d": "Q59890062",
+  "3d printer": "Q59890062",
+  "resina 3d": "Q11474",
+  "resinas 3d": "Q11474",
+  "photopolymer": "Q11474",
+  "scanner 3d": "Q1753819",
+  "scanners 3d": "Q1753819",
+  "3d scanner": "Q1753819",
+  "software": "Q7397",
+  "softwares": "Q7397",
+  "ceramica": "Q45621",
+  "cerâmica": "Q45621",
+  "caracterizacao": "Q45621",
+  "caracterização": "Q45621",
+  "dental ceramics": "Q45621",
+  "adesivo": "Q131790",
+  "adesivos": "Q131790",
+  "adhesive": "Q131790",
+  "cimento": "Q170585",
+  "cimentos": "Q170585",
+  "dental cement": "Q170585",
+  "clareador": "Q900406",
+  "clareamento": "Q900406",
+  "teeth whitening": "Q900406",
+  "selante": "Q2648150",
+  "silicone": "Q147271",
+  "silicones": "Q147271",
+  "moldagem": "Q147271",
+  "alginato": "Q422219",
+  "fotopolimerizador": "Q1198635",
+  "led": "Q1198635",
+};
+
+function getCategoryFallbackQid(category?: string | null, subcategory?: string | null, name?: string | null): string | null {
+  const candidates = [subcategory, category, name].filter(Boolean).map((v) => normalizeText(v!));
+
+  for (const text of candidates) {
+    for (const [key, qid] of Object.entries(CATEGORY_FALLBACK_MAP)) {
+      if (text.includes(normalizeText(key))) {
+        return qid;
+      }
+    }
+  }
+  return null;
+}
+
+function extractGenericProductTerms(name?: string | null): string {
+  if (!name) return "";
+  return name
+    .replace(/[-–—]/g, " ")
+    .replace(/\b[A-Z]{0,3}\d+[A-Z]?\b/gi, "") // Remove codes like DA2, A3, B1
+    .replace(/\b(kit|combo|pack|uni|unid|ml|g|mm)\b/gi, "")
+    .replace(/\b\d+(\.\d+)?\s*(ml|g|mm|un|kg)?\b/gi, "") // Remove measurements
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 async function collectBestCandidates(
