@@ -70,22 +70,24 @@ async function signOAuth1a(
   url: string,
   params: Record<string, string>,
   secrets: WikidataOAuthSecrets,
-): Promise<Record<string, string>> {
+): Promise<{ oauthParams: Record<string, string>; apiParams: Record<string, string> }> {
   const encoder = new TextEncoder();
 
-  const baseParams: Record<string, string> = {
+  const oauthBase: Record<string, string> = {
     oauth_consumer_key: secrets.consumerKey,
     oauth_token: secrets.accessToken,
     oauth_nonce: crypto.randomUUID().replace(/-/g, ""),
     oauth_timestamp: Math.floor(Date.now() / 1000).toString(),
     oauth_signature_method: "HMAC-SHA1",
     oauth_version: "1.0",
-    ...params,
   };
 
-  const sorted = Object.keys(baseParams)
+  // Signature base string includes ALL params (oauth + api)
+  const allParams: Record<string, string> = { ...oauthBase, ...params };
+
+  const sorted = Object.keys(allParams)
     .sort()
-    .map((k) => `${percentEncode(k)}=${percentEncode(baseParams[k])}`)
+    .map((k) => `${percentEncode(k)}=${percentEncode(allParams[k])}`)
     .join("&");
 
   const baseString = [
@@ -113,25 +115,38 @@ async function signOAuth1a(
   const signature = btoa(String.fromCharCode(...new Uint8Array(signatureBuffer)));
 
   return {
-    ...baseParams,
-    oauth_signature: signature,
+    oauthParams: { ...oauthBase, oauth_signature: signature },
+    apiParams: params,
   };
+}
+
+function buildOAuthHeader(oauthParams: Record<string, string>): string {
+  const parts = Object.keys(oauthParams)
+    .sort()
+    .map((k) => `${percentEncode(k)}="${percentEncode(oauthParams[k])}"`)
+    .join(", ");
+  return `OAuth ${parts}`;
 }
 
 async function getWikidataCsrfToken(secrets: WikidataOAuthSecrets): Promise<string> {
   const url = "https://www.wikidata.org/w/api.php";
-  const params: Record<string, string> = {
+  const apiParams: Record<string, string> = {
     action: "query",
     meta: "tokens",
     type: "csrf",
     format: "json",
   };
 
-  const signed = await signOAuth1a("GET", url, params, secrets);
-  const query = new URLSearchParams(signed).toString();
+  const { oauthParams } = await signOAuth1a("GET", url, apiParams, secrets);
+  const query = new URLSearchParams(apiParams).toString();
 
-  const res = await fetch(`${url}?${query}`);
+  const res = await fetch(`${url}?${query}`, {
+    headers: { Authorization: buildOAuthHeader(oauthParams) },
+  });
+
   if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    console.error("[wikidata-sync] CSRF request failed", { status: res.status, body: text.slice(0, 500) });
     throw new Error(`CSRF token request failed: HTTP ${res.status}`);
   }
 
@@ -139,6 +154,7 @@ async function getWikidataCsrfToken(secrets: WikidataOAuthSecrets): Promise<stri
   const token = json?.query?.tokens?.csrftoken;
 
   if (!token || token === "+\\") {
+    console.error("[wikidata-sync] Invalid CSRF token response", JSON.stringify(json).slice(0, 500));
     throw new Error(`Invalid CSRF token received: ${JSON.stringify(json?.query?.tokens)}`);
   }
 
@@ -171,7 +187,7 @@ async function executeWbEditEntity(
   const url = "https://www.wikidata.org/w/api.php";
   const csrf = await getWikidataCsrfToken(secrets);
 
-  const params: Record<string, string> = {
+  const apiParams: Record<string, string> = {
     action: "wbeditentity",
     format: "json",
     token: csrf,
@@ -181,32 +197,45 @@ async function executeWbEditEntity(
   };
 
   if (qid) {
-    params.id = qid;
+    apiParams.id = qid;
   } else {
-    params.new = "item";
+    apiParams.new = "item";
   }
 
-  const signed = await signOAuth1a("POST", url, params, secrets);
-  const body = new URLSearchParams(signed);
+  const { oauthParams } = await signOAuth1a("POST", url, apiParams, secrets);
 
   console.log(`[wikidata-sync] Executing wbeditentity: ${qid ? `UPDATE ${qid}` : "CREATE NEW"}`);
 
+  const body = new URLSearchParams(apiParams);
+
   const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      Authorization: buildOAuthHeader(oauthParams),
+    },
     body,
   });
 
-  const json = await res.json();
+  const rawText = await res.text();
+  console.log(`[wikidata-sync] wbeditentity raw response (${res.status}):`, rawText.slice(0, 1000));
+
+  let json: any;
+  try {
+    json = JSON.parse(rawText);
+  } catch {
+    throw new Error(`Non-JSON response from Wikidata: ${rawText.slice(0, 500)}`);
+  }
 
   if (json.error) {
     const errInfo = json.error.info || json.error.code || JSON.stringify(json.error);
+    console.error("[wikidata-sync] Wikidata API error details:", JSON.stringify(json.error));
     throw Object.assign(new Error(`Wikidata API Error: ${errInfo}`), { code: "WIKIDATA_API_ERROR" });
   }
 
   const resultQid = json.entity?.id;
   if (!resultQid) {
-    throw new Error(`No entity ID in wbeditentity response: ${JSON.stringify(json).slice(0, 500)}`);
+    throw new Error(`No entity ID in wbeditentity response: ${rawText.slice(0, 500)}`);
   }
 
   console.log(`[wikidata-sync] ✅ wbeditentity SUCCESS: ${resultQid}`);
