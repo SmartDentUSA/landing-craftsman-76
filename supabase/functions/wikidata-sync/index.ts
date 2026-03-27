@@ -174,10 +174,15 @@ async function findExistingEntity(label: string): Promise<string | null> {
   if (!res.ok) return null;
 
   const json = await res.json();
-  // Return exact match only
+  // Return exact match only, excluding known category/class QIDs
   const exactMatch = json.search?.find(
-    (r: { label?: string }) => normalizeLabel(r.label || "") === normalizeLabel(label),
+    (r: { id?: string; label?: string }) =>
+      normalizeLabel(r.label || "") === normalizeLabel(label) &&
+      !CATEGORY_QIDS.has(r.id),
   );
+  if (exactMatch) {
+    console.log(`[wikidata-sync] findExistingEntity: matched "${label}" → ${exactMatch.id}`);
+  }
   return exactMatch?.id || null;
 }
 
@@ -544,6 +549,7 @@ async function searchProductCandidates(input: { name?: string | null; brand?: st
 }
 
 const CATEGORY_FALLBACK_MAP: Record<string, string> = {
+// NOTE: CATEGORY_QIDS is derived below after this map definition
   // Q1780993 = dental composite (verified on Wikidata)
   "resina composta": "Q1780993",
   "resinas compostas": "Q1780993",
@@ -593,6 +599,9 @@ const CATEGORY_FALLBACK_MAP: Record<string, string> = {
   "fotopolimerizador": "Q2102936",
   "led": "Q2102936",
 };
+
+// Blocklist: all category/class QIDs that must never be treated as product duplicates
+const CATEGORY_QIDS = new Set(Object.values(CATEGORY_FALLBACK_MAP));
 
 function getCategoryFallbackQid(category?: string | null, subcategory?: string | null, name?: string | null): string | null {
   const candidates = [subcategory, category, name].filter(Boolean).map((v) => normalizeText(v!));
