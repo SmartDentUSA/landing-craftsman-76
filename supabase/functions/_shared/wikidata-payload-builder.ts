@@ -1,9 +1,8 @@
 // ============================================================
-// Wikidata Payload Builder v3.0 — Production-Critical Grade
+// Wikidata Payload Builder v4.0 — Write-Mode Hardened
 // Spec-compliant, whitelist-enforced, idempotent, auditable
+// Canonicalized, SHA-256 hashed, write-guard enabled
 // ============================================================
-
-import { createHash } from "https://deno.land/std@0.224.0/crypto/mod.ts";
 
 // ── 1. STRICT TYPES ────────────────────────────────────────
 
@@ -818,23 +817,64 @@ function buildEnrichedDescription(
   return enriched.length > 250 ? enriched.slice(0, 247) + "..." : enriched;
 }
 
-// ── 10. IDEMPOTÊNCIA ───────────────────────────────────────
+// ── 10. CANONICALIZAÇÃO DETERMINÍSTICA + SHA-256 ───────────
+
+/**
+ * Canonicaliza payload recursivamente:
+ * - Ordena keys em objetos
+ * - Remove null/undefined
+ * - Ordena arrays de claims por property + datavalue determinístico
+ */
+export function canonicalizePayload(obj: unknown): unknown {
+  if (obj === null || obj === undefined) return undefined;
+  if (typeof obj !== "object") return obj;
+
+  if (Array.isArray(obj)) {
+    return obj
+      .map(item => canonicalizePayload(item))
+      .filter(item => item !== undefined)
+      .sort((a, b) => {
+        const sa = JSON.stringify(a);
+        const sb = JSON.stringify(b);
+        return sa < sb ? -1 : sa > sb ? 1 : 0;
+      });
+  }
+
+  const sorted: Record<string, unknown> = {};
+  const keys = Object.keys(obj as Record<string, unknown>).sort();
+  for (const key of keys) {
+    const val = canonicalizePayload((obj as Record<string, unknown>)[key]);
+    if (val !== undefined) {
+      sorted[key] = val;
+    }
+  }
+  return sorted;
+}
+
+/**
+ * SHA-256 hash do payload canonicalizado (crypto.subtle nativo Deno)
+ */
+export async function hashPayload(payload: WikidataPayload): Promise<string> {
+  const canonical = canonicalizePayload(payload);
+  const json = JSON.stringify(canonical);
+  const encoded = new TextEncoder().encode(json);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", encoded);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+}
 
 export function generateClaimHash(claim: WikidataClaim): string {
-  const hashInput = JSON.stringify({
+  const canonical = canonicalizePayload({
     property: claim.mainsnak.property,
     datavalue: claim.mainsnak.datavalue,
-    references: claim.references?.map(r => ({
-      snaks: r.snaks,
-    })),
+    references: claim.references?.map(r => ({ snaks: r.snaks })),
   });
-
-  // Use a simple string hash for Deno compatibility
+  const json = JSON.stringify(canonical);
   let hash = 0;
-  for (let i = 0; i < hashInput.length; i++) {
-    const char = hashInput.charCodeAt(i);
+  for (let i = 0; i < json.length; i++) {
+    const char = json.charCodeAt(i);
     hash = ((hash << 5) - hash) + char;
-    hash |= 0; // Convert to 32bit integer
+    hash |= 0;
   }
   return `claim_${Math.abs(hash).toString(36)}`;
 }
@@ -888,12 +928,32 @@ export function evaluateSemanticScore(
   let claimsWithRefs = 0;
   let totalClaims = 0;
   let qidClaims = 0;
+  let hasExternalRefs = false;
 
   if (payload.claims) {
     for (const claimArray of Object.values(payload.claims)) {
       for (const claim of claimArray) {
         totalClaims++;
-        if (claim.references?.length) claimsWithRefs++;
+        if (claim.references?.length) {
+          claimsWithRefs++;
+          // Check for external URLs in references
+          for (const ref of claim.references) {
+            if (ref.snaks["P854"]) {
+              const refUrl = ref.snaks["P854"][0]?.datavalue;
+              if (refUrl?.type === "string" && typeof refUrl.value === "string") {
+                // External = not company's own domain
+                const refHost = refUrl.value.replace(/^https?:\/\//, "").split("/")[0].replace(/^www\./, "");
+                const ownWebsite = payload.claims?.["P856"]?.[0]?.mainsnak?.datavalue;
+                const ownHost = ownWebsite?.type === "string" && typeof ownWebsite.value === "string"
+                  ? ownWebsite.value.replace(/^https?:\/\//, "").split("/")[0].replace(/^www\./, "")
+                  : "";
+                if (refHost && ownHost && refHost !== ownHost) {
+                  hasExternalRefs = true;
+                }
+              }
+            }
+          }
+        }
         if (claim.mainsnak.datavalue?.type === "wikibase-entityid") qidClaims++;
       }
     }
@@ -941,13 +1001,21 @@ export function evaluateSemanticScore(
     details.push(`Consistency: ${hardErrors.length} validation errors`);
   }
 
+  // External reference bonus (+0.15)
+  const externalRefBonus = hasExternalRefs ? 0.15 : 0;
+  if (hasExternalRefs) {
+    details.push(`External references detected: +0.15 bonus`);
+  }
+
   // Overall weighted score
-  const overall = Math.round((
+  const rawOverall = 
     references * 0.25 +
     connectivity * 0.20 +
     completeness * 0.35 +
-    consistency * 0.20
-  ) * 100) / 100;
+    consistency * 0.20 +
+    externalRefBonus;
+
+  const overall = Math.round(Math.min(1.0, rawOverall) * 100) / 100;
 
   let grade: SemanticScore["grade"] = "F";
   if (overall >= 0.9) grade = "A";

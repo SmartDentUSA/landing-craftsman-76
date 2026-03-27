@@ -6,8 +6,11 @@ import {
   extractTechSpecs,
   summarizePayload,
   evaluateSemanticScore,
+  canonicalizePayload,
+  hashPayload,
   type CompanyProfileInput,
   type ProductInput,
+  type WikidataPayload,
 } from "../_shared/wikidata-payload-builder.ts";
 
 type EntitySearchHit = {
@@ -98,6 +101,10 @@ serve(async (req) => {
 
     if (action === "build_product_payload") {
       return await handleBuildProductPayload(db, body?.productId);
+    }
+
+    if (action === "resolve_and_persist") {
+      return await handleResolveAndPersist(db, body?.entityType, body?.internalId);
     }
 
     return jsonResponse({ success: false, error: "Invalid action" }, 400);
@@ -746,6 +753,319 @@ async function handleBuildProductPayload(db: ReturnType<typeof createClient>, pr
       productId,
     }, 400);
   }
+}
+
+// ── resolve_and_persist Pipeline ────────────────────────────
+
+async function handleResolveAndPersist(
+  db: ReturnType<typeof createClient>,
+  entityType?: string,
+  internalId?: string,
+) {
+  const startTime = Date.now();
+
+  if (!entityType || !internalId) {
+    return jsonResponse({ success: false, error: "entityType and internalId required" }, 400);
+  }
+
+  if (entityType !== "company" && entityType !== "product") {
+    return jsonResponse({ success: false, error: "entityType must be 'company' or 'product'" }, 400);
+  }
+
+  try {
+    // 1. Circuit breaker check
+    const { data: flag } = await db
+      .from("system_flags")
+      .select("value")
+      .eq("key", "WIKIDATA_WRITE_ENABLED")
+      .maybeSingle();
+
+    const writeEnabled = flag?.value?.enabled === true;
+
+    // 2. Build payload based on entity type
+    let payload: WikidataPayload;
+    let semanticEntityType: "company" | "product" = entityType;
+
+    if (entityType === "company") {
+      const { data: company, error } = await db
+        .from("company_profile")
+        .select("*")
+        .eq("id", internalId)
+        .maybeSingle();
+
+      if (error || !company) {
+        return logAndReturn(db, {
+          action: "resolve_and_persist",
+          entityType, internalId,
+          writeDecision: "abort",
+          success: false,
+          errorCode: "ENTITY_NOT_FOUND",
+          errorMessage: error?.message || "Company not found",
+          durationMs: Date.now() - startTime,
+        });
+      }
+
+      payload = buildCompanyPayload(company as CompanyProfileInput);
+    } else {
+      const { data: product, error } = await db
+        .from("products_repository")
+        .select("*")
+        .eq("id", internalId)
+        .maybeSingle();
+
+      if (error || !product) {
+        return logAndReturn(db, {
+          action: "resolve_and_persist",
+          entityType, internalId,
+          writeDecision: "abort",
+          success: false,
+          errorCode: "ENTITY_NOT_FOUND",
+          errorMessage: error?.message || "Product not found",
+          durationMs: Date.now() - startTime,
+        });
+      }
+
+      const { data: company } = await db
+        .from("company_profile")
+        .select("wikidata_id, country")
+        .order("updated_at", { ascending: false, nullsFirst: false })
+        .limit(1)
+        .maybeSingle();
+
+      const companyQid = company?.wikidata_id || "Q138636902";
+      const productWithCountry = { ...(product as ProductInput), country: company?.country || "Brasil" };
+      payload = buildProductPayload(productWithCountry, companyQid);
+    }
+
+    // 3. Canonicalize + SHA-256
+    const payloadHash = await hashPayload(payload);
+
+    // 4. Semantic score + write guard
+    const score = evaluateSemanticScore(payload, semanticEntityType);
+
+    if (!score.passed) {
+      return logAndReturn(db, {
+        action: "resolve_and_persist",
+        entityType, internalId,
+        payloadHash,
+        writeDecision: "abort",
+        success: false,
+        semanticScore: score.overall,
+        semanticGrade: score.grade,
+        errorCode: "SEMANTIC_BLOCK",
+        errorMessage: `Semantic score ${score.overall} < 0.7 threshold`,
+        durationMs: Date.now() - startTime,
+        requestPayload: payload,
+      });
+    }
+
+    // 5. Atomic upsert with optimistic locking
+    const { data: entityMap, error: upsertError } = await db.rpc("resolve_wikidata_entity", {
+      p_entity_type: entityType,
+      p_internal_id: internalId,
+      p_payload_hash: payloadHash,
+      p_resolution_score: score.overall,
+      p_resolution_decision: score.overall >= 0.85 ? "link" : score.overall >= 0.7 ? "create" : "collision",
+    }).maybeSingle();
+
+    // Fallback: direct upsert if RPC doesn't exist
+    let writeDecision: string;
+    let syncStatus: string;
+    let wikidataQid: string | null = null;
+    let entityMapId: string | null = null;
+
+    if (upsertError) {
+      // RPC doesn't exist yet — do direct upsert
+      console.warn("[wikidata-sync] RPC fallback, direct upsert", upsertError.message);
+
+      const { data: existing } = await db
+        .from("wikidata_entity_map")
+        .select("*")
+        .eq("entity_type", entityType)
+        .eq("internal_id", internalId)
+        .maybeSingle();
+
+      if (existing?.payload_hash === payloadHash) {
+        writeDecision = "skip";
+        syncStatus = existing.sync_status;
+        wikidataQid = existing.wikidata_qid;
+        entityMapId = existing.id;
+      } else {
+        const upsertData = {
+          entity_type: entityType,
+          internal_id: internalId,
+          payload_hash: payloadHash,
+          sync_status: "pending" as const,
+          resolution_score: score.overall,
+          resolution_decision: score.overall >= 0.85 ? "link" : score.overall >= 0.7 ? "create" : "collision",
+        };
+
+        if (existing) {
+          const { data: updated } = await db
+            .from("wikidata_entity_map")
+            .update({
+              ...upsertData,
+              lock_version: (existing.lock_version || 0) + 1,
+            })
+            .eq("id", existing.id)
+            .eq("lock_version", existing.lock_version || 0)
+            .select()
+            .maybeSingle();
+
+          if (!updated) {
+            return logAndReturn(db, {
+              action: "resolve_and_persist",
+              entityType, internalId, payloadHash,
+              writeDecision: "abort",
+              success: false,
+              errorCode: "OPTIMISTIC_LOCK_FAILURE",
+              errorMessage: "Concurrent modification detected",
+              durationMs: Date.now() - startTime,
+            });
+          }
+          writeDecision = "update";
+          syncStatus = "pending";
+          entityMapId = updated.id;
+          wikidataQid = updated.wikidata_qid;
+        } else {
+          const { data: inserted } = await db
+            .from("wikidata_entity_map")
+            .insert(upsertData)
+            .select()
+            .maybeSingle();
+
+          writeDecision = "create";
+          syncStatus = "pending";
+          entityMapId = inserted?.id || null;
+        }
+      }
+    } else {
+      writeDecision = entityMap?.write_decision || "create";
+      syncStatus = entityMap?.sync_status || "pending";
+      wikidataQid = entityMap?.wikidata_qid || null;
+      entityMapId = entityMap?.id || null;
+    }
+
+    // 6. Log and return
+    return logAndReturn(db, {
+      action: "resolve_and_persist",
+      entityType, internalId, payloadHash,
+      writeDecision,
+      success: true,
+      semanticScore: score.overall,
+      semanticGrade: score.grade,
+      wikidataQid,
+      entityMapId,
+      syncStatus,
+      writeEnabled,
+      durationMs: Date.now() - startTime,
+      requestPayload: payload,
+      collisionCandidates: score.overall >= 0.7 && score.overall < 0.85 ? score.details : undefined,
+    });
+  } catch (err) {
+    console.error("[wikidata-sync] resolve_and_persist error", err);
+    return logAndReturn(db, {
+      action: "resolve_and_persist",
+      entityType, internalId,
+      writeDecision: "abort",
+      success: false,
+      errorCode: "INTERNAL_ERROR",
+      errorMessage: err instanceof Error ? err.message : "Unknown error",
+      durationMs: Date.now() - startTime,
+    });
+  }
+}
+
+interface LogEntry {
+  action: string;
+  entityType: string;
+  internalId: string;
+  payloadHash?: string;
+  writeDecision: string;
+  success: boolean;
+  semanticScore?: number;
+  semanticGrade?: string;
+  wikidataQid?: string | null;
+  entityMapId?: string | null;
+  syncStatus?: string;
+  writeEnabled?: boolean;
+  errorCode?: string;
+  errorMessage?: string;
+  durationMs: number;
+  requestPayload?: unknown;
+  collisionCandidates?: unknown;
+}
+
+async function logAndReturn(
+  db: ReturnType<typeof createClient>,
+  entry: LogEntry,
+) {
+  // Insert sync log
+  try {
+    await db.from("wikidata_sync_logs").insert({
+      entity_map_id: entry.entityMapId || null,
+      action: entry.action,
+      entity_type: entry.entityType,
+      internal_id: entry.internalId,
+      wikidata_qid: entry.wikidataQid || null,
+      payload_hash: entry.payloadHash || null,
+      write_decision: entry.writeDecision,
+      success: entry.success,
+      error_code: entry.errorCode || null,
+      error_message: entry.errorMessage || null,
+      semantic_grade: entry.semanticGrade || null,
+      semantic_score: entry.semanticScore || null,
+      duration_ms: entry.durationMs,
+      request_payload: entry.requestPayload ? JSON.parse(JSON.stringify(entry.requestPayload)) : null,
+    });
+  } catch (logErr) {
+    console.error("[wikidata-sync] Failed to insert sync log", logErr);
+  }
+
+  const status = entry.success ? 200 : entry.errorCode === "ENTITY_NOT_FOUND" ? 404 : 400;
+
+  return jsonResponse({
+    success: entry.success,
+    writeDecision: entry.writeDecision,
+    syncStatus: entry.syncStatus || (entry.success ? "pending" : "failed"),
+    semanticScore: entry.semanticScore,
+    semanticGrade: entry.semanticGrade,
+    wikidataQid: entry.wikidataQid,
+    writeEnabled: entry.writeEnabled,
+    payloadHash: entry.payloadHash,
+    collisionCandidates: entry.collisionCandidates,
+    error: entry.errorMessage,
+    errorCode: entry.errorCode,
+    durationMs: entry.durationMs,
+  }, status);
+}
+
+// ── Retry with Exponential Backoff ──────────────────────────
+
+export async function withRetry<T>(
+  fn: () => Promise<T>,
+  options: { max?: number; delays?: number[]; retryOn?: string[] } = {},
+): Promise<T> {
+  const { max = 3, delays = [500, 1500, 3000], retryOn = ["API_RATE_LIMIT", "NETWORK_ERROR"] } = options;
+
+  for (let attempt = 0; attempt < max; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      const errorCode = (err as { code?: string })?.code || "";
+      const isRetryable = retryOn.some(code => 
+        errorCode.includes(code) || (err instanceof Error && err.message.includes(code))
+      );
+
+      if (!isRetryable || attempt >= max - 1) throw err;
+
+      const delay = delays[Math.min(attempt, delays.length - 1)];
+      console.warn(`[wikidata-sync] Retry ${attempt + 1}/${max} after ${delay}ms`, errorCode);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+
+  throw new Error("withRetry: exhausted all attempts");
 }
 
 function jsonResponse(payload: unknown, status = 200) {

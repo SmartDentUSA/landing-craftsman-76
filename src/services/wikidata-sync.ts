@@ -13,6 +13,21 @@ interface WikidataPayloadResult {
   error?: string;
 }
 
+export interface WikidataResolveResult {
+  success: boolean;
+  writeDecision?: 'create' | 'update' | 'skip' | 'abort';
+  syncStatus?: 'synced' | 'pending' | 'collision' | 'failed' | 'skipped';
+  semanticScore?: number;
+  semanticGrade?: string;
+  wikidataQid?: string;
+  writeEnabled?: boolean;
+  payloadHash?: string;
+  collisionCandidates?: unknown[];
+  error?: string;
+  errorCode?: string;
+  durationMs?: number;
+}
+
 function normalizeResponse(data: any): WikidataSyncResult {
   if (!data) return { success: false, error: 'Resposta vazia da edge function' };
 
@@ -125,6 +140,44 @@ export async function buildProductWikidataPayload(productId: string): Promise<Wi
 
     return { success: false, error: data?.error || 'Resposta inesperada' };
   } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Erro desconhecido' };
+  }
+}
+
+export async function resolveWikidataEntity(
+  entityType: 'company' | 'product',
+  internalId: string,
+): Promise<WikidataResolveResult> {
+  try {
+    const { data, error } = await invokeWikidataSync({
+      action: 'resolve_and_persist',
+      entityType,
+      internalId,
+    });
+
+    console.log('[Wikidata] resolve_and_persist response:', { data, error, entityType, internalId });
+
+    if (error) {
+      console.error('[Wikidata] resolve_and_persist error:', error);
+      return { success: false, error: error.message || 'Erro na edge function' };
+    }
+
+    return {
+      success: data?.success ?? false,
+      writeDecision: data?.writeDecision,
+      syncStatus: data?.syncStatus,
+      semanticScore: data?.semanticScore,
+      semanticGrade: data?.semanticGrade,
+      wikidataQid: data?.wikidataQid,
+      writeEnabled: data?.writeEnabled,
+      payloadHash: data?.payloadHash,
+      collisionCandidates: data?.collisionCandidates,
+      error: data?.error,
+      errorCode: data?.errorCode,
+      durationMs: data?.durationMs,
+    };
+  } catch (err) {
+    console.error('[Wikidata] resolve_and_persist exception:', err);
     return { success: false, error: err instanceof Error ? err.message : 'Erro desconhecido' };
   }
 }
