@@ -1091,12 +1091,13 @@ async function handleResolveAndPersist(
     let syncStatus: string;
     let wikidataQid: string | null = null;
     let entityMapId: string | null = null;
+    let existingRecord: any = null;
 
     if (upsertError) {
       // RPC doesn't exist yet — do direct upsert
       console.warn("[wikidata-sync] RPC fallback, direct upsert", upsertError.message);
 
-      const { data: existing } = await db
+      const { data: existingData } = await db
         .from("wikidata_entity_map")
         .select("*")
         .eq("entity_type", entityType)
