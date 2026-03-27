@@ -168,7 +168,7 @@ async function handleProductSync(db: ReturnType<typeof createClient>, productId?
 
   const { data: product, error } = await db
     .from("products_repository")
-    .select("id, name, brand, description, wikidata_item_id")
+    .select("id, name, brand, description, category, subcategory, wikidata_item_id")
     .eq("id", productId)
     .maybeSingle();
 
@@ -189,10 +189,47 @@ async function handleProductSync(db: ReturnType<typeof createClient>, productId?
     name: product.name,
     brand: product.brand,
     description: product.description,
+    category: product.category,
+    subcategory: product.subcategory,
   });
 
   const best = candidates[0];
-  if (!best || best.score < 55) {
+  if (!best || best.score < 35) {
+    // Try category fallback
+    const fallbackQid = getCategoryFallbackQid(product.category, product.subcategory, product.name);
+    if (fallbackQid) {
+      console.log("[wikidata-sync] Using category fallback", { productId, fallbackQid });
+      const fallbackDetails = await fetchEntityDetails(fallbackQid);
+      const fallbackCandidate: Candidate = {
+        qid: fallbackQid,
+        label: fallbackDetails.label,
+        description: fallbackDetails.description,
+        website: fallbackDetails.website,
+        score: 30,
+        reasons: ["category_fallback"],
+      };
+
+      const { error: updateError } = await db
+        .from("products_repository")
+        .update({ wikidata_item_id: fallbackQid, updated_at: new Date().toISOString() })
+        .eq("id", product.id);
+
+      if (updateError) {
+        console.error("[wikidata-sync] Failed to update product Wikidata ID (fallback)", updateError);
+        return jsonResponse({ success: false, error: `Erro ao salvar Wikidata do produto: ${updateError.message}` }, 500);
+      }
+
+      return jsonResponse({
+        success: true,
+        wikidataQid: fallbackCandidate.qid,
+        label: fallbackCandidate.label,
+        description: fallbackCandidate.description,
+        score: fallbackCandidate.score,
+        reasons: fallbackCandidate.reasons,
+        source: "category_fallback",
+      });
+    }
+
     console.warn("[wikidata-sync] No strong product match found", { productId, candidates });
     return jsonResponse(
       {
@@ -242,10 +279,15 @@ async function searchCompanyCandidates(input: { name?: string | null; descriptio
   );
 }
 
-async function searchProductCandidates(input: { name?: string | null; brand?: string | null; description?: string | null }) {
+async function searchProductCandidates(input: { name?: string | null; brand?: string | null; description?: string | null; category?: string | null; subcategory?: string | null }) {
+  const genericTerms = extractGenericProductTerms(input.name);
   const queries = uniqueStrings([
     input.brand && input.name ? `${input.brand} ${input.name}` : null,
     input.name,
+    genericTerms,
+    input.subcategory,
+    input.category,
+    input.subcategory ? `${input.subcategory} dental` : null,
   ]);
 
   return await collectBestCandidates(queries, (candidate) =>
@@ -253,8 +295,73 @@ async function searchProductCandidates(input: { name?: string | null; brand?: st
       name: input.name ?? "",
       brand: input.brand ?? "",
       description: input.description ?? "",
+      category: input.category ?? "",
+      subcategory: input.subcategory ?? "",
     })
   );
+}
+
+const CATEGORY_FALLBACK_MAP: Record<string, string> = {
+  "resina composta": "Q2648150",
+  "resinas compostas": "Q2648150",
+  "composite resin": "Q2648150",
+  "dental composite": "Q2648150",
+  "impressora 3d": "Q59890062",
+  "impressoras 3d": "Q59890062",
+  "3d printer": "Q59890062",
+  "resina 3d": "Q11474",
+  "resinas 3d": "Q11474",
+  "photopolymer": "Q11474",
+  "scanner 3d": "Q1753819",
+  "scanners 3d": "Q1753819",
+  "3d scanner": "Q1753819",
+  "software": "Q7397",
+  "softwares": "Q7397",
+  "ceramica": "Q45621",
+  "cerâmica": "Q45621",
+  "caracterizacao": "Q45621",
+  "caracterização": "Q45621",
+  "dental ceramics": "Q45621",
+  "adesivo": "Q131790",
+  "adesivos": "Q131790",
+  "adhesive": "Q131790",
+  "cimento": "Q170585",
+  "cimentos": "Q170585",
+  "dental cement": "Q170585",
+  "clareador": "Q900406",
+  "clareamento": "Q900406",
+  "teeth whitening": "Q900406",
+  "selante": "Q2648150",
+  "silicone": "Q147271",
+  "silicones": "Q147271",
+  "moldagem": "Q147271",
+  "alginato": "Q422219",
+  "fotopolimerizador": "Q1198635",
+  "led": "Q1198635",
+};
+
+function getCategoryFallbackQid(category?: string | null, subcategory?: string | null, name?: string | null): string | null {
+  const candidates = [subcategory, category, name].filter(Boolean).map((v) => normalizeText(v!));
+
+  for (const text of candidates) {
+    for (const [key, qid] of Object.entries(CATEGORY_FALLBACK_MAP)) {
+      if (text.includes(normalizeText(key))) {
+        return qid;
+      }
+    }
+  }
+  return null;
+}
+
+function extractGenericProductTerms(name?: string | null): string {
+  if (!name) return "";
+  return name
+    .replace(/[-–—]/g, " ")
+    .replace(/\b[A-Z]{0,3}\d+[A-Z]?\b/gi, "") // Remove codes like DA2, A3, B1
+    .replace(/\b(kit|combo|pack|uni|unid|ml|g|mm)\b/gi, "")
+    .replace(/\b\d+(\.\d+)?\s*(ml|g|mm|un|kg)?\b/gi, "") // Remove measurements
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 async function collectBestCandidates(
@@ -336,25 +443,36 @@ function scoreCompanyCandidate(
 
 function scoreProductCandidate(
   candidate: Candidate,
-  target: { name: string; brand: string; description: string },
+  target: { name: string; brand: string; description: string; category: string; subcategory: string },
 ): Candidate {
   const reasons: string[] = [];
   let score = 0;
 
   const targetName = normalizeText(target.name);
   const targetBrand = normalizeText(target.brand);
+  const targetCategory = normalizeText(target.category);
+  const targetSubcategory = normalizeText(target.subcategory);
   const candidateLabel = normalizeText(candidate.label);
   const candidateDescription = normalizeText(candidate.description);
+
+  // Generic terms from the product name (without codes/models)
+  const genericTerms = normalizeText(extractGenericProductTerms(target.name));
 
   if (candidateLabel && targetName && candidateLabel === targetName) {
     score += 45;
     reasons.push("label_exact_match");
+  } else if (candidateLabel && genericTerms && candidateLabel === genericTerms) {
+    score += 40;
+    reasons.push("generic_label_exact_match");
   } else if (candidateLabel && targetName && candidateLabel.includes(targetName)) {
     score += 28;
     reasons.push("label_contains_target");
   } else if (candidateLabel && targetName && targetName.includes(candidateLabel)) {
     score += 20;
     reasons.push("target_contains_label");
+  } else if (candidateLabel && genericTerms && (candidateLabel.includes(genericTerms) || genericTerms.includes(candidateLabel))) {
+    score += 22;
+    reasons.push("generic_terms_match");
   }
 
   if (targetBrand && candidateLabel.includes(targetBrand)) {
@@ -365,6 +483,21 @@ function scoreProductCandidate(
   if (targetBrand && candidateDescription.includes(targetBrand)) {
     score += 10;
     reasons.push("brand_in_description");
+  }
+
+  // Category/subcategory matching
+  if (targetSubcategory && (candidateLabel.includes(targetSubcategory) || candidateDescription.includes(targetSubcategory))) {
+    score += 18;
+    reasons.push("subcategory_match");
+  } else if (targetCategory && (candidateLabel.includes(targetCategory) || candidateDescription.includes(targetCategory))) {
+    score += 12;
+    reasons.push("category_match");
+  }
+
+  // Dental/odontology context boost
+  if (candidateDescription.includes("dental") || candidateDescription.includes("odonto") || candidateDescription.includes("dentist")) {
+    score += 8;
+    reasons.push("dental_context");
   }
 
   const productKeywords = extractKeywords(target.description || target.name);
