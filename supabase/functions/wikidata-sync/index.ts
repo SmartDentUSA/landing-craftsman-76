@@ -656,7 +656,7 @@ async function handleBuildCompanyPayload(db: ReturnType<typeof createClient>) {
 
   const payload = buildCompanyPayload(company as CompanyProfileInput);
   const techSpecs = {};
-  const summary = summarizePayload(payload, techSpecs);
+  const summary = summarizePayload(payload, techSpecs, "company");
 
   console.log("[wikidata-sync] Company payload built", {
     claimCount: summary.claimCount,
@@ -702,9 +702,11 @@ async function handleBuildProductPayload(db: ReturnType<typeof createClient>, pr
     .maybeSingle();
 
   const companyQid = company?.wikidata_id || "Q138636902";
-  const payload = buildProductPayload(product as ProductInput, companyQid);
+  // Inject country from company profile for conditional P495
+  const productWithCountry = { ...(product as ProductInput), country: "Brasil" };
+  const payload = buildProductPayload(productWithCountry, companyQid);
   const techSpecs = extractTechSpecs(product.features, product.description);
-  const summary = summarizePayload(payload, techSpecs);
+  const summary = summarizePayload(payload, techSpecs, "product");
 
   console.log("[wikidata-sync] Product payload built", {
     productId,
