@@ -132,6 +132,7 @@ export interface ProductNode {
   workflow_stages: any;
   sales_pitch: string | null;
   applications: string | null;
+  wikidata_item_id: string | null;
   [key: string]: any;
 }
 

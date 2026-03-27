@@ -424,7 +424,16 @@ function generateSchemaGraph(options: {
     },
     "sku": product.sku || product.mpn,
     "mpn": product.mpn,
-    "gtin13": product.gtin
+    "gtin13": product.gtin,
+    ...(product.wikidata_item_id && { "sameAs": `https://www.wikidata.org/entity/${product.wikidata_item_id}` }),
+    ...(companyName && {
+      "manufacturer": {
+        "@type": "Organization",
+        "name": companyName,
+        ...(companyProfile?.website_url && { "url": companyProfile.website_url }),
+        ...(companyProfile?.wikidata_id && { "sameAs": `https://www.wikidata.org/entity/${companyProfile.wikidata_id}` })
+      }
+    })
   };
   
   // Add offers if price exists

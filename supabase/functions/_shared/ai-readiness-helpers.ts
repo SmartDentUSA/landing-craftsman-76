@@ -387,4 +387,67 @@ export function generateDefinedTermSetSchema(contentText: string, setName?: stri
   };
 }
 
-console.log('🤖 [AI-Readiness] Helpers loaded: Wikidata entities, AI summary, LLM knowledge, entity index, DefinedTermSet');
+// ============================================
+// N. Product-Company Wikidata Semantic Linking
+// ============================================
+
+/**
+ * Enriches a Product JSON-LD schema with Wikidata sameAs linking
+ * and manufacturer/brand semantic connection to the company.
+ * 
+ * Creates the triple: Company (Q138636902) --[manufacturer]--> Product --[sameAs]--> Category (QID)
+ */
+export function enrichProductSchemaWithWikidata(
+  productSchema: Record<string, any>,
+  params: {
+    wikidataItemId?: string | null;
+    companyName?: string;
+    companyWikidataId?: string | null;
+    companyWebsiteUrl?: string | null;
+  }
+): Record<string, any> {
+  const enriched = { ...productSchema };
+  const { wikidataItemId, companyName, companyWikidataId, companyWebsiteUrl } = params;
+
+  // 1. Product sameAs → Wikidata category entity
+  if (wikidataItemId) {
+    const wikidataSameAs = `https://www.wikidata.org/entity/${wikidataItemId}`;
+    if (Array.isArray(enriched.sameAs)) {
+      if (!enriched.sameAs.includes(wikidataSameAs)) {
+        enriched.sameAs.push(wikidataSameAs);
+      }
+    } else if (enriched.sameAs) {
+      enriched.sameAs = [enriched.sameAs, wikidataSameAs];
+    } else {
+      enriched.sameAs = wikidataSameAs;
+    }
+  }
+
+  // 2. Manufacturer → Organization with Wikidata sameAs
+  if (companyName) {
+    const manufacturer: Record<string, any> = {
+      "@type": "Organization",
+      "name": companyName,
+    };
+    if (companyWebsiteUrl) {
+      manufacturer.url = companyWebsiteUrl;
+    }
+    if (companyWikidataId) {
+      manufacturer.sameAs = `https://www.wikidata.org/entity/${companyWikidataId}`;
+    }
+    enriched.manufacturer = manufacturer;
+  }
+
+  // 3. Brand (if not already set with company info)
+  if (companyName && !enriched.brand?.sameAs && companyWikidataId) {
+    enriched.brand = {
+      "@type": "Brand",
+      "name": enriched.brand?.name || companyName,
+      "sameAs": `https://www.wikidata.org/entity/${companyWikidataId}`
+    };
+  }
+
+  return enriched;
+}
+
+console.log('🤖 [AI-Readiness] Helpers loaded: Wikidata entities, AI summary, LLM knowledge, entity index, DefinedTermSet, product-company linking');
