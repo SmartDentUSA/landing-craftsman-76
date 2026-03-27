@@ -1814,8 +1814,17 @@ function injectSEO(
         "image": finalOgImage,
         "brand": {
           "@type": "Brand",
-          "name": brand
+          "name": brand,
+          ...(companyProfile?.wikidata_id && { "sameAs": `https://www.wikidata.org/entity/${companyProfile.wikidata_id}` })
         },
+        ...(companyProfile?.wikidata_id && {
+          "manufacturer": {
+            "@type": "Organization",
+            "name": companyProfile?.company_name || brand,
+            ...(websiteUrl && { "url": websiteUrl }),
+            "sameAs": `https://www.wikidata.org/entity/${companyProfile.wikidata_id}`
+          }
+        }),
         "offers": {
           "@type": "Offer",
           "url": canonical,

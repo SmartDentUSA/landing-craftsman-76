@@ -275,6 +275,26 @@ export function generateProductSchema(product: ProductTemplateData, company: Com
   if (product.mpn) schema.mpn = product.mpn;
   if (product.ean) schema.gtin = product.ean;
 
+  // Wikidata sameAs for product category
+  if ((product as any).wikidata_item_id) {
+    schema.sameAs = `https://www.wikidata.org/entity/${(product as any).wikidata_item_id}`;
+  }
+
+  // Manufacturer with Wikidata linking
+  if (company.company_name) {
+    schema.manufacturer = {
+      "@type": "Organization",
+      "name": company.company_name,
+      ...(company.website_url && { "url": company.website_url }),
+      ...(company.wikidata_id && { "sameAs": `https://www.wikidata.org/entity/${company.wikidata_id}` })
+    };
+  }
+
+  // Enrich brand with Wikidata if available
+  if (company.wikidata_id && schema.brand) {
+    schema.brand.sameAs = `https://www.wikidata.org/entity/${company.wikidata_id}`;
+  }
+
   // Offers
   if (product.price) {
     schema.offers = {
