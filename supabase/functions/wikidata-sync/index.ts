@@ -600,8 +600,14 @@ const CATEGORY_FALLBACK_MAP: Record<string, string> = {
   "led": "Q2102936",
 };
 
-// Blocklist: all category/class QIDs that must never be treated as product duplicates
-const CATEGORY_QIDS = new Set(Object.values(CATEGORY_FALLBACK_MAP));
+// Lazy getter for category QID blocklist (avoids TDZ issues with hoisting)
+let _categoryQidsCache: Set<string> | null = null;
+function getCategoryQids(): Set<string> {
+  if (!_categoryQidsCache) {
+    _categoryQidsCache = new Set(Object.values(CATEGORY_FALLBACK_MAP));
+  }
+  return _categoryQidsCache;
+}
 
 function getCategoryFallbackQid(category?: string | null, subcategory?: string | null, name?: string | null): string | null {
   const candidates = [subcategory, category, name].filter(Boolean).map((v) => normalizeText(v!));
