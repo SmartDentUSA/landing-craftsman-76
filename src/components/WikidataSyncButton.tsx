@@ -187,7 +187,7 @@ export function WikidataSyncButton({ productId, wikidataItemId, onSyncSuccess }:
           {semanticScore?.details && (
             <div className="rounded border p-2 bg-muted/30 text-xs space-y-1">
               <p className="font-semibold text-foreground">Semantic Score Details:</p>
-              {(semanticScore.details as string[]).map((d, i) => (
+              {(semanticScore.details as string[]).map((d: string, i: number) => (
                 <p key={i} className={`text-muted-foreground ${d.startsWith("⚠️") || d.startsWith("MISSING") ? "text-destructive font-medium" : ""}`}>
                   {d}
                 </p>
@@ -197,8 +197,8 @@ export function WikidataSyncButton({ productId, wikidataItemId, onSyncSuccess }:
 
           {/* Warnings */}
           {warnings.length > 0 && (
-            <div className="rounded border border-yellow-500/30 p-2 bg-yellow-50/5 text-xs space-y-1">
-              <p className="font-semibold text-yellow-600">⚠ Warnings ({warnings.length}):</p>
+            <div className="rounded border border-destructive/30 p-2 bg-destructive/5 text-xs space-y-1">
+              <p className="font-semibold text-destructive">⚠ Warnings ({warnings.length}):</p>
               {warnings.map((w, i) => (
                 <p key={i} className="text-muted-foreground">
                   <span className="font-mono">{w.path}</span>: {w.message}
