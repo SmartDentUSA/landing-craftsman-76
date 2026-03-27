@@ -443,25 +443,36 @@ function scoreCompanyCandidate(
 
 function scoreProductCandidate(
   candidate: Candidate,
-  target: { name: string; brand: string; description: string },
+  target: { name: string; brand: string; description: string; category: string; subcategory: string },
 ): Candidate {
   const reasons: string[] = [];
   let score = 0;
 
   const targetName = normalizeText(target.name);
   const targetBrand = normalizeText(target.brand);
+  const targetCategory = normalizeText(target.category);
+  const targetSubcategory = normalizeText(target.subcategory);
   const candidateLabel = normalizeText(candidate.label);
   const candidateDescription = normalizeText(candidate.description);
+
+  // Generic terms from the product name (without codes/models)
+  const genericTerms = normalizeText(extractGenericProductTerms(target.name));
 
   if (candidateLabel && targetName && candidateLabel === targetName) {
     score += 45;
     reasons.push("label_exact_match");
+  } else if (candidateLabel && genericTerms && candidateLabel === genericTerms) {
+    score += 40;
+    reasons.push("generic_label_exact_match");
   } else if (candidateLabel && targetName && candidateLabel.includes(targetName)) {
     score += 28;
     reasons.push("label_contains_target");
   } else if (candidateLabel && targetName && targetName.includes(candidateLabel)) {
     score += 20;
     reasons.push("target_contains_label");
+  } else if (candidateLabel && genericTerms && (candidateLabel.includes(genericTerms) || genericTerms.includes(candidateLabel))) {
+    score += 22;
+    reasons.push("generic_terms_match");
   }
 
   if (targetBrand && candidateLabel.includes(targetBrand)) {
@@ -472,6 +483,21 @@ function scoreProductCandidate(
   if (targetBrand && candidateDescription.includes(targetBrand)) {
     score += 10;
     reasons.push("brand_in_description");
+  }
+
+  // Category/subcategory matching
+  if (targetSubcategory && (candidateLabel.includes(targetSubcategory) || candidateDescription.includes(targetSubcategory))) {
+    score += 18;
+    reasons.push("subcategory_match");
+  } else if (targetCategory && (candidateLabel.includes(targetCategory) || candidateDescription.includes(targetCategory))) {
+    score += 12;
+    reasons.push("category_match");
+  }
+
+  // Dental/odontology context boost
+  if (candidateDescription.includes("dental") || candidateDescription.includes("odonto") || candidateDescription.includes("dentist")) {
+    score += 8;
+    reasons.push("dental_context");
   }
 
   const productKeywords = extractKeywords(target.description || target.name);
