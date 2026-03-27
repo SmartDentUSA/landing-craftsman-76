@@ -1,0 +1,1 @@
+UPDATE products_repository SET wikidata_item_id = NULL WHERE wikidata_item_id IN ('Q2648150', 'Q59890062', 'Q11474', 'Q1753819', 'Q170585', 'Q147271', 'Q422219', 'Q900406', 'Q1198635');
