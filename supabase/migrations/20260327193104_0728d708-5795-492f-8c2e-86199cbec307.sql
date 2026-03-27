@@ -1,0 +1,1 @@
+UPDATE system_flags SET value = '{"enabled": true}'::jsonb, updated_at = now() WHERE key = 'WIKIDATA_WRITE_ENABLED';
