@@ -1,127 +1,142 @@
 
 
-# Builder Automático de Payload `wbeditentity` — 100% Validado
+# Hardening Final: Concorrência, Upsert Atômico, Circuit Breaker e TTL
 
-## Contexto
+## Resumo
 
-O sistema atual apenas **lê** do Wikidata (busca entidades via `wbsearchentities`). Para escrita, precisamos construir payloads `wbeditentity` que respeitem 100% a especificação da Wikidata API. Este plano cria um **builder tipado e validado** que monta payloads atômicos a partir dos dados do `company_profile` e `products_repository`.
-
-**Pré-requisito**: Os 4 secrets OAuth 1.0a (`WIKIDATA_CONSUMER_KEY`, `WIKIDATA_CONSUMER_SECRET`, `WIKIDATA_ACCESS_TOKEN`, `WIKIDATA_ACCESS_SECRET`) ainda **não existem**. O builder será construído de forma independente do transporte OAuth — pronto para uso assim que os tokens forem registrados.
+Implementar os ajustes críticos de última milha para garantir escrita segura no Wikidata: tabelas de persistência com upsert atômico (ON CONFLICT), advisory locks, circuit breaker, retry com backoff, canonicalização de hash, e TTL de logs via cron job.
 
 ---
 
-## Arquitetura
+## Arquitetura do Pipeline Final
 
 ```text
-company_profile / products_repository
-         │
-         ▼
-┌─────────────────────────┐
-│  wikidata-payload-      │  ← NOVO: builder tipado
-│  builder.ts             │
-│                         │
-│  buildCompanyPayload()  │  → { labels, descriptions, aliases, claims }
-│  buildProductPayload()  │  → { labels, descriptions, claims }
-│  buildClaim()           │  → claim individual validado
-│  validatePayload()      │  → throw se inválido
-└─────────────────────────┘
-         │
-         ▼
-   JSON pronto para wbeditentity
+1. Build payload
+2. Canonicalize (sort keys, remove nulls)
+3. SHA-256 hash
+4. Advisory lock (pg_advisory_xact_lock)
+5. Atomic upsert (INSERT ... ON CONFLICT)
+   ├─ same hash → SKIP
+   └─ diff hash → UPDATE decision
+6. Entity resolution (se novo)
+   ├─ >0.85 → LINK existing
+   ├─ 0.7-0.85 → COLLISION (manual review)
+   └─ <0.7 → CREATE
+7. Write guard (score < 0.7 → ABORT)
+8. EXECUTE wbeditentity (futuro OAuth)
+9. Persist entity_map com QID real (pós-write)
+10. Log completo
+11. Unlock automático (fim da transação)
 ```
 
 ---
 
-## Plano de Implementação
+## 1. Migração SQL
 
-### 1. Novo arquivo: `supabase/functions/_shared/wikidata-payload-builder.ts`
+### Tabela `wikidata_entity_map`
+- `id` UUID PK, `entity_type` TEXT NOT NULL, `internal_id` TEXT NOT NULL
+- `wikidata_qid` TEXT (CHECK `~ '^Q[0-9]+$'` OR NULL)
+- `payload_hash` TEXT, `sync_status` (pending/processing/synced/failed/collision/skipped)
+- `lock_version` INTEGER DEFAULT 0 (optimistic locking)
+- `resolution_source` TEXT (created/matched_existing/manual_link/merged)
+- `collision_candidates` JSONB, `last_synced_at`, timestamps
+- UNIQUE on `(entity_type, internal_id)` -- one mapping per entity
+- INDEX on `sync_status`
 
-Módulo compartilhado com tipos e builders:
+### Tabela `wikidata_sync_logs`
+- `id` UUID PK, `entity_map_id` FK nullable
+- `action` TEXT, `entity_type`, `internal_id`, `wikidata_qid`
+- `payload_hash`, `write_decision` (create/update/skip/abort)
+- `success` BOOLEAN, `error_code` TEXT, `error_message` TEXT, `error_context` JSONB
+- `semantic_grade`, `semantic_score` NUMERIC, `duration_ms` INTEGER
+- `request_payload` JSONB, `response_data` JSONB
+- `created_at`, `expires_at` (DEFAULT now() + 90 days)
+- INDEX on `(success, created_at DESC)`
 
-**Tipos Wikidata (spec-compliant):**
-- `WikidataValue` (string, time, quantity, globecoordinate, url, wikibase-entityid)
-- `WikidataClaim` (mainsnak + qualifiers + references)
-- `WikidataPayload` (labels, descriptions, aliases, claims)
+### Tabela `system_flags`
+- `key` TEXT PK, `value` JSONB, `updated_at`
+- Initial row: `WIKIDATA_WRITE_ENABLED = false` (circuit breaker)
 
-**Builder da Empresa** — `buildCompanyPayload(company)`:
+### RLS
+- Admin: full access via `has_role(auth.uid(), 'admin')`
+- Authenticated: SELECT only on entity_map and sync_logs
 
-| Propriedade Wikidata | Campo `company_profile` | Tipo de valor |
-|---|---|---|
-| P31 (instance of) | — | wikibase-entityid → Q4830453 |
-| P17 (country) | country | wikibase-entityid → Q155 |
-| P856 (website) | website_url | url |
-| P571 (inception) | founded_year | time (+YYYY-00-00T00:00:00Z) |
-| P112 (founded by) | founder_name | string |
-| P625 (coordinates) | latitude, longitude | globecoordinate |
-| P154 (logo image) | company_logo_url | string (Commons filename) |
-| P1651 (YouTube video ID) | company_videos[].youtube_id | string (extraído) |
-| P968 (email) | contact_email | string |
-| P1329 (phone) | contact_phone | string |
-| P3225 (DUNS) | duns_number | string |
-| P6782 (ROR ID) | tax_id | string |
-| P1327 (partner org) | institutional_links[].url | url (por parceiro) |
-
-**Builder do Produto** — `buildProductPayload(product, companyQid)`:
-
-| Propriedade Wikidata | Campo `products_repository` | Tipo de valor |
-|---|---|---|
-| P31 (instance of) | wikidata_item_id | wikibase-entityid (ex: Q1780993) |
-| P176 (manufacturer) | — | wikibase-entityid → companyQid |
-| P495 (country of origin) | — | wikibase-entityid → Q155 |
-| P2076 (flexural strength) | features[] / description | quantity (MPa) — via parser regex |
-| P1306 (Shore hardness) | features[] / description | quantity — via parser regex |
-| P3931 (copyright holder) | — | wikibase-entityid → companyQid |
-| P248 (stated in) | technical_documents[].url | referência em cada claim técnico |
-
-**Parser de Specs Técnicos** — `extractTechSpecs(features, description)`:
-```text
-Regex: /(\d+(?:[.,]\d+)?)\s*MPa/i → flexuralStrength
-Regex: /Shore\s*[AD]\s*(\d+)/i → shoreHardness
-Regex: /(\d+(?:[.,]\d+)?)\s*%\s*(radiopac|transluc)/i → percentages
-```
-
-**Validador** — `validatePayload(payload)`:
-- Verifica que todos os claims têm `mainsnak.snaktype` = "value"
-- Valida formato de time (`+YYYY-00-00T00:00:00Z`)
-- Valida coordenadas (lat -90..90, lon -180..180)
-- Valida QIDs (regex `^Q\d+$`)
-- Lança erro detalhado se inválido
-
-**Labels/Descriptions multilíngue** — `buildMultilingualLabels()`:
-- PT: direto dos campos do banco
-- EN/ES: stub preparado para integração com Gemini (retorna apenas PT por ora, com TODO para tradução)
-
-### 2. Atualizar `supabase/functions/wikidata-sync/index.ts`
-
-Adicionar duas novas actions:
-
-- `build_company_payload` — Busca `company_profile` completo, chama `buildCompanyPayload()`, retorna o JSON pronto (sem enviar ao Wikidata). Permite inspecionar e validar antes de escrita real.
-- `build_product_payload` — Busca produto completo, chama `buildProductPayload()`, retorna o JSON validado.
-
-Estas actions são **dry-run** — geram o payload mas não executam `wbeditentity`. A escrita real será habilitada quando os secrets OAuth estiverem configurados.
-
-### 3. Atualizar `src/services/wikidata-sync.ts`
-
-Adicionar funções:
-- `buildCompanyWikidataPayload()` — invoca action `build_company_payload`
-- `buildProductWikidataPayload(productId)` — invoca action `build_product_payload`
-
-### 4. Atualizar `src/components/WikidataSyncButton.tsx`
-
-Adicionar botão secundário "Preview Payload" que chama o builder em modo dry-run e exibe o JSON resultante em um dialog/modal para inspeção antes do envio real.
+### Cron Job (TTL cleanup)
+- Via `pg_cron`: DELETE FROM `wikidata_sync_logs` WHERE `expires_at < now()` — scheduled daily
 
 ---
 
-## Arquivos Alterados/Criados
+## 2. Atualizar `wikidata-payload-builder.ts`
 
-| Arquivo | Ação |
+### 2a. Canonicalização determinística
+Nova função `canonicalizePayload(payload)`:
+- Ordena keys recursivamente em objetos
+- Remove campos null/undefined
+- Ordena arrays de claims por property + datavalue determinístico
+
+### 2b. SHA-256 real
+Substituir hash simples (djb2) por `crypto.subtle.digest("SHA-256", ...)` nativo do Deno. Input = JSON do payload canonicalizado.
+
+### 2c. Score externo
+Adicionar ao `evaluateSemanticScore`:
+- `+0.15` se claims têm referências com URLs externas (não apenas domínio próprio)
+
+---
+
+## 3. Atualizar `wikidata-sync/index.ts`
+
+### 3a. Nova action: `resolve_and_persist`
+Pipeline completo:
+1. Build payload
+2. Canonicalize + SHA-256
+3. `pg_advisory_xact_lock(hashtext(entity_type || ':' || internal_id))`
+4. Atomic upsert: `INSERT INTO wikidata_entity_map ... ON CONFLICT (entity_type, internal_id) DO UPDATE SET ...`
+5. Se `payload_hash` idêntico → `write_decision = 'skip'`
+6. Se novo → entity resolution → decisão automática
+7. Write guard: `semantic_score < 0.7 → abort`
+8. Circuit breaker: check `system_flags` WHERE key = `WIKIDATA_WRITE_ENABLED`
+9. Log em `wikidata_sync_logs`
+10. Retornar decisão + payload + score
+
+### 3b. Retry com backoff exponencial
+Wrapper `withRetry(fn, { max: 3, delays: [500, 1500, 3000], retryOn: ['API_RATE_LIMIT', 'NETWORK_ERROR'] })`.
+Antes de retry: re-check `wikidata_entity_map.wikidata_qid` para evitar duplicação.
+
+### 3c. Composite entity resolution
+Score composto:
+```
+0.4 * label_similarity + 0.2 * manufacturer_match + 0.2 * domain_match + 0.2 * description_keyword_match
+```
+Decisão: >0.85 link, 0.7-0.85 collision, <0.7 create.
+
+### 3d. Persistência pós-write (ordem correta)
+1. Decisão → 2. Execução (wbeditentity) → 3. Persistência com QID real
+Nunca registrar sucesso antes de confirmação da API.
+
+---
+
+## 4. Atualizar `src/services/wikidata-sync.ts`
+
+- `resolveWikidataEntity(entityType, internalId)` — chama action `resolve_and_persist`
+- Retorna `{ writeDecision, syncStatus, semanticScore, collisionCandidates }`
+
+---
+
+## 5. Atualizar `WikidataSyncButton.tsx`
+
+- Badge de `sync_status` (synced/pending/collision/skipped)
+- Indicador de `write_decision` no preview (create/update/skip/abort)
+- Warning visual quando `writeBlocked` (score < 0.7)
+
+---
+
+## Arquivos
+
+| Arquivo | Acao |
 |---|---|
-| `supabase/functions/_shared/wikidata-payload-builder.ts` | **Novo** — Builder tipado + validador |
-| `supabase/functions/wikidata-sync/index.ts` | **Editar** — Actions `build_company_payload` e `build_product_payload` |
-| `src/services/wikidata-sync.ts` | **Editar** — Funções de invocação dry-run |
-| `src/components/WikidataSyncButton.tsx` | **Editar** — Botão "Preview Payload" |
-
-## Resultado
-
-Payload 100% validado e inspecionável antes de qualquer escrita no Wikidata. Zero risco de claims malformados ou dados inválidos.
+| SQL Migration | **Novo** — 3 tabelas, indices, RLS, cron |
+| `_shared/wikidata-payload-builder.ts` | **Editar** — canonicalize, SHA-256, score externo |
+| `wikidata-sync/index.ts` | **Editar** — resolve_and_persist, advisory lock, upsert, retry, circuit breaker |
+| `src/services/wikidata-sync.ts` | **Editar** — resolveWikidataEntity |
+| `src/components/WikidataSyncButton.tsx` | **Editar** — status badges, write decision display |
 
