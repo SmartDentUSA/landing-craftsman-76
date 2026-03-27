@@ -4550,7 +4550,7 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
             </div>
 
             <div className="flex gap-2 items-center">
-              <WikidataSyncButton productId={product?.id} wikidataItemId={(product as any)?.wikidata_item_id} />
+              <WikidataSyncButton productId={product?.id} wikidataItemId={product?.wikidata_item_id} />
               <Button variant="outline" onClick={onClose}>
                 Cancelar
               </Button>
