@@ -74,6 +74,11 @@ export function WikidataSyncButton({ productId, wikidataItemId, onSyncSuccess }:
             </a>
           ),
         });
+      } else if (result.needsCreate) {
+        toast({
+          title: "Categoria identificada",
+          description: `${result.fallbackLabel || "Categoria genérica"} — use Resolve + Publish para criar item específico.`,
+        });
       } else {
         toast({ title: "Erro ao sincronizar", description: result.error ?? "Erro desconhecido", variant: "destructive" });
       }

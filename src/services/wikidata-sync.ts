@@ -4,6 +4,11 @@ interface WikidataSyncResult {
   success: boolean;
   wikidataQid?: string;
   error?: string;
+  needsCreate?: boolean;
+  reason?: string;
+  fallbackQid?: string;
+  fallbackLabel?: string;
+  fallbackDescription?: string;
 }
 
 interface WikidataPayloadResult {
@@ -30,6 +35,19 @@ export interface WikidataResolveResult {
 
 function normalizeResponse(data: any): WikidataSyncResult {
   if (!data) return { success: false, error: 'Resposta vazia da edge function' };
+
+  // Handle "generic_category_only" — no item found, only category fallback
+  if (data.needsCreate === true && data.reason === 'generic_category_only') {
+    return {
+      success: false,
+      needsCreate: true,
+      reason: data.reason,
+      fallbackQid: data.fallbackQid,
+      fallbackLabel: data.fallbackLabel,
+      fallbackDescription: data.fallbackDescription,
+      error: data.message,
+    };
+  }
 
   const qid = data.wikidataQid || data.qid || data.wikidata_id || data.wikidata_item_id || data.wikidataItemId;
   const success = data.success === true || !!qid;
