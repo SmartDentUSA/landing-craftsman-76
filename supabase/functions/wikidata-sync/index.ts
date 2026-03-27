@@ -152,6 +152,13 @@ async function getWikidataCsrfToken(secrets: WikidataOAuthSecrets): Promise<stri
 
   const json = await res.json();
   const token = json?.query?.tokens?.csrftoken;
+  const oauthErrorCode = json?.error?.code;
+  const oauthErrorInfo = json?.error?.info;
+
+  if (oauthErrorCode === "mwoauth-invalid-authorization") {
+    console.error("[wikidata-sync] Invalid Wikidata OAuth authorization", JSON.stringify(json).slice(0, 500));
+    throw new Error(`WIKIDATA_OAUTH_INVALID_AUTHORIZATION: ${oauthErrorInfo || "OAuth grant not approved or expired"}`);
+  }
 
   if (!token || token === "+\\") {
     console.error("[wikidata-sync] Invalid CSRF token response", JSON.stringify(json).slice(0, 500));
@@ -1339,6 +1346,14 @@ async function handleResolveAndPersist(
           }
 
           syncStatus = "failed";
+          const writeErrorMessage = writeErr instanceof Error ? writeErr.message : "Write failed";
+          const writeErrorCode = writeErrorMessage.includes("WIKIDATA_OAUTH_INVALID_AUTHORIZATION")
+            ? "WIKIDATA_OAUTH_INVALID_AUTHORIZATION"
+            : "WRITE_FAILED";
+          const friendlyWriteError = writeErrorCode === "WIKIDATA_OAUTH_INVALID_AUTHORIZATION"
+            ? "Credenciais OAuth do Wikidata inválidas ou expiradas. Atualize os secrets WIKIDATA_ACCESS_TOKEN / WIKIDATA_ACCESS_SECRET."
+            : writeErrorMessage;
+
           return logAndReturn(db, {
             action: "resolve_and_persist",
             entityType, internalId, payloadHash,
@@ -1350,8 +1365,8 @@ async function handleResolveAndPersist(
             entityMapId,
             syncStatus: "failed",
             writeEnabled,
-            errorCode: "WRITE_FAILED",
-            errorMessage: writeErr instanceof Error ? writeErr.message : "Write failed",
+            errorCode: writeErrorCode,
+            errorMessage: friendlyWriteError,
             durationMs: Date.now() - startTime,
             requestPayload: payload,
           });
@@ -1609,7 +1624,13 @@ async function logAndReturn(
     console.error("[wikidata-sync] Failed to insert sync log", logErr);
   }
 
-  const status = entry.success ? 200 : entry.errorCode === "ENTITY_NOT_FOUND" ? 404 : 400;
+  const status = entry.success
+    ? 200
+    : entry.errorCode === "ENTITY_NOT_FOUND"
+      ? 404
+      : entry.errorCode === "WIKIDATA_OAUTH_INVALID_AUTHORIZATION"
+        ? 401
+        : 400;
 
   return jsonResponse({
     success: entry.success,
