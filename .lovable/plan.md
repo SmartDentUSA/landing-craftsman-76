@@ -1,83 +1,45 @@
 
 
-# Fix: Payload builder only generates PT labels (EN missing)
+# Fix: Pipeline Blocked — `existing` Variable Out of Scope
 
 ## Root Cause
 
-In `supabase/functions/_shared/wikidata-payload-builder.ts`, line 780-788:
+Line 1235 in `supabase/functions/wikidata-sync/index.ts` references `existing` which is `const`-declared inside the `if (upsertError)` block (line 1099). Since `const` is block-scoped, accessing it on line 1235 (outside that block) throws a `ReferenceError`, crashing the function.
 
-```typescript
-function buildMultilingualLabels(name: string): Record<string, WikidataLabel> {
-  return {
-    pt: { language: "pt", value: name },
-    "pt-br": { language: "pt-br", value: name },
-    // EN placeholder — ready for Gemini integration  ← NEVER SET
-    // es placeholder — ready for Gemini integration  ← NEVER SET
-  };
-}
+The outer `catch` (line 1375) catches it and returns a 400 status with `INTERNAL_ERROR`, which the client surfaces as "Edge Function returned a non-2xx status code" → "Pipeline bloqueado".
+
+## Evidence
+
+Logs show:
+1. `Repair: orphan QID Q1780993 from source` (line 1192 — last log before crash)
+2. **No** "Decision context" log (line 1236 — never reached because line 1235 crashes)
+3. **No** explicit error log (the `catch` at 1375 should log, but may be suppressed)
+
+## Fix (1 Edit)
+
+**File**: `supabase/functions/wikidata-sync/index.ts`
+
+Hoist `existing` declaration to the same scope as `writeDecision` (line 1094), and assign it inside the block:
+
+```
+// Line 1094: Add declaration
+let existingRecord: any = null;
+
+// Inside if (upsertError) block, after line 1099:
+// Change: const { data: existing } = await db...
+// To:     const { data: existingData } = await db...
+//         existingRecord = existingData;
+// Then replace all references to `existing` within that block with `existingRecord`
+
+// Line 1235: Fix reference
+const sameHashFlag = existingRecord?.payload_hash === payloadHash;
 ```
 
-EN and ES labels are commented out. The same issue exists in:
-- **Company descriptions** (lines 498-502): only `pt` and `pt-br`, no EN
-- **Company aliases** (line 511): only `pt`
-- **Product aliases** (line 687): only `pt`
+This is a single variable rename + hoist. All 11 references to `existing` inside the `if (upsertError)` block get updated to `existingRecord`, and the structured logging on line 1235 uses `existingRecord` which is now in scope.
 
-Product descriptions (lines 668-672) **do** include EN — that's the only place it works.
+## Impact
 
-## Critical Impact
-
-The Edit 6 payload guard from the hardening plan requires both `pt` and `en` labels with min 2 chars. With the current builder, **every entity would be aborted** as invalid because `payload.labels.en` is always undefined.
-
-## Fix
-
-### File: `supabase/functions/_shared/wikidata-payload-builder.ts`
-
-**1. `buildMultilingualLabels`** (line 780-788) — Add EN label using the same name (product names are typically already in a universal/commercial form):
-
-```typescript
-function buildMultilingualLabels(name: string): Record<string, WikidataLabel> {
-  return {
-    pt: { language: "pt", value: name },
-    "pt-br": { language: "pt-br", value: name },
-    en: { language: "en", value: name },
-  };
-}
-```
-
-**2. Company descriptions** (lines 498-502) — Add EN description:
-
-```typescript
-payload.descriptions = {
-  pt: { language: "pt", value: shortDesc },
-  "pt-br": { language: "pt-br", value: shortDesc },
-  en: { language: "en", value: shortDesc },
-};
-```
-
-**3. Company aliases** (line 511) — Add EN alias entry when available:
-
-```typescript
-if (aliasValues.length > 0) {
-  payload.aliases = { pt: aliasValues, en: aliasValues };
-}
-```
-
-**4. Product aliases** (line 686-688) — Same pattern:
-
-```typescript
-if (aliasValues.length > 0) {
-  payload.aliases = { pt: aliasValues, en: aliasValues };
-}
-```
-
-## Summary
-
-| Location | Current | Fix |
-|---|---|---|
-| `buildMultilingualLabels` | pt, pt-br only | Add en |
-| Company descriptions | pt, pt-br only | Add en |
-| Company aliases | pt only | Add en mirror |
-| Product aliases | pt only | Add en mirror |
-
-Using the same PT value for EN is standard practice for commercial product names (e.g., "Atos Resina Composta Direta - DA2" is the same in any language). Future Gemini integration can generate proper translations later.
+- Unblocks the entire Wikidata sync pipeline
+- Orphan recovery, anti-dup, payload guard, and structured logging will all execute correctly
+- No behavior change — just fixes the scoping bug
 
