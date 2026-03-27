@@ -1,62 +1,127 @@
 
 
-# Gerar documentação técnica completa da integração Wikidata
+# Builder Automático de Payload `wbeditentity` — 100% Validado
 
-## Objetivo
+## Contexto
 
-Criar um arquivo `.md` detalhado documentando todo o fluxo da integração com o Wikidata: origem dos dados, sincronização, armazenamento, e consumo nos geradores de HTML.
+O sistema atual apenas **lê** do Wikidata (busca entidades via `wbsearchentities`). Para escrita, precisamos construir payloads `wbeditentity` que respeitem 100% a especificação da Wikidata API. Este plano cria um **builder tipado e validado** que monta payloads atômicos a partir dos dados do `company_profile` e `products_repository`.
 
-## Conteúdo do documento
+**Pré-requisito**: Os 4 secrets OAuth 1.0a (`WIKIDATA_CONSUMER_KEY`, `WIKIDATA_CONSUMER_SECRET`, `WIKIDATA_ACCESS_TOKEN`, `WIKIDATA_ACCESS_SECRET`) ainda **não existem**. O builder será construído de forma independente do transporte OAuth — pronto para uso assim que os tokens forem registrados.
 
-O arquivo `/mnt/documents/WIKIDATA_INTEGRATION_DOCS.md` cobrirá:
+---
 
-### 1. Visão geral da arquitetura
-Diagrama ASCII do fluxo completo: UI → Service → Edge Function → Wikidata API → Supabase → Geradores HTML
+## Arquitetura
 
-### 2. Componentes do sistema
-- **Frontend**: `WikidataSyncButton.tsx` (botão no modal de produto)
-- **Service Layer**: `src/services/wikidata-sync.ts` (invocação autenticada)
-- **Edge Function**: `supabase/functions/wikidata-sync/index.ts` (lógica de busca e scoring)
-- **Helpers**: `ai-readiness-helpers.ts` (enriquecimento semântico)
+```text
+company_profile / products_repository
+         │
+         ▼
+┌─────────────────────────┐
+│  wikidata-payload-      │  ← NOVO: builder tipado
+│  builder.ts             │
+│                         │
+│  buildCompanyPayload()  │  → { labels, descriptions, aliases, claims }
+│  buildProductPayload()  │  → { labels, descriptions, claims }
+│  buildClaim()           │  → claim individual validado
+│  validatePayload()      │  → throw se inválido
+└─────────────────────────┘
+         │
+         ▼
+   JSON pronto para wbeditentity
+```
 
-### 3. Fluxo de sincronização da empresa
-- Origem: `company_profile` (company_name, website_url, company_description)
-- Busca na Wikidata API (wbsearchentities) em PT e EN
-- Scoring: domain match (+100), label match (+40), description signals (+8/+15)
-- Threshold: score >= 45
-- Destino: `company_profile.wikidata_id`
+---
 
-### 4. Fluxo de sincronização de produtos
-- Origem: `products_repository` (name, brand, category, subcategory, description)
-- Extração de termos genéricos (remove códigos DA2, medidas ml/g)
-- Busca dinâmica + Category Fallback Map (20 categorias mapeadas)
-- Scoring: label match (+45), category match (+12/+18), dental context (+8)
-- Threshold: score >= 35 (ou fallback com score 30)
-- Destino: `products_repository.wikidata_item_id`
+## Plano de Implementação
 
-### 5. Category Fallback Map completo
-Tabela com todas as 20+ categorias e seus QIDs validados
+### 1. Novo arquivo: `supabase/functions/_shared/wikidata-payload-builder.ts`
 
-### 6. Consumo nos geradores de HTML
-- `mustache-template-engine.ts`: Product JSON-LD com sameAs + manufacturer + brand
-- `product-blog-html-v2.ts`: Mesmo padrão para blogs de produto
-- `generate-ecommerce-html`: E-commerce pages
-- `publish-product-blog-cloudflare`: Blog publicado
-- `clone-landing-page` e `publish-blog-post`: Landing pages e blog posts
+Módulo compartilhado com tipos e builders:
 
-### 7. JSON-LD resultante
-Exemplo completo do grafo semântico gerado
+**Tipos Wikidata (spec-compliant):**
+- `WikidataValue` (string, time, quantity, globecoordinate, url, wikibase-entityid)
+- `WikidataClaim` (mainsnak + qualifiers + references)
+- `WikidataPayload` (labels, descriptions, aliases, claims)
 
-### 8. Autenticação e segurança
-- JWT validation via `auth.getClaims()`
-- Admin-only via `has_role()` RPC
-- Service role key para escrita no banco
+**Builder da Empresa** — `buildCompanyPayload(company)`:
 
-## Arquivo gerado
+| Propriedade Wikidata | Campo `company_profile` | Tipo de valor |
+|---|---|---|
+| P31 (instance of) | — | wikibase-entityid → Q4830453 |
+| P17 (country) | country | wikibase-entityid → Q155 |
+| P856 (website) | website_url | url |
+| P571 (inception) | founded_year | time (+YYYY-00-00T00:00:00Z) |
+| P112 (founded by) | founder_name | string |
+| P625 (coordinates) | latitude, longitude | globecoordinate |
+| P154 (logo image) | company_logo_url | string (Commons filename) |
+| P1651 (YouTube video ID) | company_videos[].youtube_id | string (extraído) |
+| P968 (email) | contact_email | string |
+| P1329 (phone) | contact_phone | string |
+| P3225 (DUNS) | duns_number | string |
+| P6782 (ROR ID) | tax_id | string |
+| P1327 (partner org) | institutional_links[].url | url (por parceiro) |
 
-| Arquivo | Local |
-|---------|-------|
-| `WIKIDATA_INTEGRATION_DOCS.md` | `/mnt/documents/` |
+**Builder do Produto** — `buildProductPayload(product, companyQid)`:
 
-Será gerado via script, sem alterações no codebase.
+| Propriedade Wikidata | Campo `products_repository` | Tipo de valor |
+|---|---|---|
+| P31 (instance of) | wikidata_item_id | wikibase-entityid (ex: Q1780993) |
+| P176 (manufacturer) | — | wikibase-entityid → companyQid |
+| P495 (country of origin) | — | wikibase-entityid → Q155 |
+| P2076 (flexural strength) | features[] / description | quantity (MPa) — via parser regex |
+| P1306 (Shore hardness) | features[] / description | quantity — via parser regex |
+| P3931 (copyright holder) | — | wikibase-entityid → companyQid |
+| P248 (stated in) | technical_documents[].url | referência em cada claim técnico |
+
+**Parser de Specs Técnicos** — `extractTechSpecs(features, description)`:
+```text
+Regex: /(\d+(?:[.,]\d+)?)\s*MPa/i → flexuralStrength
+Regex: /Shore\s*[AD]\s*(\d+)/i → shoreHardness
+Regex: /(\d+(?:[.,]\d+)?)\s*%\s*(radiopac|transluc)/i → percentages
+```
+
+**Validador** — `validatePayload(payload)`:
+- Verifica que todos os claims têm `mainsnak.snaktype` = "value"
+- Valida formato de time (`+YYYY-00-00T00:00:00Z`)
+- Valida coordenadas (lat -90..90, lon -180..180)
+- Valida QIDs (regex `^Q\d+$`)
+- Lança erro detalhado se inválido
+
+**Labels/Descriptions multilíngue** — `buildMultilingualLabels()`:
+- PT: direto dos campos do banco
+- EN/ES: stub preparado para integração com Gemini (retorna apenas PT por ora, com TODO para tradução)
+
+### 2. Atualizar `supabase/functions/wikidata-sync/index.ts`
+
+Adicionar duas novas actions:
+
+- `build_company_payload` — Busca `company_profile` completo, chama `buildCompanyPayload()`, retorna o JSON pronto (sem enviar ao Wikidata). Permite inspecionar e validar antes de escrita real.
+- `build_product_payload` — Busca produto completo, chama `buildProductPayload()`, retorna o JSON validado.
+
+Estas actions são **dry-run** — geram o payload mas não executam `wbeditentity`. A escrita real será habilitada quando os secrets OAuth estiverem configurados.
+
+### 3. Atualizar `src/services/wikidata-sync.ts`
+
+Adicionar funções:
+- `buildCompanyWikidataPayload()` — invoca action `build_company_payload`
+- `buildProductWikidataPayload(productId)` — invoca action `build_product_payload`
+
+### 4. Atualizar `src/components/WikidataSyncButton.tsx`
+
+Adicionar botão secundário "Preview Payload" que chama o builder em modo dry-run e exibe o JSON resultante em um dialog/modal para inspeção antes do envio real.
+
+---
+
+## Arquivos Alterados/Criados
+
+| Arquivo | Ação |
+|---|---|
+| `supabase/functions/_shared/wikidata-payload-builder.ts` | **Novo** — Builder tipado + validador |
+| `supabase/functions/wikidata-sync/index.ts` | **Editar** — Actions `build_company_payload` e `build_product_payload` |
+| `src/services/wikidata-sync.ts` | **Editar** — Funções de invocação dry-run |
+| `src/components/WikidataSyncButton.tsx` | **Editar** — Botão "Preview Payload" |
+
+## Resultado
+
+Payload 100% validado e inspecionável antes de qualquer escrita no Wikidata. Zero risco de claims malformados ou dados inválidos.
 
