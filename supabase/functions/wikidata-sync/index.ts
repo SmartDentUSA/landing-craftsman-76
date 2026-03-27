@@ -302,42 +302,54 @@ async function searchProductCandidates(input: { name?: string | null; brand?: st
 }
 
 const CATEGORY_FALLBACK_MAP: Record<string, string> = {
-  "resina composta": "Q2648150",
-  "resinas compostas": "Q2648150",
-  "composite resin": "Q2648150",
-  "dental composite": "Q2648150",
-  "impressora 3d": "Q59890062",
-  "impressoras 3d": "Q59890062",
-  "3d printer": "Q59890062",
-  "resina 3d": "Q11474",
-  "resinas 3d": "Q11474",
-  "photopolymer": "Q11474",
-  "scanner 3d": "Q1753819",
-  "scanners 3d": "Q1753819",
-  "3d scanner": "Q1753819",
+  // Q1780993 = dental composite (verified on Wikidata)
+  "resina composta": "Q1780993",
+  "resinas compostas": "Q1780993",
+  "composite resin": "Q1780993",
+  "dental composite": "Q1780993",
+  "selante": "Q1780993",
+  // Q3834994 = 3D printer (verified on Wikidata)
+  "impressora 3d": "Q3834994",
+  "impressoras 3d": "Q3834994",
+  "3d printer": "Q3834994",
+  // Q2631097 = photopolymer (verified on Wikidata)
+  "resina 3d": "Q2631097",
+  "resinas 3d": "Q2631097",
+  "photopolymer": "Q2631097",
+  // Q1618071 = 3D scanner (verified on Wikidata)
+  "scanner 3d": "Q1618071",
+  "scanners 3d": "Q1618071",
+  "3d scanner": "Q1618071",
+  // Q7397 = software ✓
   "software": "Q7397",
   "softwares": "Q7397",
+  // Q45621 = ceramic ✓
   "ceramica": "Q45621",
   "cerâmica": "Q45621",
   "caracterizacao": "Q45621",
   "caracterização": "Q45621",
   "dental ceramics": "Q45621",
+  // Q131790 = adhesive ✓
   "adesivo": "Q131790",
   "adesivos": "Q131790",
   "adhesive": "Q131790",
-  "cimento": "Q170585",
-  "cimentos": "Q170585",
-  "dental cement": "Q170585",
-  "clareador": "Q900406",
-  "clareamento": "Q900406",
-  "teeth whitening": "Q900406",
-  "selante": "Q2648150",
-  "silicone": "Q147271",
-  "silicones": "Q147271",
-  "moldagem": "Q147271",
-  "alginato": "Q422219",
-  "fotopolimerizador": "Q1198635",
-  "led": "Q1198635",
+  // Q204885 = dental cement (verified on Wikidata)
+  "cimento": "Q204885",
+  "cimentos": "Q204885",
+  "dental cement": "Q204885",
+  // Q143458 = tooth bleaching (verified on Wikidata)
+  "clareador": "Q143458",
+  "clareamento": "Q143458",
+  "teeth whitening": "Q143458",
+  // Q146439 = silicone (verified on Wikidata)
+  "silicone": "Q146439",
+  "silicones": "Q146439",
+  "moldagem": "Q146439",
+  // Q11685373 = alginate (verified on Wikidata)
+  "alginato": "Q11685373",
+  // Q2102936 = dental curing light (verified on Wikidata)
+  "fotopolimerizador": "Q2102936",
+  "led": "Q2102936",
 };
 
 function getCategoryFallbackQid(category?: string | null, subcategory?: string | null, name?: string | null): string | null {
