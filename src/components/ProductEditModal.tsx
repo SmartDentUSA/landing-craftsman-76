@@ -239,6 +239,7 @@ interface Product {
   clinical_brain_validated_at?: string;
   clinical_brain_validator_name?: string;
   clinical_brain_validation_notes?: string;
+  wikidata_item_id?: string | null;
 }
 
 interface WorkflowStage {
