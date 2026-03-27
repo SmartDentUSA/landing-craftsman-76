@@ -168,7 +168,7 @@ async function handleProductSync(db: ReturnType<typeof createClient>, productId?
 
   const { data: product, error } = await db
     .from("products_repository")
-    .select("id, name, brand, description, wikidata_item_id")
+    .select("id, name, brand, description, category, subcategory, wikidata_item_id")
     .eq("id", productId)
     .maybeSingle();
 
@@ -189,10 +189,47 @@ async function handleProductSync(db: ReturnType<typeof createClient>, productId?
     name: product.name,
     brand: product.brand,
     description: product.description,
+    category: product.category,
+    subcategory: product.subcategory,
   });
 
   const best = candidates[0];
-  if (!best || best.score < 55) {
+  if (!best || best.score < 35) {
+    // Try category fallback
+    const fallbackQid = getCategoryFallbackQid(product.category, product.subcategory, product.name);
+    if (fallbackQid) {
+      console.log("[wikidata-sync] Using category fallback", { productId, fallbackQid });
+      const fallbackDetails = await fetchEntityDetails(fallbackQid);
+      const fallbackCandidate: Candidate = {
+        qid: fallbackQid,
+        label: fallbackDetails.label,
+        description: fallbackDetails.description,
+        website: fallbackDetails.website,
+        score: 30,
+        reasons: ["category_fallback"],
+      };
+
+      const { error: updateError } = await db
+        .from("products_repository")
+        .update({ wikidata_item_id: fallbackQid, updated_at: new Date().toISOString() })
+        .eq("id", product.id);
+
+      if (updateError) {
+        console.error("[wikidata-sync] Failed to update product Wikidata ID (fallback)", updateError);
+        return jsonResponse({ success: false, error: `Erro ao salvar Wikidata do produto: ${updateError.message}` }, 500);
+      }
+
+      return jsonResponse({
+        success: true,
+        wikidataQid: fallbackCandidate.qid,
+        label: fallbackCandidate.label,
+        description: fallbackCandidate.description,
+        score: fallbackCandidate.score,
+        reasons: fallbackCandidate.reasons,
+        source: "category_fallback",
+      });
+    }
+
     console.warn("[wikidata-sync] No strong product match found", { productId, candidates });
     return jsonResponse(
       {
