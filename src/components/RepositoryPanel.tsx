@@ -90,6 +90,8 @@ interface Product {
     technical?: string | null;
     generated_at?: string | null;
   };
+  // Wikidata
+  wikidata_item_id?: string | null;
 }
 
 interface ManualReview {
