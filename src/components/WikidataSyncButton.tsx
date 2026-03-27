@@ -161,7 +161,7 @@ export function WikidataSyncButton({ productId, wikidataItemId, onSyncSuccess }:
                 </Badge>
               )}
               <Badge variant="secondary">
-                {summary.claimCount ?? 0} claims
+                {String(summary.claimCount ?? 0)} claims
               </Badge>
               {semanticScore && (
                 <Badge
@@ -169,12 +169,12 @@ export function WikidataSyncButton({ productId, wikidataItemId, onSyncSuccess }:
                   className="gap-1"
                 >
                   <Shield className="h-3 w-3" />
-                  Score: {semanticScore.grade} ({((semanticScore.overall as number) * 100).toFixed(0)}%)
+                  Score: {String(semanticScore.grade)} ({((semanticScore.overall as number) * 100).toFixed(0)}%)
                 </Badge>
               )}
               {(summary.duplicatesRemoved as number) > 0 && (
                 <Badge variant="outline">
-                  {summary.duplicatesRemoved} duplicatas removidas
+                  {String(summary.duplicatesRemoved)} duplicatas removidas
                 </Badge>
               )}
               <Badge variant="outline">
