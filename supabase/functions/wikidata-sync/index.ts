@@ -1104,23 +1104,25 @@ async function handleResolveAndPersist(
         .eq("internal_id", internalId)
         .maybeSingle();
 
-      const sameHash = existing?.payload_hash === payloadHash;
-      const hasQid = !!existing?.wikidata_qid;
+      existingRecord = existingData;
 
-      if (sameHash && hasQid && existing?.sync_status === "synced") {
+      const sameHash = existingRecord?.payload_hash === payloadHash;
+      const hasQid = !!existingRecord?.wikidata_qid;
+
+      if (sameHash && hasQid && existingRecord?.sync_status === "synced") {
         writeDecision = "skip";
         syncStatus = "synced";
-        wikidataQid = existing.wikidata_qid;
-        entityMapId = existing.id;
+        wikidataQid = existingRecord.wikidata_qid;
+        entityMapId = existingRecord.id;
       } else if (sameHash && hasQid) {
         writeDecision = "update";
-        syncStatus = existing.sync_status;
-        wikidataQid = existing.wikidata_qid;
-        entityMapId = existing.id;
+        syncStatus = existingRecord.sync_status;
+        wikidataQid = existingRecord.wikidata_qid;
+        entityMapId = existingRecord.id;
       } else if (sameHash && !hasQid) {
         writeDecision = "create";
-        syncStatus = existing.sync_status;
-        entityMapId = existing.id;
+        syncStatus = existingRecord.sync_status;
+        entityMapId = existingRecord.id;
       } else {
         const upsertData = {
           entity_type: entityType,
@@ -1131,15 +1133,15 @@ async function handleResolveAndPersist(
           resolution_decision: score.overall >= 0.85 ? "link" : score.overall >= 0.7 ? "create" : "collision",
         };
 
-        if (existing) {
+        if (existingRecord) {
           const { data: updated } = await db
             .from("wikidata_entity_map")
             .update({
               ...upsertData,
-              lock_version: (existing.lock_version || 0) + 1,
+              lock_version: (existingRecord.lock_version || 0) + 1,
             })
-            .eq("id", existing.id)
-            .eq("lock_version", existing.lock_version || 0)
+            .eq("id", existingRecord.id)
+            .eq("lock_version", existingRecord.lock_version || 0)
             .select()
             .maybeSingle();
 
