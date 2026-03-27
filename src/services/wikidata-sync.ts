@@ -23,11 +23,32 @@ function normalizeResponse(data: any): WikidataSyncResult {
   };
 }
 
+async function invokeWikidataSync(body: Record<string, unknown>) {
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  const accessToken = sessionData.session?.access_token;
+
+  if (sessionError) {
+    console.error('[Wikidata] session error:', sessionError);
+  }
+
+  if (!accessToken) {
+    return {
+      data: null,
+      error: new Error('Sessão expirada ou ausente. Faça login novamente.')
+    };
+  }
+
+  return supabase.functions.invoke('wikidata-sync', {
+    body,
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+}
+
 export async function syncCompanyToWikidata(): Promise<WikidataSyncResult> {
   try {
-    const { data, error } = await supabase.functions.invoke('wikidata-sync', {
-      body: { action: 'sync_company' }
-    });
+    const { data, error } = await invokeWikidataSync({ action: 'sync_company' });
 
     console.log('[Wikidata] sync_company response:', { data, error });
 
@@ -45,9 +66,7 @@ export async function syncCompanyToWikidata(): Promise<WikidataSyncResult> {
 
 export async function syncProductToWikidata(productId: string): Promise<WikidataSyncResult> {
   try {
-    const { data, error } = await supabase.functions.invoke('wikidata-sync', {
-      body: { action: 'sync_product', productId }
-    });
+    const { data, error } = await invokeWikidataSync({ action: 'sync_product', productId });
 
     console.log('[Wikidata] sync_product response:', { data, error, productId });
 
