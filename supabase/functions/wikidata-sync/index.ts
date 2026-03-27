@@ -92,6 +92,14 @@ serve(async (req) => {
       return await handleProductSync(db, body?.productId);
     }
 
+    if (action === "build_company_payload") {
+      return await handleBuildCompanyPayload(db);
+    }
+
+    if (action === "build_product_payload") {
+      return await handleBuildProductPayload(db, body?.productId);
+    }
+
     return jsonResponse({ success: false, error: "Invalid action" }, 400);
   } catch (error) {
     console.error("[wikidata-sync] Unhandled error", error);

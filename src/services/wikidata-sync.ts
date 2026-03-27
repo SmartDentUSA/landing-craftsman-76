@@ -6,6 +6,13 @@ interface WikidataSyncResult {
   error?: string;
 }
 
+interface WikidataPayloadResult {
+  success: boolean;
+  payload?: Record<string, unknown>;
+  summary?: Record<string, unknown>;
+  error?: string;
+}
+
 function normalizeResponse(data: any): WikidataSyncResult {
   if (!data) return { success: false, error: 'Resposta vazia da edge function' };
 
@@ -78,6 +85,46 @@ export async function syncProductToWikidata(productId: string): Promise<Wikidata
     return normalizeResponse(data);
   } catch (err) {
     console.error('[Wikidata] sync_product exception:', err);
+    return { success: false, error: err instanceof Error ? err.message : 'Erro desconhecido' };
+  }
+}
+
+export async function buildCompanyWikidataPayload(): Promise<WikidataPayloadResult> {
+  try {
+    const { data, error } = await invokeWikidataSync({ action: 'build_company_payload' });
+
+    console.log('[Wikidata] build_company_payload response:', { data, error });
+
+    if (error) {
+      return { success: false, error: error.message || 'Erro na edge function' };
+    }
+
+    if (data?.success && data?.payload) {
+      return { success: true, payload: data.payload, summary: data.summary };
+    }
+
+    return { success: false, error: data?.error || 'Resposta inesperada' };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Erro desconhecido' };
+  }
+}
+
+export async function buildProductWikidataPayload(productId: string): Promise<WikidataPayloadResult> {
+  try {
+    const { data, error } = await invokeWikidataSync({ action: 'build_product_payload', productId });
+
+    console.log('[Wikidata] build_product_payload response:', { data, error, productId });
+
+    if (error) {
+      return { success: false, error: error.message || 'Erro na edge function' };
+    }
+
+    if (data?.success && data?.payload) {
+      return { success: true, payload: data.payload, summary: data.summary };
+    }
+
+    return { success: false, error: data?.error || 'Resposta inesperada' };
+  } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Erro desconhecido' };
   }
 }
