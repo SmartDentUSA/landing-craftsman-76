@@ -508,7 +508,9 @@ export function buildCompanyPayload(company: CompanyProfileInput): WikidataPaylo
     aliasValues.push({ language: "pt", value: company.legal_name.trim() });
   }
   if (aliasValues.length > 0) {
-    payload.aliases = { pt: aliasValues, en: aliasValues };
+    const ptAliases = aliasValues.map(a => ({ language: "pt", value: a.value }));
+    const enAliases = aliasValues.map(a => ({ language: "en", value: a.value }));
+    payload.aliases = { pt: ptAliases, en: enAliases };
   }
 
   // ── Claims ──
