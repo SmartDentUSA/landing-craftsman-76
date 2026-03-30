@@ -96,8 +96,22 @@ function createOAuthClient(secrets: WikidataOAuthSecrets) {
 function buildOAuthHeader(secrets: WikidataOAuthSecrets, requestData: { url: string; method: string; data?: Record<string, string> }): string {
   const oauth = createOAuthClient(secrets);
   const token = { key: secrets.accessToken, secret: secrets.accessSecret };
+  // CRITICAL: oauth-1.0a needs base URL (no query string) + data object
+  // The library constructs the signature base string from url + data
   const authorized = oauth.authorize(requestData, token);
   return oauth.toHeader(authorized).Authorization;
+}
+
+/** Build query string from params using RFC3986 encoding (same as oauth-1.0a uses internally) */
+function rfc3986Encode(str: string): string {
+  return encodeURIComponent(str).replace(/[!'()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
+}
+
+function buildQueryString(params: Record<string, string>): string {
+  return Object.keys(params)
+    .sort()
+    .map((k) => `${rfc3986Encode(k)}=${rfc3986Encode(params[k])}`)
+    .join("&");
 }
 
 async function getWikidataCsrfToken(secrets: WikidataOAuthSecrets): Promise<string> {
