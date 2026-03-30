@@ -1,5 +1,8 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import OAuth from "https://esm.sh/oauth-1.0a@2.2.6";
+import hmacSHA1 from "https://esm.sh/crypto-js@4.2.0/hmac-sha1";
+import Base64 from "https://esm.sh/crypto-js@4.2.0/enc-base64";
 import {
   buildCompanyPayload,
   buildProductPayload,
@@ -78,76 +81,23 @@ function getWikidataSecrets(): WikidataOAuthSecrets | null {
   return { consumerKey, consumerSecret, accessToken, accessSecret };
 }
 
-function percentEncode(str: string): string {
-  return encodeURIComponent(str)
-    .replace(/!/g, "%21")
-    .replace(/\*/g, "%2A")
-    .replace(/'/g, "%27")
-    .replace(/\(/g, "%28")
-    .replace(/\)/g, "%29");
+// ── OAuth 1.0a via battle-tested library ─────────────────────
+
+function createOAuthClient(secrets: WikidataOAuthSecrets) {
+  return new OAuth({
+    consumer: { key: secrets.consumerKey, secret: secrets.consumerSecret },
+    signature_method: "HMAC-SHA1",
+    hash_function(baseString: string, key: string) {
+      return Base64.stringify(hmacSHA1(baseString, key));
+    },
+  });
 }
 
-async function signOAuth1a(
-  method: string,
-  url: string,
-  params: Record<string, string>,
-  secrets: WikidataOAuthSecrets,
-): Promise<{ oauthParams: Record<string, string>; apiParams: Record<string, string> }> {
-  const encoder = new TextEncoder();
-
-  const oauthBase: Record<string, string> = {
-    oauth_consumer_key: secrets.consumerKey,
-    oauth_token: secrets.accessToken,
-    oauth_nonce: crypto.randomUUID().replace(/-/g, ""),
-    oauth_timestamp: Math.floor(Date.now() / 1000).toString(),
-    oauth_signature_method: "HMAC-SHA1",
-    oauth_version: "1.0",
-  };
-
-  // Signature base string includes ALL params (oauth + api)
-  const allParams: Record<string, string> = { ...oauthBase, ...params };
-
-  const sorted = Object.keys(allParams)
-    .sort()
-    .map((k) => `${percentEncode(k)}=${percentEncode(allParams[k])}`)
-    .join("&");
-
-  const baseString = [
-    method.toUpperCase(),
-    percentEncode(url),
-    percentEncode(sorted),
-  ].join("&");
-
-  const signingKey = `${percentEncode(secrets.consumerSecret)}&${percentEncode(secrets.accessSecret)}`;
-
-  const key = await crypto.subtle.importKey(
-    "raw",
-    encoder.encode(signingKey),
-    { name: "HMAC", hash: "SHA-1" },
-    false,
-    ["sign"],
-  );
-
-  const signatureBuffer = await crypto.subtle.sign(
-    "HMAC",
-    key,
-    encoder.encode(baseString),
-  );
-
-  const signature = btoa(String.fromCharCode(...new Uint8Array(signatureBuffer)));
-
-  return {
-    oauthParams: { ...oauthBase, oauth_signature: signature },
-    apiParams: params,
-  };
-}
-
-function buildOAuthHeader(oauthParams: Record<string, string>): string {
-  const parts = Object.keys(oauthParams)
-    .sort()
-    .map((k) => `${percentEncode(k)}="${percentEncode(oauthParams[k])}"`)
-    .join(", ");
-  return `OAuth ${parts}`;
+function buildOAuthHeader(secrets: WikidataOAuthSecrets, requestData: { url: string; method: string; data?: Record<string, string> }): string {
+  const oauth = createOAuthClient(secrets);
+  const token = { key: secrets.accessToken, secret: secrets.accessSecret };
+  const authorized = oauth.authorize(requestData, token);
+  return oauth.toHeader(authorized).Authorization;
 }
 
 async function getWikidataCsrfToken(secrets: WikidataOAuthSecrets): Promise<string> {
@@ -159,11 +109,12 @@ async function getWikidataCsrfToken(secrets: WikidataOAuthSecrets): Promise<stri
     format: "json",
   };
 
-  const { oauthParams } = await signOAuth1a("GET", url, apiParams, secrets);
   const query = new URLSearchParams(apiParams).toString();
+  const fullUrl = `${url}?${query}`;
+  const authHeader = buildOAuthHeader(secrets, { url: fullUrl, method: "GET" });
 
-  const res = await fetch(`${url}?${query}`, {
-    headers: { Authorization: buildOAuthHeader(oauthParams) },
+  const res = await fetch(fullUrl, {
+    headers: { Authorization: authHeader },
   });
 
   if (!res.ok) {
@@ -240,7 +191,7 @@ async function executeWbEditEntity(
     apiParams.new = "item";
   }
 
-  const { oauthParams } = await signOAuth1a("POST", url, apiParams, secrets);
+  const authHeader = buildOAuthHeader(secrets, { url, method: "POST", data: apiParams });
 
   console.log(`[wikidata-sync] Executing wbeditentity: ${qid ? `UPDATE ${qid}` : "CREATE NEW"}`);
 
@@ -250,7 +201,7 @@ async function executeWbEditEntity(
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
-      Authorization: buildOAuthHeader(oauthParams),
+      Authorization: authHeader,
     },
     body,
   });
@@ -358,6 +309,10 @@ serve(async (req) => {
       return await handleExecuteWrite(db, body?.entityType, body?.internalId);
     }
 
+    if (action === "test_oauth") {
+      return await handleTestOAuth();
+    }
+
     return jsonResponse({ success: false, error: "Invalid action" }, 400);
   } catch (error) {
     console.error("[wikidata-sync] Unhandled error", error);
@@ -370,6 +325,86 @@ serve(async (req) => {
     );
   }
 });
+
+async function handleTestOAuth(): Promise<Response> {
+  const secrets = getWikidataSecrets();
+  if (!secrets) {
+    return jsonResponse({ success: false, error: "OAuth secrets missing or invalid" }, 500);
+  }
+
+  // Safe partial logging for visual verification
+  const mask = (s: string) => s.length > 10 ? `${s.slice(0, 6)}...${s.slice(-4)}` : "too_short";
+  console.log("[wikidata-sync] test_oauth: Secret fragments", {
+    consumerKey: mask(secrets.consumerKey),
+    consumerSecret: mask(secrets.consumerSecret),
+    accessToken: mask(secrets.accessToken),
+    accessSecret: mask(secrets.accessSecret),
+  });
+
+  try {
+    // Simple read-only query to test OAuth signature
+    const url = "https://www.wikidata.org/w/api.php";
+    const apiParams: Record<string, string> = {
+      action: "query",
+      meta: "siteinfo",
+      siprop: "general",
+      format: "json",
+    };
+    const query = new URLSearchParams(apiParams).toString();
+    const fullUrl = `${url}?${query}`;
+    const authHeader = buildOAuthHeader(secrets, { url: fullUrl, method: "GET" });
+
+    console.log("[wikidata-sync] test_oauth: Sending authenticated siteinfo request...");
+
+    const res = await fetch(fullUrl, {
+      headers: { Authorization: authHeader },
+    });
+
+    const text = await res.text();
+    let json: any;
+    try { json = JSON.parse(text); } catch { json = null; }
+
+    if (json?.error) {
+      console.error("[wikidata-sync] test_oauth: FAILED", JSON.stringify(json.error));
+      return jsonResponse({
+        success: false,
+        error: `OAuth test failed: ${json.error.info || json.error.code}`,
+        details: json.error,
+        secretFragments: {
+          consumerKey: mask(secrets.consumerKey),
+          consumerSecret: mask(secrets.consumerSecret),
+          accessToken: mask(secrets.accessToken),
+          accessSecret: mask(secrets.accessSecret),
+        },
+      });
+    }
+
+    const sitename = json?.query?.general?.sitename;
+    console.log(`[wikidata-sync] test_oauth: SUCCESS — sitename=${sitename}`);
+
+    // Also test CSRF token acquisition
+    let csrfResult = "not_tested";
+    try {
+      const csrf = await getWikidataCsrfToken(secrets);
+      csrfResult = csrf && csrf !== "+\\" ? "valid" : "invalid";
+    } catch (e) {
+      csrfResult = `error: ${e instanceof Error ? e.message : String(e)}`;
+    }
+
+    return jsonResponse({
+      success: true,
+      sitename,
+      csrfTokenStatus: csrfResult,
+      message: "OAuth 1.0a authentication working correctly!",
+    });
+  } catch (e) {
+    console.error("[wikidata-sync] test_oauth: Exception", e);
+    return jsonResponse({
+      success: false,
+      error: e instanceof Error ? e.message : String(e),
+    }, 500);
+  }
+}
 
 async function handleCompanySync(db: ReturnType<typeof createClient>) {
   const { data: company, error } = await db
