@@ -326,6 +326,86 @@ serve(async (req) => {
   }
 });
 
+async function handleTestOAuth(): Promise<Response> {
+  const secrets = getWikidataSecrets();
+  if (!secrets) {
+    return jsonResponse({ success: false, error: "OAuth secrets missing or invalid" }, 500);
+  }
+
+  // Safe partial logging for visual verification
+  const mask = (s: string) => s.length > 10 ? `${s.slice(0, 6)}...${s.slice(-4)}` : "too_short";
+  console.log("[wikidata-sync] test_oauth: Secret fragments", {
+    consumerKey: mask(secrets.consumerKey),
+    consumerSecret: mask(secrets.consumerSecret),
+    accessToken: mask(secrets.accessToken),
+    accessSecret: mask(secrets.accessSecret),
+  });
+
+  try {
+    // Simple read-only query to test OAuth signature
+    const url = "https://www.wikidata.org/w/api.php";
+    const apiParams: Record<string, string> = {
+      action: "query",
+      meta: "siteinfo",
+      siprop: "general",
+      format: "json",
+    };
+    const query = new URLSearchParams(apiParams).toString();
+    const fullUrl = `${url}?${query}`;
+    const authHeader = buildOAuthHeader(secrets, { url: fullUrl, method: "GET" });
+
+    console.log("[wikidata-sync] test_oauth: Sending authenticated siteinfo request...");
+
+    const res = await fetch(fullUrl, {
+      headers: { Authorization: authHeader },
+    });
+
+    const text = await res.text();
+    let json: any;
+    try { json = JSON.parse(text); } catch { json = null; }
+
+    if (json?.error) {
+      console.error("[wikidata-sync] test_oauth: FAILED", JSON.stringify(json.error));
+      return jsonResponse({
+        success: false,
+        error: `OAuth test failed: ${json.error.info || json.error.code}`,
+        details: json.error,
+        secretFragments: {
+          consumerKey: mask(secrets.consumerKey),
+          consumerSecret: mask(secrets.consumerSecret),
+          accessToken: mask(secrets.accessToken),
+          accessSecret: mask(secrets.accessSecret),
+        },
+      });
+    }
+
+    const sitename = json?.query?.general?.sitename;
+    console.log(`[wikidata-sync] test_oauth: SUCCESS — sitename=${sitename}`);
+
+    // Also test CSRF token acquisition
+    let csrfResult = "not_tested";
+    try {
+      const csrf = await getWikidataCsrfToken(secrets);
+      csrfResult = csrf && csrf !== "+\\" ? "valid" : "invalid";
+    } catch (e) {
+      csrfResult = `error: ${e instanceof Error ? e.message : String(e)}`;
+    }
+
+    return jsonResponse({
+      success: true,
+      sitename,
+      csrfTokenStatus: csrfResult,
+      message: "OAuth 1.0a authentication working correctly!",
+    });
+  } catch (e) {
+    console.error("[wikidata-sync] test_oauth: Exception", e);
+    return jsonResponse({
+      success: false,
+      error: e instanceof Error ? e.message : String(e),
+    }, 500);
+  }
+}
+
 async function handleCompanySync(db: ReturnType<typeof createClient>) {
   const { data: company, error } = await db
     .from("company_profile")
