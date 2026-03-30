@@ -310,3 +310,40 @@ export async function executeWikidataWrite(
     return { success: false, error: err instanceof Error ? err.message : 'Erro desconhecido' };
   }
 }
+
+// ── Test OAuth ──
+
+export interface WikidataTestOAuthResult {
+  success: boolean;
+  sitename?: string;
+  csrfTokenStatus?: string;
+  errorCategory?: string;
+  secretFragments?: Record<string, string>;
+  message?: string;
+  error?: string;
+}
+
+export async function testWikidataOAuth(): Promise<WikidataTestOAuthResult> {
+  try {
+    const { data, error } = await invokeWikidataSync({ action: 'test_oauth' });
+
+    console.log('[Wikidata] test_oauth response:', { data, error });
+
+    if (error) {
+      const parsed = await extractErrorFromResponse(error);
+      return { success: false, error: parsed.error };
+    }
+
+    return {
+      success: data?.success ?? false,
+      sitename: data?.sitename,
+      csrfTokenStatus: data?.csrfTokenStatus,
+      errorCategory: data?.errorCategory,
+      secretFragments: data?.secretFragments,
+      message: data?.message,
+      error: data?.error,
+    };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Erro desconhecido' };
+  }
+}

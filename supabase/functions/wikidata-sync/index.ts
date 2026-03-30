@@ -344,30 +344,35 @@ serve(async (req) => {
 async function handleTestOAuth(): Promise<Response> {
   const secrets = getWikidataSecrets();
   if (!secrets) {
-    return jsonResponse({ success: false, error: "OAuth secrets missing or invalid" }, 500);
+    return jsonResponse({
+      success: false,
+      error: "OAuth secrets missing or invalid",
+      errorCategory: "missing_secrets",
+    }, 500);
   }
 
-  // Safe partial logging for visual verification
   const mask = (s: string) => s.length > 10 ? `${s.slice(0, 6)}...${s.slice(-4)}` : "too_short";
-  console.log("[wikidata-sync] test_oauth: Secret fragments", {
+  const fragments = {
     consumerKey: mask(secrets.consumerKey),
     consumerSecret: mask(secrets.consumerSecret),
     accessToken: mask(secrets.accessToken),
     accessSecret: mask(secrets.accessSecret),
-  });
+  };
+  console.log("[wikidata-sync] test_oauth: Secret fragments", fragments);
 
   try {
-    // Simple read-only query to test OAuth signature
-    const url = "https://www.wikidata.org/w/api.php";
+    // Step 1: Simple read-only siteinfo query
+    const baseUrl = "https://www.wikidata.org/w/api.php";
     const apiParams: Record<string, string> = {
       action: "query",
       meta: "siteinfo",
       siprop: "general",
       format: "json",
     };
-    const query = new URLSearchParams(apiParams).toString();
-    const fullUrl = `${url}?${query}`;
-    const authHeader = buildOAuthHeader(secrets, { url: fullUrl, method: "GET" });
+
+    // CRITICAL FIX: sign with base URL + data, NOT full URL
+    const authHeader = buildOAuthHeader(secrets, { url: baseUrl, method: "GET", data: apiParams });
+    const fullUrl = `${baseUrl}?${buildQueryString(apiParams)}`;
 
     console.log("[wikidata-sync] test_oauth: Sending authenticated siteinfo request...");
 
@@ -380,36 +385,43 @@ async function handleTestOAuth(): Promise<Response> {
     try { json = JSON.parse(text); } catch { json = null; }
 
     if (json?.error) {
+      const errorCode = json.error.code || "unknown";
+      let errorCategory = "other";
+      if (errorCode === "mwoauth-invalid-authorization") {
+        const info = (json.error.info || "").toLowerCase();
+        if (info.includes("signature")) errorCategory = "invalid_signature";
+        else if (info.includes("token") || info.includes("consumer")) errorCategory = "invalid_token";
+        else if (info.includes("timestamp") || info.includes("nonce")) errorCategory = "timestamp_nonce";
+        else errorCategory = "invalid_authorization";
+      }
+
       console.error("[wikidata-sync] test_oauth: FAILED", JSON.stringify(json.error));
       return jsonResponse({
         success: false,
-        error: `OAuth test failed: ${json.error.info || json.error.code}`,
-        details: json.error,
-        secretFragments: {
-          consumerKey: mask(secrets.consumerKey),
-          consumerSecret: mask(secrets.consumerSecret),
-          accessToken: mask(secrets.accessToken),
-          accessSecret: mask(secrets.accessSecret),
-        },
+        error: `OAuth test failed: ${json.error.info || errorCode}`,
+        errorCategory,
+        httpStatus: res.status,
+        secretFragments: fragments,
       });
     }
 
     const sitename = json?.query?.general?.sitename;
     console.log(`[wikidata-sync] test_oauth: SUCCESS — sitename=${sitename}`);
 
-    // Also test CSRF token acquisition
-    let csrfResult = "not_tested";
+    // Step 2: Test CSRF token acquisition
+    let csrfTokenStatus = "not_tested";
     try {
       const csrf = await getWikidataCsrfToken(secrets);
-      csrfResult = csrf && csrf !== "+\\" ? "valid" : "invalid";
+      csrfTokenStatus = csrf && csrf !== "+\\" ? "valid" : "invalid";
     } catch (e) {
-      csrfResult = `error: ${e instanceof Error ? e.message : String(e)}`;
+      csrfTokenStatus = `error: ${e instanceof Error ? e.message : String(e)}`;
     }
 
     return jsonResponse({
       success: true,
       sitename,
-      csrfTokenStatus: csrfResult,
+      csrfTokenStatus,
+      secretFragments: fragments,
       message: "OAuth 1.0a authentication working correctly!",
     });
   } catch (e) {
@@ -417,6 +429,7 @@ async function handleTestOAuth(): Promise<Response> {
     return jsonResponse({
       success: false,
       error: e instanceof Error ? e.message : String(e),
+      errorCategory: "exception",
     }, 500);
   }
 }
