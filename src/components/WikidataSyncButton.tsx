@@ -155,6 +155,12 @@ export function WikidataSyncButton({ productId, wikidataItemId, onSyncSuccess }:
             </a>
           ),
         });
+      } else if (result.errorCode === "WIKIDATA_OAUTH_INVALID_AUTHORIZATION") {
+        toast({
+          title: "🔑 Credenciais OAuth inválidas",
+          description: "Regenere ACCESS_TOKEN e ACCESS_SECRET do mesmo OAuth consumer aprovado e atualize os secrets no Supabase.",
+          variant: "destructive",
+        });
       } else {
         toast({
           title: "Erro ao publicar",

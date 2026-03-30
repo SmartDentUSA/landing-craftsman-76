@@ -1588,13 +1588,21 @@ async function handleExecuteWrite(
     });
   } catch (err) {
     console.error("[wikidata-sync] execute_write error", err);
+    const errMsg = err instanceof Error ? err.message : "Unknown error";
+    const errCode = errMsg.includes("WIKIDATA_OAUTH_INVALID_AUTHORIZATION")
+      ? "WIKIDATA_OAUTH_INVALID_AUTHORIZATION"
+      : "WRITE_FAILED";
+    const friendlyMsg = errCode === "WIKIDATA_OAUTH_INVALID_AUTHORIZATION"
+      ? "Credenciais OAuth do Wikidata inválidas ou expiradas. Atualize os secrets WIKIDATA_ACCESS_TOKEN / WIKIDATA_ACCESS_SECRET."
+      : errMsg;
+
     return logAndReturn(db, {
       action: "execute_write",
       entityType, internalId,
       writeDecision: "abort",
       success: false,
-      errorCode: "WRITE_FAILED",
-      errorMessage: err instanceof Error ? err.message : "Unknown error",
+      errorCode: errCode,
+      errorMessage: friendlyMsg,
       durationMs: Date.now() - startTime,
     });
   }
