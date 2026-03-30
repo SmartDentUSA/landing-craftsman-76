@@ -1,53 +1,33 @@
 
 
-## Correção: Erro "Inconsistent language 'pt' detected (expected 'en')"
+## Atualizar secrets OAuth do Wikidata no Supabase
 
-### Causa raiz
+### Situação
 
-O erro vem da API do Wikidata rejeitando o payload porque os **aliases** no campo `en` contêm objetos com `language: "pt"`. A API exige que o valor de `language` dentro de cada alias corresponda à chave do idioma.
+Você criou um **novo** OAuth consumer no Wikidata ("Smart Dent Content Intelligence Platform 2"). Os tokens exibidos são diferentes dos que estão no Supabase. É necessário atualizar os 4 secrets.
 
-**Código problemático** em `wikidata-payload-builder.ts`:
+### Ação do usuário (manual)
 
-```typescript
-// Produto (linha 687):
-payload.aliases = { pt: aliasValues, en: aliasValues }; 
-// aliasValues = [{ language: "pt", value: "..." }]
-// ↑ "en" recebe aliases com language: "pt" → ERRO
+Acesse [Edge Functions Secrets](https://supabase.com/dashboard/project/pgfgripuanuwwolmtknn/settings/functions) e atualize:
 
-// Empresa (linha 511):
-payload.aliases = { pt: aliasValues, en: aliasValues };
-// mesmo problema
-```
+| Secret name | Novo valor |
+|---|---|
+| `WIKIDATA_CONSUMER_KEY` | `a536f3526c3efb9e7d36c7509852f887` |
+| `WIKIDATA_CONSUMER_SECRET` | `e9a955d65a9fbc7300d687ddf21bf002e7975f76` |
+| `WIKIDATA_ACCESS_TOKEN` | `2b7e09aee757650ee2268b0463744c9e` |
+| `WIKIDATA_ACCESS_SECRET` | `156a1adbea1f91738656239e2a4a528c63f2c8e8` |
 
-### Correção
+### Alteração de código necessária
 
-Modificar **2 trechos** no arquivo `supabase/functions/_shared/wikidata-payload-builder.ts`:
+Remover `bot: "1"` do `wikidata-sync/index.ts` (linha 233). Mesmo com o grant "High-volume (bot) access" no consumer, a flag `bot` no `wbeditentity` exige que a **conta do usuário** tenha a flag bot concedida pela comunidade Wikidata — o que provavelmente não é o caso. Isso era a causa do erro "You do not have the permissions needed".
 
-**1. Aliases de empresa (linhas ~506-512)** — criar cópias separadas para cada idioma:
+### Redeploy
 
-```typescript
-if (aliasValues.length > 0) {
-  const ptAliases = aliasValues.map(a => ({ language: "pt", value: a.value }));
-  const enAliases = aliasValues.map(a => ({ language: "en", value: a.value }));
-  payload.aliases = { pt: ptAliases, en: enAliases };
-}
-```
-
-**2. Aliases de produto (linhas ~676-688)** — mesma abordagem, gerar aliases com `language` correto para cada idioma:
-
-```typescript
-if (aliasValues.length > 0) {
-  const ptAliases = aliasValues.map(a => ({ language: "pt", value: a.value }));
-  const enAliases = aliasValues.map(a => ({ language: "en", value: a.value }));
-  payload.aliases = { pt: ptAliases, en: enAliases };
-}
-```
-
-### Arquivo impactado
-- `supabase/functions/_shared/wikidata-payload-builder.ts` — 2 edições (~4 linhas cada)
+Após as 2 ações (atualizar secrets + remover `bot: "1"`), redeploy da edge function `wikidata-sync`.
 
 ### Resultado esperado
-- O payload enviado ao Wikidata terá `aliases.en[*].language === "en"` e `aliases.pt[*].language === "pt"`
-- O erro "Inconsistent language" desaparece
-- A edge function `wikidata-sync` será redeployada automaticamente
+
+- OAuth funciona com os novos tokens
+- `wbeditentity` executa sem erro de permissão
+- Items são criados/atualizados com sucesso no Wikidata
 
