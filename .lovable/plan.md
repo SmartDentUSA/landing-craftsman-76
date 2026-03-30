@@ -1,27 +1,30 @@
 
 
-## Fix: `companyProfile is not defined` in clone-landing-page
+## Checklist de Produtos - Arquivo .md
 
-### Diagnóstico
-O log de erro mostra:
-```
-ReferenceError: companyProfile is not defined
-    at injectSEO (index.ts:1807)
-```
+### O que será gerado
 
-A função `injectSEO` recebe o parâmetro como `companyData` (linha 1626), mas nas linhas 1818-1825 o código referencia `companyProfile` — uma variável que não existe nesse escopo.
+Um arquivo Markdown (`/mnt/documents/checklist_produtos_smartdent.md`) com:
 
-### Correção
-No arquivo `supabase/functions/clone-landing-page/index.ts`, substituir todas as referências a `companyProfile` dentro de `injectSEO` por `companyData`:
+1. **Resumo executivo** - totais gerais (120 produtos, cobertura por campo)
+2. **Tabela por categoria** - cada produto com ✅/❌ para 27 campos de conteúdo agrupados em:
+   - **Dados Básicos**: Descrição, Preço, Imagem, URL, Marca
+   - **Conteúdo Rico**: Pitch, Keywords, Benefícios, Features, Público, FAQ, Specs
+   - **SEO**: Title, Description, Slug, Canonical
+   - **Mídia**: YouTube, Instagram, Vídeos Técnicos, Legendas
+   - **Documentação**: Docs Técnicos, Transcrições, Workflow, Concorrentes
+   - **Conteúdo Gerado**: WhatsApp, Instagram Copies, YouTube Desc, Blog, E-commerce HTML
+3. **Produtos críticos** - lista dos que têm mais campos faltantes para priorização
 
-- Linha 1818: `companyProfile?.wikidata_id` → `companyData?.wikidata_id`
-- Linha 1820: `companyProfile?.wikidata_id` → `companyData?.wikidata_id`
-- Linha 1823: `companyProfile?.company_name` → `companyData?.company_name`
-- Linha 1825: `companyProfile.wikidata_id` → `companyData.wikidata_id`
+### Implementação
 
-### Segundo erro nos logs
-Há também um warning: `column video_testimonials.city does not exist`. Isso não bloqueia o pipeline mas indica que a tabela `video_testimonials` não possui a coluna `city`. Pode ser corrigido com uma migration adicionando a coluna, ou removendo a referência no código.
+Um script Python que:
+1. Consulta `products_repository` via `psql`
+2. Monta o Markdown com tabelas organizadas por categoria/subcategoria
+3. Salva em `/mnt/documents/checklist_produtos_smartdent.md`
 
-### Resultado esperado
-Após o deploy, a edge function `clone-landing-page` não falhará mais com `ReferenceError` e retornará o HTML processado com sucesso.
+### Dados já coletados
+- 120 produtos, 8 categorias
+- Cobertura geral: Descrição 95%, Preço 100%, Imagem 93%, SEO Title 98%, Slug 98%
+- Campos mais deficientes: `technical_documents`, `tags`, `canonical_url`
 
