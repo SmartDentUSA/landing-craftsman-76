@@ -122,6 +122,12 @@ export function WikidataSyncButton({ productId, wikidataItemId, onSyncSuccess }:
           title: `Pipeline: ${result.writeDecision?.toUpperCase()} ${result.syncStatus === "synced" ? "✅" : ""}`,
           description: `Score: ${result.semanticGrade} (${((result.semanticScore || 0) * 100).toFixed(0)}%) | ${result.writeEnabled ? "🟢 Live" : "🔴 Preview"} | ${result.wikidataQid || "No QID yet"}`,
         });
+      } else if (result.errorCode === "WIKIDATA_OAUTH_INVALID_AUTHORIZATION") {
+        toast({
+          title: "🔑 Credenciais OAuth inválidas",
+          description: "Regenere ACCESS_TOKEN e ACCESS_SECRET do mesmo OAuth consumer aprovado e atualize os secrets no Supabase.",
+          variant: "destructive",
+        });
       } else {
         toast({ title: "Pipeline bloqueado", description: result.error || result.errorCode || "Erro desconhecido", variant: "destructive" });
       }
@@ -148,6 +154,12 @@ export function WikidataSyncButton({ productId, wikidataItemId, onSyncSuccess }:
               Ver no Wikidata →
             </a>
           ),
+        });
+      } else if (result.errorCode === "WIKIDATA_OAUTH_INVALID_AUTHORIZATION") {
+        toast({
+          title: "🔑 Credenciais OAuth inválidas",
+          description: "Regenere ACCESS_TOKEN e ACCESS_SECRET do mesmo OAuth consumer aprovado e atualize os secrets no Supabase.",
+          variant: "destructive",
         });
       } else {
         toast({

@@ -4,6 +4,7 @@ interface WikidataSyncResult {
   success: boolean;
   wikidataQid?: string;
   error?: string;
+  errorCode?: string;
   needsCreate?: boolean;
   reason?: string;
   fallbackQid?: string;
@@ -33,6 +34,74 @@ export interface WikidataResolveResult {
   durationMs?: number;
 }
 
+export interface WikidataWriteResult {
+  success: boolean;
+  wikidataQid?: string;
+  writeDecision?: string;
+  syncStatus?: string;
+  semanticScore?: number;
+  semanticGrade?: string;
+  durationMs?: number;
+  error?: string;
+  errorCode?: string;
+}
+
+// ── Helper: extract structured error from non-2xx edge function responses ──
+
+function parseEdgeFunctionError(error: any): { error: string; errorCode?: string } {
+  // supabase.functions.invoke puts the response body in error.context when non-2xx
+  try {
+    if (error?.context) {
+      // error.context may be a Response object
+      const ctx = error.context;
+      if (ctx && typeof ctx === 'object') {
+        // Try to get JSON body from the context if it was already parsed
+        if (ctx.json && typeof ctx.json === 'function') {
+          // Can't await here synchronously, handled below
+        }
+        // Some versions expose body directly
+        if (ctx.error) return { error: ctx.error, errorCode: ctx.errorCode };
+        if (ctx.errorMessage) return { error: ctx.errorMessage, errorCode: ctx.errorCode };
+      }
+    }
+    // Fallback: parse the error message itself
+    if (error?.message) {
+      // The default message from supabase-js is "Edge Function returned a non-2xx status code"
+      // Try to extract the real message
+      const msg = error.message;
+      if (msg.includes('WIKIDATA_OAUTH_INVALID_AUTHORIZATION')) {
+        return {
+          error: 'Credenciais OAuth do Wikidata inválidas. Atualize ACCESS_TOKEN/ACCESS_SECRET.',
+          errorCode: 'WIKIDATA_OAUTH_INVALID_AUTHORIZATION',
+        };
+      }
+      return { error: msg };
+    }
+  } catch {
+    // ignore parse errors
+  }
+  return { error: error?.message || 'Erro na edge function' };
+}
+
+async function extractErrorFromResponse(error: any): Promise<{ error: string; errorCode?: string }> {
+  try {
+    if (error?.context && typeof error.context.json === 'function') {
+      const body = await error.context.json();
+      if (body?.error || body?.errorMessage) {
+        return {
+          error: body.error || body.errorMessage,
+          errorCode: body.errorCode,
+        };
+      }
+    }
+  } catch {
+    // context.json() may fail if body already consumed
+  }
+  return parseEdgeFunctionError(error);
+}
+
+// ── Shared invoke helper ──
+
 function normalizeResponse(data: any): WikidataSyncResult {
   if (!data) return { success: false, error: 'Resposta vazia da edge function' };
 
@@ -59,7 +128,8 @@ function normalizeResponse(data: any): WikidataSyncResult {
 
   return {
     success: false,
-    error: error || `Resposta inesperada: ${JSON.stringify(data).slice(0, 200)}`
+    error: error || `Resposta inesperada: ${JSON.stringify(data).slice(0, 200)}`,
+    errorCode: data.errorCode,
   };
 }
 
@@ -94,7 +164,8 @@ export async function syncCompanyToWikidata(): Promise<WikidataSyncResult> {
 
     if (error) {
       console.error('[Wikidata] sync_company error:', error);
-      return { success: false, error: error.message || 'Erro na edge function' };
+      const parsed = await extractErrorFromResponse(error);
+      return { success: false, error: parsed.error, errorCode: parsed.errorCode };
     }
 
     return normalizeResponse(data);
@@ -112,7 +183,8 @@ export async function syncProductToWikidata(productId: string): Promise<Wikidata
 
     if (error) {
       console.error('[Wikidata] sync_product error:', error);
-      return { success: false, error: error.message || 'Erro na edge function' };
+      const parsed = await extractErrorFromResponse(error);
+      return { success: false, error: parsed.error, errorCode: parsed.errorCode };
     }
 
     return normalizeResponse(data);
@@ -129,7 +201,8 @@ export async function buildCompanyWikidataPayload(): Promise<WikidataPayloadResu
     console.log('[Wikidata] build_company_payload response:', { data, error });
 
     if (error) {
-      return { success: false, error: error.message || 'Erro na edge function' };
+      const parsed = await extractErrorFromResponse(error);
+      return { success: false, error: parsed.error };
     }
 
     if (data?.success && data?.payload) {
@@ -149,7 +222,8 @@ export async function buildProductWikidataPayload(productId: string): Promise<Wi
     console.log('[Wikidata] build_product_payload response:', { data, error, productId });
 
     if (error) {
-      return { success: false, error: error.message || 'Erro na edge function' };
+      const parsed = await extractErrorFromResponse(error);
+      return { success: false, error: parsed.error };
     }
 
     if (data?.success && data?.payload) {
@@ -177,7 +251,8 @@ export async function resolveWikidataEntity(
 
     if (error) {
       console.error('[Wikidata] resolve_and_persist error:', error);
-      return { success: false, error: error.message || 'Erro na edge function' };
+      const parsed = await extractErrorFromResponse(error);
+      return { success: false, error: parsed.error, errorCode: parsed.errorCode };
     }
 
     return {
@@ -200,18 +275,6 @@ export async function resolveWikidataEntity(
   }
 }
 
-export interface WikidataWriteResult {
-  success: boolean;
-  wikidataQid?: string;
-  writeDecision?: string;
-  syncStatus?: string;
-  semanticScore?: number;
-  semanticGrade?: string;
-  durationMs?: number;
-  error?: string;
-  errorCode?: string;
-}
-
 export async function executeWikidataWrite(
   entityType: 'company' | 'product',
   internalId: string,
@@ -227,7 +290,8 @@ export async function executeWikidataWrite(
 
     if (error) {
       console.error('[Wikidata] execute_write error:', error);
-      return { success: false, error: error.message || 'Erro na edge function' };
+      const parsed = await extractErrorFromResponse(error);
+      return { success: false, error: parsed.error, errorCode: parsed.errorCode };
     }
 
     return {
