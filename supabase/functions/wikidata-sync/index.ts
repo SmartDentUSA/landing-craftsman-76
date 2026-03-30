@@ -191,7 +191,7 @@ async function executeWbEditEntity(
     apiParams.new = "item";
   }
 
-  const { oauthParams } = await signOAuth1a("POST", url, apiParams, secrets);
+  const authHeader = buildOAuthHeader(secrets, { url, method: "POST", data: apiParams });
 
   console.log(`[wikidata-sync] Executing wbeditentity: ${qid ? `UPDATE ${qid}` : "CREATE NEW"}`);
 
@@ -201,7 +201,7 @@ async function executeWbEditEntity(
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
-      Authorization: buildOAuthHeader(oauthParams),
+      Authorization: authHeader,
     },
     body,
   });
