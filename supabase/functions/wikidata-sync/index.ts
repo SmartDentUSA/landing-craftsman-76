@@ -45,14 +45,36 @@ interface WikidataOAuthSecrets {
 }
 
 function getWikidataSecrets(): WikidataOAuthSecrets | null {
-  const consumerKey = Deno.env.get("WIKIDATA_CONSUMER_KEY");
-  const consumerSecret = Deno.env.get("WIKIDATA_CONSUMER_SECRET");
-  const accessToken = Deno.env.get("WIKIDATA_ACCESS_TOKEN");
-  const accessSecret = Deno.env.get("WIKIDATA_ACCESS_SECRET");
+  const consumerKey = Deno.env.get("WIKIDATA_CONSUMER_KEY")?.trim();
+  const consumerSecret = Deno.env.get("WIKIDATA_CONSUMER_SECRET")?.trim();
+  const accessToken = Deno.env.get("WIKIDATA_ACCESS_TOKEN")?.trim();
+  const accessSecret = Deno.env.get("WIKIDATA_ACCESS_SECRET")?.trim();
+
+  // Diagnostic logging (safe — no secret values exposed)
+  console.log("[wikidata-sync] OAuth secrets check:", {
+    consumerKey: consumerKey ? `present (${consumerKey.length} chars)` : "MISSING",
+    consumerSecret: consumerSecret ? `present (${consumerSecret.length} chars)` : "MISSING",
+    accessToken: accessToken ? `present (${accessToken.length} chars)` : "MISSING",
+    accessSecret: accessSecret ? `present (${accessSecret.length} chars)` : "MISSING",
+  });
 
   if (!consumerKey || !consumerSecret || !accessToken || !accessSecret) {
     return null;
   }
+
+  // Basic format validation
+  const minLen = 10;
+  const invalid: string[] = [];
+  if (consumerKey.length < minLen) invalid.push("WIKIDATA_CONSUMER_KEY");
+  if (consumerSecret.length < minLen) invalid.push("WIKIDATA_CONSUMER_SECRET");
+  if (accessToken.length < minLen) invalid.push("WIKIDATA_ACCESS_TOKEN");
+  if (accessSecret.length < minLen) invalid.push("WIKIDATA_ACCESS_SECRET");
+
+  if (invalid.length > 0) {
+    console.error("[wikidata-sync] OAuth secrets too short:", invalid);
+    return null;
+  }
+
   return { consumerKey, consumerSecret, accessToken, accessSecret };
 }
 
