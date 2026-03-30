@@ -9,13 +9,14 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Globe, Loader2, Eye, Shield, AlertTriangle, CheckCircle, Database, Zap, Upload } from "lucide-react";
+import { Globe, Loader2, Eye, Shield, AlertTriangle, CheckCircle, Database, Zap, Upload, KeyRound } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   syncProductToWikidata,
   buildProductWikidataPayload,
   resolveWikidataEntity,
   executeWikidataWrite,
+  testWikidataOAuth,
   type WikidataResolveResult,
 } from "@/services/wikidata-sync";
 
@@ -46,6 +47,7 @@ export function WikidataSyncButton({ productId, wikidataItemId, onSyncSuccess }:
   const [previewing, setPreviewing] = useState(false);
   const [resolving, setResolving] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [testingOAuth, setTestingOAuth] = useState(false);
   const [localQid, setLocalQid] = useState<string | null>(null);
   const [payloadDialogOpen, setPayloadDialogOpen] = useState(false);
   const [payloadData, setPayloadData] = useState<{ payload: unknown; summary: unknown } | null>(null);
@@ -53,9 +55,41 @@ export function WikidataSyncButton({ productId, wikidataItemId, onSyncSuccess }:
   const { toast } = useToast();
 
   const displayQid = localQid || wikidataItemId;
-  const isAnyLoading = syncing || previewing || resolving || publishing;
+  const isAnyLoading = syncing || previewing || resolving || publishing || testingOAuth;
   const isLiveMode = resolveResult?.writeEnabled === true;
   const canPublish = isLiveMode && resolveResult?.syncStatus === "pending" && resolveResult?.writeDecision !== "abort";
+
+  const handleTestOAuth = async () => {
+    setTestingOAuth(true);
+    try {
+      const result = await testWikidataOAuth();
+      if (result.success) {
+        toast({
+          title: "✅ OAuth OK",
+          description: `Site: ${result.sitename} | CSRF: ${result.csrfTokenStatus}`,
+        });
+      } else {
+        const category = result.errorCategory || "unknown";
+        let recommendation = "Verifique os secrets no Supabase.";
+        if (category === "invalid_signature") {
+          recommendation = "Assinatura inválida — verifique se CONSUMER_SECRET e ACCESS_SECRET estão corretos.";
+        } else if (category === "invalid_token") {
+          recommendation = "Token/consumer rejeitado — regenere os tokens no mesmo OAuth consumer aprovado.";
+        } else if (category === "missing_secrets") {
+          recommendation = "Secrets ausentes — configure WIKIDATA_CONSUMER_KEY, CONSUMER_SECRET, ACCESS_TOKEN, ACCESS_SECRET.";
+        }
+        toast({
+          title: `❌ OAuth falhou (${category})`,
+          description: recommendation,
+          variant: "destructive",
+        });
+      }
+    } catch (err) {
+      toast({ title: "Erro no teste OAuth", description: err instanceof Error ? err.message : "Erro desconhecido", variant: "destructive" });
+    } finally {
+      setTestingOAuth(false);
+    }
+  };
 
   if (!productId) return null;
 
@@ -198,6 +232,10 @@ export function WikidataSyncButton({ productId, wikidataItemId, onSyncSuccess }:
         <Button variant="ghost" size="sm" onClick={handleResolve} disabled={isAnyLoading} className="gap-1" title="Resolve & Persist pipeline">
           {resolving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
           Resolve
+        </Button>
+        <Button variant="ghost" size="sm" onClick={handleTestOAuth} disabled={isAnyLoading} className="gap-1" title="Testar autenticação OAuth com Wikidata">
+          {testingOAuth ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
+          Test OAuth
         </Button>
 
         {/* Publish button — only visible in Live Mode */}
