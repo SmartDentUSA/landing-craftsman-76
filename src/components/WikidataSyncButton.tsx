@@ -59,6 +59,38 @@ export function WikidataSyncButton({ productId, wikidataItemId, onSyncSuccess }:
   const isLiveMode = resolveResult?.writeEnabled === true;
   const canPublish = isLiveMode && resolveResult?.syncStatus === "pending" && resolveResult?.writeDecision !== "abort";
 
+  const handleTestOAuth = async () => {
+    setTestingOAuth(true);
+    try {
+      const result = await testWikidataOAuth();
+      if (result.success) {
+        toast({
+          title: "✅ OAuth OK",
+          description: `Site: ${result.sitename} | CSRF: ${result.csrfTokenStatus}`,
+        });
+      } else {
+        const category = result.errorCategory || "unknown";
+        let recommendation = "Verifique os secrets no Supabase.";
+        if (category === "invalid_signature") {
+          recommendation = "Assinatura inválida — verifique se CONSUMER_SECRET e ACCESS_SECRET estão corretos.";
+        } else if (category === "invalid_token") {
+          recommendation = "Token/consumer rejeitado — regenere os tokens no mesmo OAuth consumer aprovado.";
+        } else if (category === "missing_secrets") {
+          recommendation = "Secrets ausentes — configure WIKIDATA_CONSUMER_KEY, CONSUMER_SECRET, ACCESS_TOKEN, ACCESS_SECRET.";
+        }
+        toast({
+          title: `❌ OAuth falhou (${category})`,
+          description: recommendation,
+          variant: "destructive",
+        });
+      }
+    } catch (err) {
+      toast({ title: "Erro no teste OAuth", description: err instanceof Error ? err.message : "Erro desconhecido", variant: "destructive" });
+    } finally {
+      setTestingOAuth(false);
+    }
+  };
+
   if (!productId) return null;
 
   const handleSync = async () => {
