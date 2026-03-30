@@ -1,5 +1,8 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import OAuth from "https://esm.sh/oauth-1.0a@2.2.6";
+import hmacSHA1 from "https://esm.sh/crypto-js@4.2.0/hmac-sha1";
+import Base64 from "https://esm.sh/crypto-js@4.2.0/enc-base64";
 import {
   buildCompanyPayload,
   buildProductPayload,
