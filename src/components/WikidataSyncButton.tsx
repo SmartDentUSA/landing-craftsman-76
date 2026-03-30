@@ -233,6 +233,10 @@ export function WikidataSyncButton({ productId, wikidataItemId, onSyncSuccess }:
           {resolving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
           Resolve
         </Button>
+        <Button variant="ghost" size="sm" onClick={handleTestOAuth} disabled={isAnyLoading} className="gap-1" title="Testar autenticação OAuth com Wikidata">
+          {testingOAuth ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
+          Test OAuth
+        </Button>
 
         {/* Publish button — only visible in Live Mode */}
         {(canPublish || publishing) && (
