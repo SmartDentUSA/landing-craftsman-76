@@ -1,33 +1,43 @@
 
 
-## Atualizar secrets OAuth do Wikidata no Supabase
+## Diagnóstico Definitivo + Correção: OAuth 1.0a "Invalid Signature"
 
-### Situação
+### Análise da causa raiz
 
-Você criou um **novo** OAuth consumer no Wikidata ("Smart Dent Content Intelligence Platform 2"). Os tokens exibidos são diferentes dos que estão no Supabase. É necessário atualizar os 4 secrets.
+O erro `mwoauth-invalid-authorization: Invalid signature` persiste mesmo com os secrets corretos e aprovados. Analisando o código em `signOAuth1a()` (linhas 90-143), a implementação manual do OAuth 1.0a usa `crypto.subtle` (Web Crypto API) para HMAC-SHA1. Esta implementação manual é frágil e propensa a bugs sutis de encoding que são difíceis de diagnosticar.
 
-### Ação do usuário (manual)
+A abordagem correta é **substituir a implementação manual por uma biblioteca battle-tested** (`oauth-1.0a` + `crypto-js`), que é exatamente o que a [documentação oficial do MediaWiki](https://www.mediawiki.org/wiki/User:Chlod/OAuth) recomenda.
 
-Acesse [Edge Functions Secrets](https://supabase.com/dashboard/project/pgfgripuanuwwolmtknn/settings/functions) e atualize:
+### Plano (2 partes)
 
-| Secret name | Novo valor |
-|---|---|
-| `WIKIDATA_CONSUMER_KEY` | `a536f3526c3efb9e7d36c7509852f887` |
-| `WIKIDATA_CONSUMER_SECRET` | `e9a955d65a9fbc7300d687ddf21bf002e7975f76` |
-| `WIKIDATA_ACCESS_TOKEN` | `2b7e09aee757650ee2268b0463744c9e` |
-| `WIKIDATA_ACCESS_SECRET` | `156a1adbea1f91738656239e2a4a528c63f2c8e8` |
+**Parte 1 — Adicionar ação `test_oauth` para diagnóstico**
 
-### Alteração de código necessária
+Adicionar uma nova ação `test_oauth` na edge function `wikidata-sync` que:
+- Loga os **primeiros 6 e últimos 4 caracteres** de cada secret (para verificação visual)
+- Faz uma chamada simples `action=query&meta=siteinfo` (sem CSRF, sem escrita)
+- Retorna o resultado completo: sucesso ou erro detalhado com signature base string
 
-Remover `bot: "1"` do `wikidata-sync/index.ts` (linha 233). Mesmo com o grant "High-volume (bot) access" no consumer, a flag `bot` no `wbeditentity` exige que a **conta do usuário** tenha a flag bot concedida pela comunidade Wikidata — o que provavelmente não é o caso. Isso era a causa do erro "You do not have the permissions needed".
+**Parte 2 — Substituir implementação OAuth manual por biblioteca**
 
-### Redeploy
+Substituir `signOAuth1a()` e `buildOAuthHeader()` pela biblioteca `oauth-1.0a` (via esm.sh):
 
-Após as 2 ações (atualizar secrets + remover `bot: "1"`), redeploy da edge function `wikidata-sync`.
+```typescript
+import OAuth from "https://esm.sh/oauth-1.0a@2.2.6";
+import hmacSHA1 from "https://esm.sh/crypto-js@4.2.0/hmac-sha1";
+import Base64 from "https://esm.sh/crypto-js@4.2.0/enc-base64";
+```
+
+Esta biblioteca:
+- É recomendada pela documentação oficial do MediaWiki
+- Gera assinaturas OAuth 1.0a comprovadamente compatíveis
+- Elimina bugs sutis de encoding na construção da signature base string
+
+### Arquivos impactados
+- `supabase/functions/wikidata-sync/index.ts` — substituir `signOAuth1a`, `buildOAuthHeader`, `percentEncode` pela lib; adicionar handler `test_oauth`
+- Redeploy automático da edge function
 
 ### Resultado esperado
-
-- OAuth funciona com os novos tokens
-- `wbeditentity` executa sem erro de permissão
-- Items são criados/atualizados com sucesso no Wikidata
+1. Ação `test_oauth` permite validar os secrets sem efeitos colaterais
+2. A lib `oauth-1.0a` gera assinaturas corretas, eliminando o "Invalid signature"
+3. CSRF token é obtido com sucesso → `wbeditentity` funciona
 
