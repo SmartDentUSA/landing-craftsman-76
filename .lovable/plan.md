@@ -1,43 +1,51 @@
 
+Objetivo: eliminar definitivamente o erro `mwoauth-invalid-authorization: Invalid signature` no fluxo Wikidata e dar diagnóstico acionável no próprio app.
 
-## Diagnóstico Definitivo + Correção: OAuth 1.0a "Invalid Signature"
+Diagnóstico atual (com base em código + logs):
+- O erro continua ocorrendo em `getWikidataCsrfToken` (GET), antes mesmo do `wbeditentity`.
+- A assinatura usa `oauth-1.0a`, mas o transporte usa `URLSearchParams`; essa combinação pode gerar divergência de canonicalização/encoding entre o que é assinado e o que é enviado.
+- O botão/UI atual só mostra erro genérico de credenciais, sem expor resultado do `test_oauth` para triagem rápida.
 
-### Análise da causa raiz
+Plano de implementação:
+1) Padronizar assinatura e serialização (fonte única de verdade)
+- Em `supabase/functions/wikidata-sync/index.ts`, criar helpers internos para:
+  - serialização RFC3986 determinística (query/body),
+  - montagem de URL GET e body POST a partir do MESMO objeto de parâmetros usado na assinatura.
+- Ajustar `buildOAuthHeader` para assinar sempre com:
+  - `url` base (sem query),
+  - `data` explícito (GET e POST).
+- Aplicar isso em:
+  - `getWikidataCsrfToken`,
+  - `executeWbEditEntity`,
+  - `handleTestOAuth` (siteinfo).
 
-O erro `mwoauth-invalid-authorization: Invalid signature` persiste mesmo com os secrets corretos e aprovados. Analisando o código em `signOAuth1a()` (linhas 90-143), a implementação manual do OAuth 1.0a usa `crypto.subtle` (Web Crypto API) para HMAC-SHA1. Esta implementação manual é frágil e propensa a bugs sutis de encoding que são difíceis de diagnosticar.
+2) Fortalecer diagnóstico `test_oauth`
+- Expandir retorno de `test_oauth` com campos seguros de debug (sem vazar segredo):
+  - método, endpoint, status HTTP, presença de token CSRF, categoria de erro (`invalid_signature`, `invalid_token`, `timestamp/nonce`, `other`).
+- Manter mascaramento parcial dos secrets e melhorar mensagem para separar:
+  - “segredo ausente/inválido” vs
+  - “assinatura divergente”.
 
-A abordagem correta é **substituir a implementação manual por uma biblioteca battle-tested** (`oauth-1.0a` + `crypto-js`), que é exatamente o que a [documentação oficial do MediaWiki](https://www.mediawiki.org/wiki/User:Chlod/OAuth) recomenda.
+3) Expor teste OAuth no frontend
+- Em `src/services/wikidata-sync.ts`: adicionar função `testWikidataOAuth()` para chamar `action: "test_oauth"`.
+- Em `src/components/WikidataSyncButton.tsx`: adicionar botão “Test OAuth” e feedback claro com resultado técnico resumido (success/fail + motivo principal).
+- Ajustar toasts de erro OAuth para incluir recomendação contextual com base no erro retornado (não assumir sempre “regenere token”).
 
-### Plano (2 partes)
+4) Validação end-to-end após implementação
+- Fluxo 1: clicar “Test OAuth” e confirmar:
+  - `siteinfo` OK,
+  - `csrfTokenStatus = valid`.
+- Fluxo 2: `Resolve` + `Publish` no mesmo produto que falhava.
+- Fluxo 3: conferir logs da função:
+  - sem `WIKIDATA_OAUTH_INVALID_AUTHORIZATION`,
+  - com sucesso em CSRF e `wbeditentity`.
 
-**Parte 1 — Adicionar ação `test_oauth` para diagnóstico**
+Arquivos impactados:
+- `supabase/functions/wikidata-sync/index.ts`
+- `src/services/wikidata-sync.ts`
+- `src/components/WikidataSyncButton.tsx`
 
-Adicionar uma nova ação `test_oauth` na edge function `wikidata-sync` que:
-- Loga os **primeiros 6 e últimos 4 caracteres** de cada secret (para verificação visual)
-- Faz uma chamada simples `action=query&meta=siteinfo` (sem CSRF, sem escrita)
-- Retorna o resultado completo: sucesso ou erro detalhado com signature base string
-
-**Parte 2 — Substituir implementação OAuth manual por biblioteca**
-
-Substituir `signOAuth1a()` e `buildOAuthHeader()` pela biblioteca `oauth-1.0a` (via esm.sh):
-
-```typescript
-import OAuth from "https://esm.sh/oauth-1.0a@2.2.6";
-import hmacSHA1 from "https://esm.sh/crypto-js@4.2.0/hmac-sha1";
-import Base64 from "https://esm.sh/crypto-js@4.2.0/enc-base64";
-```
-
-Esta biblioteca:
-- É recomendada pela documentação oficial do MediaWiki
-- Gera assinaturas OAuth 1.0a comprovadamente compatíveis
-- Elimina bugs sutis de encoding na construção da signature base string
-
-### Arquivos impactados
-- `supabase/functions/wikidata-sync/index.ts` — substituir `signOAuth1a`, `buildOAuthHeader`, `percentEncode` pela lib; adicionar handler `test_oauth`
-- Redeploy automático da edge function
-
-### Resultado esperado
-1. Ação `test_oauth` permite validar os secrets sem efeitos colaterais
-2. A lib `oauth-1.0a` gera assinaturas corretas, eliminando o "Invalid signature"
-3. CSRF token é obtido com sucesso → `wbeditentity` funciona
-
+Critério de aceite:
+- `test_oauth` passa de forma consistente.
+- `resolve_and_persist`/`execute_write` não retornam mais “Invalid signature”.
+- UI passa a mostrar diagnóstico útil sem depender de inspeção manual de logs.
