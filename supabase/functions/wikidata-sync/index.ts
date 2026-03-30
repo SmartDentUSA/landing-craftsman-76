@@ -309,6 +309,10 @@ serve(async (req) => {
       return await handleExecuteWrite(db, body?.entityType, body?.internalId);
     }
 
+    if (action === "test_oauth") {
+      return await handleTestOAuth();
+    }
+
     return jsonResponse({ success: false, error: "Invalid action" }, 400);
   } catch (error) {
     console.error("[wikidata-sync] Unhandled error", error);
