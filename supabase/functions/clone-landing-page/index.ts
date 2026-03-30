@@ -1815,14 +1815,14 @@ function injectSEO(
         "brand": {
           "@type": "Brand",
           "name": brand,
-          ...(companyProfile?.wikidata_id && { "sameAs": `https://www.wikidata.org/entity/${companyProfile.wikidata_id}` })
+          ...(companyData?.wikidata_id && { "sameAs": `https://www.wikidata.org/entity/${companyData.wikidata_id}` })
         },
-        ...(companyProfile?.wikidata_id && {
+        ...(companyData?.wikidata_id && {
           "manufacturer": {
             "@type": "Organization",
-            "name": companyProfile?.company_name || brand,
+            "name": companyData?.company_name || brand,
             ...(websiteUrl && { "url": websiteUrl }),
-            "sameAs": `https://www.wikidata.org/entity/${companyProfile.wikidata_id}`
+            "sameAs": `https://www.wikidata.org/entity/${companyData.wikidata_id}`
           }
         }),
         "offers": {
