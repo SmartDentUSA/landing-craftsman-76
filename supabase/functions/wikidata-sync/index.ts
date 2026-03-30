@@ -81,76 +81,23 @@ function getWikidataSecrets(): WikidataOAuthSecrets | null {
   return { consumerKey, consumerSecret, accessToken, accessSecret };
 }
 
-function percentEncode(str: string): string {
-  return encodeURIComponent(str)
-    .replace(/!/g, "%21")
-    .replace(/\*/g, "%2A")
-    .replace(/'/g, "%27")
-    .replace(/\(/g, "%28")
-    .replace(/\)/g, "%29");
+// ── OAuth 1.0a via battle-tested library ─────────────────────
+
+function createOAuthClient(secrets: WikidataOAuthSecrets) {
+  return new OAuth({
+    consumer: { key: secrets.consumerKey, secret: secrets.consumerSecret },
+    signature_method: "HMAC-SHA1",
+    hash_function(baseString: string, key: string) {
+      return Base64.stringify(hmacSHA1(baseString, key));
+    },
+  });
 }
 
-async function signOAuth1a(
-  method: string,
-  url: string,
-  params: Record<string, string>,
-  secrets: WikidataOAuthSecrets,
-): Promise<{ oauthParams: Record<string, string>; apiParams: Record<string, string> }> {
-  const encoder = new TextEncoder();
-
-  const oauthBase: Record<string, string> = {
-    oauth_consumer_key: secrets.consumerKey,
-    oauth_token: secrets.accessToken,
-    oauth_nonce: crypto.randomUUID().replace(/-/g, ""),
-    oauth_timestamp: Math.floor(Date.now() / 1000).toString(),
-    oauth_signature_method: "HMAC-SHA1",
-    oauth_version: "1.0",
-  };
-
-  // Signature base string includes ALL params (oauth + api)
-  const allParams: Record<string, string> = { ...oauthBase, ...params };
-
-  const sorted = Object.keys(allParams)
-    .sort()
-    .map((k) => `${percentEncode(k)}=${percentEncode(allParams[k])}`)
-    .join("&");
-
-  const baseString = [
-    method.toUpperCase(),
-    percentEncode(url),
-    percentEncode(sorted),
-  ].join("&");
-
-  const signingKey = `${percentEncode(secrets.consumerSecret)}&${percentEncode(secrets.accessSecret)}`;
-
-  const key = await crypto.subtle.importKey(
-    "raw",
-    encoder.encode(signingKey),
-    { name: "HMAC", hash: "SHA-1" },
-    false,
-    ["sign"],
-  );
-
-  const signatureBuffer = await crypto.subtle.sign(
-    "HMAC",
-    key,
-    encoder.encode(baseString),
-  );
-
-  const signature = btoa(String.fromCharCode(...new Uint8Array(signatureBuffer)));
-
-  return {
-    oauthParams: { ...oauthBase, oauth_signature: signature },
-    apiParams: params,
-  };
-}
-
-function buildOAuthHeader(oauthParams: Record<string, string>): string {
-  const parts = Object.keys(oauthParams)
-    .sort()
-    .map((k) => `${percentEncode(k)}="${percentEncode(oauthParams[k])}"`)
-    .join(", ");
-  return `OAuth ${parts}`;
+function buildOAuthHeader(secrets: WikidataOAuthSecrets, requestData: { url: string; method: string; data?: Record<string, string> }): string {
+  const oauth = createOAuthClient(secrets);
+  const token = { key: secrets.accessToken, secret: secrets.accessSecret };
+  const authorized = oauth.authorize(requestData, token);
+  return oauth.toHeader(authorized).Authorization;
 }
 
 async function getWikidataCsrfToken(secrets: WikidataOAuthSecrets): Promise<string> {
