@@ -109,11 +109,12 @@ async function getWikidataCsrfToken(secrets: WikidataOAuthSecrets): Promise<stri
     format: "json",
   };
 
-  const { oauthParams } = await signOAuth1a("GET", url, apiParams, secrets);
   const query = new URLSearchParams(apiParams).toString();
+  const fullUrl = `${url}?${query}`;
+  const authHeader = buildOAuthHeader(secrets, { url: fullUrl, method: "GET" });
 
-  const res = await fetch(`${url}?${query}`, {
-    headers: { Authorization: buildOAuthHeader(oauthParams) },
+  const res = await fetch(fullUrl, {
+    headers: { Authorization: authHeader },
   });
 
   if (!res.ok) {
