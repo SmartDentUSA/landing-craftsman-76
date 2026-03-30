@@ -115,7 +115,7 @@ function buildQueryString(params: Record<string, string>): string {
 }
 
 async function getWikidataCsrfToken(secrets: WikidataOAuthSecrets): Promise<string> {
-  const url = "https://www.wikidata.org/w/api.php";
+  const baseUrl = "https://www.wikidata.org/w/api.php";
   const apiParams: Record<string, string> = {
     action: "query",
     meta: "tokens",
@@ -123,9 +123,10 @@ async function getWikidataCsrfToken(secrets: WikidataOAuthSecrets): Promise<stri
     format: "json",
   };
 
-  const query = new URLSearchParams(apiParams).toString();
-  const fullUrl = `${url}?${query}`;
-  const authHeader = buildOAuthHeader(secrets, { url: fullUrl, method: "GET" });
+  // CRITICAL FIX: Sign with base URL + data (not full URL with query string)
+  // oauth-1.0a includes data params in the signature base string
+  const authHeader = buildOAuthHeader(secrets, { url: baseUrl, method: "GET", data: apiParams });
+  const fullUrl = `${baseUrl}?${buildQueryString(apiParams)}`;
 
   const res = await fetch(fullUrl, {
     headers: { Authorization: authHeader },
