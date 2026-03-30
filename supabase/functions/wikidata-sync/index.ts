@@ -230,7 +230,6 @@ async function executeWbEditEntity(
     action: "wbeditentity",
     format: "json",
     token: csrf,
-    bot: "1",
     data: JSON.stringify(payload),
     summary: "Automated sync via SmartDent Authority Publisher",
   };
