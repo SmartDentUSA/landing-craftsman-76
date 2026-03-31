@@ -2658,7 +2658,8 @@ const EditorPageContent = () => {
           knowledge_feed_section: processedData.knowledge_feed_section,
           seo: processedData.seo,
           schema: processedData.schema,
-          brand: processedData.brand
+          brand: processedData.brand,
+          reviews_section_visible: processedData.reviews_section_visible
         }
       };
       
