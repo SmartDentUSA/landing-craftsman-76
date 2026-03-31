@@ -2202,7 +2202,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                     <div class="carousel-track" id="solutions-carousel">
                         {{#solutions}}
                         <div class="carousel-slide">
-                            {{#image.href}}<a href="{{image.href}}" target="_blank" rel="noopener noreferrer" style="display:block;text-decoration:none;color:inherit;">{{/image.href}}
+                            {{#image.href}}<a href="{{image.href}}" target="_blank" rel="noopener noreferrer" style="display:block;text-decoration:none;color:inherit;height:100%;width:100%;">{{/image.href}}
                             <div class="image-container">
                                 <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image" style="transform: scale({{containerScale}})">
                                 <div class="control-item-text-overlay">
