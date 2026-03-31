@@ -1,26 +1,26 @@
 
 
-## Correção: Links em Soluções + Toggle de Avaliações
+## Correção: Toggle de avaliações não persiste ao recarregar
 
-### Problemas identificados
+### Causa raiz
 
-**1. Links nas soluções não funcionam**
-No template HTML (`src/lib/template-engine.ts`, linhas 2190 e 2206), o texto das soluções usa `{{text}}` (Mustache com escape HTML). Isso transforma qualquer `<a href="...">` em `&lt;a href=...&gt;`, impedindo que links funcionem. A correção é usar `{{{text}}}` (triple-stache, sem escape).
+A função `ensureLandingPageDefaults()` (linhas 511-634 de `Editor.tsx`) constrói o objeto de retorno **campo a campo** de forma explícita, mas **não inclui `reviews_section_visible`**. Quando a página é recarregada, os dados passam por essa função e o campo é descartado, fazendo o toggle voltar ao valor padrão (`undefined`, que é tratado como `true`).
 
-**2. Toggle de avaliações não persiste**
-No `handleSave` do Editor (`src/pages/Editor.tsx`, linhas 2633-2661), o campo `reviews_section_visible` **não está incluído** no payload salvo no banco de dados. Quando a página é recarregada, o valor volta como `undefined`, e a lógica `data.reviews_section_visible !== false` avalia como `true` — fazendo as avaliações sempre aparecerem no HTML gerado.
+O salvamento está correto (linhas 2662 e 2734 já incluem o campo). O problema é exclusivamente na **leitura/hidratação**.
 
-### Correções
+### Correção
 
-**Arquivo 1: `src/lib/template-engine.ts`**
-- Linha 2190: trocar `{{text}}` por `{{{text}}}` (desktop grid)
-- Linha 2206: trocar `{{text}}` por `{{{text}}}` (mobile carousel)
+**Arquivo: `src/pages/Editor.tsx`**
 
-**Arquivo 2: `src/pages/Editor.tsx`**
-- No bloco do `handleSave` (entre linhas 2633-2661), adicionar `reviews_section_visible: processedData.reviews_section_visible` ao objeto `data` do payload salvo
-- Fazer o mesmo no bloco de criação de nova LP (perto da linha 2700)
+Na função `ensureLandingPageDefaults`, adicionar o campo `reviews_section_visible` ao objeto retornado (perto da linha 633, antes do `} as LandingPageData`):
+
+```typescript
+reviews_section_visible: data.reviews_section_visible
+```
+
+Isso garante que o valor salvo no banco (`true` ou `false`) é preservado ao rehidratar os dados. Se o campo não existir no banco (LPs antigas), ficará `undefined`, que o template engine já trata como `true` via `!== false`.
 
 ### Resultado esperado
-- Links inseridos em soluções via editor renderizam como links clicáveis no HTML gerado
-- Desativar o toggle de avaliações persiste no banco e o HTML gerado não inclui a seção visual de reviews
+- Desligar o toggle → salvar → recarregar página → toggle permanece desligado
+- LPs antigas sem o campo continuam funcionando normalmente (avaliações visíveis por padrão)
 
