@@ -630,7 +630,8 @@ const ensureLandingPageDefaults = (data: Partial<LandingPageData>): LandingPageD
         security_url: '',
         cookies_url: ''
       }
-    }
+    },
+    reviews_section_visible: data.reviews_section_visible
   } as LandingPageData;
 };
 
