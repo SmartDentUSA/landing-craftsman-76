@@ -1,26 +1,34 @@
 
 
-## Correção: Toggle de avaliações não persiste ao recarregar
+## Correção: Links das imagens de soluções não funcionam no HTML gerado
 
 ### Causa raiz
 
-A função `ensureLandingPageDefaults()` (linhas 511-634 de `Editor.tsx`) constrói o objeto de retorno **campo a campo** de forma explícita, mas **não inclui `reviews_section_visible`**. Quando a página é recarregada, os dados passam por essa função e o campo é descartado, fazendo o toggle voltar ao valor padrão (`undefined`, que é tratado como `true`).
+O componente `ImageUploader` permite definir um campo `href` (link de destino) para cada imagem de solução, mas o **template HTML** (`src/lib/template-engine.ts`, linhas 2186-2193 e 2202-2209) renderiza apenas `<img>` sem envolver em `<a>`.
 
-O salvamento está correto (linhas 2662 e 2734 já incluem o campo). O problema é exclusivamente na **leitura/hidratação**.
+O `href` é salvo nos dados mas nunca chega ao HTML final.
 
 ### Correção
 
-**Arquivo: `src/pages/Editor.tsx`**
+**Arquivo: `src/lib/template-engine.ts`**
 
-Na função `ensureLandingPageDefaults`, adicionar o campo `reviews_section_visible` ao objeto retornado (perto da linha 633, antes do `} as LandingPageData`):
+Nas duas seções de soluções (desktop grid e mobile carousel), envolver o conteúdo do card em `<a>` quando `image.href` estiver presente, usando blocos condicionais Mustache:
 
-```typescript
-reviews_section_visible: data.reviews_section_visible
+**Desktop (linhas ~2186-2193):**
+```mustache
+{{#image.href}}<a href="{{image.href}}" target="_blank" rel="noopener noreferrer" style="display:block;text-decoration:none;color:inherit;">{{/image.href}}
+  <div class="image-container image-container-{{sizeType}}">
+    <img src="{{image.src}}" alt="{{image.alt}}" ...>
+    <div class="control-item-text-overlay">
+      <p>{{{text}}}</p>
+    </div>
+  </div>
+{{#image.href}}</a>{{/image.href}}
 ```
 
-Isso garante que o valor salvo no banco (`true` ou `false`) é preservado ao rehidratar os dados. Se o campo não existir no banco (LPs antigas), ficará `undefined`, que o template engine já trata como `true` via `!== false`.
+**Mobile (linhas ~2202-2209):** mesma lógica.
 
 ### Resultado esperado
-- Desligar o toggle → salvar → recarregar página → toggle permanece desligado
-- LPs antigas sem o campo continuam funcionando normalmente (avaliações visíveis por padrão)
+- Imagens de soluções com `href` preenchido tornam-se links clicáveis no HTML gerado
+- Imagens sem `href` continuam sem link (sem regressão)
 
