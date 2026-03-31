@@ -1,51 +1,26 @@
 
-Objetivo: eliminar definitivamente o erro `mwoauth-invalid-authorization: Invalid signature` no fluxo Wikidata e dar diagnóstico acionável no próprio app.
 
-Diagnóstico atual (com base em código + logs):
-- O erro continua ocorrendo em `getWikidataCsrfToken` (GET), antes mesmo do `wbeditentity`.
-- A assinatura usa `oauth-1.0a`, mas o transporte usa `URLSearchParams`; essa combinação pode gerar divergência de canonicalização/encoding entre o que é assinado e o que é enviado.
-- O botão/UI atual só mostra erro genérico de credenciais, sem expor resultado do `test_oauth` para triagem rápida.
+## Correção: Links em Soluções + Toggle de Avaliações
 
-Plano de implementação:
-1) Padronizar assinatura e serialização (fonte única de verdade)
-- Em `supabase/functions/wikidata-sync/index.ts`, criar helpers internos para:
-  - serialização RFC3986 determinística (query/body),
-  - montagem de URL GET e body POST a partir do MESMO objeto de parâmetros usado na assinatura.
-- Ajustar `buildOAuthHeader` para assinar sempre com:
-  - `url` base (sem query),
-  - `data` explícito (GET e POST).
-- Aplicar isso em:
-  - `getWikidataCsrfToken`,
-  - `executeWbEditEntity`,
-  - `handleTestOAuth` (siteinfo).
+### Problemas identificados
 
-2) Fortalecer diagnóstico `test_oauth`
-- Expandir retorno de `test_oauth` com campos seguros de debug (sem vazar segredo):
-  - método, endpoint, status HTTP, presença de token CSRF, categoria de erro (`invalid_signature`, `invalid_token`, `timestamp/nonce`, `other`).
-- Manter mascaramento parcial dos secrets e melhorar mensagem para separar:
-  - “segredo ausente/inválido” vs
-  - “assinatura divergente”.
+**1. Links nas soluções não funcionam**
+No template HTML (`src/lib/template-engine.ts`, linhas 2190 e 2206), o texto das soluções usa `{{text}}` (Mustache com escape HTML). Isso transforma qualquer `<a href="...">` em `&lt;a href=...&gt;`, impedindo que links funcionem. A correção é usar `{{{text}}}` (triple-stache, sem escape).
 
-3) Expor teste OAuth no frontend
-- Em `src/services/wikidata-sync.ts`: adicionar função `testWikidataOAuth()` para chamar `action: "test_oauth"`.
-- Em `src/components/WikidataSyncButton.tsx`: adicionar botão “Test OAuth” e feedback claro com resultado técnico resumido (success/fail + motivo principal).
-- Ajustar toasts de erro OAuth para incluir recomendação contextual com base no erro retornado (não assumir sempre “regenere token”).
+**2. Toggle de avaliações não persiste**
+No `handleSave` do Editor (`src/pages/Editor.tsx`, linhas 2633-2661), o campo `reviews_section_visible` **não está incluído** no payload salvo no banco de dados. Quando a página é recarregada, o valor volta como `undefined`, e a lógica `data.reviews_section_visible !== false` avalia como `true` — fazendo as avaliações sempre aparecerem no HTML gerado.
 
-4) Validação end-to-end após implementação
-- Fluxo 1: clicar “Test OAuth” e confirmar:
-  - `siteinfo` OK,
-  - `csrfTokenStatus = valid`.
-- Fluxo 2: `Resolve` + `Publish` no mesmo produto que falhava.
-- Fluxo 3: conferir logs da função:
-  - sem `WIKIDATA_OAUTH_INVALID_AUTHORIZATION`,
-  - com sucesso em CSRF e `wbeditentity`.
+### Correções
 
-Arquivos impactados:
-- `supabase/functions/wikidata-sync/index.ts`
-- `src/services/wikidata-sync.ts`
-- `src/components/WikidataSyncButton.tsx`
+**Arquivo 1: `src/lib/template-engine.ts`**
+- Linha 2190: trocar `{{text}}` por `{{{text}}}` (desktop grid)
+- Linha 2206: trocar `{{text}}` por `{{{text}}}` (mobile carousel)
 
-Critério de aceite:
-- `test_oauth` passa de forma consistente.
-- `resolve_and_persist`/`execute_write` não retornam mais “Invalid signature”.
-- UI passa a mostrar diagnóstico útil sem depender de inspeção manual de logs.
+**Arquivo 2: `src/pages/Editor.tsx`**
+- No bloco do `handleSave` (entre linhas 2633-2661), adicionar `reviews_section_visible: processedData.reviews_section_visible` ao objeto `data` do payload salvo
+- Fazer o mesmo no bloco de criação de nova LP (perto da linha 2700)
+
+### Resultado esperado
+- Links inseridos em soluções via editor renderizam como links clicáveis no HTML gerado
+- Desativar o toggle de avaliações persiste no banco e o HTML gerado não inclui a seção visual de reviews
+
