@@ -2184,12 +2184,14 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             <div class="control-grid"{{#solutions_section.autoExpandLast}} data-auto-expand="true"{{/solutions_section.autoExpandLast}}>
                 {{#solutions}}
                 <div class="control-item {{size}}" style="{{gridColumnStyle}}" data-solution-index="{{solutionIndex}}" data-debug="{{debugInfo}}">
+                    {{#image.href}}<a href="{{image.href}}" target="_blank" rel="noopener noreferrer" style="display:block;text-decoration:none;color:inherit;">{{/image.href}}
                     <div class="image-container image-container-{{sizeType}}">
                         <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image" style="transform: scale({{containerScale}}); transform-origin: center;">
                         <div class="control-item-text-overlay">
                             <p>{{{text}}}</p>
                         </div>
                     </div>
+                    {{#image.href}}</a>{{/image.href}}
                 </div>
                 {{/solutions}}
             </div>
@@ -2200,12 +2202,14 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                     <div class="carousel-track" id="solutions-carousel">
                         {{#solutions}}
                         <div class="carousel-slide">
+                            {{#image.href}}<a href="{{image.href}}" target="_blank" rel="noopener noreferrer" style="display:block;text-decoration:none;color:inherit;">{{/image.href}}
                             <div class="image-container">
                                 <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image" style="transform: scale({{containerScale}})">
                                 <div class="control-item-text-overlay">
                                     <p>{{{text}}}</p>
                                 </div>
                             </div>
+                            {{#image.href}}</a>{{/image.href}}
                         </div>
                         {{/solutions}}
                     </div>
