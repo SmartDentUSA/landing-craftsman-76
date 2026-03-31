@@ -2187,7 +2187,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                     <div class="image-container image-container-{{sizeType}}">
                         <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image" style="transform: scale({{containerScale}}); transform-origin: center;">
                         <div class="control-item-text-overlay">
-                            <p>{{text}}</p>
+                            <p>{{{text}}}</p>
                         </div>
                     </div>
                 </div>
@@ -2203,7 +2203,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                             <div class="image-container">
                                 <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image" style="transform: scale({{containerScale}})">
                                 <div class="control-item-text-overlay">
-                                    <p>{{text}}</p>
+                                    <p>{{{text}}}</p>
                                 </div>
                             </div>
                         </div>
