@@ -8,7 +8,7 @@ export interface LandingPage {
   name: string;
   status: string;
   last_modified: Date;
-  updated_at: Date;
+  updated_at?: Date;
   version: number;
   template: string;
   data?: any;
