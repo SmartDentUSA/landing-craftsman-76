@@ -1,30 +1,31 @@
 
 
-## Correção: Imagens perderam proporções após adição do link
+## Correção: Data "Modificado em" mostrando 17/03 em vez de 31/03
 
 ### Causa raiz
 
-O `<a>` inserido entre `.control-item` e `.image-container` quebra a cadeia de `height: 100%` do CSS. O grid desktop usa regras como:
+O Dashboard exibe `last_modified` (linha 644), que depende do código da aplicação para ser atualizado. Porém a tabela `landing_pages` também tem uma coluna `updated_at` que é **automaticamente atualizada por trigger do banco** (`update_updated_at_column`) em toda operação de update — tornando-a sempre precisa.
 
-```css
-.control-item, .image-container { height: 100%; }
-```
-
-Com o `<a>` no meio, o `.image-container` não herda mais a altura do `.control-item` porque o `<a>` não tem `height: 100%`.
+É provável que em algum caminho de salvamento (ex: via `admin_update_landing_page` RPC ou outro fluxo) o `last_modified` não tenha sido atualizado corretamente, ficando preso em 17/03.
 
 ### Correção
 
-**Arquivo: `src/lib/template-engine.ts`**
+**Arquivo: `src/hooks/useLandingPagesSupabase.ts`**
 
-1. **Desktop (linha 2187):** Adicionar `height:100%;width:100%;` ao style inline do `<a>`:
-```mustache
-{{#image.href}}<a href="{{image.href}}" target="_blank" rel="noopener noreferrer" style="display:block;text-decoration:none;color:inherit;height:100%;width:100%;">{{/image.href}}
+1. Adicionar `updated_at` à interface `LandingPage` (como `Date`)
+2. No `loadLandingPages`, converter `page.updated_at` para Date
+
+**Arquivo: `src/pages/Dashboard.tsx`**
+
+3. Na linha 643-647, usar `updated_at` (que vem do trigger do banco e é sempre confiável) em vez de `last_modified`:
+
+```tsx
+Modificado em: {
+  landingPage.updated_at instanceof Date 
+    ? landingPage.updated_at.toLocaleDateString('pt-BR')
+    : new Date(landingPage.updated_at).toLocaleDateString('pt-BR')
+}
 ```
 
-2. **Mobile (linha 2205):** Mesmo ajuste:
-```mustache
-{{#image.href}}<a href="{{image.href}}" target="_blank" rel="noopener noreferrer" style="display:block;text-decoration:none;color:inherit;height:100%;width:100%;">{{/image.href}}
-```
-
-Duas linhas alteradas. A cadeia de `height: 100%` é restaurada e as proporções voltam ao normal.
+Isso garante que a data exibida reflita sempre o último update real no banco de dados.
 
