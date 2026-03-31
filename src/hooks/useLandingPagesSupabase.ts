@@ -38,6 +38,7 @@ export const useLandingPagesSupabase = () => {
       const pages = data?.map(page => ({
         ...page,
         last_modified: new Date(page.last_modified),
+        updated_at: new Date(page.updated_at),
         blog_generated_at: page.blog_generated_at ? new Date(page.blog_generated_at) : undefined,
       })) || [];
 

@@ -641,8 +641,8 @@ const DashboardContent = () => {
                       <span>Versão: v{landingPage.version}</span>
                       <span>
                         Modificado em: {
-                          landingPage.last_modified instanceof Date 
-                            ? landingPage.last_modified.toLocaleDateString('pt-BR')
+                          landingPage.updated_at instanceof Date 
+                            ? landingPage.updated_at.toLocaleDateString('pt-BR')
                             : new Date(landingPage.last_modified).toLocaleDateString('pt-BR')
                         }
                       </span>
