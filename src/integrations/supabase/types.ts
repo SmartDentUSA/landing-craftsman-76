@@ -145,6 +145,13 @@ export type Database = {
             referencedRelation: "raw_reviews"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "approved_reviews_raw_review_id_fkey"
+            columns: ["raw_review_id"]
+            isOneToOne: false
+            referencedRelation: "v_reviews_with_responses"
+            referencedColumns: ["review_id"]
+          },
         ]
       }
       blog_posts: {
@@ -822,6 +829,54 @@ export type Database = {
           },
         ]
       }
+      content_refresh_log: {
+        Row: {
+          created_at: string
+          details: Json | null
+          duration_ms: number | null
+          error_message: string | null
+          id: string
+          operation: string
+          source_id: string | null
+          source_table: string | null
+          success: boolean | null
+          target_id: string | null
+          target_type: string | null
+          target_url: string | null
+          trigger_type: string
+        }
+        Insert: {
+          created_at?: string
+          details?: Json | null
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          operation: string
+          source_id?: string | null
+          source_table?: string | null
+          success?: boolean | null
+          target_id?: string | null
+          target_type?: string | null
+          target_url?: string | null
+          trigger_type: string
+        }
+        Update: {
+          created_at?: string
+          details?: Json | null
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          operation?: string
+          source_id?: string | null
+          source_table?: string | null
+          success?: boolean | null
+          target_id?: string | null
+          target_type?: string | null
+          target_url?: string | null
+          trigger_type?: string
+        }
+        Relationships: []
+      }
       content_submissions: {
         Row: {
           content_type: string
@@ -1150,6 +1205,60 @@ export type Database = {
           started_at?: string | null
           status?: string
           total_reviews_found?: number | null
+        }
+        Relationships: []
+      }
+      gbp_posts_log: {
+        Row: {
+          created_at: string
+          cta_type: string | null
+          cta_url: string | null
+          error_message: string | null
+          google_post_id: string | null
+          id: string
+          image_url: string | null
+          post_type: string
+          published_at: string | null
+          scheduled_for: string | null
+          source_id: string | null
+          source_type: string | null
+          status: string
+          summary: string
+          title: string | null
+        }
+        Insert: {
+          created_at?: string
+          cta_type?: string | null
+          cta_url?: string | null
+          error_message?: string | null
+          google_post_id?: string | null
+          id?: string
+          image_url?: string | null
+          post_type?: string
+          published_at?: string | null
+          scheduled_for?: string | null
+          source_id?: string | null
+          source_type?: string | null
+          status?: string
+          summary: string
+          title?: string | null
+        }
+        Update: {
+          created_at?: string
+          cta_type?: string | null
+          cta_url?: string | null
+          error_message?: string | null
+          google_post_id?: string | null
+          id?: string
+          image_url?: string | null
+          post_type?: string
+          published_at?: string | null
+          scheduled_for?: string | null
+          source_id?: string | null
+          source_type?: string | null
+          status?: string
+          summary?: string
+          title?: string | null
         }
         Relationships: []
       }
@@ -1670,6 +1779,96 @@ export type Database = {
           },
         ]
       }
+      local_seo_targets: {
+        Row: {
+          category_name: string | null
+          city: string | null
+          competition_est: string | null
+          created_at: string
+          delivery_promise: string | null
+          focus_keyword: string | null
+          h1_text: string | null
+          html_content: string | null
+          html_generated: boolean | null
+          id: string
+          last_refreshed: string | null
+          meta_description: string | null
+          page_slug: string | null
+          page_title: string | null
+          priority: number | null
+          product_id: string | null
+          product_name: string | null
+          published_at: string | null
+          published_url: string | null
+          region_label: string | null
+          search_volume_est: number | null
+          secondary_keywords: string[] | null
+          shipping_highlight: string | null
+          specialty: string
+          state_uf: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          category_name?: string | null
+          city?: string | null
+          competition_est?: string | null
+          created_at?: string
+          delivery_promise?: string | null
+          focus_keyword?: string | null
+          h1_text?: string | null
+          html_content?: string | null
+          html_generated?: boolean | null
+          id?: string
+          last_refreshed?: string | null
+          meta_description?: string | null
+          page_slug?: string | null
+          page_title?: string | null
+          priority?: number | null
+          product_id?: string | null
+          product_name?: string | null
+          published_at?: string | null
+          published_url?: string | null
+          region_label?: string | null
+          search_volume_est?: number | null
+          secondary_keywords?: string[] | null
+          shipping_highlight?: string | null
+          specialty: string
+          state_uf: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          category_name?: string | null
+          city?: string | null
+          competition_est?: string | null
+          created_at?: string
+          delivery_promise?: string | null
+          focus_keyword?: string | null
+          h1_text?: string | null
+          html_content?: string | null
+          html_generated?: boolean | null
+          id?: string
+          last_refreshed?: string | null
+          meta_description?: string | null
+          page_slug?: string | null
+          page_title?: string | null
+          priority?: number | null
+          product_id?: string | null
+          product_name?: string | null
+          published_at?: string | null
+          published_url?: string | null
+          region_label?: string | null
+          search_volume_est?: number | null
+          secondary_keywords?: string[] | null
+          shipping_highlight?: string | null
+          specialty?: string
+          state_uf?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       manual_reviews: {
         Row: {
           approved: boolean
@@ -1839,6 +2038,162 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      panda_videos: {
+        Row: {
+          category_name: string | null
+          copies_approved: boolean | null
+          copies_generated: boolean | null
+          copies_generated_at: string | null
+          created_at: string
+          description: string | null
+          duration_seconds: number | null
+          embed_url: string | null
+          file_size_bytes: number | null
+          gbp_post_id: string | null
+          gbp_post_status: string | null
+          gbp_posted_at: string | null
+          id: string
+          instagram_post_id: string | null
+          instagram_posted_at: string | null
+          language: string | null
+          last_synced_at: string | null
+          panda_finish_rate: number | null
+          panda_folder_id: string | null
+          panda_play_count: number | null
+          panda_stats_updated_at: string | null
+          panda_url: string | null
+          panda_video_id: string
+          panda_view_count: number | null
+          product_id: string | null
+          product_name: string | null
+          sistema_b_reference: string | null
+          source: string
+          status: string
+          tags: string[] | null
+          thumbnail_url: string | null
+          title: string
+          transcript: string | null
+          transcript_updated_at: string | null
+          updated_at: string
+          youtube_description: string | null
+          youtube_posted_at: string | null
+          youtube_status: string | null
+          youtube_tags: string[] | null
+          youtube_title: string | null
+          youtube_url: string | null
+          youtube_video_id: string | null
+          yt_avg_view_duration: number | null
+          yt_comment_count: number | null
+          yt_ctr: number | null
+          yt_impressions: number | null
+          yt_like_count: number | null
+          yt_stats_updated_at: string | null
+          yt_view_count: number | null
+        }
+        Insert: {
+          category_name?: string | null
+          copies_approved?: boolean | null
+          copies_generated?: boolean | null
+          copies_generated_at?: string | null
+          created_at?: string
+          description?: string | null
+          duration_seconds?: number | null
+          embed_url?: string | null
+          file_size_bytes?: number | null
+          gbp_post_id?: string | null
+          gbp_post_status?: string | null
+          gbp_posted_at?: string | null
+          id?: string
+          instagram_post_id?: string | null
+          instagram_posted_at?: string | null
+          language?: string | null
+          last_synced_at?: string | null
+          panda_finish_rate?: number | null
+          panda_folder_id?: string | null
+          panda_play_count?: number | null
+          panda_stats_updated_at?: string | null
+          panda_url?: string | null
+          panda_video_id: string
+          panda_view_count?: number | null
+          product_id?: string | null
+          product_name?: string | null
+          sistema_b_reference?: string | null
+          source?: string
+          status?: string
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          title: string
+          transcript?: string | null
+          transcript_updated_at?: string | null
+          updated_at?: string
+          youtube_description?: string | null
+          youtube_posted_at?: string | null
+          youtube_status?: string | null
+          youtube_tags?: string[] | null
+          youtube_title?: string | null
+          youtube_url?: string | null
+          youtube_video_id?: string | null
+          yt_avg_view_duration?: number | null
+          yt_comment_count?: number | null
+          yt_ctr?: number | null
+          yt_impressions?: number | null
+          yt_like_count?: number | null
+          yt_stats_updated_at?: string | null
+          yt_view_count?: number | null
+        }
+        Update: {
+          category_name?: string | null
+          copies_approved?: boolean | null
+          copies_generated?: boolean | null
+          copies_generated_at?: string | null
+          created_at?: string
+          description?: string | null
+          duration_seconds?: number | null
+          embed_url?: string | null
+          file_size_bytes?: number | null
+          gbp_post_id?: string | null
+          gbp_post_status?: string | null
+          gbp_posted_at?: string | null
+          id?: string
+          instagram_post_id?: string | null
+          instagram_posted_at?: string | null
+          language?: string | null
+          last_synced_at?: string | null
+          panda_finish_rate?: number | null
+          panda_folder_id?: string | null
+          panda_play_count?: number | null
+          panda_stats_updated_at?: string | null
+          panda_url?: string | null
+          panda_video_id?: string
+          panda_view_count?: number | null
+          product_id?: string | null
+          product_name?: string | null
+          sistema_b_reference?: string | null
+          source?: string
+          status?: string
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          title?: string
+          transcript?: string | null
+          transcript_updated_at?: string | null
+          updated_at?: string
+          youtube_description?: string | null
+          youtube_posted_at?: string | null
+          youtube_status?: string | null
+          youtube_tags?: string[] | null
+          youtube_title?: string | null
+          youtube_url?: string | null
+          youtube_video_id?: string | null
+          yt_avg_view_duration?: number | null
+          yt_comment_count?: number | null
+          yt_ctr?: number | null
+          yt_impressions?: number | null
+          yt_like_count?: number | null
+          yt_stats_updated_at?: string | null
+          yt_view_count?: number | null
+        }
+        Relationships: []
       }
       pipeline_audit_logs: {
         Row: {
@@ -2551,6 +2906,72 @@ export type Database = {
         }
         Relationships: []
       }
+      review_responses: {
+        Row: {
+          ai_model: string | null
+          author_name: string
+          created_at: string
+          error_message: string | null
+          id: string
+          manually_approved: boolean
+          original_rating: number | null
+          original_text: string | null
+          posted_at: string | null
+          raw_review_id: string | null
+          response_text: string
+          response_tone: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          ai_model?: string | null
+          author_name: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          manually_approved?: boolean
+          original_rating?: number | null
+          original_text?: string | null
+          posted_at?: string | null
+          raw_review_id?: string | null
+          response_text: string
+          response_tone?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          ai_model?: string | null
+          author_name?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          manually_approved?: boolean
+          original_rating?: number | null
+          original_text?: string | null
+          posted_at?: string | null
+          raw_review_id?: string | null
+          response_text?: string
+          response_tone?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_responses_raw_review_id_fkey"
+            columns: ["raw_review_id"]
+            isOneToOne: false
+            referencedRelation: "raw_reviews"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_responses_raw_review_id_fkey"
+            columns: ["raw_review_id"]
+            isOneToOne: false
+            referencedRelation: "v_reviews_with_responses"
+            referencedColumns: ["review_id"]
+          },
+        ]
+      }
       spin_selling_solutions: {
         Row: {
           active: boolean | null
@@ -2736,6 +3157,139 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      video_copies: {
+        Row: {
+          ai_model: string | null
+          ai_prompt_version: string | null
+          approved_at: string | null
+          char_count: number | null
+          content: string
+          copy_type: string
+          created_at: string
+          id: string
+          panda_video_id: string
+          status: string
+          updated_at: string
+          used_at: string | null
+          used_in: string | null
+        }
+        Insert: {
+          ai_model?: string | null
+          ai_prompt_version?: string | null
+          approved_at?: string | null
+          char_count?: number | null
+          content: string
+          copy_type: string
+          created_at?: string
+          id?: string
+          panda_video_id: string
+          status?: string
+          updated_at?: string
+          used_at?: string | null
+          used_in?: string | null
+        }
+        Update: {
+          ai_model?: string | null
+          ai_prompt_version?: string | null
+          approved_at?: string | null
+          char_count?: number | null
+          content?: string
+          copy_type?: string
+          created_at?: string
+          id?: string
+          panda_video_id?: string
+          status?: string
+          updated_at?: string
+          used_at?: string | null
+          used_in?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_copies_panda_video_id_fkey"
+            columns: ["panda_video_id"]
+            isOneToOne: false
+            referencedRelation: "panda_videos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_copies_panda_video_id_fkey"
+            columns: ["panda_video_id"]
+            isOneToOne: false
+            referencedRelation: "v_panda_videos_dashboard"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      video_publish_log: {
+        Row: {
+          action: string
+          copy_id: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          panda_video_id: string
+          payload_sent: Json | null
+          platform: string
+          platform_post_id: string | null
+          platform_url: string | null
+          response_raw: Json | null
+          status: string
+          triggered_by: string | null
+        }
+        Insert: {
+          action: string
+          copy_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          panda_video_id: string
+          payload_sent?: Json | null
+          platform: string
+          platform_post_id?: string | null
+          platform_url?: string | null
+          response_raw?: Json | null
+          status?: string
+          triggered_by?: string | null
+        }
+        Update: {
+          action?: string
+          copy_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          panda_video_id?: string
+          payload_sent?: Json | null
+          platform?: string
+          platform_post_id?: string | null
+          platform_url?: string | null
+          response_raw?: Json | null
+          status?: string
+          triggered_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_publish_log_copy_id_fkey"
+            columns: ["copy_id"]
+            isOneToOne: false
+            referencedRelation: "video_copies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_publish_log_panda_video_id_fkey"
+            columns: ["panda_video_id"]
+            isOneToOne: false
+            referencedRelation: "panda_videos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_publish_log_panda_video_id_fkey"
+            columns: ["panda_video_id"]
+            isOneToOne: false
+            referencedRelation: "v_panda_videos_dashboard"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       video_testimonials: {
         Row: {
@@ -2928,9 +3482,247 @@ export type Database = {
           },
         ]
       }
+      youtube_metadata_queue: {
+        Row: {
+          ai_model: string | null
+          approved_at: string | null
+          created_at: string
+          current_description: string | null
+          current_tags: string[] | null
+          current_title: string | null
+          error_message: string | null
+          id: string
+          processed_at: string | null
+          product_id: string | null
+          product_name: string | null
+          status: string
+          suggested_chapters: string | null
+          suggested_description: string | null
+          suggested_tags: string[] | null
+          suggested_title: string | null
+          updated_at: string
+          video_id: string
+          video_url: string | null
+        }
+        Insert: {
+          ai_model?: string | null
+          approved_at?: string | null
+          created_at?: string
+          current_description?: string | null
+          current_tags?: string[] | null
+          current_title?: string | null
+          error_message?: string | null
+          id?: string
+          processed_at?: string | null
+          product_id?: string | null
+          product_name?: string | null
+          status?: string
+          suggested_chapters?: string | null
+          suggested_description?: string | null
+          suggested_tags?: string[] | null
+          suggested_title?: string | null
+          updated_at?: string
+          video_id: string
+          video_url?: string | null
+        }
+        Update: {
+          ai_model?: string | null
+          approved_at?: string | null
+          created_at?: string
+          current_description?: string | null
+          current_tags?: string[] | null
+          current_title?: string | null
+          error_message?: string | null
+          id?: string
+          processed_at?: string | null
+          product_id?: string | null
+          product_name?: string | null
+          status?: string
+          suggested_chapters?: string | null
+          suggested_description?: string | null
+          suggested_tags?: string[] | null
+          suggested_title?: string | null
+          updated_at?: string
+          video_id?: string
+          video_url?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
-      [_ in never]: never
+      v_local_seo_summary: {
+        Row: {
+          approved: number | null
+          avg_priority: number | null
+          draft: number | null
+          html_ready: number | null
+          published: number | null
+          state_uf: string | null
+          total: number | null
+        }
+        Relationships: []
+      }
+      v_panda_videos_dashboard: {
+        Row: {
+          approved_copies: number | null
+          category_name: string | null
+          completeness_score: number | null
+          copies_approved: boolean | null
+          copies_generated: boolean | null
+          created_at: string | null
+          description: string | null
+          duration_seconds: number | null
+          embed_url: string | null
+          gbp_post_status: string | null
+          gbp_posted_at: string | null
+          id: string | null
+          instagram_copy_approved: string | null
+          last_publish_status: string | null
+          last_published_at: string | null
+          last_published_platform: string | null
+          last_synced_at: string | null
+          panda_finish_rate: number | null
+          panda_play_count: number | null
+          panda_url: string | null
+          panda_video_id: string | null
+          panda_view_count: number | null
+          product_id: string | null
+          product_name: string | null
+          status: string | null
+          tags: string[] | null
+          thumbnail_url: string | null
+          title: string | null
+          total_copies: number | null
+          updated_at: string | null
+          whatsapp_copy_approved: string | null
+          youtube_posted_at: string | null
+          youtube_status: string | null
+          youtube_url: string | null
+          youtube_video_id: string | null
+          yt_comment_count: number | null
+          yt_ctr: number | null
+          yt_description_approved: string | null
+          yt_impressions: number | null
+          yt_like_count: number | null
+          yt_stats_updated_at: string | null
+          yt_title_approved: string | null
+          yt_view_count: number | null
+        }
+        Insert: {
+          approved_copies?: never
+          category_name?: string | null
+          completeness_score?: never
+          copies_approved?: boolean | null
+          copies_generated?: boolean | null
+          created_at?: string | null
+          description?: string | null
+          duration_seconds?: number | null
+          embed_url?: string | null
+          gbp_post_status?: string | null
+          gbp_posted_at?: string | null
+          id?: string | null
+          instagram_copy_approved?: never
+          last_publish_status?: never
+          last_published_at?: never
+          last_published_platform?: never
+          last_synced_at?: string | null
+          panda_finish_rate?: number | null
+          panda_play_count?: number | null
+          panda_url?: string | null
+          panda_video_id?: string | null
+          panda_view_count?: number | null
+          product_id?: string | null
+          product_name?: string | null
+          status?: string | null
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          title?: string | null
+          total_copies?: never
+          updated_at?: string | null
+          whatsapp_copy_approved?: never
+          youtube_posted_at?: string | null
+          youtube_status?: string | null
+          youtube_url?: string | null
+          youtube_video_id?: string | null
+          yt_comment_count?: number | null
+          yt_ctr?: number | null
+          yt_description_approved?: never
+          yt_impressions?: number | null
+          yt_like_count?: number | null
+          yt_stats_updated_at?: string | null
+          yt_title_approved?: never
+          yt_view_count?: number | null
+        }
+        Update: {
+          approved_copies?: never
+          category_name?: string | null
+          completeness_score?: never
+          copies_approved?: boolean | null
+          copies_generated?: boolean | null
+          created_at?: string | null
+          description?: string | null
+          duration_seconds?: number | null
+          embed_url?: string | null
+          gbp_post_status?: string | null
+          gbp_posted_at?: string | null
+          id?: string | null
+          instagram_copy_approved?: never
+          last_publish_status?: never
+          last_published_at?: never
+          last_published_platform?: never
+          last_synced_at?: string | null
+          panda_finish_rate?: number | null
+          panda_play_count?: number | null
+          panda_url?: string | null
+          panda_video_id?: string | null
+          panda_view_count?: number | null
+          product_id?: string | null
+          product_name?: string | null
+          status?: string | null
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          title?: string | null
+          total_copies?: never
+          updated_at?: string | null
+          whatsapp_copy_approved?: never
+          youtube_posted_at?: string | null
+          youtube_status?: string | null
+          youtube_url?: string | null
+          youtube_video_id?: string | null
+          yt_comment_count?: number | null
+          yt_ctr?: number | null
+          yt_description_approved?: never
+          yt_impressions?: number | null
+          yt_like_count?: number | null
+          yt_stats_updated_at?: string | null
+          yt_title_approved?: never
+          yt_view_count?: number | null
+        }
+        Relationships: []
+      }
+      v_reviews_with_responses: {
+        Row: {
+          action_needed: string | null
+          ai_model: string | null
+          author_name: string | null
+          error_message: string | null
+          existing_owner_response: string | null
+          manually_approved: boolean | null
+          posted_at: string | null
+          profile_photo_url: string | null
+          rating: number | null
+          response_created_at: string | null
+          response_id: string | null
+          response_status: string | null
+          response_text: string | null
+          response_tone: string | null
+          review_created_at: string | null
+          review_date: string | null
+          review_id: string | null
+          review_text: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       admin_update_landing_page: {
@@ -2951,6 +3743,14 @@ export type Database = {
       auto_close_stale_lia_conversations: { Args: never; Returns: undefined }
       calculate_landing_page_score: { Args: { lp_id: string }; Returns: Json }
       calculate_product_score: { Args: { product_id: string }; Returns: Json }
+      fn_get_local_seo_schema_block: {
+        Args: { p_target_id: string }
+        Returns: Json
+      }
+      fn_get_reviews_schema_block: {
+        Args: { p_company_name?: string; p_company_url?: string }
+        Returns: Json
+      }
       get_complete_knowledge_base:
         | {
             Args: {
