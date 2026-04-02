@@ -6,85 +6,86 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-/**
- * Trunca logs sensíveis para até 50 caracteres
- */
-function logPreview(value: string, label: string = ''): void {
-  const preview = value.length > 50 ? `${value.substring(0, 50)}...` : value;
-  console.log(`${label}: ${preview}`);
-}
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let credentialSource = 'unknown';
   try {
-    // Get Supabase client to read from database
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
       { auth: { persistSession: false } }
     );
 
-    // Try to get credentials from database first (per-user config)
-    const authHeader = req.headers.get('Authorization');
-    let clientId, clientSecret, refreshToken;
+    console.log('🔍 Checking YouTube OAuth credentials...');
 
+    let clientId: string | undefined, clientSecret: string | undefined, refreshToken: string | undefined;
+
+    // Priority 1: oauth_credentials table (unified flow)
+    const authHeader = req.headers.get('Authorization');
     if (authHeader) {
       const token = authHeader.replace('Bearer ', '');
       const { data: { user } } = await supabaseClient.auth.getUser(token);
       
       if (user) {
-        const { data: credsData } = await supabaseClient
-          .from('youtube_oauth_credentials')
+        // Try oauth_credentials first (new flow)
+        const { data: creds } = await supabaseClient
+          .from('oauth_credentials')
           .select('client_id, client_secret, refresh_token')
           .eq('user_id', user.id)
-          .single();
+          .eq('provider', 'youtube')
+          .maybeSingle();
 
-        if (credsData) {
-          clientId = credsData.client_id;
-          clientSecret = credsData.client_secret;
-          refreshToken = credsData.refresh_token;
-          console.log('✅ Using credentials from database for user:', user.id);
+        if (creds?.refresh_token) {
+          clientId = creds.client_id;
+          clientSecret = creds.client_secret;
+          refreshToken = creds.refresh_token;
+          credentialSource = 'oauth_credentials';
+          console.log('✅ Found credentials in oauth_credentials');
+        }
+
+        // Fallback: google_oauth_tokens (legacy)
+        if (!refreshToken) {
+          const { data: legacyCreds } = await supabaseClient
+            .from('google_oauth_tokens')
+            .select('provider_refresh_token')
+            .eq('user_id', user.id)
+            .contains('scopes', ['https://www.googleapis.com/auth/youtube.force-ssl'])
+            .maybeSingle();
+          
+          if (legacyCreds?.provider_refresh_token) {
+            refreshToken = legacyCreds.provider_refresh_token;
+            credentialSource = 'google_oauth_tokens';
+            console.log('✅ Found credentials in google_oauth_tokens (legacy)');
+          }
         }
       }
     }
 
-    // Fallback to environment variables
-    if (!clientId) clientId = Deno.env.get('YOUTUBE_CLIENT_ID');
-    if (!clientSecret) clientSecret = Deno.env.get('YOUTUBE_CLIENT_SECRET');
-    if (!refreshToken) refreshToken = Deno.env.get('YOUTUBE_REFRESH_TOKEN');
+    // Fallback: environment variables
+    if (!clientId) clientId = Deno.env.get('GOOGLE_CLIENT_ID') || Deno.env.get('YOUTUBE_CLIENT_ID');
+    if (!clientSecret) clientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET') || Deno.env.get('YOUTUBE_CLIENT_SECRET');
+    if (!refreshToken) {
+      refreshToken = Deno.env.get('YOUTUBE_REFRESH_TOKEN');
+      if (refreshToken) credentialSource = 'environment';
+    }
 
-    console.log('🔍 Checking YouTube OAuth credentials...');
-    
     if (!clientId || !clientSecret || !refreshToken) {
       const missing = [];
-      if (!clientId) missing.push('YOUTUBE_CLIENT_ID');
-      if (!clientSecret) missing.push('YOUTUBE_CLIENT_SECRET');
-      if (!refreshToken) missing.push('YOUTUBE_REFRESH_TOKEN');
-      
-      console.log('❌ Missing secrets:', missing.join(', '));
+      if (!clientId) missing.push('CLIENT_ID');
+      if (!clientSecret) missing.push('CLIENT_SECRET');
+      if (!refreshToken) missing.push('REFRESH_TOKEN');
       
       return new Response(
-        JSON.stringify({ 
-          ok: false,
-          error: 'Missing YouTube OAuth credentials',
-          missing 
-        }),
+        JSON.stringify({ ok: false, error: 'Missing YouTube OAuth credentials', missing }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    let credentialSource = clientId === Deno.env.get('YOUTUBE_CLIENT_ID') ? 'environment' : 'database';
-
-    logPreview(clientId, '✅ Client ID');
-    logPreview(clientSecret, '✅ Client Secret');
-    logPreview(refreshToken, '✅ Refresh Token');
-
-    // Trocar refresh_token por access_token
-    console.log('🔄 Exchanging refresh_token for access_token...');
-    let tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+    console.log(`🔄 Refreshing token (source: ${credentialSource})...`);
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
@@ -95,41 +96,7 @@ serve(async (req) => {
       }),
     });
 
-    let tokenData = await tokenResponse.json();
-
-    // 🔥 FALLBACK: Se OAuth falhou com deleted_client ou invalid_grant, tentar env vars
-    if (!tokenResponse.ok && (tokenData.error === 'deleted_client' || tokenData.error === 'invalid_grant')) {
-      console.error(`❌ Token refresh failed (${tokenData.error}):`, tokenData);
-      
-      const envClientId = Deno.env.get('YOUTUBE_CLIENT_ID');
-      const envClientSecret = Deno.env.get('YOUTUBE_CLIENT_SECRET');
-      const envRefreshToken = Deno.env.get('YOUTUBE_REFRESH_TOKEN');
-      
-      if (envClientId && envClientSecret && envRefreshToken && credentialSource !== 'environment') {
-        console.log('🔄 Retrying with environment variables fallback...');
-        
-        tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams({
-            client_id: envClientId,
-            client_secret: envClientSecret,
-            refresh_token: envRefreshToken,
-            grant_type: 'refresh_token',
-          }),
-        });
-        
-        tokenData = await tokenResponse.json();
-        
-        if (tokenResponse.ok) {
-          clientId = envClientId;
-          clientSecret = envClientSecret;
-          refreshToken = envRefreshToken;
-          credentialSource = 'environment_fallback';
-          console.log('✅ Token refresh successful with env vars fallback!');
-        }
-      }
-    }
+    const tokenData = await tokenResponse.json();
 
     if (!tokenResponse.ok) {
       console.error('❌ Token refresh failed:', tokenData);
@@ -145,66 +112,41 @@ serve(async (req) => {
     }
 
     const accessToken = tokenData.access_token;
-    logPreview(accessToken, '✅ New Access Token');
 
-    // Testar API do YouTube
-    console.log('🧪 Testing YouTube API connection...');
+    console.log('🧪 Testing YouTube API...');
     const apiResponse = await fetch(
       'https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true',
-      {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
-      }
+      { headers: { 'Authorization': `Bearer ${accessToken}` } }
     );
 
     const apiData = await apiResponse.json();
 
     if (!apiResponse.ok) {
-      console.error('❌ YouTube API test failed:', apiData);
       return new Response(
-        JSON.stringify({ 
-          ok: false,
-          error: apiData.error?.message || 'YouTube API test failed',
-          details: apiData 
-        }),
+        JSON.stringify({ ok: false, error: apiData.error?.message || 'YouTube API test failed', details: apiData }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const channelCount = apiData.items?.length || 0;
     const channelName = apiData.items?.[0]?.snippet?.title || 'Unknown';
-    
-    console.log('✅ YouTube API connection successful!');
-    console.log(`📺 Channel: ${channelName} (${channelCount} channel(s) found)`);
+    console.log(`✅ YouTube connected: ${channelName}`);
 
     return new Response(
       JSON.stringify({ 
         ok: true,
-        channelCount,
+        channelCount: apiData.items?.length || 0,
         channelName,
         credentialSource,
-        message: `YouTube OAuth credentials are valid (Source: ${credentialSource})`
+        message: `YouTube conectado: ${channelName} (via ${credentialSource})`
       }),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
-    console.error('❌ Error in test-youtube-connection:', error);
-    
+    console.error('❌ Error:', error);
     return new Response(
-      JSON.stringify({ 
-        ok: false,
-        error: 'Failed to test YouTube connection',
-        details: (error as Error).message 
-      }),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
+      JSON.stringify({ ok: false, error: 'Failed to test YouTube connection', details: (error as Error).message }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
