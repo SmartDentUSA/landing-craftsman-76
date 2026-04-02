@@ -154,6 +154,13 @@ function ReviewResponsesCard() {
             {postMutation.isPending && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
             Postar Pendentes
           </Button>
+          {failedCount > 0 && (
+            <Button size="sm" variant="outline" className="border-red-300 text-red-700 hover:bg-red-50" onClick={() => retryFailedMutation.mutate()} disabled={retryFailedMutation.isPending}>
+              {retryFailedMutation.isPending && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+              <RefreshCw className="h-4 w-4 mr-1" />
+              Retentar {failedCount} Falhadas
+            </Button>
+          )}
         </div>
       </CardHeader>
       <CardContent>
