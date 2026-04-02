@@ -191,6 +191,10 @@ const Repository = () => {
                   <BookOpen className="h-4 w-4" />
                   Apostila
                 </TabsTrigger>
+                <TabsTrigger value="google-apis" className="gap-2">
+                  <Building2 className="h-4 w-4" />
+                  Google APIs
+                </TabsTrigger>
               </TabsList>
               
               <TabsContent value="repository">
