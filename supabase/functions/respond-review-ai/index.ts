@@ -72,6 +72,7 @@ async function generateResponses(supabase: any, limit: number, reviewId?: string
   const { data: reviews, error: reviewsError } = await query
 
   if (reviewsError) throw new Error(`Failed to fetch reviews: ${reviewsError.message}`)
+  console.log('[REVIEWS] Raw reviews fetched:', reviews?.length || 0)
   if (!reviews || reviews.length === 0) return { generated: 0, responses: [] }
 
   // Step 2: Filter out reviews that already have AI-generated responses in review_responses table
@@ -84,6 +85,7 @@ async function generateResponses(supabase: any, limit: number, reviewId?: string
   const existingIds = new Set((existingResponses || []).map((r: any) => r.raw_review_id))
   const newReviews = reviews.filter((r: any) => !existingIds.has(r.id)).slice(0, limit)
 
+  console.log('[REVIEWS] Existing responses:', existingIds.size, '| New reviews to process:', newReviews.length)
   if (newReviews.length === 0) return { generated: 0, responses: [], message: 'Todas as reviews já possuem respostas geradas' }
 
   const apiKey = Deno.env.get('LOVABLE_API_KEY')

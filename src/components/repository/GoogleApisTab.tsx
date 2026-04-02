@@ -330,7 +330,20 @@ function YouTubeQueueCard() {
   const queryClient = useQueryClient();
   const [newVideoId, setNewVideoId] = useState('');
   const [newProductName, setNewProductName] = useState('');
+  const [selectedProductId, setSelectedProductId] = useState('');
   const [diffItem, setDiffItem] = useState<any>(null);
+
+  const { data: products } = useQuery({
+    queryKey: ['products-for-youtube'],
+    queryFn: async (): Promise<Array<{id: string; name: string; category: string}>> => {
+      const res = await supabase
+        .from('products_repository' as any)
+        .select('id, name, category')
+        .eq('is_active', true)
+        .order('name');
+      return (res.data as any[]) || [];
+    },
+  });
 
   const { data: items, isLoading } = useQuery({
     queryKey: ['youtube-queue'],
@@ -363,11 +376,16 @@ function YouTubeQueueCard() {
   });
 
   const addToQueue = async () => {
-    if (!newVideoId) return;
+    if (!newVideoId || !selectedProductId) {
+      toast({ title: 'Erro', description: 'Selecione um produto antes de adicionar', variant: 'destructive' });
+      return;
+    }
+    const selectedProduct = (products || []).find((p: any) => p.id === selectedProductId);
     const { error } = await supabase.from('youtube_metadata_queue').insert({
       video_id: newVideoId,
       video_url: `https://youtube.com/watch?v=${newVideoId}`,
-      product_name: newProductName || null,
+      product_id: selectedProductId,
+      product_name: selectedProduct?.name || newProductName || null,
       status: 'pending',
     });
     if (error) {
@@ -376,6 +394,7 @@ function YouTubeQueueCard() {
       toast({ title: 'Vídeo adicionado à fila' });
       setNewVideoId('');
       setNewProductName('');
+      setSelectedProductId('');
       queryClient.invalidateQueries({ queryKey: ['youtube-queue'] });
     }
   };
@@ -410,13 +429,32 @@ function YouTubeQueueCard() {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex gap-2 items-end">
+        <div className="flex gap-2 items-end flex-wrap">
           <Input placeholder="YouTube Video ID" value={newVideoId} onChange={(e) => setNewVideoId(e.target.value)} className="max-w-[200px]" />
-          <Input placeholder="Produto vinculado" value={newProductName} onChange={(e) => setNewProductName(e.target.value)} className="max-w-[200px]" />
-          <Button size="sm" onClick={addToQueue} disabled={!newVideoId}>
+          <Select value={selectedProductId} onValueChange={(val) => {
+            setSelectedProductId(val);
+            const p = (products || []).find((pr: any) => pr.id === val);
+            if (p) setNewProductName(p.name);
+          }}>
+            <SelectTrigger className="max-w-[250px]">
+              <SelectValue placeholder="Selecione o produto *" />
+            </SelectTrigger>
+            <SelectContent>
+              {(products || []).map((p: any) => (
+                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button size="sm" onClick={addToQueue} disabled={!newVideoId || !selectedProductId}>
             <Plus className="h-4 w-4 mr-1" /> Adicionar
           </Button>
         </div>
+        {/* Alerta para items sem produto */}
+        {(items || []).some((i: any) => !i.product_id) && (
+          <div className="text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded p-2">
+            ⚠️ Existem vídeos na fila sem produto vinculado. A IA não pode gerar metadados sem produto.
+          </div>
+        )}
 
         {isLoading ? (
           <div className="flex justify-center py-4"><Loader2 className="h-6 w-6 animate-spin" /></div>

@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { getValidGoogleToken } from '../_shared/google-auth.ts'
+import { mapProductToContext, buildFullPrompt } from '../_shared/clinical-brain-guard.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -63,11 +64,34 @@ async function generateMetadata(supabase: any, limit: number, videoId?: string) 
   const processed: any[] = []
 
   for (const item of items) {
-    const prompt = `Otimize os metadados deste vídeo odontológico para YouTube SEO em português:
+    // Validação: product_id ou product_name obrigatório
+    if (!item.product_id && !item.product_name) {
+      console.error('[YT] Skipping video', item.video_id, '— no product linked')
+      await supabase
+        .from('youtube_metadata_queue')
+        .update({
+          status: 'error',
+          error_message: 'product_id ausente — vincule um produto antes de gerar metadados',
+        })
+        .eq('id', item.id)
+      continue
+    }
+
+    // Buscar produto real se product_id disponível
+    let productContext = null
+    if (item.product_id) {
+      const { data: prod } = await supabase
+        .from('products_repository')
+        .select('name, category, price, description, benefits, features, keywords, technical_specifications, sales_pitch, target_audience, impact_metrics, clinical_brain')
+        .eq('id', item.product_id)
+        .single()
+      if (prod) productContext = mapProductToContext(prod)
+    }
+
+    const ytPrompt = `Otimize os metadados deste vídeo odontológico para YouTube SEO em português:
 Título atual: ${item.current_title || 'Não informado'}
 Descrição atual: ${item.current_description || 'Não informada'}
 Tags atuais: ${(item.current_tags || []).join(', ') || 'Nenhuma'}
-Produto vinculado: ${item.product_name || 'Não especificado'}
 
 Retorne APENAS um JSON válido (sem markdown) com:
 {
@@ -76,6 +100,10 @@ Retorne APENAS um JSON válido (sem markdown) com:
   "tags": ["array de 15 strings, mix PT+EN"],
   "chapters": "00:00 Introdução\\n02:30 ... (se identificar seções)"
 }`
+
+    const prompt = productContext
+      ? buildFullPrompt(productContext, ytPrompt)
+      : ytPrompt
 
     try {
       const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
