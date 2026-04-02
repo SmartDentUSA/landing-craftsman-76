@@ -2,6 +2,7 @@ import "https://deno.land/x/xhr@0.3.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
 import { trackFromResponse } from '../_shared/track-ai-usage.ts';
+import { injectClinicalBrainGuard, mapProductToContext } from '../_shared/clinical-brain-guard.ts';
 // ✅ Tracking Pixels Injection v2.0
 import { generateTrackingHeadScripts, generateGTMNoScript, generateTrackingDebugComment, type TrackingPixels } from '../_shared/tracking-injector.ts';
 import { fetchAggregateRating, type AggregateRatingData } from "../_shared/aggregate-rating-helper.ts";

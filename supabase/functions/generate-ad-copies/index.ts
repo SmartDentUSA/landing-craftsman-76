@@ -7,6 +7,8 @@ import {
   validateGoogleAdsPath,
   applyFallback
 } from "../_shared/content-validators.ts";
+import { buildFullPrompt, mapProductToContext } from '../_shared/clinical-brain-guard.ts';
+import { PROMPTS } from '../_shared/prompt-templates.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
