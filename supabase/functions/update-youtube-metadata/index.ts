@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { getValidGoogleToken } from '../_shared/google-auth.ts'
+import { mapProductToContext, buildFullPrompt } from '../_shared/clinical-brain-guard.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
