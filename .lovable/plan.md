@@ -1,81 +1,137 @@
 
+## Corrigir Google APIs logado pelo Google, mas sem funcionar
 
-## Transformar Carrossel Engajamento em Editor Visual Completo
+### Diagnóstico resumido
+O problema não é “login Google”. O login do usuário está separado das credenciais usadas pelas integrações Google APIs.
 
-### Situacao atual
-O "Carrossel Engajamento" e apenas texto (titulo + corpo + sugestao de imagem). O "Carrossel Visual" (StrategicCarouselPreview.tsx, ~1867 linhas) tem preview visual com canvas 1080x1350, upload de imagem, editor de texto inline, export PNG, controles de cor/escala/fonte.
+Hoje existem 4 quebras principais no fluxo:
 
-O usuario quer que o Engajamento tenha as mesmas capacidades visuais, porem com um layout diferente inspirado nas imagens de referencia (@brandsdecoded): fundo escuro, texto grande bold com palavras em cor destaque (laranja/vermelho), imagem centralizada, header com marca, e suporte a video alem de imagem.
+1. **OAuth salvo em uma tabela, consumo em outra**
+   - As telas de OAuth salvam em `oauth_credentials`
+   - As edge functions críticas (`respond-review-ai`, `update-youtube-metadata`, `refresh-google-token`, `_shared/google-auth.ts`) ainda dependem de `google_oauth_tokens`
+   - Resultado: usuário conecta, mas as funções dizem que OAuth não está configurado
 
-### Layout dos slides (baseado nas referencias)
+2. **Callback OAuth volta para `/repository`, mas o processamento do código está nas páginas erradas**
+   - `OAuthCallback.tsx` redireciona para `/repository`
+   - Porém quem escuta `openOAuthModal/code` são `GoogleBusinessOAuthSettings.tsx` e `YouTubeOAuthSettings.tsx`
+   - Resultado: o código OAuth chega, mas muitas vezes não é trocado por refresh token no lugar certo
 
-Cada slide segue este padrao:
-- **Header**: barra superior com "Powered by [marca]" a esquerda, "@handle" centro, "2026 //" direita
-- **Bloco de texto**: tipografia grande, bold, com palavras-chave em cor destaque (laranja). Frases curtas e impactantes
-- **Imagem/Video**: foto ou video centralizado, proporcao ~16:9 dentro do card
-- **Texto inferior**: paragrafo de apoio em fonte menor, com trechos em cor destaque
-- **Fundo**: escuro (#1a1a1a) ou claro (#f5f5f5) alternando entre slides
+3. **YouTube usa fonte antiga para testar**
+   - `test-youtube-connection` ainda busca `youtube_oauth_credentials`
+   - A UI nova salva em `oauth_credentials`
+   - Resultado: YouTube parece desconectado mesmo após configurar
 
-### Plano de implementacao
+4. **Google Reviews posta no endpoint antigo**
+   - `respond-review-ai` usa `mybusiness.googleapis.com/v4/.../reply`
+   - O projeto já está migrando para APIs novas em outros pontos
+   - Mesmo com token válido, isso pode falhar ou ficar inconsistente
 
-**Arquivo 1: `src/components/EngagementCarouselPreview.tsx`** (CRIAR — ~800-1000 linhas)
+### O que vou implementar
 
-Componente visual completo seguindo a arquitetura do StrategicCarouselPreview:
+#### 1) Unificar a leitura de credenciais Google
+Criar/ajustar a camada compartilhada para que **todas** as funções Google leiam primeiro de `oauth_credentials` e só usem `google_oauth_tokens` como fallback temporário.
 
-1. **6 slides renderizados em canvas 1080x1350** com layout @brandsdecoded:
-   - Slide 1 (Capa/Gancho): fundo escuro + imagem + texto grande bold
-   - Slide 2 (Problema): fundo claro + texto + imagem
-   - Slide 3 (Solucao): fundo escuro + texto com destaque + imagem
-   - Slide 4 (Prova): fundo claro + texto + imagem
-   - Slide 5 (Autoridade): fundo escuro + texto + imagem
-   - Slide 6 (CTA): fundo escuro + texto CTA + imagem
+Arquivos:
+- `supabase/functions/_shared/google-auth.ts`
+- `supabase/functions/refresh-google-token/index.ts`
 
-2. **Funcionalidades iguais ao Carrossel Visual**:
-   - Upload de imagem por slide (reutilizar pattern do SlideWrapper)
-   - **Upload de video** por slide (aceitar video/*, exibir `<video>` no preview, gerar thumbnail para export PNG)
-   - Editor inline de textos (textarea com bold/italic/uppercase)
-   - Controles de cor (fundo, cor de destaque do texto)
-   - Escala de imagem por slide (slider 50-150%)
-   - Seletor de fonte e tamanho global
-   - Export individual e em lote como PNG via Canvas 2D
+Objetivo:
+- Buscar credenciais por usuário e provider (`google_business` / `youtube`)
+- Fazer refresh com `GOOGLE_CLIENT_ID/SECRET` ou com credenciais salvas do usuário, conforme o fluxo já existente
+- Parar de depender exclusivamente de `google_oauth_tokens`
 
-3. **Renderizacao de texto rico**: suporte a `**bold**` e `{destaque}` para aplicar cor accent em palavras especificas
+#### 2) Corrigir o callback OAuth no front
+Mover o processamento do retorno OAuth para o fluxo que realmente recebe o redirecionamento.
 
-4. **Media type toggle**: botao por slide para alternar entre imagem e video. Videos mostram thumbnail no preview e frame no export
+Arquivos:
+- `src/pages/OAuthCallback.tsx`
+- `src/pages/Repository.tsx`
+- possivelmente `src/components/OAuthSettingsCard.tsx`
 
-**Arquivo 2: `src/components/EngagementCarouselSection.tsx`** (REESCREVER)
+Objetivo:
+- Quando o callback voltar com `code`, abrir a aba correta e encaminhar o código para o componente certo
+- Garantir que o token seja efetivamente salvo em `oauth_credentials`
+- Eliminar o estado “logado no Google, mas sem integração ativa”
 
-Transformar de componente texto-only para wrapper que:
-- Gera conteudo via IA (manter edge function existente)
-- Mapeia slides gerados para o estado do editor visual
-- Renderiza `<EngagementCarouselPreview>` com todos os controles
-- Persiste configuracoes visuais (imagens, cores, textos editados) no campo `engagement_carousel` do `instagram_copies`
-- Botoes "Exportar PNGs" e "Baixar ZIP" (reutilizar logica do JSZip existente)
+#### 3) Corrigir testes de conexão
+Padronizar testes de Google Business e YouTube para a mesma origem de dados.
 
-**Arquivo 3: `src/components/InstagramCopyGenerator.tsx`** (EDITAR)
+Arquivos:
+- `supabase/functions/test-youtube-connection/index.ts`
+- `supabase/functions/test-google-business-connection/index.ts`
 
-- Substituir o `<EngagementCarouselSection>` simples pelo novo com props adicionais (productImages, primaryColor, accentColor)
-- Passar as mesmas imagens do produto ja carregadas
+Objetivo:
+- YouTube passar a ler `oauth_credentials`
+- Google Business manter leitura coerente com o novo fluxo
+- Mensagens de erro ficarem claras: sem credencial, token expirado, escopo faltando, client inválido
 
-### Detalhes tecnicos
+#### 4) Corrigir postagem de respostas de reviews
+Atualizar a função para usar token válido do novo fluxo e revisar o endpoint de reply.
 
-- **Video upload**: `<input accept="image/*,video/*">`. Para video, criar thumbnail via `<canvas>` + `<video>.currentTime`. No export PNG, desenhar o frame do video no canvas
-- **Texto com destaque**: parser simples — `{texto}` renderiza com `accentColor`, `**texto**` renderiza bold. Combinaveis
-- **Persistencia**: salvar `slideImageMap`, `slideTexts`, `mediaType` (image|video) por slide no JSON do banco
-- **Export PNG**: funcao `generateEngagementSlidePNG()` similar a `generateSlidePNG()` existente, com o layout @brandsdecoded
+Arquivo:
+- `supabase/functions/respond-review-ai/index.ts`
 
-### Arquivos afetados
+Objetivo:
+- Gerar/postar respostas reais usando o token correto
+- Continuar usando a lógica já certa de “reviews sem resposta IA”, não a presença de resposta manual do dono
+- Melhorar logs para diferenciar: sem token, endpoint Google falhou, review sem identificador válido
 
-| Arquivo | Acao |
-|---|---|
-| `src/components/EngagementCarouselPreview.tsx` | **Criar** |
-| `src/components/EngagementCarouselSection.tsx` | Reescrever |
-| `src/components/InstagramCopyGenerator.tsx` | Editar (passar props extras) |
+#### 5) Corrigir pipeline do YouTube
+Fazer a geração e aplicação dependerem de credenciais consistentes e validação real de item.
+
+Arquivo:
+- `supabase/functions/update-youtube-metadata/index.ts`
+
+Objetivo:
+- Usar o mesmo resolvedor de token compartilhado
+- Evitar fila “presa” por credencial aparentemente conectada mas não utilizável
+- Manter a validação de `product_id`
+
+#### 6) Melhorar SEO Local para parecer SmartDent de verdade
+A função já injeta alguns produtos reais, mas ainda deixa o layout muito genérico porque o HTML final fica por conta do modelo sem um template visual mais rígido.
+
+Arquivo:
+- `supabase/functions/generate-local-seo-page/index.ts`
+
+Objetivo:
+- Forçar estrutura branded:
+  - header com marca SmartDent
+  - hero com proposta real da empresa
+  - cards de produtos reais com imagem real
+  - bloco de diferenciais da SmartDent
+  - CTA e visual mais profissional
+- Reduzir páginas “genéricas” mesmo quando houver poucos produtos compatíveis
+
+### Ordem de implementação
+1. Unificar token/refresh em `_shared/google-auth.ts` e `refresh-google-token`
+2. Corrigir callback OAuth no front
+3. Corrigir `test-youtube-connection` e alinhar testes
+4. Corrigir `respond-review-ai`
+5. Corrigir `update-youtube-metadata`
+6. Reforçar template branded em `generate-local-seo-page`
 
 ### Resultado esperado
-- Carrossel Engajamento gera imagens visuais no estilo @brandsdecoded (fundo escuro, texto grande, destaques em cor)
-- Upload de imagem E video por slide
-- Editor inline com formatacao (bold, destaque colorido, uppercase)
-- Export como PNG 1080x1350
-- Mesmas funcionalidades do Carrossel Visual mas com layout editorial/storytelling
+- Usuário pode estar logado com Google e também ter a integração realmente ativa
+- Google Business passa a funcionar para postar respostas
+- YouTube deixa de parecer “desconectado” falsamente
+- SEO Local passa a gerar páginas com cara de SmartDent, usando logo/branding/produtos reais
+- O hub “Google APIs” finalmente reflete o estado real das integrações
 
+### Detalhes técnicos
+```text
+Situação atual:
+Login Google do app -> OK
+OAuth integrações -> salvo em oauth_credentials
+Funções backend -> ainda leem google_oauth_tokens / tabela antiga
+Callback -> volta para /repository, mas listener fica em outra tela
+
+Situação corrigida:
+Login Google do app -> independente
+OAuth integrações -> salvo e lido de oauth_credentials
+Shared token resolver -> centralizado
+Callback -> processado onde o usuário realmente retorna
+Reviews / YouTube / SEO -> usam a mesma base correta
+```
+
+Risco principal:
+- há coexistência de fluxos antigos e novos; vou preservar compatibilidade temporária com fallback para não quebrar credenciais já existentes durante a transição.
