@@ -132,7 +132,7 @@ termine convidando para contato via WhatsApp.`
           original_rating: review.rating,
           original_text: review.review_text,
           response_text: responseText.trim(),
-          ai_model: 'gemini-1.5-flash',
+          ai_model: 'gemini-2.5-flash',
           status: 'pending',
         })
         .select('id, author_name, response_text')

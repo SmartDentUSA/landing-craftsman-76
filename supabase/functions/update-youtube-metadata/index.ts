@@ -111,7 +111,7 @@ Retorne APENAS um JSON válido (sem markdown) com:
           suggested_description: parsed.description,
           suggested_tags: parsed.tags,
           suggested_chapters: parsed.chapters,
-          ai_model: 'gemini-1.5-flash',
+          ai_model: 'gemini-2.5-flash',
           status: 'pending',
         })
         .eq('id', item.id)
