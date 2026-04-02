@@ -85,10 +85,15 @@ function ReviewResponsesCard() {
 
   const pendingCount = reviews?.filter((r: any) => r.response?.status === 'pending').length || 0;
 
+  const withoutResponseCount = reviews?.filter((r: any) => !r.response).length || 0;
+
   const generateMutation = useMutation({
     mutationFn: () => callEdgeFunction('respond-review-ai', { mode: 'generate', limit: 10 }),
     onSuccess: (data) => {
-      toast({ title: 'Respostas geradas', description: `${data.generated} respostas criadas` });
+      const msg = data.generated > 0
+        ? `${data.generated} respostas criadas`
+        : data.message || 'Todas as reviews já possuem respostas';
+      toast({ title: 'Respostas geradas', description: msg });
       queryClient.invalidateQueries({ queryKey: ['review-responses'] });
     },
     onError: (err: any) => toast({ title: 'Erro', description: err.message, variant: 'destructive' }),

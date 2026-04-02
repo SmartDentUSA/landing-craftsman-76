@@ -54,16 +54,19 @@ Deno.serve(async (req) => {
 })
 
 async function generateResponses(supabase: any, limit: number, reviewId?: string) {
-  // Find reviews without responses
+  // Step 1: Get all reviews (not just those without response_from_owner)
   let query = supabase
     .from('raw_reviews')
     .select('id, author_name, rating, review_text')
-    .is('response_from_owner', null)
+    .not('review_text', 'is', null)
     .order('created_at', { ascending: false })
-    .limit(limit)
+    .limit(50)
 
   if (reviewId) {
-    query = query.eq('id', reviewId)
+    query = supabase
+      .from('raw_reviews')
+      .select('id, author_name, rating, review_text')
+      .eq('id', reviewId)
   }
 
   const { data: reviews, error: reviewsError } = await query
@@ -71,18 +74,17 @@ async function generateResponses(supabase: any, limit: number, reviewId?: string
   if (reviewsError) throw new Error(`Failed to fetch reviews: ${reviewsError.message}`)
   if (!reviews || reviews.length === 0) return { generated: 0, responses: [] }
 
-  // Filter out reviews that already have responses
+  // Step 2: Filter out reviews that already have AI-generated responses in review_responses table
   const reviewIds = reviews.map((r: any) => r.id)
   const { data: existingResponses } = await supabase
     .from('review_responses')
     .select('raw_review_id')
     .in('raw_review_id', reviewIds)
-    .in('status', ['pending', 'posted'])
 
   const existingIds = new Set((existingResponses || []).map((r: any) => r.raw_review_id))
-  const newReviews = reviews.filter((r: any) => !existingIds.has(r.id))
+  const newReviews = reviews.filter((r: any) => !existingIds.has(r.id)).slice(0, limit)
 
-  if (newReviews.length === 0) return { generated: 0, responses: [] }
+  if (newReviews.length === 0) return { generated: 0, responses: [], message: 'Todas as reviews já possuem respostas geradas' }
 
   const apiKey = Deno.env.get('LOVABLE_API_KEY')
   if (!apiKey) throw new Error('LOVABLE_API_KEY not configured')
