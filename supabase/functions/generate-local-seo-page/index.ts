@@ -237,21 +237,16 @@ Retorne APENAS o HTML completo, sem markdown.`
 function extractCategoryKeyword(categoryName: string): string {
   if (!categoryName) return ''
   const lower = categoryName.toLowerCase()
-  // Map known category names to DB category keywords
-  const mappings: Record<string, string> = {
-    'scanner': 'SCANNER',
-    'impressora': 'IMPRESSÃO',
-    'resina': 'RESINA',
-    'software': 'SOFTWARE',
-    'caracterização': 'CARACTERIZAÇÃO',
-    'insumo': 'INSUMO',
-    'pós-impressão': 'PÓS-IMPRESSÃO',
-    'dentística': 'DENTÍSTICA',
-    'curso': 'CURSO',
-  }
-  for (const [key, value] of Object.entries(mappings)) {
-    if (lower.includes(key)) return value
-  }
-  // Fallback: first 4+ chars
-  return categoryName.substring(0, Math.min(categoryName.length, 6))
+  // Map known category names to DB category keywords (use simple substrings for ILIKE)
+  if (lower.includes('scanner') || lower.includes('intraoral')) return 'SCANNER'
+  if (lower.includes('impressora') || lower.includes('impress')) return 'IMPRESS'
+  if (lower.includes('resina')) return 'RESINA'
+  if (lower.includes('software')) return 'SOFTWARE'
+  if (lower.includes('caracteriza')) return 'CARACTERIZA'
+  if (lower.includes('insumo')) return 'INSUMO'
+  if (lower.includes('cura') || lower.includes('wash')) return 'IMPRESS'
+  if (lower.includes('dent')) return 'DENT'
+  if (lower.includes('curso')) return 'CURSO'
+  // Fallback: first word
+  return categoryName.split(' ')[0]
 }
