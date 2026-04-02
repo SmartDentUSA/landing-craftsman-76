@@ -84,8 +84,8 @@ async function generateResponses(supabase: any, limit: number, reviewId?: string
 
   if (newReviews.length === 0) return { generated: 0, responses: [] }
 
-  const apiKey = Deno.env.get('GOOGLE_AI_API_KEY')
-  if (!apiKey) throw new Error('GOOGLE_AI_API_KEY not configured')
+  const apiKey = Deno.env.get('LOVABLE_API_KEY')
+  if (!apiKey) throw new Error('LOVABLE_API_KEY not configured')
 
   const responses: any[] = []
 
