@@ -493,7 +493,7 @@ function Slide2Solution({ image, primaryColor, accentColor, productData, texts }
           {category}
         </div>
       )}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px 0', minHeight: 0, overflow: 'hidden' }}>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px 0', minHeight: 0 }}>
         {image ? (
           <img
             src={image}
