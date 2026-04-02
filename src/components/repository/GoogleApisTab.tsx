@@ -121,6 +121,7 @@ function ReviewResponsesCard() {
         <div className="flex items-center gap-3">
           <MessageSquare className="h-5 w-5" />
           <CardTitle className="text-lg">Respostas de Reviews Google</CardTitle>
+          {withoutResponseCount > 0 && <Badge variant="destructive">{withoutResponseCount} sem resposta</Badge>}
           {pendingCount > 0 && <Badge variant="secondary">{pendingCount} pendentes</Badge>}
         </div>
         <div className="flex gap-2">
