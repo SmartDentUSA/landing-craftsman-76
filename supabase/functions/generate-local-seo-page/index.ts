@@ -112,7 +112,7 @@ URL: ${p.product_url || ''}
 Imagem: ${p.image_url || ''}
 ${specs ? `Especificações:\n${specs}` : ''}
 ${benefits ? `Benefícios: ${benefits}` : ''}
-${p.competitive_advantages ? `Diferenciais: ${p.competitive_advantages.substring(0, 200)}` : ''}`
+${p.sales_pitch ? `Pitch: ${p.sales_pitch.substring(0, 200)}` : ''}`
       }).join('\n\n')
 
       // Build context for Clinical Brain Guard
