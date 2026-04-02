@@ -632,7 +632,7 @@ IMPORTANTE - NÃO INCLUIR NO CONTEÚDO:
 - Terminar o blog com informações de contato genéricas
 - Informações de telefone no formato "(XX) XXXX-XXXX"
 
-Gere o blog post completo agora:`;
+Gere o blog post completo agora:`, productCtx);
   }
 
   console.log(`🤖 Generating ${blogType} blog for product: ${product.name}`);
