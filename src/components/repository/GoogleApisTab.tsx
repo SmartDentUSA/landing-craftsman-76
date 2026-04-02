@@ -85,10 +85,15 @@ function ReviewResponsesCard() {
 
   const pendingCount = reviews?.filter((r: any) => r.response?.status === 'pending').length || 0;
 
+  const withoutResponseCount = reviews?.filter((r: any) => !r.response).length || 0;
+
   const generateMutation = useMutation({
     mutationFn: () => callEdgeFunction('respond-review-ai', { mode: 'generate', limit: 10 }),
     onSuccess: (data) => {
-      toast({ title: 'Respostas geradas', description: `${data.generated} respostas criadas` });
+      const msg = data.generated > 0
+        ? `${data.generated} respostas criadas`
+        : data.message || 'Todas as reviews já possuem respostas';
+      toast({ title: 'Respostas geradas', description: msg });
       queryClient.invalidateQueries({ queryKey: ['review-responses'] });
     },
     onError: (err: any) => toast({ title: 'Erro', description: err.message, variant: 'destructive' }),
@@ -116,6 +121,7 @@ function ReviewResponsesCard() {
         <div className="flex items-center gap-3">
           <MessageSquare className="h-5 w-5" />
           <CardTitle className="text-lg">Respostas de Reviews Google</CardTitle>
+          {withoutResponseCount > 0 && <Badge variant="destructive">{withoutResponseCount} sem resposta</Badge>}
           {pendingCount > 0 && <Badge variant="secondary">{pendingCount} pendentes</Badge>}
         </div>
         <div className="flex gap-2">
@@ -447,10 +453,10 @@ function YouTubeQueueCard() {
                         )}
                         {item.status === 'pending' && item.suggested_title && (
                           <>
-                            <Button size="sm" variant="ghost" className="text-green-600" onClick={() => approveItem(item.id)}>
-                              <Check className="h-3 w-3" />
+                            <Button size="sm" variant="default" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => approveItem(item.id)}>
+                              <Check className="h-3 w-3 mr-1" /> Aprovar
                             </Button>
-                            <Button size="sm" variant="ghost" className="text-red-600" onClick={() => skipItem(item.id)}>
+                            <Button size="sm" variant="ghost" className="text-destructive" onClick={() => skipItem(item.id)}>
                               <X className="h-3 w-3" />
                             </Button>
                           </>
