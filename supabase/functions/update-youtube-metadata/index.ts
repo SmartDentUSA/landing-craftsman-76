@@ -78,20 +78,26 @@ Retorne APENAS um JSON válido (sem markdown) com:
 }`
 
     try {
-      const geminiRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.7, maxOutputTokens: 2000 },
-          }),
-        }
-      )
+      const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash',
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.7,
+        }),
+      })
 
-      const geminiData = await geminiRes.json()
-      const rawText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text
+      if (!aiRes.ok) {
+        console.error('AI Gateway error for video:', item.video_id, aiRes.status, await aiRes.text())
+        continue
+      }
+
+      const aiData = await aiRes.json()
+      const rawText = aiData?.choices?.[0]?.message?.content
       if (!rawText) continue
 
       // Parse JSON from response (handle markdown code blocks)
