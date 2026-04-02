@@ -88,7 +88,8 @@ const Repository = () => {
                    activeView === 'external-videos' ? 'Vídeos Externos (Sistema B)' :
                    activeView === 'image-migration' ? 'Migração de Imagens' :
                    activeView === 'lp-clone' ? 'LP Clone & Blogs' :
-                   activeView === 'handbook' ? 'Exportar Apostila' : 'Prompts IA'}
+                   activeView === 'handbook' ? 'Exportar Apostila' :
+                   activeView === 'google-apis' ? 'Google APIs' : 'Prompts IA'}
                 </h1>
                 <p className="text-muted-foreground mt-2">
                   {activeView === 'repository' 
