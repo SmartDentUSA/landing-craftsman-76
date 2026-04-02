@@ -1329,17 +1329,17 @@ export async function generateSlidePNG(
       ctx.fillRect(0, 0, W, H);
     }
     // Overlay escuro geral sutil
-    const s1OverlayOp = Number(allSlideTexts?.[1]?.overlayOpacity) || (hasCustomBg1 ? 10 : 28);
+    const s1OverlayOp = Number(texts?.overlayOpacity) || (hasCustomBg1 ? 10 : 28);
     ctx.fillStyle = `rgba(0,0,0,${s1OverlayOp / 100})`;
     ctx.fillRect(0, 0, W, H);
     // Número do slide
     drawBadge(1, 60, 60, 'rgba(255,255,255,0.2)', '#ffffff');
     // Faixa central opaca com a frase
-    const s1FaixaVisible = (allSlideTexts?.[1]?.faixaVisible ?? 'true') !== 'false';
+    const s1FaixaVisible = (texts?.faixaVisible ?? 'true') !== 'false';
     if (s1FaixaVisible) {
       const faixaH = 340;
       const faixaY = H / 2 - faixaH / 2;
-      const fc = allSlideTexts?.[1]?.faixaColor || '#000000';
+      const fc = texts?.faixaColor || '#000000';
       const fcClean = fc.replace('#', '');
       const fcR = parseInt(fcClean.slice(0, 2), 16);
       const fcG = parseInt(fcClean.slice(2, 4), 16);
@@ -1352,11 +1352,6 @@ export async function generateSlidePNG(
       ctx.textBaseline = 'top';
       wrapText(ctx, hookText, W / 2, faixaY + 60, W - 160, 70, 'center');
     }
-    ctx.font = '400 52px system-ui, -apple-system, sans-serif';
-    ctx.fillStyle = '#ffffff';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    wrapText(ctx, hookText, W / 2, faixaY + 60, W - 160, 70, 'center');
     // Gradiente rodapé
     const grad2 = ctx.createLinearGradient(0, H - 300, 0, H);
     grad2.addColorStop(0, 'rgba(0,0,0,0)');
