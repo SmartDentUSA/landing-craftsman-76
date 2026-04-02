@@ -30,7 +30,7 @@ serve(async (req) => {
   }
 
   try {
-    const { productId, feedCopy, approach } = await req.json();
+    const { productId, feedCopy, approach, promptType } = await req.json();
 
     if (!productId || !feedCopy || !approach) {
       return new Response(
