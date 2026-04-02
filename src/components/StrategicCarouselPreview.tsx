@@ -43,7 +43,7 @@ interface ProductData {
 
 // ========================= SlideTexts Types =========================
 export interface SlideTextsType {
-  1: { hook: string; productName: string; imageScale?: string; bgColor?: string };
+  1: { hook: string; productName: string; imageScale?: string; bgColor?: string; overlayOpacity?: string; faixaVisible?: string; faixaColor?: string };
   2: { category: string; introLabel?: string; productName: string; imageScale?: string; bgColor?: string };
   3: { title: string; headline?: string; body?: string; bullet1?: string; bullet2?: string; bullet3?: string; bullet4?: string; imageScale?: string; bgColor?: string };
   4: { label: string; keyword: string; benefit: string; imageScale?: string; bgColor?: string };
@@ -81,12 +81,15 @@ const SLIDE_W = 1080;
 const SLIDE_H = 1350;
 
 // ========================= Per-slide editor configs =========================
-const SLIDE_EDITOR_FIELDS: Record<number, Array<{ key: string; label: string; type: 'input' | 'textarea' | 'slider' | 'color' }>> = {
+const SLIDE_EDITOR_FIELDS: Record<number, Array<{ key: string; label: string; type: 'input' | 'textarea' | 'slider' | 'color' | 'toggle'; min?: number; max?: number }>> = {
   1: [
     { key: 'hook', label: 'Texto do Gancho', type: 'textarea' },
     { key: 'productName', label: 'Nome do produto', type: 'input' },
     { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
     { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
+    { key: 'faixaVisible', label: 'Mostrar faixa central', type: 'toggle' },
+    { key: 'faixaColor', label: 'Cor da faixa', type: 'color' },
+    { key: 'overlayOpacity', label: 'Transparência do overlay (%)', type: 'slider', min: 0, max: 80 },
   ],
   2: [
     { key: 'category', label: 'Categoria', type: 'input' },
@@ -312,19 +315,27 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
                     maxLength={7}
                   />
                 </div>
+              ) : field.type === 'toggle' ? (
+                <button
+                  type="button"
+                  onClick={() => onSlideTextChange(field.key, (slideTexts?.[field.key] ?? 'true') === 'true' ? 'false' : 'true')}
+                  className={`text-xs px-3 py-1 rounded border cursor-pointer font-medium ${(slideTexts?.[field.key] ?? 'true') === 'true' ? 'bg-primary text-primary-foreground border-primary' : 'bg-muted text-muted-foreground border-border'}`}
+                >
+                  {(slideTexts?.[field.key] ?? 'true') === 'true' ? 'Ativado' : 'Desativado'}
+                </button>
               ) : field.type === 'slider' ? (
                 <div className="flex items-center gap-2 pt-1">
                   <input
                     type="range"
-                    min={50}
-                    max={150}
+                    min={field.min ?? 50}
+                    max={field.max ?? 150}
                     step={5}
-                    value={Number(slideTexts?.[field.key]) || 100}
+                    value={Number(slideTexts?.[field.key]) || (field.min != null ? Math.round(((field.min ?? 0) + (field.max ?? 150)) / 2) : 100)}
                     onChange={(e) => onSlideTextChange(field.key, e.target.value)}
                     className="flex-1 h-2 rounded cursor-pointer accent-primary"
                   />
                   <span className="text-xs font-mono text-muted-foreground w-10 text-right">
-                    {slideTexts?.[field.key] || '100'}%
+                    {slideTexts?.[field.key] || (field.min != null ? Math.round(((field.min ?? 0) + (field.max ?? 150)) / 2) : 100)}%
                   </span>
                 </div>
               ) : field.type === 'textarea' ? (
@@ -380,7 +391,7 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
 }
 
 // ==================== SLIDE 1 — HOOK / GANCHO ====================
-function Slide1Hook({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; productData: ProductData; texts?: { hook?: string; productName?: string; imageScale?: string; bgColor?: string } }) {
+function Slide1Hook({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; productData: ProductData; texts?: { hook?: string; productName?: string; imageScale?: string; bgColor?: string; overlayOpacity?: string; faixaVisible?: string; faixaColor?: string } }) {
   const hook = texts?.hook || (() => {
     if (productData.salesPitch) {
       const pitch = productData.salesPitch.trim();
@@ -418,7 +429,10 @@ function Slide1Hook({ image, primaryColor, productData, texts }: { image: string
       )}
 
       {/* Overlay escuro geral sutil para dar profundidade */}
-      <div style={{ position: 'absolute', inset: 0, background: hasCustomBg ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.28)' }} />
+      {(() => {
+        const ov = Number(texts?.overlayOpacity) || (hasCustomBg ? 10 : 28);
+        return <div style={{ position: 'absolute', inset: 0, background: `rgba(0,0,0,${ov / 100})` }} />;
+      })()}
 
       {/* Número do slide */}
       <div style={{ position: 'absolute', top: 60, left: 60, width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -426,18 +440,27 @@ function Slide1Hook({ image, primaryColor, productData, texts }: { image: string
       </div>
 
       {/* FAIXA CENTRAL OPACA com a frase — centralizada verticalmente */}
-      <div style={{
-        position: 'absolute',
-        top: '50%',
-        transform: 'translateY(-50%)',
-        left: 0,
-        right: 0,
-        padding: '60px 80px',
-        background: 'rgba(0, 0, 0, 0.58)',
-        textAlign: 'center',
-      }}>
-        <p style={{ color: '#ffffff', fontWeight: 400, fontSize: 52, lineHeight: 1.3, margin: 0 }}>{hook}</p>
-      </div>
+      {(texts?.faixaVisible ?? 'true') !== 'false' && (
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          transform: 'translateY(-50%)',
+          left: 0,
+          right: 0,
+          padding: '60px 80px',
+          background: (() => {
+            const fc = texts?.faixaColor || '#000000';
+            const clean = fc.replace('#', '');
+            const r = parseInt(clean.slice(0, 2), 16);
+            const g = parseInt(clean.slice(2, 4), 16);
+            const b = parseInt(clean.slice(4, 6), 16);
+            return `rgba(${r},${g},${b},0.58)`;
+          })(),
+          textAlign: 'center',
+        }}>
+          <p style={{ color: '#ffffff', fontWeight: 400, fontSize: 52, lineHeight: 1.3, margin: 0 }}>{hook}</p>
+        </div>
+      )}
 
       {/* Gradiente rodapé + nome do produto */}
       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 200, background: 'linear-gradient(to top, rgba(0,0,0,0.75), transparent)' }} />
@@ -1306,20 +1329,29 @@ export async function generateSlidePNG(
       ctx.fillRect(0, 0, W, H);
     }
     // Overlay escuro geral sutil
-    ctx.fillStyle = hasCustomBg1 ? 'rgba(0,0,0,0.10)' : 'rgba(0,0,0,0.28)';
+    const s1OverlayOp = Number(texts?.overlayOpacity) || (hasCustomBg1 ? 10 : 28);
+    ctx.fillStyle = `rgba(0,0,0,${s1OverlayOp / 100})`;
     ctx.fillRect(0, 0, W, H);
     // Número do slide
     drawBadge(1, 60, 60, 'rgba(255,255,255,0.2)', '#ffffff');
     // Faixa central opaca com a frase
-    const faixaH = 340;
-    const faixaY = H / 2 - faixaH / 2;
-    ctx.fillStyle = 'rgba(0,0,0,0.58)';
-    ctx.fillRect(0, faixaY, W, faixaH);
-    ctx.font = '400 52px system-ui, -apple-system, sans-serif';
-    ctx.fillStyle = '#ffffff';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    wrapText(ctx, hookText, W / 2, faixaY + 60, W - 160, 70, 'center');
+    const s1FaixaVisible = (texts?.faixaVisible ?? 'true') !== 'false';
+    if (s1FaixaVisible) {
+      const faixaH = 340;
+      const faixaY = H / 2 - faixaH / 2;
+      const fc = texts?.faixaColor || '#000000';
+      const fcClean = fc.replace('#', '');
+      const fcR = parseInt(fcClean.slice(0, 2), 16);
+      const fcG = parseInt(fcClean.slice(2, 4), 16);
+      const fcB = parseInt(fcClean.slice(4, 6), 16);
+      ctx.fillStyle = `rgba(${fcR},${fcG},${fcB},0.58)`;
+      ctx.fillRect(0, faixaY, W, faixaH);
+      ctx.font = '400 52px system-ui, -apple-system, sans-serif';
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      wrapText(ctx, hookText, W / 2, faixaY + 60, W - 160, 70, 'center');
+    }
     // Gradiente rodapé
     const grad2 = ctx.createLinearGradient(0, H - 300, 0, H);
     grad2.addColorStop(0, 'rgba(0,0,0,0)');
