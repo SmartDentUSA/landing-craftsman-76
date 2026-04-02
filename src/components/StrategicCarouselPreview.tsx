@@ -391,7 +391,7 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
 }
 
 // ==================== SLIDE 1 — HOOK / GANCHO ====================
-function Slide1Hook({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; productData: ProductData; texts?: { hook?: string; productName?: string; imageScale?: string; bgColor?: string } }) {
+function Slide1Hook({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; productData: ProductData; texts?: { hook?: string; productName?: string; imageScale?: string; bgColor?: string; overlayOpacity?: string; faixaVisible?: string; faixaColor?: string } }) {
   const hook = texts?.hook || (() => {
     if (productData.salesPitch) {
       const pitch = productData.salesPitch.trim();
