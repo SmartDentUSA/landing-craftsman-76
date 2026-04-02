@@ -507,8 +507,8 @@ function YouTubeQueueCard() {
 function LocalSEOCard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [filterUF, setFilterUF] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
+  const [filterUF, setFilterUF] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all');
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newTarget, setNewTarget] = useState({
@@ -523,8 +523,8 @@ function LocalSEOCard() {
         .select('*')
         .order('priority', { ascending: false });
 
-      if (filterUF) query = query.eq('state_uf', filterUF);
-      if (filterStatus) query = query.eq('status', filterStatus);
+      if (filterUF && filterUF !== 'all') query = query.eq('state_uf', filterUF);
+      if (filterStatus && filterStatus !== 'all') query = query.eq('status', filterStatus);
 
       const { data } = await query.limit(50);
       return data || [];
@@ -596,7 +596,7 @@ function LocalSEOCard() {
           <Select value={filterUF} onValueChange={setFilterUF}>
             <SelectTrigger className="w-[120px]"><SelectValue placeholder="UF" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos</SelectItem>
+              <SelectItem value="all">Todos</SelectItem>
               {['SP','RJ','MG','RS','PR','SC','BA','PE','CE','DF','GO','PA','MA','MT','MS','ES','PB','RN','AL','PI','SE','RO','TO','AC','AP','AM','RR'].map(uf => (
                 <SelectItem key={uf} value={uf}>{uf}</SelectItem>
               ))}
@@ -605,7 +605,7 @@ function LocalSEOCard() {
           <Select value={filterStatus} onValueChange={setFilterStatus}>
             <SelectTrigger className="w-[140px]"><SelectValue placeholder="Status" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos</SelectItem>
+              <SelectItem value="all">Todos</SelectItem>
               <SelectItem value="draft">Draft</SelectItem>
               <SelectItem value="approved">Approved</SelectItem>
               <SelectItem value="published">Published</SelectItem>
