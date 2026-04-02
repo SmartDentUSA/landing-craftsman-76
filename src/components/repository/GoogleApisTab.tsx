@@ -340,7 +340,7 @@ function YouTubeQueueCard() {
         .from('products_repository')
         .select('id, name, category')
         .eq('is_active', true)
-        .order('name');
+        .order('name') as { data: any[] | null };
       return data || [];
     },
   });
