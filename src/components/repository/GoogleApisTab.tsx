@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Star, Send, MessageSquare, Youtube, MapPin, Plus, Eye, Check, X, RefreshCw } from 'lucide-react';
+import { Loader2, Star, Send, MessageSquare, Youtube, MapPin, Plus, Eye, Check, X, RefreshCw, ExternalLink, Globe } from 'lucide-react';
 
 const SUPABASE_URL = "https://pgfgripuanuwwolmtknn.supabase.co";
 
