@@ -81,12 +81,15 @@ const SLIDE_W = 1080;
 const SLIDE_H = 1350;
 
 // ========================= Per-slide editor configs =========================
-const SLIDE_EDITOR_FIELDS: Record<number, Array<{ key: string; label: string; type: 'input' | 'textarea' | 'slider' | 'color' }>> = {
+const SLIDE_EDITOR_FIELDS: Record<number, Array<{ key: string; label: string; type: 'input' | 'textarea' | 'slider' | 'color' | 'toggle'; min?: number; max?: number }>> = {
   1: [
     { key: 'hook', label: 'Texto do Gancho', type: 'textarea' },
     { key: 'productName', label: 'Nome do produto', type: 'input' },
     { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
     { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
+    { key: 'faixaVisible', label: 'Mostrar faixa central', type: 'toggle' },
+    { key: 'faixaColor', label: 'Cor da faixa', type: 'color' },
+    { key: 'overlayOpacity', label: 'Transparência do overlay (%)', type: 'slider', min: 0, max: 80 },
   ],
   2: [
     { key: 'category', label: 'Categoria', type: 'input' },
