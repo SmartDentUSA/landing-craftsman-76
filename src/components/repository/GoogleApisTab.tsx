@@ -376,11 +376,16 @@ function YouTubeQueueCard() {
   });
 
   const addToQueue = async () => {
-    if (!newVideoId) return;
+    if (!newVideoId || !selectedProductId) {
+      toast({ title: 'Erro', description: 'Selecione um produto antes de adicionar', variant: 'destructive' });
+      return;
+    }
+    const selectedProduct = (products || []).find((p: any) => p.id === selectedProductId);
     const { error } = await supabase.from('youtube_metadata_queue').insert({
       video_id: newVideoId,
       video_url: `https://youtube.com/watch?v=${newVideoId}`,
-      product_name: newProductName || null,
+      product_id: selectedProductId,
+      product_name: selectedProduct?.name || newProductName || null,
       status: 'pending',
     });
     if (error) {
@@ -389,6 +394,7 @@ function YouTubeQueueCard() {
       toast({ title: 'Vídeo adicionado à fila' });
       setNewVideoId('');
       setNewProductName('');
+      setSelectedProductId('');
       queryClient.invalidateQueries({ queryKey: ['youtube-queue'] });
     }
   };
