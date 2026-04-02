@@ -89,7 +89,7 @@ Deno.serve(async (req) => {
       if (products.length === 0 && target.product_name) {
         const { data: nameProducts } = await supabase
           .from('products_repository')
-          .select('name, description, price, image_url, product_url, technical_specifications, benefits, features, competitive_advantages, sales_pitch, keywords, target_audience')
+          .select('name, description, price, image_url, product_url, technical_specifications, benefits, features, sales_pitch, keywords, target_audience')
           .eq('approved', true)
           .ilike('name', `%${target.product_name.split(' ')[0]}%`)
           .limit(5)
