@@ -1,69 +1,64 @@
 
 
-## Diagnóstico: Por que nada funciona no Google APIs
+## Adicionar controles de faixa e overlay no Slide 1 do Carrossel
 
-### Problemas identificados
+### O que será feito
 
-**Problema 1 — Gemini API retorna vazio (generate-local-seo-page, respond-review-ai, update-youtube-metadata)**
+Adicionar 3 novos controles no editor do Slide 1:
+- **Toggle** para mostrar/esconder a faixa central escura
+- **Cor da faixa** — color picker para mudar a cor da faixa
+- **Transparência do overlay** — slider para controlar a opacidade do filtro escuro sobre a imagem (0% a 80%)
 
-As 4 edge functions novas usam a API direta do Google (`generativelanguage.googleapis.com`) com modelo `gemini-1.5-flash`. Todas as outras ~20 edge functions funcionais do projeto usam a **Lovable AI Gateway** (`ai.gateway.lovable.dev`) com modelo `google/gemini-2.5-flash` e `LOVABLE_API_KEY`.
+### Mudanças técnicas
 
-O `GOOGLE_AI_API_KEY` funciona para embeddings mas está falhando para `generateContent` — provavelmente `gemini-1.5-flash` está deprecated ou a key não tem permissão para esse modelo. Resultado: 100% dos calls retornam empty response.
+**Arquivo: `src/components/StrategicCarouselPreview.tsx`**
 
-**Problema 2 — respond-review-ai retorna `generated: 0`**
+**1. Tipo `SlideTextsType` (linha 46)**
+Adicionar campos opcionais ao slide 1:
+- `overlayOpacity?: string` (0-80, default 28)
+- `faixaVisible?: string` ("true"/"false", default "true")
+- `faixaColor?: string` (hex, default "#000000")
 
-Correto: todas as 30 reviews em `raw_reviews` já têm `response_from_owner` preenchido. A query filtra `WHERE response_from_owner IS NULL` e encontra 0 registros. Não é bug — é falta de dados novos.
-
-**Problema 3 — generate-local-seo-page retorna `generated: 0`**
-
-Existem 18 targets com `status='approved'` e `html_generated=false`, mas o Gemini retorna vazio para todos (ver Problema 1).
-
-### Correção
-
-**Migrar as 4 edge functions para usar a Lovable AI Gateway** (mesmo padrão das funções que funcionam):
-
-- **Endpoint**: `https://ai.gateway.lovable.dev/v1/chat/completions`
-- **Auth**: `Bearer ${LOVABLE_API_KEY}` (já existe como secret)
-- **Model**: `google/gemini-2.5-flash`
-- **Response format**: `data.choices[0].message.content` (OpenAI-compatible)
-
-**Arquivos a modificar:**
-
-| Edge Function | Mudança |
-|---|---|
-| `respond-review-ai/index.ts` | Trocar fetch Gemini direto → Lovable Gateway |
-| `generate-local-seo-page/index.ts` | Trocar fetch Gemini direto → Lovable Gateway |
-| `update-youtube-metadata/index.ts` | Trocar fetch Gemini direto → Lovable Gateway |
-| `publish-gbp-post/index.ts` | Já não usa Gemini (só publica), sem mudança de AI |
-
-Em cada função, a mudança é:
-```typescript
-// ANTES (não funciona):
-const geminiRes = await fetch(
-  `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-  { body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) }
-)
-const text = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text
-
-// DEPOIS (padrão do projeto):
-const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-  headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    model: 'google/gemini-2.5-flash',
-    messages: [{ role: 'user', content: prompt }],
-    temperature: 0.7,
-  })
-})
-const text = data.choices?.[0]?.message?.content
+**2. `SLIDE_EDITOR_FIELDS` (linhas 85-90)**
+Adicionar 3 campos novos ao slide 1:
+```
+{ key: 'faixaVisible', label: 'Mostrar faixa central', type: 'toggle' }
+{ key: 'faixaColor', label: 'Cor da faixa', type: 'color' }
+{ key: 'overlayOpacity', label: 'Transparência do overlay (%)', type: 'slider' }
 ```
 
-Adicionar logging da resposta Gemini quando vazia para debug futuro.
+**3. Editor field types (linha 84)**
+Adicionar `'toggle'` ao union type dos fields. No renderer do editor (linhas 293-366), adicionar case para `toggle`:
+```tsx
+field.type === 'toggle' ? (
+  <button onClick={...} className="...">
+    {value === 'false' ? 'Desativado' : 'Ativado'}
+  </button>
+)
+```
 
-**Para respond-review-ai**: a lógica de filtro está correta. Como todas as reviews já têm resposta, o botão "Gerar Respostas" não terá efeito até que novas reviews sem resposta apareçam (via `extract-google-reviews`).
+**4. `Slide1Hook` (linhas 408-447)**
+- Ler `overlayOpacity` (default 28), `faixaVisible` (default "true"), `faixaColor` (default "#000000")
+- Overlay (linha 421): usar `rgba(0,0,0, overlayOpacity/100)` em vez do valor fixo
+- Faixa central (linhas 428-440): renderizar condicionalmente com `faixaVisible !== 'false'`, e usar `faixaColor` com opacidade 0.58
+
+**5. Canvas export do Slide 1 (linhas 1308-1322)**
+- Overlay (linha 1309): usar `rgba(0,0,0, overlayOpacity/100)`
+- Faixa (linhas 1313-1317): condicionar a `faixaVisible`, usar `faixaColor`
+
+### Slider de overlay
+- Range: 0 a 80 (em %)
+- Default: 28 (valor atual hardcoded)
+- Reutiliza o mesmo renderer `type: 'slider'` existente, mas com min/max customizados via config
+
+Para diferenciar do slider de imageScale (50-150), adicionar `min`/`max` opcionais ao field config:
+```ts
+{ key: 'overlayOpacity', label: 'Transparência do overlay (%)', type: 'slider', min: 0, max: 80 }
+```
 
 ### Resultado esperado
-- `generate-local-seo-page` gera HTML para os 18 targets aprovados
-- `respond-review-ai` funciona quando houver reviews sem resposta
-- `update-youtube-metadata` gera metadados para vídeos na fila
-- Todas usam o mesmo gateway AI que o resto do projeto
+- Usuário pode desligar a faixa central preta sobre a imagem do Slide 1
+- Pode mudar a cor da faixa (ex: azul, vermelho)
+- Pode controlar quanto o filtro escuro cobre a imagem (de 0% transparente a 80% escuro)
+- Preview e PNG exportado refletem as configurações
 
