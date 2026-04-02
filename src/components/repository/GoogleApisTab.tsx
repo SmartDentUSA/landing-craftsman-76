@@ -84,8 +84,28 @@ function ReviewResponsesCard() {
   });
 
   const pendingCount = reviews?.filter((r: any) => r.response?.status === 'pending').length || 0;
-
+  const failedCount = reviews?.filter((r: any) => r.response?.status === 'failed').length || 0;
   const withoutResponseCount = reviews?.filter((r: any) => !r.response).length || 0;
+
+  const retryFailedMutation = useMutation({
+    mutationFn: async () => {
+      const failedIds = reviews
+        ?.filter((r: any) => r.response?.status === 'failed')
+        .map((r: any) => r.response.id) || [];
+      if (failedIds.length === 0) throw new Error('Nenhuma resposta falhada');
+      const { error } = await supabase
+        .from('review_responses')
+        .update({ status: 'pending' })
+        .in('id', failedIds);
+      if (error) throw error;
+      return { reset: failedIds.length };
+    },
+    onSuccess: (data) => {
+      toast({ title: 'Respostas resetadas', description: `${data.reset} respostas voltaram para pendente` });
+      queryClient.invalidateQueries({ queryKey: ['review-responses'] });
+    },
+    onError: (err: any) => toast({ title: 'Erro', description: err.message, variant: 'destructive' }),
+  });
 
   const generateMutation = useMutation({
     mutationFn: () => callEdgeFunction('respond-review-ai', { mode: 'generate', limit: 10 }),
@@ -123,6 +143,7 @@ function ReviewResponsesCard() {
           <CardTitle className="text-lg">Respostas de Reviews Google</CardTitle>
           {withoutResponseCount > 0 && <Badge variant="destructive">{withoutResponseCount} sem resposta</Badge>}
           {pendingCount > 0 && <Badge variant="secondary">{pendingCount} pendentes</Badge>}
+          {failedCount > 0 && <Badge className="bg-red-100 text-red-800">{failedCount} falhadas</Badge>}
         </div>
         <div className="flex gap-2">
           <Button size="sm" onClick={() => generateMutation.mutate()} disabled={generateMutation.isPending}>
@@ -133,6 +154,13 @@ function ReviewResponsesCard() {
             {postMutation.isPending && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
             Postar Pendentes
           </Button>
+          {failedCount > 0 && (
+            <Button size="sm" variant="outline" className="border-red-300 text-red-700 hover:bg-red-50" onClick={() => retryFailedMutation.mutate()} disabled={retryFailedMutation.isPending}>
+              {retryFailedMutation.isPending && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+              <RefreshCw className="h-4 w-4 mr-1" />
+              Retentar {failedCount} Falhadas
+            </Button>
+          )}
         </div>
       </CardHeader>
       <CardContent>
@@ -339,7 +367,7 @@ function YouTubeQueueCard() {
       const res = await supabase
         .from('products_repository' as any)
         .select('id, name, category')
-        .eq('is_active', true)
+        .eq('active', true)
         .order('name');
       return (res.data as any[]) || [];
     },
