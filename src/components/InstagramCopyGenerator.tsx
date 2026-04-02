@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { StrategicCarouselPreview, generateSlidePNG, fetchAsDataUrl } from "./StrategicCarouselPreview";
 import type { SlideTextsType } from "./StrategicCarouselPreview";
+import { EngagementCarouselSection } from "./EngagementCarouselSection";
 import JSZip from "jszip";
 
 // === Tipos para Carrossel (7 Slides) ===
