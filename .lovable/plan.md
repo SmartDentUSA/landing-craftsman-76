@@ -1,49 +1,81 @@
 
 
-## Fix Google APIs — 4 Correções
+## Transformar Carrossel Engajamento em Editor Visual Completo
 
-### Situação Atual (verificada via banco e logs)
+### Situacao atual
+O "Carrossel Engajamento" e apenas texto (titulo + corpo + sugestao de imagem). O "Carrossel Visual" (StrategicCarouselPreview.tsx, ~1867 linhas) tem preview visual com canvas 1080x1350, upload de imagem, editor de texto inline, export PNG, controles de cor/escala/fonte.
 
-| Problema | Status real |
-|---|---|
-| Reviews | Código correto no arquivo, mas edge function possivelmente não redeployada. 27 reviews sem resposta confirmadas no banco |
-| YouTube hallucination | `product_id` e `product_name` são NULL no único item da fila. A função gera conteúdo inventado sem validação |
-| YouTube aprovação | Botão "Aprovar" já existe na UI (linha 456), funciona. O item tem `suggested_title` preenchido |
-| SEO Local | Fuzzy matching já funciona (log mostra 5 produtos encontrados). 16 targets aprovados pendentes |
+O usuario quer que o Engajamento tenha as mesmas capacidades visuais, porem com um layout diferente inspirado nas imagens de referencia (@brandsdecoded): fundo escuro, texto grande bold com palavras em cor destaque (laranja/vermelho), imagem centralizada, header com marca, e suporte a video alem de imagem.
 
-### Correções necessárias
+### Layout dos slides (baseado nas referencias)
 
-**FIX 1 — `supabase/functions/update-youtube-metadata/index.ts`** (linhas 65-78)
-- Adicionar validação antes de chamar a IA: se `product_id` e `product_name` são ambos null, marcar como `error` com mensagem clara e pular
-- Importar `injectClinicalBrainGuard` e `mapProductToContext` do `_shared/clinical-brain-guard.ts`
-- Se `product_id` existe, buscar produto do `products_repository` e injetar specs reais no prompt via `buildFullPrompt`
-- Se só `product_name` existe (sem `product_id`), usar no prompt mas sem specs detalhadas
+Cada slide segue este padrao:
+- **Header**: barra superior com "Powered by [marca]" a esquerda, "@handle" centro, "2026 //" direita
+- **Bloco de texto**: tipografia grande, bold, com palavras-chave em cor destaque (laranja). Frases curtas e impactantes
+- **Imagem/Video**: foto ou video centralizado, proporcao ~16:9 dentro do card
+- **Texto inferior**: paragrafo de apoio em fonte menor, com trechos em cor destaque
+- **Fundo**: escuro (#1a1a1a) ou claro (#f5f5f5) alternando entre slides
 
-**FIX 2 — `supabase/functions/respond-review-ai/index.ts`**
-- O código atual (linhas 56-84) já faz a lógica correta (busca 50 reviews, filtra por existência em review_responses)
-- Ação: **redeploy** da função para garantir que a versão correta está ativa
-- Adicionar log de diagnóstico: `console.log('[REVIEWS] Found reviews:', reviews.length, 'Without response:', newReviews.length)` para facilitar debug
+### Plano de implementacao
 
-**FIX 3 — `supabase/functions/generate-local-seo-page/index.ts`**
-- Já funciona (log confirma 5 produtos encontrados com ILIKE)
-- Ação: **redeploy** para garantir versão atualizada
-- Opcional: limpar o item com `suggested_title` inventado no `youtube_metadata_queue` (reset status para pending e limpar campos suggested_*)
+**Arquivo 1: `src/components/EngagementCarouselPreview.tsx`** (CRIAR — ~800-1000 linhas)
 
-**FIX 4 — `src/components/repository/GoogleApisTab.tsx`** (YouTubeQueueCard)
-- No formulário "Adicionar vídeo à fila": adicionar campo `product_id` obrigatório com select de produtos do repositório
-- Buscar produtos ativos do `products_repository` para popular o select
-- Salvar `product_id` junto com `product_name` ao inserir na fila
-- Mostrar alerta visual quando item existente tem `product_id` null
+Componente visual completo seguindo a arquitetura do StrategicCarouselPreview:
+
+1. **6 slides renderizados em canvas 1080x1350** com layout @brandsdecoded:
+   - Slide 1 (Capa/Gancho): fundo escuro + imagem + texto grande bold
+   - Slide 2 (Problema): fundo claro + texto + imagem
+   - Slide 3 (Solucao): fundo escuro + texto com destaque + imagem
+   - Slide 4 (Prova): fundo claro + texto + imagem
+   - Slide 5 (Autoridade): fundo escuro + texto + imagem
+   - Slide 6 (CTA): fundo escuro + texto CTA + imagem
+
+2. **Funcionalidades iguais ao Carrossel Visual**:
+   - Upload de imagem por slide (reutilizar pattern do SlideWrapper)
+   - **Upload de video** por slide (aceitar video/*, exibir `<video>` no preview, gerar thumbnail para export PNG)
+   - Editor inline de textos (textarea com bold/italic/uppercase)
+   - Controles de cor (fundo, cor de destaque do texto)
+   - Escala de imagem por slide (slider 50-150%)
+   - Seletor de fonte e tamanho global
+   - Export individual e em lote como PNG via Canvas 2D
+
+3. **Renderizacao de texto rico**: suporte a `**bold**` e `{destaque}` para aplicar cor accent em palavras especificas
+
+4. **Media type toggle**: botao por slide para alternar entre imagem e video. Videos mostram thumbnail no preview e frame no export
+
+**Arquivo 2: `src/components/EngagementCarouselSection.tsx`** (REESCREVER)
+
+Transformar de componente texto-only para wrapper que:
+- Gera conteudo via IA (manter edge function existente)
+- Mapeia slides gerados para o estado do editor visual
+- Renderiza `<EngagementCarouselPreview>` com todos os controles
+- Persiste configuracoes visuais (imagens, cores, textos editados) no campo `engagement_carousel` do `instagram_copies`
+- Botoes "Exportar PNGs" e "Baixar ZIP" (reutilizar logica do JSZip existente)
+
+**Arquivo 3: `src/components/InstagramCopyGenerator.tsx`** (EDITAR)
+
+- Substituir o `<EngagementCarouselSection>` simples pelo novo com props adicionais (productImages, primaryColor, accentColor)
+- Passar as mesmas imagens do produto ja carregadas
+
+### Detalhes tecnicos
+
+- **Video upload**: `<input accept="image/*,video/*">`. Para video, criar thumbnail via `<canvas>` + `<video>.currentTime`. No export PNG, desenhar o frame do video no canvas
+- **Texto com destaque**: parser simples — `{texto}` renderiza com `accentColor`, `**texto**` renderiza bold. Combinaveis
+- **Persistencia**: salvar `slideImageMap`, `slideTexts`, `mediaType` (image|video) por slide no JSON do banco
+- **Export PNG**: funcao `generateEngagementSlidePNG()` similar a `generateSlidePNG()` existente, com o layout @brandsdecoded
 
 ### Arquivos afetados
 
-| Arquivo | Ação |
+| Arquivo | Acao |
 |---|---|
-| `supabase/functions/update-youtube-metadata/index.ts` | Editar (add product validation + Clinical Brain Guard) |
-| `supabase/functions/respond-review-ai/index.ts` | Editar (add diagnostic log) + redeploy |
-| `supabase/functions/generate-local-seo-page/index.ts` | Redeploy apenas |
-| `src/components/repository/GoogleApisTab.tsx` | Editar (product select no YouTube form) |
+| `src/components/EngagementCarouselPreview.tsx` | **Criar** |
+| `src/components/EngagementCarouselSection.tsx` | Reescrever |
+| `src/components/InstagramCopyGenerator.tsx` | Editar (passar props extras) |
 
-### Deploy
-- `respond-review-ai`, `update-youtube-metadata`, `generate-local-seo-page`
+### Resultado esperado
+- Carrossel Engajamento gera imagens visuais no estilo @brandsdecoded (fundo escuro, texto grande, destaques em cor)
+- Upload de imagem E video por slide
+- Editor inline com formatacao (bold, destaque colorido, uppercase)
+- Export como PNG 1080x1350
+- Mesmas funcionalidades do Carrossel Visual mas com layout editorial/storytelling
 
