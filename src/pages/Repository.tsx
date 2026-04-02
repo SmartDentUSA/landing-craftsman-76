@@ -25,11 +25,12 @@ import { ExternalVideosGallery } from '@/components/ExternalVideosGallery';
 import { ImageMigrationManager } from '@/components/ImageMigrationManager';
 import { LPClonePanel } from '@/components/LPClonePanel';
 import { CompleteHandbookExporter } from '@/components/CompleteHandbookExporter';
+import { GoogleApisTab } from '@/components/repository/GoogleApisTab';
 
 const Repository = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [activeView, setActiveView] = useState<'repository' | 'categories' | 'prompts' | 'links' | 'merchant' | 'youtube' | 'google-business' | 'coupons' | 'aftersales' | 'cs' | 'spin-selling' | 'external-videos' | 'image-migration' | 'lp-clone' | 'handbook'>('repository');
+  const [activeView, setActiveView] = useState<'repository' | 'categories' | 'prompts' | 'links' | 'merchant' | 'youtube' | 'google-business' | 'coupons' | 'aftersales' | 'cs' | 'spin-selling' | 'external-videos' | 'image-migration' | 'lp-clone' | 'handbook' | 'google-apis'>('repository');
 
   // Detectar redirecionamento OAuth e abrir aba correta
   useEffect(() => {
@@ -87,7 +88,8 @@ const Repository = () => {
                    activeView === 'external-videos' ? 'Vídeos Externos (Sistema B)' :
                    activeView === 'image-migration' ? 'Migração de Imagens' :
                    activeView === 'lp-clone' ? 'LP Clone & Blogs' :
-                   activeView === 'handbook' ? 'Exportar Apostila' : 'Prompts IA'}
+                   activeView === 'handbook' ? 'Exportar Apostila' :
+                   activeView === 'google-apis' ? 'Google APIs' : 'Prompts IA'}
                 </h1>
                 <p className="text-muted-foreground mt-2">
                   {activeView === 'repository' 
@@ -118,6 +120,8 @@ const Repository = () => {
                     ? 'Clone landing pages e publique blogs de produtos nos domínios Cloudflare'
                     : activeView === 'handbook'
                     ? 'Exporte todos os dados em formato estruturado para gerar apostila DOCX'
+                    : activeView === 'google-apis'
+                    ? 'Gerencie respostas de reviews, posts GBP, YouTube SEO e páginas SEO local'
                     : 'Configure prompts e dados utilizados na geração de conteúdo IA'
                   }
                 </p>
@@ -186,6 +190,10 @@ const Repository = () => {
                 <TabsTrigger value="handbook" className="gap-2">
                   <BookOpen className="h-4 w-4" />
                   Apostila
+                </TabsTrigger>
+                <TabsTrigger value="google-apis" className="gap-2">
+                  <Building2 className="h-4 w-4" />
+                  Google APIs
                 </TabsTrigger>
               </TabsList>
               
@@ -277,6 +285,10 @@ const Repository = () => {
 
               <TabsContent value="prompts">
                 <EnhancedPromptsManager />
+              </TabsContent>
+
+              <TabsContent value="google-apis">
+                <GoogleApisTab />
               </TabsContent>
             </Tabs>
           </div>
