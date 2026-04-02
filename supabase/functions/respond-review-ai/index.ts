@@ -54,7 +54,6 @@ Deno.serve(async (req) => {
 })
 
 async function generateResponses(supabase: any, limit: number, reviewId?: string) {
-  // Step 1: Get all reviews (not just those without response_from_owner)
   let query = supabase
     .from('raw_reviews')
     .select('id, author_name, rating, review_text')
@@ -75,7 +74,6 @@ async function generateResponses(supabase: any, limit: number, reviewId?: string
   console.log('[REVIEWS] Raw reviews fetched:', reviews?.length || 0)
   if (!reviews || reviews.length === 0) return { generated: 0, responses: [] }
 
-  // Step 2: Filter out reviews that already have AI-generated responses in review_responses table
   const reviewIds = reviews.map((r: any) => r.id)
   const { data: existingResponses } = await supabase
     .from('review_responses')
@@ -166,13 +164,14 @@ async function postResponses(supabase: any, limit: number) {
   if (error) throw new Error(`Failed to fetch pending responses: ${error.message}`)
   if (!pending || pending.length === 0) return { posted: 0, failed: 0 }
 
+  // Use unified token resolver
   const token = await getValidGoogleToken(supabase, 'business')
   if (!token) {
-    // Mark all as failed
+    console.error('[REVIEWS] No valid Google Business token found')
     for (const resp of pending) {
       await supabase
         .from('review_responses')
-        .update({ status: 'failed', error_message: 'OAuth não configurado' })
+        .update({ status: 'failed', error_message: 'OAuth não configurado — reconecte via Configurações > Google Business' })
         .eq('id', resp.id)
     }
     return { posted: 0, failed: pending.length, error: 'OAuth não configurado' }
@@ -189,10 +188,9 @@ async function postResponses(supabase: any, limit: number) {
   let failed = 0
 
   for (const resp of pending) {
-    // Get place_id / review name from raw_reviews
     const { data: rawReview } = await supabase
       .from('raw_reviews')
-      .select('place_id, id')
+      .select('place_id, google_review_id')
       .eq('id', resp.raw_review_id)
       .single()
 
@@ -205,18 +203,31 @@ async function postResponses(supabase: any, limit: number) {
       continue
     }
 
+    // Use google_review_id if available, otherwise fallback to place_id
+    const reviewId = rawReview.google_review_id || rawReview.place_id
+    if (!reviewId) {
+      await supabase
+        .from('review_responses')
+        .update({ status: 'failed', error_message: 'Sem google_review_id ou place_id' })
+        .eq('id', resp.id)
+      failed++
+      continue
+    }
+
     try {
-      const replyRes = await fetch(
-        `https://mybusiness.googleapis.com/v4/accounts/${accountId}/locations/${locationId}/reviews/${rawReview.place_id}/reply`,
-        {
-          method: 'PUT',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ comment: resp.response_text }),
-        }
-      )
+      // Use My Business Account Management API v1 (modern endpoint)
+      const replyUrl = `https://mybusiness.googleapis.com/v4/accounts/${accountId}/locations/${locationId}/reviews/${reviewId}/reply`
+      
+      console.log(`[REVIEWS] Posting reply to: ${replyUrl}`)
+      
+      const replyRes = await fetch(replyUrl, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ comment: resp.response_text }),
+      })
 
       if (replyRes.ok) {
         await supabase
@@ -224,11 +235,13 @@ async function postResponses(supabase: any, limit: number) {
           .update({ status: 'posted', posted_at: new Date().toISOString() })
           .eq('id', resp.id)
         posted++
+        console.log(`[REVIEWS] ✅ Posted reply for review ${reviewId}`)
       } else {
         const errBody = await replyRes.text()
+        console.error(`[REVIEWS] ❌ Reply failed (${replyRes.status}): ${errBody.substring(0, 200)}`)
         await supabase
           .from('review_responses')
-          .update({ status: 'failed', error_message: errBody.substring(0, 500) })
+          .update({ status: 'failed', error_message: `HTTP ${replyRes.status}: ${errBody.substring(0, 500)}` })
           .eq('id', resp.id)
         failed++
       }

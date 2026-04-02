@@ -64,7 +64,6 @@ async function generateMetadata(supabase: any, limit: number, videoId?: string) 
   const processed: any[] = []
 
   for (const item of items) {
-    // Validação: product_id ou product_name obrigatório
     if (!item.product_id && !item.product_name) {
       console.error('[YT] Skipping video', item.video_id, '— no product linked')
       await supabase
@@ -77,7 +76,6 @@ async function generateMetadata(supabase: any, limit: number, videoId?: string) 
       continue
     }
 
-    // Buscar produto real se product_id disponível
     let productContext = null
     if (item.product_id) {
       const { data: prod } = await supabase
@@ -128,7 +126,6 @@ Retorne APENAS um JSON válido (sem markdown) com:
       const rawText = aiData?.choices?.[0]?.message?.content
       if (!rawText) continue
 
-      // Parse JSON from response (handle markdown code blocks)
       const jsonStr = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
       const parsed = JSON.parse(jsonStr)
 
@@ -163,12 +160,14 @@ async function updateMetadata(supabase: any, limit: number) {
   if (error) throw new Error(`Failed to fetch approved items: ${error.message}`)
   if (!items || items.length === 0) return { updated: 0, failed: 0 }
 
+  // Use unified token resolver
   const token = await getValidGoogleToken(supabase, 'youtube')
   if (!token) {
+    console.error('[YT] No valid YouTube token found')
     for (const item of items) {
       await supabase
         .from('youtube_metadata_queue')
-        .update({ status: 'failed', error_message: 'YouTube OAuth não configurado' })
+        .update({ status: 'failed', error_message: 'YouTube OAuth não configurado — reconecte via Configurações' })
         .eq('id', item.id)
     }
     return { updated: 0, failed: items.length, error: 'OAuth não configurado' }
