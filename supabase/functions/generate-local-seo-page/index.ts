@@ -74,12 +74,14 @@ Deno.serve(async (req) => {
       
       let products: any[] = []
       if (categoryKeyword) {
-        const { data: fuzzyProducts } = await supabase
+        console.log(`[SEO] Target ${target.id}: category_name="${target.category_name}" → keyword="${categoryKeyword}"`)
+        const { data: fuzzyProducts, error: prodError } = await supabase
           .from('products_repository')
           .select('name, description, price, image_url, product_url, technical_specifications, benefits, features, competitive_advantages, sales_pitch, keywords, target_audience')
           .eq('approved', true)
           .ilike('category', `%${categoryKeyword}%`)
           .limit(5)
+        console.log(`[SEO] Products found: ${fuzzyProducts?.length || 0}, error: ${prodError?.message || 'none'}`)
         products = fuzzyProducts || []
       }
 
