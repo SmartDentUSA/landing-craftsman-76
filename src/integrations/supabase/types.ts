@@ -225,6 +225,120 @@ export type Database = {
           },
         ]
       }
+      capcut_kits: {
+        Row: {
+          aspect_ratio: string
+          created_at: string
+          drive_folder_id: string | null
+          drive_kit_folder_id: string | null
+          drive_kit_folder_url: string | null
+          drive_upload_status: string | null
+          error_message: string | null
+          google_ads_desc: string | null
+          google_ads_headline: string | null
+          id: string
+          instagram_copy: string | null
+          is_ads_ready: boolean | null
+          linkedin_copy: string | null
+          narration_audio_url: string | null
+          product_id: string
+          product_name: string
+          script_data: Json | null
+          selected_images: Json | null
+          status: string
+          thumbnail_url: string | null
+          tiktok_script: string | null
+          updated_at: string
+          video_type: string
+          whatsapp_copy: string | null
+          youtube_chapters: string | null
+          youtube_description: string | null
+          youtube_status: string | null
+          youtube_tags: string[] | null
+          youtube_title: string | null
+          youtube_uploaded_at: string | null
+          youtube_url: string | null
+          youtube_video_id: string | null
+          yt_like_count: number | null
+          yt_stats_updated_at: string | null
+          yt_view_count: number | null
+        }
+        Insert: {
+          aspect_ratio?: string
+          created_at?: string
+          drive_folder_id?: string | null
+          drive_kit_folder_id?: string | null
+          drive_kit_folder_url?: string | null
+          drive_upload_status?: string | null
+          error_message?: string | null
+          google_ads_desc?: string | null
+          google_ads_headline?: string | null
+          id?: string
+          instagram_copy?: string | null
+          is_ads_ready?: boolean | null
+          linkedin_copy?: string | null
+          narration_audio_url?: string | null
+          product_id: string
+          product_name: string
+          script_data?: Json | null
+          selected_images?: Json | null
+          status?: string
+          thumbnail_url?: string | null
+          tiktok_script?: string | null
+          updated_at?: string
+          video_type: string
+          whatsapp_copy?: string | null
+          youtube_chapters?: string | null
+          youtube_description?: string | null
+          youtube_status?: string | null
+          youtube_tags?: string[] | null
+          youtube_title?: string | null
+          youtube_uploaded_at?: string | null
+          youtube_url?: string | null
+          youtube_video_id?: string | null
+          yt_like_count?: number | null
+          yt_stats_updated_at?: string | null
+          yt_view_count?: number | null
+        }
+        Update: {
+          aspect_ratio?: string
+          created_at?: string
+          drive_folder_id?: string | null
+          drive_kit_folder_id?: string | null
+          drive_kit_folder_url?: string | null
+          drive_upload_status?: string | null
+          error_message?: string | null
+          google_ads_desc?: string | null
+          google_ads_headline?: string | null
+          id?: string
+          instagram_copy?: string | null
+          is_ads_ready?: boolean | null
+          linkedin_copy?: string | null
+          narration_audio_url?: string | null
+          product_id?: string
+          product_name?: string
+          script_data?: Json | null
+          selected_images?: Json | null
+          status?: string
+          thumbnail_url?: string | null
+          tiktok_script?: string | null
+          updated_at?: string
+          video_type?: string
+          whatsapp_copy?: string | null
+          youtube_chapters?: string | null
+          youtube_description?: string | null
+          youtube_status?: string | null
+          youtube_tags?: string[] | null
+          youtube_title?: string | null
+          youtube_uploaded_at?: string | null
+          youtube_url?: string | null
+          youtube_video_id?: string | null
+          yt_like_count?: number | null
+          yt_stats_updated_at?: string | null
+          yt_view_count?: number | null
+        }
+        Relationships: []
+      }
       categories_config: {
         Row: {
           anti_hallucination_rules: Json | null
@@ -678,6 +792,108 @@ export type Database = {
           quality_metrics?: Json | null
           updated_at?: string | null
           user_feedback?: Json | null
+        }
+        Relationships: []
+      }
+      content_calendar: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          caption: string | null
+          comments: number | null
+          content_type: string
+          created_at: string
+          cta_text: string | null
+          cta_url: string | null
+          error_message: string | null
+          hashtags: string[] | null
+          id: string
+          likes: number | null
+          media_url: string | null
+          platform: string
+          platform_post_id: string | null
+          platform_url: string | null
+          product_id: string | null
+          product_name: string | null
+          published_at: string | null
+          reach: number | null
+          saves: number | null
+          scheduled_for: string | null
+          shares: number | null
+          source_id: string | null
+          source_type: string
+          stats_updated_at: string | null
+          status: string
+          thumbnail_url: string | null
+          title: string | null
+          updated_at: string
+          views: number | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          caption?: string | null
+          comments?: number | null
+          content_type: string
+          created_at?: string
+          cta_text?: string | null
+          cta_url?: string | null
+          error_message?: string | null
+          hashtags?: string[] | null
+          id?: string
+          likes?: number | null
+          media_url?: string | null
+          platform: string
+          platform_post_id?: string | null
+          platform_url?: string | null
+          product_id?: string | null
+          product_name?: string | null
+          published_at?: string | null
+          reach?: number | null
+          saves?: number | null
+          scheduled_for?: string | null
+          shares?: number | null
+          source_id?: string | null
+          source_type: string
+          stats_updated_at?: string | null
+          status?: string
+          thumbnail_url?: string | null
+          title?: string | null
+          updated_at?: string
+          views?: number | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          caption?: string | null
+          comments?: number | null
+          content_type?: string
+          created_at?: string
+          cta_text?: string | null
+          cta_url?: string | null
+          error_message?: string | null
+          hashtags?: string[] | null
+          id?: string
+          likes?: number | null
+          media_url?: string | null
+          platform?: string
+          platform_post_id?: string | null
+          platform_url?: string | null
+          product_id?: string | null
+          product_name?: string | null
+          published_at?: string | null
+          reach?: number | null
+          saves?: number | null
+          scheduled_for?: string | null
+          shares?: number | null
+          source_id?: string | null
+          source_type?: string
+          stats_updated_at?: string | null
+          status?: string
+          thumbnail_url?: string | null
+          title?: string | null
+          updated_at?: string
+          views?: number | null
         }
         Relationships: []
       }
@@ -2345,6 +2561,216 @@ export type Database = {
           },
         ]
       }
+      product_drive_folders: {
+        Row: {
+          assets_count: number | null
+          auto_sync: boolean | null
+          created_at: string
+          folder_id: string
+          folder_name: string | null
+          folder_url: string | null
+          id: string
+          images_count: number | null
+          last_synced_at: string | null
+          product_id: string
+          product_name: string | null
+          updated_at: string
+          videos_count: number | null
+        }
+        Insert: {
+          assets_count?: number | null
+          auto_sync?: boolean | null
+          created_at?: string
+          folder_id: string
+          folder_name?: string | null
+          folder_url?: string | null
+          id?: string
+          images_count?: number | null
+          last_synced_at?: string | null
+          product_id: string
+          product_name?: string | null
+          updated_at?: string
+          videos_count?: number | null
+        }
+        Update: {
+          assets_count?: number | null
+          auto_sync?: boolean | null
+          created_at?: string
+          folder_id?: string
+          folder_name?: string | null
+          folder_url?: string | null
+          id?: string
+          images_count?: number | null
+          last_synced_at?: string | null
+          product_id?: string
+          product_name?: string | null
+          updated_at?: string
+          videos_count?: number | null
+        }
+        Relationships: []
+      }
+      product_video_projects: {
+        Row: {
+          ads_campaign_type: string | null
+          ads_description: string | null
+          ads_headline: string | null
+          aspect_ratio: string
+          assembly_cost_usd: number | null
+          assembly_done_at: string | null
+          assembly_job_id: string | null
+          assembly_progress: number | null
+          assembly_service: string | null
+          assembly_started_at: string | null
+          assembly_status: string | null
+          copies: Json | null
+          created_at: string
+          drive_assets: Json | null
+          drive_assets_synced: boolean | null
+          drive_folder_id: string | null
+          drive_folder_url: string | null
+          duration_target_s: number | null
+          error_message: string | null
+          id: string
+          is_ads_ready: boolean | null
+          is_shorts: boolean | null
+          narration_audio_url: string | null
+          narration_duration_s: number | null
+          narration_status: string | null
+          narration_voice: string | null
+          product_id: string
+          product_name: string
+          script_data: Json | null
+          script_generated_at: string | null
+          script_status: string | null
+          selected_clips: Json | null
+          selected_images: Json | null
+          status: string
+          thumbnail_status: string | null
+          thumbnail_url: string | null
+          updated_at: string
+          video_file_size_mb: number | null
+          video_type: string
+          video_url: string | null
+          youtube_chapters: string | null
+          youtube_description: string | null
+          youtube_status: string | null
+          youtube_tags: string[] | null
+          youtube_title: string | null
+          youtube_uploaded_at: string | null
+          youtube_url: string | null
+          youtube_video_id: string | null
+          yt_like_count: number | null
+          yt_stats_updated_at: string | null
+          yt_view_count: number | null
+        }
+        Insert: {
+          ads_campaign_type?: string | null
+          ads_description?: string | null
+          ads_headline?: string | null
+          aspect_ratio?: string
+          assembly_cost_usd?: number | null
+          assembly_done_at?: string | null
+          assembly_job_id?: string | null
+          assembly_progress?: number | null
+          assembly_service?: string | null
+          assembly_started_at?: string | null
+          assembly_status?: string | null
+          copies?: Json | null
+          created_at?: string
+          drive_assets?: Json | null
+          drive_assets_synced?: boolean | null
+          drive_folder_id?: string | null
+          drive_folder_url?: string | null
+          duration_target_s?: number | null
+          error_message?: string | null
+          id?: string
+          is_ads_ready?: boolean | null
+          is_shorts?: boolean | null
+          narration_audio_url?: string | null
+          narration_duration_s?: number | null
+          narration_status?: string | null
+          narration_voice?: string | null
+          product_id: string
+          product_name: string
+          script_data?: Json | null
+          script_generated_at?: string | null
+          script_status?: string | null
+          selected_clips?: Json | null
+          selected_images?: Json | null
+          status?: string
+          thumbnail_status?: string | null
+          thumbnail_url?: string | null
+          updated_at?: string
+          video_file_size_mb?: number | null
+          video_type: string
+          video_url?: string | null
+          youtube_chapters?: string | null
+          youtube_description?: string | null
+          youtube_status?: string | null
+          youtube_tags?: string[] | null
+          youtube_title?: string | null
+          youtube_uploaded_at?: string | null
+          youtube_url?: string | null
+          youtube_video_id?: string | null
+          yt_like_count?: number | null
+          yt_stats_updated_at?: string | null
+          yt_view_count?: number | null
+        }
+        Update: {
+          ads_campaign_type?: string | null
+          ads_description?: string | null
+          ads_headline?: string | null
+          aspect_ratio?: string
+          assembly_cost_usd?: number | null
+          assembly_done_at?: string | null
+          assembly_job_id?: string | null
+          assembly_progress?: number | null
+          assembly_service?: string | null
+          assembly_started_at?: string | null
+          assembly_status?: string | null
+          copies?: Json | null
+          created_at?: string
+          drive_assets?: Json | null
+          drive_assets_synced?: boolean | null
+          drive_folder_id?: string | null
+          drive_folder_url?: string | null
+          duration_target_s?: number | null
+          error_message?: string | null
+          id?: string
+          is_ads_ready?: boolean | null
+          is_shorts?: boolean | null
+          narration_audio_url?: string | null
+          narration_duration_s?: number | null
+          narration_status?: string | null
+          narration_voice?: string | null
+          product_id?: string
+          product_name?: string
+          script_data?: Json | null
+          script_generated_at?: string | null
+          script_status?: string | null
+          selected_clips?: Json | null
+          selected_images?: Json | null
+          status?: string
+          thumbnail_status?: string | null
+          thumbnail_url?: string | null
+          updated_at?: string
+          video_file_size_mb?: number | null
+          video_type?: string
+          video_url?: string | null
+          youtube_chapters?: string | null
+          youtube_description?: string | null
+          youtube_status?: string | null
+          youtube_tags?: string[] | null
+          youtube_title?: string | null
+          youtube_uploaded_at?: string | null
+          youtube_url?: string | null
+          youtube_video_id?: string | null
+          yt_like_count?: number | null
+          yt_stats_updated_at?: string | null
+          yt_view_count?: number | null
+        }
+        Relationships: []
+      }
       products_repository: {
         Row: {
           active: boolean | null
@@ -2361,6 +2787,7 @@ export type Database = {
           bot_trigger_words: Json | null
           brand: string | null
           canonical_url: string | null
+          carousel_extra_images: Json | null
           category: string | null
           clinical_brain_generated_at: string | null
           clinical_brain_status: string | null
@@ -2396,6 +2823,7 @@ export type Database = {
           images_gallery: Json | null
           individual_blog_content: Json | null
           instagram_copies: Json | null
+          instagram_engagement_carousel: Json | null
           instagram_reels_scripts: Json | null
           instagram_videos: Json | null
           keyword_ids: string[] | null
@@ -2480,6 +2908,7 @@ export type Database = {
           bot_trigger_words?: Json | null
           brand?: string | null
           canonical_url?: string | null
+          carousel_extra_images?: Json | null
           category?: string | null
           clinical_brain_generated_at?: string | null
           clinical_brain_status?: string | null
@@ -2515,6 +2944,7 @@ export type Database = {
           images_gallery?: Json | null
           individual_blog_content?: Json | null
           instagram_copies?: Json | null
+          instagram_engagement_carousel?: Json | null
           instagram_reels_scripts?: Json | null
           instagram_videos?: Json | null
           keyword_ids?: string[] | null
@@ -2599,6 +3029,7 @@ export type Database = {
           bot_trigger_words?: Json | null
           brand?: string | null
           canonical_url?: string | null
+          carousel_extra_images?: Json | null
           category?: string | null
           clinical_brain_generated_at?: string | null
           clinical_brain_status?: string | null
@@ -2634,6 +3065,7 @@ export type Database = {
           images_gallery?: Json | null
           individual_blog_content?: Json | null
           instagram_copies?: Json | null
+          instagram_engagement_carousel?: Json | null
           instagram_reels_scripts?: Json | null
           instagram_videos?: Json | null
           keyword_ids?: string[] | null
@@ -3137,6 +3569,99 @@ export type Database = {
         }
         Relationships: []
       }
+      ugc_intake: {
+        Row: {
+          ai_location: string | null
+          ai_notes: string | null
+          ai_product_match: string | null
+          ai_publish_ready: boolean | null
+          ai_quality_score: number | null
+          ai_specialty: string | null
+          ai_transcript: string | null
+          created_at: string
+          drive_file_id: string | null
+          duration_s: number | null
+          file_name: string | null
+          file_size_mb: number | null
+          file_type: string | null
+          id: string
+          intake_channel: string
+          processed_at: string | null
+          raw_file_url: string | null
+          rejection_reason: string | null
+          sender_email: string | null
+          sender_name: string | null
+          sender_phone: string | null
+          status: string
+          testimonial_id: string | null
+        }
+        Insert: {
+          ai_location?: string | null
+          ai_notes?: string | null
+          ai_product_match?: string | null
+          ai_publish_ready?: boolean | null
+          ai_quality_score?: number | null
+          ai_specialty?: string | null
+          ai_transcript?: string | null
+          created_at?: string
+          drive_file_id?: string | null
+          duration_s?: number | null
+          file_name?: string | null
+          file_size_mb?: number | null
+          file_type?: string | null
+          id?: string
+          intake_channel: string
+          processed_at?: string | null
+          raw_file_url?: string | null
+          rejection_reason?: string | null
+          sender_email?: string | null
+          sender_name?: string | null
+          sender_phone?: string | null
+          status?: string
+          testimonial_id?: string | null
+        }
+        Update: {
+          ai_location?: string | null
+          ai_notes?: string | null
+          ai_product_match?: string | null
+          ai_publish_ready?: boolean | null
+          ai_quality_score?: number | null
+          ai_specialty?: string | null
+          ai_transcript?: string | null
+          created_at?: string
+          drive_file_id?: string | null
+          duration_s?: number | null
+          file_name?: string | null
+          file_size_mb?: number | null
+          file_type?: string | null
+          id?: string
+          intake_channel?: string
+          processed_at?: string | null
+          raw_file_url?: string | null
+          rejection_reason?: string | null
+          sender_email?: string | null
+          sender_name?: string | null
+          sender_phone?: string | null
+          status?: string
+          testimonial_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ugc_intake_testimonial_id_fkey"
+            columns: ["testimonial_id"]
+            isOneToOne: false
+            referencedRelation: "v_ugc_pipeline"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ugc_intake_testimonial_id_fkey"
+            columns: ["testimonial_id"]
+            isOneToOne: false
+            referencedRelation: "video_testimonials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -3293,63 +3818,120 @@ export type Database = {
       }
       video_testimonials: {
         Row: {
+          ai_enriched: boolean | null
+          ai_enriched_at: string | null
           ai_extracted_benefits: Json | null
           ai_keywords: Json | null
           approved: boolean | null
           caption_data: Json | null
           client_name: string
+          content_themes: Json | null
+          copies_data: Json | null
+          copies_generated: boolean | null
+          copies_generated_at: string | null
           created_at: string
           display_order: number | null
+          engagement_score: number | null
+          extracted_city: string | null
+          extracted_products: Json | null
+          extracted_specialty: string | null
+          extracted_state: string | null
           id: string
           instagram_url: string | null
+          is_short: boolean | null
           landing_page_id: string
           location: string | null
+          platform_status: Json | null
+          product_id: string | null
+          product_name: string | null
           profession: string | null
           sentiment_score: number | null
+          source_type: string | null
           specialty: string | null
           state: string | null
           testimonial_text: string
+          tiktok_url: string | null
           updated_at: string
+          video_duration_s: number | null
+          whatsapp_sent: boolean | null
           youtube_url: string | null
         }
         Insert: {
+          ai_enriched?: boolean | null
+          ai_enriched_at?: string | null
           ai_extracted_benefits?: Json | null
           ai_keywords?: Json | null
           approved?: boolean | null
           caption_data?: Json | null
           client_name: string
+          content_themes?: Json | null
+          copies_data?: Json | null
+          copies_generated?: boolean | null
+          copies_generated_at?: string | null
           created_at?: string
           display_order?: number | null
+          engagement_score?: number | null
+          extracted_city?: string | null
+          extracted_products?: Json | null
+          extracted_specialty?: string | null
+          extracted_state?: string | null
           id?: string
           instagram_url?: string | null
+          is_short?: boolean | null
           landing_page_id: string
           location?: string | null
+          platform_status?: Json | null
+          product_id?: string | null
+          product_name?: string | null
           profession?: string | null
           sentiment_score?: number | null
+          source_type?: string | null
           specialty?: string | null
           state?: string | null
           testimonial_text: string
+          tiktok_url?: string | null
           updated_at?: string
+          video_duration_s?: number | null
+          whatsapp_sent?: boolean | null
           youtube_url?: string | null
         }
         Update: {
+          ai_enriched?: boolean | null
+          ai_enriched_at?: string | null
           ai_extracted_benefits?: Json | null
           ai_keywords?: Json | null
           approved?: boolean | null
           caption_data?: Json | null
           client_name?: string
+          content_themes?: Json | null
+          copies_data?: Json | null
+          copies_generated?: boolean | null
+          copies_generated_at?: string | null
           created_at?: string
           display_order?: number | null
+          engagement_score?: number | null
+          extracted_city?: string | null
+          extracted_products?: Json | null
+          extracted_specialty?: string | null
+          extracted_state?: string | null
           id?: string
           instagram_url?: string | null
+          is_short?: boolean | null
           landing_page_id?: string
           location?: string | null
+          platform_status?: Json | null
+          product_id?: string | null
+          product_name?: string | null
           profession?: string | null
           sentiment_score?: number | null
+          source_type?: string | null
           specialty?: string | null
           state?: string | null
           testimonial_text?: string
+          tiktok_url?: string | null
           updated_at?: string
+          video_duration_s?: number | null
+          whatsapp_sent?: boolean | null
           youtube_url?: string | null
         }
         Relationships: []
@@ -3550,6 +4132,21 @@ export type Database = {
       }
     }
     Views: {
+      v_content_pipeline_summary: {
+        Row: {
+          avg_asset_score: number | null
+          enriched: number | null
+          ig_not_yt: number | null
+          on_instagram: number | null
+          on_tiktok: number | null
+          on_youtube: number | null
+          product_name: string | null
+          total_ugc: number | null
+          with_copies: number | null
+          yt_not_ig: number | null
+        }
+        Relationships: []
+      }
       v_local_seo_summary: {
         Row: {
           approved: number | null
@@ -3720,6 +4317,170 @@ export type Database = {
           review_date: string | null
           review_id: string | null
           review_text: string | null
+        }
+        Relationships: []
+      }
+      v_ugc_pipeline: {
+        Row: {
+          ai_enriched: boolean | null
+          ai_enriched_at: string | null
+          approved: boolean | null
+          asset_score: number | null
+          client_name: string | null
+          content_themes: Json | null
+          copies_generated: boolean | null
+          copies_generated_at: string | null
+          copy_gbp: string | null
+          copy_instagram: string | null
+          copy_tiktok: string | null
+          copy_whatsapp: string | null
+          copy_youtube: string | null
+          created_at: string | null
+          extracted_city: string | null
+          extracted_products: Json | null
+          extracted_specialty: string | null
+          extracted_state: string | null
+          id: string | null
+          ig_status: string | null
+          instagram_url: string | null
+          is_short: boolean | null
+          product_id: string | null
+          product_name: string | null
+          source_type: string | null
+          text_preview: string | null
+          tiktok_url: string | null
+          tt_status: string | null
+          wa_status: string | null
+          youtube_url: string | null
+          yt_status: string | null
+        }
+        Insert: {
+          ai_enriched?: boolean | null
+          ai_enriched_at?: string | null
+          approved?: boolean | null
+          asset_score?: never
+          client_name?: string | null
+          content_themes?: Json | null
+          copies_generated?: boolean | null
+          copies_generated_at?: string | null
+          copy_gbp?: never
+          copy_instagram?: never
+          copy_tiktok?: never
+          copy_whatsapp?: never
+          copy_youtube?: never
+          created_at?: string | null
+          extracted_city?: string | null
+          extracted_products?: Json | null
+          extracted_specialty?: string | null
+          extracted_state?: string | null
+          id?: string | null
+          ig_status?: never
+          instagram_url?: string | null
+          is_short?: boolean | null
+          product_id?: string | null
+          product_name?: string | null
+          source_type?: string | null
+          text_preview?: never
+          tiktok_url?: string | null
+          tt_status?: never
+          wa_status?: never
+          youtube_url?: string | null
+          yt_status?: never
+        }
+        Update: {
+          ai_enriched?: boolean | null
+          ai_enriched_at?: string | null
+          approved?: boolean | null
+          asset_score?: never
+          client_name?: string | null
+          content_themes?: Json | null
+          copies_generated?: boolean | null
+          copies_generated_at?: string | null
+          copy_gbp?: never
+          copy_instagram?: never
+          copy_tiktok?: never
+          copy_whatsapp?: never
+          copy_youtube?: never
+          created_at?: string | null
+          extracted_city?: string | null
+          extracted_products?: Json | null
+          extracted_specialty?: string | null
+          extracted_state?: string | null
+          id?: string | null
+          ig_status?: never
+          instagram_url?: string | null
+          is_short?: boolean | null
+          product_id?: string | null
+          product_name?: string | null
+          source_type?: string | null
+          text_preview?: never
+          tiktok_url?: string | null
+          tt_status?: never
+          wa_status?: never
+          youtube_url?: string | null
+          yt_status?: never
+        }
+        Relationships: []
+      }
+      v_video_production_dashboard: {
+        Row: {
+          ads_campaign_type: string | null
+          ads_description: string | null
+          ads_headline: string | null
+          aspect_ratio: string | null
+          assembly_cost_usd: number | null
+          assembly_done_at: string | null
+          assembly_job_id: string | null
+          assembly_progress: number | null
+          assembly_service: string | null
+          assembly_started_at: string | null
+          assembly_status: string | null
+          copies: Json | null
+          created_at: string | null
+          drive_assets: Json | null
+          drive_assets_synced: boolean | null
+          drive_folder_id: string | null
+          drive_folder_name: string | null
+          drive_folder_url: string | null
+          drive_folder_url_link: string | null
+          drive_images_available: number | null
+          drive_last_synced: string | null
+          drive_videos_available: number | null
+          duration_target_s: number | null
+          error_message: string | null
+          id: string | null
+          is_ads_ready: boolean | null
+          is_shorts: boolean | null
+          narration_audio_url: string | null
+          narration_duration_s: number | null
+          narration_status: string | null
+          narration_voice: string | null
+          product_id: string | null
+          product_name: string | null
+          production_progress: number | null
+          script_data: Json | null
+          script_generated_at: string | null
+          script_status: string | null
+          selected_clips: Json | null
+          selected_images: Json | null
+          status: string | null
+          thumbnail_status: string | null
+          thumbnail_url: string | null
+          updated_at: string | null
+          video_file_size_mb: number | null
+          video_type: string | null
+          video_url: string | null
+          youtube_chapters: string | null
+          youtube_description: string | null
+          youtube_status: string | null
+          youtube_tags: string[] | null
+          youtube_title: string | null
+          youtube_uploaded_at: string | null
+          youtube_url: string | null
+          youtube_video_id: string | null
+          yt_like_count: number | null
+          yt_stats_updated_at: string | null
+          yt_view_count: number | null
         }
         Relationships: []
       }
