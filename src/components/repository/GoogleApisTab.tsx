@@ -523,8 +523,8 @@ function LocalSEOCard() {
         .select('*')
         .order('priority', { ascending: false });
 
-      if (filterUF) query = query.eq('state_uf', filterUF);
-      if (filterStatus) query = query.eq('status', filterStatus);
+      if (filterUF && filterUF !== 'all') query = query.eq('state_uf', filterUF);
+      if (filterStatus && filterStatus !== 'all') query = query.eq('status', filterStatus);
 
       const { data } = await query.limit(50);
       return data || [];
