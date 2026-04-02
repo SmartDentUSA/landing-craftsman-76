@@ -1,53 +1,56 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Loader2, Copy, ChevronLeft, ChevronRight, Sparkles, Image, RefreshCw } from "lucide-react";
+import { Loader2, Copy, Sparkles, Image, RefreshCw, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-
-interface CarouselSlide {
-  position: number;
-  title: string;
-  text: string;
-  image_suggestion: string;
-  cta_label?: string | null;
-}
-
-interface EngagementCarousel {
-  slides: CarouselSlide[];
-  generated_at?: string;
-  approach?: string;
-}
+import { EngagementCarouselPreview, generateEngagementSlidePNG, fetchAsDataUrl } from "./EngagementCarouselPreview";
+import type { EngagementSlideTexts, EngagementSlideTextsMap } from "./EngagementCarouselPreview";
+import JSZip from "jszip";
 
 interface EngagementCarouselSectionProps {
   productId: string;
   productName: string;
   feedCopy?: string;
+  productImages?: Array<{ url: string; alt?: string }>;
+  primaryColor?: string;
+  accentColor?: string;
+  brandName?: string;
+  handleName?: string;
 }
 
-const SLIDE_LABELS: Record<number, { emoji: string; label: string }> = {
-  1: { emoji: '🎯', label: 'Capa / Gancho' },
-  2: { emoji: '😰', label: 'Problema' },
-  3: { emoji: '💡', label: 'Solução' },
-  4: { emoji: '🔬', label: 'Prova Técnica' },
-  5: { emoji: '🏆', label: 'Autoridade' },
-  6: { emoji: '📲', label: 'CTA' },
+const DEFAULT_SLIDE_TEXTS: EngagementSlideTextsMap = {
+  1: { title: '', text: '', image_suggestion: '' },
+  2: { title: '', text: '', image_suggestion: '' },
+  3: { title: '', text: '', image_suggestion: '' },
+  4: { title: '', text: '', image_suggestion: '' },
+  5: { title: '', text: '', image_suggestion: '' },
+  6: { title: '', text: '', image_suggestion: '', cta_label: '' },
 };
 
-export function EngagementCarouselSection({ productId, productName, feedCopy }: EngagementCarouselSectionProps) {
-  const [carousel, setCarousel] = useState<EngagementCarousel | null>(null);
+export function EngagementCarouselSection({
+  productId,
+  productName,
+  feedCopy,
+  productImages = [],
+  primaryColor = '#1a1a1a',
+  accentColor = '#FF6B35',
+  brandName = 'Brand',
+  handleName = 'handle',
+}: EngagementCarouselSectionProps) {
+  const [slideTexts, setSlideTexts] = useState<EngagementSlideTextsMap>({ ...DEFAULT_SLIDE_TEXTS });
+  const [slideImageMap, setSlideImageMap] = useState<Record<number, string>>({});
   const [generating, setGenerating] = useState(false);
-  const [activeSlide, setActiveSlide] = useState(1);
+  const [exporting, setExporting] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [hasContent, setHasContent] = useState(false);
   const { toast } = useToast();
 
-  // Load saved carousel
   useEffect(() => {
-    loadSavedCarousel();
+    loadSaved();
   }, [productId]);
 
-  const loadSavedCarousel = async () => {
+  const loadSaved = async () => {
     setLoading(true);
     try {
       const { data } = await supabase
@@ -58,13 +61,83 @@ export function EngagementCarouselSection({ productId, productName, feedCopy }: 
 
       const copies = data?.instagram_copies as any;
       if (copies?.engagement_carousel) {
-        setCarousel(copies.engagement_carousel);
+        const ec = copies.engagement_carousel;
+        // Restore slide texts
+        if (ec.slideTexts) {
+          setSlideTexts(ec.slideTexts);
+          setHasContent(true);
+        } else if (ec.slides) {
+          // Legacy: convert from old format
+          const newTexts = { ...DEFAULT_SLIDE_TEXTS };
+          for (const slide of ec.slides) {
+            newTexts[slide.position as keyof typeof newTexts] = {
+              title: slide.title || '',
+              text: slide.text || '',
+              image_suggestion: slide.image_suggestion || '',
+              cta_label: slide.cta_label || null,
+            };
+          }
+          setSlideTexts(newTexts);
+          setHasContent(true);
+        }
+        // Restore images
+        if (ec.slideImageMap) {
+          setSlideImageMap(ec.slideImageMap);
+        }
       }
     } catch (err) {
       console.error('Erro ao carregar carrossel engajamento:', err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const persistData = async (newTexts: EngagementSlideTextsMap, newImages: Record<number, string>) => {
+    try {
+      const { data: existingData } = await supabase
+        .from('products_repository')
+        .select('instagram_copies')
+        .eq('id', productId)
+        .single();
+
+      const existingCopies = (existingData?.instagram_copies as any) || {};
+      await supabase
+        .from('products_repository')
+        .update({
+          instagram_copies: {
+            ...existingCopies,
+            engagement_carousel: {
+              slideTexts: newTexts,
+              slideImageMap: newImages,
+              generated_at: new Date().toISOString(),
+              approach: 'engajamento',
+            },
+          } as any
+        })
+        .eq('id', productId);
+    } catch (err) {
+      console.error('Erro ao salvar:', err);
+    }
+  };
+
+  const handleSlideTextChange = (slideNum: number, key: string, value: string) => {
+    setSlideTexts(prev => {
+      const updated = {
+        ...prev,
+        [slideNum]: { ...prev[slideNum], [key]: value }
+      };
+      // Debounced persist
+      setTimeout(() => persistData(updated, slideImageMap), 1000);
+      return updated;
+    });
+  };
+
+  const handleImageChange = (slideNum: number, url: string) => {
+    setSlideImageMap(prev => {
+      const updated = { ...prev, [slideNum]: url };
+      setTimeout(() => persistData(slideTexts, updated), 500);
+      return updated;
+    });
   };
 
   const generateCarousel = async () => {
@@ -82,34 +155,19 @@ export function EngagementCarouselSection({ productId, productName, feedCopy }: 
       if (error) throw error;
 
       if (data?.slides) {
-        const newCarousel: EngagementCarousel = {
-          slides: data.slides,
-          generated_at: new Date().toISOString(),
-          approach: 'engajamento',
-        };
-        setCarousel(newCarousel);
-        setActiveSlide(1);
-
-        // Persist
-        const { data: existingData } = await supabase
-          .from('products_repository')
-          .select('instagram_copies')
-          .eq('id', productId)
-          .single();
-
-        const existingCopies = (existingData?.instagram_copies as any) || {};
-
-        await supabase
-          .from('products_repository')
-          .update({
-            instagram_copies: {
-              ...existingCopies,
-              engagement_carousel: newCarousel,
-            } as any
-          })
-          .eq('id', productId);
-
-        toast({ title: "🎯 Carrossel Engajamento gerado!", description: "6 slides prontos com progressão narrativa." });
+        const newTexts = { ...DEFAULT_SLIDE_TEXTS };
+        for (const slide of data.slides) {
+          newTexts[slide.position as keyof typeof newTexts] = {
+            title: slide.title || '',
+            text: slide.text || '',
+            image_suggestion: slide.image_suggestion || '',
+            cta_label: slide.cta_label || null,
+          };
+        }
+        setSlideTexts(newTexts);
+        setHasContent(true);
+        await persistData(newTexts, slideImageMap);
+        toast({ title: "🎯 Carrossel Engajamento gerado!", description: "6 slides visuais prontos para edição." });
       }
     } catch (error) {
       console.error('Erro ao gerar carrossel engajamento:', error);
@@ -123,19 +181,44 @@ export function EngagementCarouselSection({ productId, productName, feedCopy }: 
     }
   };
 
-  const copySlide = (slide: CarouselSlide) => {
-    const text = `SLIDE ${slide.position}: ${slide.title}\n\n${slide.text}${slide.cta_label ? `\n\nCTA: ${slide.cta_label}` : ''}\n\n📸 ${slide.image_suggestion}`;
-    navigator.clipboard.writeText(text);
-    toast({ title: "Copiado!", description: `Slide ${slide.position} copiado.` });
+  const exportAllPNGs = async () => {
+    setExporting(true);
+    try {
+      const zip = new JSZip();
+      for (let i = 1; i <= 6; i++) {
+        const texts = slideTexts[i];
+        let imgUrl = slideImageMap[i] || '';
+        // Convert to data URL if needed
+        if (imgUrl && !imgUrl.startsWith('data:')) {
+          try {
+            imgUrl = await fetchAsDataUrl(imgUrl);
+          } catch { /* use original */ }
+        }
+        const blob = await generateEngagementSlidePNG(i, imgUrl, texts, primaryColor, accentColor, brandName, handleName);
+        zip.file(`engajamento_slide_${i}.png`, blob);
+      }
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(zipBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `carrossel_engajamento_${productName.replace(/\s+/g, '_')}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({ title: "✅ Download iniciado!", description: "6 PNGs 1080x1350 em ZIP." });
+    } catch (err) {
+      console.error('Erro no export:', err);
+      toast({ title: "Erro", description: "Falha ao exportar PNGs.", variant: "destructive" });
+    } finally {
+      setExporting(false);
+    }
   };
 
   const copyAllSlides = () => {
-    if (!carousel?.slides) return;
-    const text = carousel.slides.map(s =>
-      `━━━ SLIDE ${s.position}: ${s.title} ━━━\n${s.text}${s.cta_label ? `\nCTA: ${s.cta_label}` : ''}\n📸 ${s.image_suggestion}`
-    ).join('\n\n');
-    const header = `CARROSSEL ENGAJAMENTO — ${productName}\n\n`;
-    navigator.clipboard.writeText(header + text);
+    const text = [1, 2, 3, 4, 5, 6].map(i => {
+      const s = slideTexts[i];
+      return `━━━ SLIDE ${i}: ${s.title} ━━━\n${s.text}${s.cta_label ? `\nCTA: ${s.cta_label}` : ''}\n📸 ${s.image_suggestion}`;
+    }).join('\n\n');
+    navigator.clipboard.writeText(`CARROSSEL ENGAJAMENTO — ${productName}\n\n${text}`);
     toast({ title: "Copiado!", description: "Todos os 6 slides copiados!" });
   };
 
@@ -147,136 +230,68 @@ export function EngagementCarouselSection({ productId, productName, feedCopy }: 
     );
   }
 
-  const currentSlide = carousel?.slides?.find(s => s.position === activeSlide);
-  const slideInfo = SLIDE_LABELS[activeSlide] || { emoji: '📄', label: `Slide ${activeSlide}` };
-
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between flex-wrap gap-2">
           <CardTitle className="flex items-center gap-2 text-base">
             <Image className="h-5 w-5" />
-            🎯 Carrossel Engajamento — 6 Slides
+            🎯 Carrossel Engajamento — 6 Slides Visuais
           </CardTitle>
-          <div className="flex items-center gap-2">
-            {carousel?.slides?.length === 6 && (
-              <Button size="sm" variant="outline" onClick={copyAllSlides}>
-                <Copy className="h-4 w-4 mr-1" />
-                Copiar Tudo
-              </Button>
+          <div className="flex items-center gap-2 flex-wrap">
+            {hasContent && (
+              <>
+                <Button size="sm" variant="outline" onClick={copyAllSlides}>
+                  <Copy className="h-4 w-4 mr-1" />
+                  Copiar Textos
+                </Button>
+                <Button size="sm" variant="outline" onClick={exportAllPNGs} disabled={exporting}>
+                  {exporting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Download className="h-4 w-4 mr-1" />}
+                  Baixar ZIP
+                </Button>
+              </>
             )}
             <Button
               size="sm"
-              variant={carousel ? "outline" : "default"}
+              variant={hasContent ? "outline" : "default"}
               onClick={generateCarousel}
               disabled={generating}
             >
               {generating ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : carousel ? (
+              ) : hasContent ? (
                 <RefreshCw className="h-4 w-4 mr-2" />
               ) : (
                 <Sparkles className="h-4 w-4 mr-2" />
               )}
-              {carousel ? 'Regenerar' : 'Gerar com IA'}
+              {hasContent ? 'Regenerar' : 'Gerar com IA'}
             </Button>
           </div>
         </div>
         <p className="text-xs text-muted-foreground">
-          Progressão: Gancho → Problema → Solução → Prova → Autoridade → CTA
+          Progressão: Gancho → Problema → Solução → Prova → Autoridade → CTA • Use <code className="bg-muted px-1 rounded">**bold**</code> e <code className="bg-muted px-1 rounded">{'{destaque}'}</code>
         </p>
       </CardHeader>
 
       <CardContent>
-        {!carousel?.slides?.length ? (
+        {!hasContent ? (
           <div className="text-center py-8 text-muted-foreground">
             <Image className="h-12 w-12 mx-auto mb-3 opacity-30" />
-            <p className="text-sm">Clique em "Gerar com IA" para criar o carrossel de engajamento.</p>
-            <p className="text-xs mt-1">Usa o prompt otimizado com progressão narrativa e anti-alucinação.</p>
+            <p className="text-sm">Clique em "Gerar com IA" para criar o carrossel de engajamento visual.</p>
+            <p className="text-xs mt-1">Layout editorial com fundo escuro, texto bold, e destaques em cor.</p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {/* Slide navigation */}
-            <div className="flex items-center justify-center gap-1">
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-8 w-8"
-                onClick={() => setActiveSlide(prev => Math.max(1, prev - 1))}
-                disabled={activeSlide === 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-
-              {[1, 2, 3, 4, 5, 6].map(num => {
-                const info = SLIDE_LABELS[num];
-                return (
-                  <Button
-                    key={num}
-                    size="sm"
-                    variant={activeSlide === num ? "default" : "outline"}
-                    className="h-8 px-2 text-xs"
-                    onClick={() => setActiveSlide(num)}
-                    title={info?.label}
-                  >
-                    {info?.emoji} {num}
-                  </Button>
-                );
-              })}
-
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-8 w-8"
-                onClick={() => setActiveSlide(prev => Math.min(6, prev + 1))}
-                disabled={activeSlide === 6}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-
-            {/* Active slide content */}
-            {currentSlide && (
-              <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="font-mono">
-                      {slideInfo.emoji} Slide {currentSlide.position}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">{slideInfo.label}</span>
-                  </div>
-                  <Button size="sm" variant="ghost" onClick={() => copySlide(currentSlide)}>
-                    <Copy className="h-3 w-3 mr-1" />
-                    Copiar
-                  </Button>
-                </div>
-
-                <div>
-                  <p className="font-semibold text-sm text-foreground">{currentSlide.title}</p>
-                  <p className="text-sm mt-1 whitespace-pre-line text-foreground/90">{currentSlide.text}</p>
-                </div>
-
-                {currentSlide.cta_label && (
-                  <div className="flex items-center gap-2">
-                    <Badge className="bg-primary/10 text-primary text-xs">
-                      CTA: {currentSlide.cta_label}
-                    </Badge>
-                  </div>
-                )}
-
-                <div className="text-xs text-muted-foreground bg-muted/30 p-2 rounded">
-                  📸 <strong>Visual:</strong> {currentSlide.image_suggestion}
-                </div>
-              </div>
-            )}
-
-            {/* Generated at */}
-            {carousel.generated_at && (
-              <p className="text-xs text-muted-foreground text-center">
-                Gerado em {new Date(carousel.generated_at).toLocaleString('pt-BR')}
-              </p>
-            )}
-          </div>
+          <EngagementCarouselPreview
+            slideImageMap={slideImageMap}
+            onImageChange={handleImageChange}
+            productImages={productImages}
+            primaryColor={primaryColor}
+            accentColor={accentColor}
+            brandName={brandName}
+            handleName={handleName}
+            slideTexts={slideTexts}
+            onSlideTextChange={handleSlideTextChange}
+          />
         )}
       </CardContent>
     </Card>
