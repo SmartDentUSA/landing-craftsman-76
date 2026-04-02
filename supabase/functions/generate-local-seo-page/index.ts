@@ -43,8 +43,8 @@ Deno.serve(async (req) => {
       })
     }
 
-    const apiKey = Deno.env.get('GOOGLE_AI_API_KEY')
-    if (!apiKey) throw new Error('GOOGLE_AI_API_KEY not configured')
+    const apiKey = Deno.env.get('LOVABLE_API_KEY')
+    if (!apiKey) throw new Error('LOVABLE_API_KEY not configured')
 
     // Fetch company profile
     const { data: company } = await supabase
@@ -111,20 +111,26 @@ Estrutura obrigatória:
 Retorne APENAS o HTML completo, sem markdown.`
 
       try {
-        const geminiRes = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: prompt }] }],
-              generationConfig: { temperature: 0.7, maxOutputTokens: 8000 },
-            }),
-          }
-        )
+        const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-2.5-flash',
+            messages: [{ role: 'user', content: prompt }],
+            temperature: 0.7,
+          }),
+        })
 
-        const geminiData = await geminiRes.json()
-        let html = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text
+        if (!aiRes.ok) {
+          console.error('AI Gateway error for target:', target.id, aiRes.status, await aiRes.text())
+          continue
+        }
+
+        const aiData = await aiRes.json()
+        let html = aiData?.choices?.[0]?.message?.content
         if (!html) {
           console.error('Empty Gemini response for target:', target.id)
           continue
