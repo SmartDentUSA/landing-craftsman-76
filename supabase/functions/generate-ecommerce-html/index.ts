@@ -636,7 +636,9 @@ async function generateBenefitsWithAI(product: any): Promise<string[]> {
   const benefitsCount = hasRichData(product) ? 8 : 5;
   console.log(`🎯 Gerando ${benefitsCount} benefícios (adaptativo baseado em data richness)`);
   
-  const prompt = `Analise o seguinte produto e gere EXATAMENTE ${benefitsCount} benefícios objetivos e altamente persuasivos para a descrição de e-commerce. Priorize dados quantificáveis (ex: resistência, certificações, economia de tempo) no foco principal de cada benefício:
+  // Inject Clinical Brain Guard into benefits prompt
+  const productCtx = mapProductToContext(product);
+  const prompt = injectClinicalBrainGuard(`Analise o seguinte produto e gere EXATAMENTE ${benefitsCount} benefícios objetivos e altamente persuasivos para a descrição de e-commerce. Priorize dados quantificáveis (ex: resistência, certificações, economia de tempo) no foco principal de cada benefício:
 
 Produto: ${product.name}
 Descrição: ${product.description || 'N/A'}
@@ -667,7 +669,7 @@ Em cada um dos ${benefitsCount} benefícios, você DEVE utilizar a tag HTML <str
 IMPORTANTE: O dado destacado pode ser repetido em FAQs ou outros benefícios - a repetição é permitida quando o contexto for diferente. O critério é: "Este é o ponto focal mais importante desta frase específica?"
 
 Retorne APENAS o array JSON puro sem markdown:
-${JSON.stringify(Array(benefitsCount).fill('benefício X'))}`;
+${JSON.stringify(Array(benefitsCount).fill('benefício X'))}`, productCtx);
 
   console.log('🔑 API Key presente, chamando Deepseek...');
   
