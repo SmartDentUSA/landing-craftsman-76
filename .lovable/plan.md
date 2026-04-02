@@ -1,87 +1,44 @@
 
 
-## Clinical Brain Guard Global — Implementação Completa
+## Diagnóstico completo: Google APIs — 3 problemas identificados
 
-### Resumo
-Criar 2 arquivos _shared novos e integrar o guard anti-alucinação em 8 edge functions existentes, substituindo prompts inline por prompts centralizados com proteção clínica.
+### Problema 1: Reviews — "generated: 0"
+**Causa**: O filtro `.is('response_from_owner', null)` não encontra reviews porque **todas as 20+ reviews já têm `response_from_owner` preenchido**. Não há reviews "novas" para gerar respostas.
+**Solução**: Não é bug — é ausência de dados novos. O botão funciona, mas precisa de reviews sem resposta do owner. Para testar, podemos adicionar um modo que regere respostas para reviews que existem mas não têm entrada na tabela `review_responses` (independente de `response_from_owner`).
 
-### Escopo e Ordem de Execução
+### Problema 2: YouTube — funciona parcialmente
+**Status**: A geração funciona (retornou `suggested_title` para vídeo `c9C5SpEB-7o`). O update retorna `updated: 0, failed: 0` porque não há items com `status: 'approved'` — o vídeo está com status `pending` (precisa ser aprovado na UI antes de aplicar no YouTube).
+**Solução**: A UI precisa de um botão "Aprovar" visível para cada sugestão, e o fluxo precisa estar claro.
 
-**PASSO 1 — Criar `supabase/functions/_shared/clinical-brain-guard.ts`**
-Arquivo novo com interfaces `ProductContext`, `CompanyContext`, e funções:
-- `formatProductSpecs()`, `formatImpactMetrics()`, `formatForbiddenProducts()`, `formatRequiredProducts()`
-- `buildProductBaseContext()` — contexto empresa + produto formatado
-- `injectClinicalBrainGuard()` — bloco anti-alucinação com regras obrigatórias
-- `buildFullPrompt()` — composição final: guard + contexto + prompt template
+### Problema 3: SEO Local — páginas genéricas sem produtos reais
+**Causa raiz**: O filtro `.eq('category', target.category_name)` usa igualdade exata. As categorias no banco são `"SCANNERS 3D"` e `"IMPRESSÃO 3D"`, mas os targets têm `"Scanners Intraorais"` e `"Impressoras 3D"` — **não fazem match**. Resultado: `productsText` fica vazio, a IA inventa conteúdo genérico.
+**Solução**: Usar ILIKE fuzzy matching + buscar specs técnicas reais + injetar Clinical Brain Guard.
 
-Conteúdo exato conforme especificado na tarefa.
+### Mudanças propostas
 
-**PASSO 2 — Criar `supabase/functions/_shared/prompt-templates.ts`**
-Arquivo novo com objeto `PROMPTS` contendo ~30 templates organizados por canal:
-- `PROMPTS.keywords` — primary, long_tail, negative
-- `PROMPTS.google_ads` — rsa_headlines, rsa_descriptions, ad_groups, pmax_assets
-- `PROMPTS.instagram` — feed_storytelling, feed_benefits, feed_problem_solution, feed_urgency
-- `PROMPTS.reels.script`, `PROMPTS.tiktok.script`
-- `PROMPTS.youtube` — title, description, tags, chapters
-- `PROMPTS.whatsapp` — product_message, video_message, sequence_d0/d2/d5
-- `PROMPTS.gbp.post`, `PROMPTS.linkedin.post`
-- `PROMPTS.blog` — video_intro, commercial, technical
-- `PROMPTS.spin.campaign`, `PROMPTS.ecommerce.specs_block`
+**Arquivo 1: `supabase/functions/generate-local-seo-page/index.ts`**
+- Substituir `.eq('category', target.category_name)` por busca fuzzy com ILIKE
+- Buscar mais campos do produto: `technical_specifications`, `benefits`, `features`, `competitive_advantages`
+- Injetar specs técnicas reais no prompt
+- Importar `injectClinicalBrainGuard` do `_shared/clinical-brain-guard.ts`
+- Melhorar o prompt para exigir dados reais dos produtos e proibir invenção
 
-Cada template usa placeholders como `{product.name}` que serão substituídos pelo `buildFullPrompt()`.
+**Arquivo 2: `supabase/functions/respond-review-ai/index.ts`**
+- Adicionar modo alternativo: filtrar reviews que não têm entrada em `review_responses` (em vez de depender apenas de `response_from_owner`)
+- Assim, reviews existentes que ainda não foram processadas pelo sistema AI podem ser geradas
 
-**PASSO 3 — Fix `generate-social-content/index.ts` (Bug WhatsApp)**
-- Buscar interpolações de `impact_metrics` em strings (pesquisa mostrou que NÃO há referência direta neste arquivo, mas o bug vem do `processPromptVariables` que interpola `product.features` etc. sem tratar objetos)
-- Adicionar import de `buildFullPrompt` e `PROMPTS`
-- Substituir os prompts default de WhatsApp, YouTube e Instagram pelos templates centralizados
-- Manter a lógica de `processPromptVariables` e `generateWithDualAI` existente, apenas trocando os templates
+**Arquivo 3: `src/components/repository/GoogleApisTab.tsx`**
+- Na seção YouTube: tornar o botão "Aprovar" mais visível e funcional para items `pending`
+- Na seção Reviews: mostrar mensagem clara quando não há reviews pendentes
+- Na seção SEO Local: mostrar preview do HTML gerado
 
-**PASSO 4 — Integrar em `generate-product-ai-content/index.ts`**
-- Importar `buildFullPrompt` e `PROMPTS`
-- Substituir prompts de keywords (primary, long_tail) pelos novos templates
-- Adicionar suporte a keywords negativas
+**Deploy**: `generate-local-seo-page`, `respond-review-ai`
 
-**PASSO 5 — Atualizar `generate-ad-copies/index.ts`**
-- Importar guard e templates
-- Substituir o mega-prompt inline (~100 linhas) por `buildFullPrompt(product, PROMPTS.google_ads.rsa_headlines)` etc.
-- Manter a lógica de validação programática existente (`validateAndEnhanceCopies`)
-
-**PASSO 6 — Integrar nos demais geradores**
-Cada arquivo recebe import + substituição do prompt:
-
-| Edge Function | Prompt Template |
-|---|---|
-| `generate-tiktok-content` | `PROMPTS.tiktok.script` |
-| `publish-gbp-post` | `PROMPTS.gbp.post` (modo generate) |
-| `generate-spin-campaign` | `PROMPTS.spin.campaign` |
-| `generate-ecommerce-html` | `PROMPTS.ecommerce.specs_block` |
-| `generate-instagram-reels-script` | `PROMPTS.reels.script` |
-| `generate-product-blog` | `PROMPTS.blog.commercial` / `technical` |
-
-**PASSO 7 — Deploy**
-Deploy de todas as edge functions modificadas em sequência.
-
-### Notas Técnicas
-
-- **Nenhuma tabela alterada**. Nenhuma edge function nova criada (apenas 2 _shared novos + edição de 8 existentes).
-- O `buildFullPrompt()` mapeia campos do banco (`product.*`) para a interface `ProductContext` dentro de cada edge function.
-- As funções que já têm Clinical Brain parcial (`use_clinical_brain` flag) passarão a ter guard obrigatório sem flag.
-- O arquivo `prompt-templates.ts` será extenso (~1500-2000 linhas) por conter todos os 30+ templates.
-- **`generate-ecommerce-html`** é um arquivo de 2647 linhas — a edição será cirúrgica, apenas adicionando import e substituindo o bloco de prompt de specs.
-
-### Arquivos Afetados
+### Arquivos afetados
 
 | Arquivo | Ação |
 |---|---|
-| `supabase/functions/_shared/clinical-brain-guard.ts` | **Criar** |
-| `supabase/functions/_shared/prompt-templates.ts` | **Criar** |
-| `supabase/functions/generate-social-content/index.ts` | Editar prompts |
-| `supabase/functions/generate-product-ai-content/index.ts` | Editar prompts |
-| `supabase/functions/generate-ad-copies/index.ts` | Editar prompts |
-| `supabase/functions/generate-tiktok-content/index.ts` | Editar prompts |
-| `supabase/functions/publish-gbp-post/index.ts` | Editar (add generate mode) |
-| `supabase/functions/generate-spin-campaign/index.ts` | Editar prompts |
-| `supabase/functions/generate-ecommerce-html/index.ts` | Editar prompts |
-| `supabase/functions/generate-instagram-reels-script/index.ts` | Editar prompts |
-| `supabase/functions/generate-product-blog/index.ts` | Editar prompts |
+| `supabase/functions/generate-local-seo-page/index.ts` | Editar (fuzzy match + specs reais + guard) |
+| `supabase/functions/respond-review-ai/index.ts` | Editar (filtro alternativo) |
+| `src/components/repository/GoogleApisTab.tsx` | Editar (UX melhorias) |
 
