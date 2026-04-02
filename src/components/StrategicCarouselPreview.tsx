@@ -429,7 +429,10 @@ function Slide1Hook({ image, primaryColor, productData, texts }: { image: string
       )}
 
       {/* Overlay escuro geral sutil para dar profundidade */}
-      <div style={{ position: 'absolute', inset: 0, background: hasCustomBg ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.28)' }} />
+      {(() => {
+        const ov = Number(texts?.overlayOpacity) || (hasCustomBg ? 10 : 28);
+        return <div style={{ position: 'absolute', inset: 0, background: `rgba(0,0,0,${ov / 100})` }} />;
+      })()}
 
       {/* Número do slide */}
       <div style={{ position: 'absolute', top: 60, left: 60, width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -437,18 +440,27 @@ function Slide1Hook({ image, primaryColor, productData, texts }: { image: string
       </div>
 
       {/* FAIXA CENTRAL OPACA com a frase — centralizada verticalmente */}
-      <div style={{
-        position: 'absolute',
-        top: '50%',
-        transform: 'translateY(-50%)',
-        left: 0,
-        right: 0,
-        padding: '60px 80px',
-        background: 'rgba(0, 0, 0, 0.58)',
-        textAlign: 'center',
-      }}>
-        <p style={{ color: '#ffffff', fontWeight: 400, fontSize: 52, lineHeight: 1.3, margin: 0 }}>{hook}</p>
-      </div>
+      {(texts?.faixaVisible ?? 'true') !== 'false' && (
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          transform: 'translateY(-50%)',
+          left: 0,
+          right: 0,
+          padding: '60px 80px',
+          background: (() => {
+            const fc = texts?.faixaColor || '#000000';
+            const clean = fc.replace('#', '');
+            const r = parseInt(clean.slice(0, 2), 16);
+            const g = parseInt(clean.slice(2, 4), 16);
+            const b = parseInt(clean.slice(4, 6), 16);
+            return `rgba(${r},${g},${b},0.58)`;
+          })(),
+          textAlign: 'center',
+        }}>
+          <p style={{ color: '#ffffff', fontWeight: 400, fontSize: 52, lineHeight: 1.3, margin: 0 }}>{hook}</p>
+        </div>
+      )}
 
       {/* Gradiente rodapé + nome do produto */}
       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 200, background: 'linear-gradient(to top, rgba(0,0,0,0.75), transparent)' }} />
