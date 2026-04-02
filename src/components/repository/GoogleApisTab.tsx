@@ -596,7 +596,7 @@ function LocalSEOCard() {
           <Select value={filterUF} onValueChange={setFilterUF}>
             <SelectTrigger className="w-[120px]"><SelectValue placeholder="UF" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos</SelectItem>
+              <SelectItem value="all">Todos</SelectItem>
               {['SP','RJ','MG','RS','PR','SC','BA','PE','CE','DF','GO','PA','MA','MT','MS','ES','PB','RN','AL','PI','SE','RO','TO','AC','AP','AM','RR'].map(uf => (
                 <SelectItem key={uf} value={uf}>{uf}</SelectItem>
               ))}
