@@ -13,22 +13,12 @@ const ALLOWED_REDIRECT_URIS = new Set([
   "http://localhost:3000/oauth2/callback",
 ]);
 
-type Provider = "youtube" | "googleBusiness";
-
-interface Body {
-  code: string;
-  provider: Provider;
-  config_id: string;
-  redirect_uri: string;
-}
-
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Authenticate user via JWT
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!,
@@ -42,50 +32,40 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const { code, provider, config_id, redirect_uri } = await req.json() as Body;
+    const { code, provider, redirect_uri } = await req.json();
 
-    if (!code || !provider || !config_id || !redirect_uri) {
+    if (!code || !provider || !redirect_uri) {
       return new Response(JSON.stringify({
-        success: false, error: "missing_params",
-        error_description: "code, provider, config_id e redirect_uri são obrigatórios"
+        success: false, error: "missing_params"
       }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Validate redirect_uri against allowlist
     if (!ALLOWED_REDIRECT_URIS.has(redirect_uri)) {
-      console.error("❌ redirect_uri não permitido:", redirect_uri);
       return new Response(JSON.stringify({
-        success: false, error: "invalid_redirect_uri",
-        error_description: `redirect_uri não permitido: ${redirect_uri}`
+        success: false, error: "invalid_redirect_uri"
       }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    console.log("🔁 Exchange", { provider, user_id: user.id, config_id, redirect_uri });
+    const clientId = Deno.env.get("GOOGLE_CLIENT_ID");
+    const clientSecret = Deno.env.get("GOOGLE_CLIENT_SECRET");
 
-    // Fetch client credentials from config
-    const { data: config, error: configError } = await supabase
-      .from("oauth_client_configs")
-      .select("client_id, client_secret")
-      .eq("id", config_id)
-      .eq("owner_user_id", user.id)
-      .eq("provider", provider)
-      .maybeSingle();
-
-    if (configError || !config) {
-      console.error("❌ Config não encontrada:", { config_id, provider, error: configError });
+    if (!clientId || !clientSecret) {
+      console.error("❌ GOOGLE_CLIENT_ID ou GOOGLE_CLIENT_SECRET não configurados");
       return new Response(JSON.stringify({
-        success: false, error: "config_not_found"
-      }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        success: false, error: "missing_env_secrets",
+        error_description: "GOOGLE_CLIENT_ID/SECRET não configurados no servidor"
+      }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Exchange code for tokens with Google
+    console.log("🔁 Direct exchange", { provider, user_id: user.id, redirect_uri });
+
     const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
         code,
-        client_id: config.client_id,
-        client_secret: config.client_secret,
+        client_id: clientId,
+        client_secret: clientSecret,
         redirect_uri,
         grant_type: "authorization_code",
       }),
@@ -98,34 +78,30 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({
         success: false,
         error: tokenData?.error || "token_exchange_failed",
-        error_description: tokenData?.error_description || "Falha ao trocar código",
-        details: { status: tokenRes.status, redirect_uri }
+        error_description: tokenData?.error_description,
       }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Save refresh_token
     const { error: upsertError } = await supabase
       .from("oauth_credentials")
       .upsert({
         user_id: user.id,
         provider,
         refresh_token: tokenData.refresh_token,
-        config_id,
         updated_at: new Date().toISOString(),
       }, { onConflict: "user_id,provider" });
 
     if (upsertError) {
-      console.error("❌ Erro ao salvar:", upsertError);
+      console.error("❌ Save failed:", upsertError);
       return new Response(JSON.stringify({ success: false, error: "save_failed" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
 
-    console.log("✅ Token salvo com sucesso", { provider, user_id: user.id });
+    console.log("✅ Direct exchange success", { provider, user_id: user.id });
 
     return new Response(JSON.stringify({
-      success: true,
-      refresh_token: tokenData.refresh_token,
+      success: true, refresh_token: tokenData.refresh_token,
     }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   } catch (err) {

@@ -8,21 +8,19 @@ export type OAuthProvider = "youtube" | "googleBusiness";
 export const ALLOWED_REDIRECT_ORIGINS = new Set([
   "https://landing-craftsman-76.lovable.app",
   "https://b282ae68-9aa1-4f3f-8597-81ef6773926f.lovableproject.com",
+  "https://id-preview--b282ae68-9aa1-4f3f-8597-81ef6773926f.lovable.app",
   "http://localhost:5173",
   "http://localhost:3000",
 ]);
 
+// Always use the canonical redirect (registered in Google Console)
 export const CANONICAL_REDIRECT = "https://landing-craftsman-76.lovable.app/oauth2/callback";
 
 /**
- * Retorna redirect_uri dinâmico baseado na origem atual
+ * Returns the redirect_uri to use for OAuth.
+ * Always uses canonical to avoid cross-domain sessionStorage loss.
  */
 export function getRedirectUri(): string {
-  const origin = window.location.origin;
-  if (ALLOWED_REDIRECT_ORIGINS.has(origin)) {
-    return `${origin}/oauth2/callback`;
-  }
-  console.warn(`⚠️ Origem não permitida: ${origin}. Usando canônico.`);
   return CANONICAL_REDIRECT;
 }
 
@@ -39,7 +37,6 @@ export function getScopes(provider: OAuthProvider): string[] {
     ];
   }
   
-  // Google Business Profile
   return [
     "https://www.googleapis.com/auth/business.manage",
     "openid",
@@ -49,9 +46,30 @@ export function getScopes(provider: OAuthProvider): string[] {
 }
 
 /**
+ * Encode state as provider:config_id so it survives cross-domain redirects
+ */
+export function encodeOAuthState(provider: OAuthProvider, configId?: string): string {
+  return configId ? `${provider}:${configId}` : provider;
+}
+
+/**
+ * Decode state from callback
+ */
+export function decodeOAuthState(state: string): { provider: OAuthProvider; configId?: string } {
+  const parts = state.split(":");
+  const providerRaw = parts[0];
+  const provider: OAuthProvider = 
+    providerRaw === "googleBusiness" || providerRaw === "google-business" 
+      ? "googleBusiness" 
+      : "youtube";
+  const configId = parts.length > 1 ? parts.slice(1).join(":") : undefined;
+  return { provider, configId };
+}
+
+/**
  * Constrói a URL de autorização OAuth do Google
  */
-export function buildAuthUrl(clientId: string, provider: OAuthProvider): string {
+export function buildAuthUrl(clientId: string, provider: OAuthProvider, configId?: string): string {
   const auth = new URL("https://accounts.google.com/o/oauth2/v2/auth");
   auth.searchParams.set("client_id", clientId);
   auth.searchParams.set("redirect_uri", getRedirectUri());
@@ -59,6 +77,6 @@ export function buildAuthUrl(clientId: string, provider: OAuthProvider): string 
   auth.searchParams.set("scope", getScopes(provider).join(" "));
   auth.searchParams.set("access_type", "offline");
   auth.searchParams.set("prompt", "consent");
-  auth.searchParams.set("state", provider);
+  auth.searchParams.set("state", encodeOAuthState(provider, configId));
   return auth.toString();
 }
