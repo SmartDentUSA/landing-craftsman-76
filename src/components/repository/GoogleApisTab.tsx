@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Star, Send, MessageSquare, Youtube, MapPin, Plus, Eye, Check, X, RefreshCw } from 'lucide-react';
+import { Loader2, Star, Send, MessageSquare, Youtube, MapPin, Plus, Eye, Check, X, RefreshCw, ExternalLink, Globe } from 'lucide-react';
 
 const SUPABASE_URL = "https://pgfgripuanuwwolmtknn.supabase.co";
 
@@ -700,6 +700,7 @@ function LocalSEOCard() {
                   <th className="text-left py-2 px-2">Prior.</th>
                   <th className="text-left py-2 px-2">Status</th>
                   <th className="text-left py-2 px-2">HTML</th>
+                  <th className="text-left py-2 px-2">URL</th>
                   <th className="text-left py-2 px-2">Ações</th>
                 </tr>
               </thead>
@@ -709,23 +710,32 @@ function LocalSEOCard() {
                     <td className="py-2 px-2 font-medium">{t.state_uf}</td>
                     <td className="py-2 px-2">{t.city || '—'}</td>
                     <td className="py-2 px-2">{t.specialty}</td>
-                    <td className="py-2 px-2">{t.focus_keyword || '—'}</td>
+                    <td className="py-2 px-2 max-w-[120px] truncate">{t.focus_keyword || '—'}</td>
                     <td className="py-2 px-2">{'●'.repeat(t.priority || 1)}{'○'.repeat(5 - (t.priority || 1))}</td>
                     <td className="py-2 px-2"><StatusBadge status={t.status} /></td>
                     <td className="py-2 px-2">{t.html_generated ? '✅' : '—'}</td>
                     <td className="py-2 px-2">
+                      {t.published_url ? (
+                        <a href={t.published_url} target="_blank" rel="noopener noreferrer" className="text-sky-600 hover:text-sky-700 flex items-center gap-1 text-xs">
+                          <Globe className="h-3 w-3" /> Publicada
+                        </a>
+                      ) : t.html_generated ? (
+                        <span className="text-xs text-muted-foreground">Não publicada</span>
+                      ) : '—'}
+                    </td>
+                    <td className="py-2 px-2">
                       <div className="flex gap-1">
                         {t.html_generated && (
-                          <Button size="sm" variant="ghost" onClick={() => setPreviewHtml(t.html_content)}>
+                          <Button size="sm" variant="ghost" onClick={() => setPreviewHtml(t.html_content)} title="Preview">
                             <Eye className="h-3 w-3" />
                           </Button>
                         )}
                         {t.status === 'draft' && (
-                          <Button size="sm" variant="ghost" className="text-green-600" onClick={() => approveTarget(t.id)}>
+                          <Button size="sm" variant="ghost" className="text-green-600" onClick={() => approveTarget(t.id)} title="Aprovar">
                             <Check className="h-3 w-3" />
                           </Button>
                         )}
-                        <Button size="sm" variant="ghost" onClick={() => generateMutation.mutate({ target_id: t.id })}>
+                        <Button size="sm" variant="ghost" onClick={() => generateMutation.mutate({ target_id: t.id })} title="Regenerar">
                           <RefreshCw className="h-3 w-3" />
                         </Button>
                       </div>
