@@ -292,11 +292,12 @@ Retorne apenas o texto da mensagem formatada, sem explicações.
       if (promptConfig?.custom_prompt) {
         finalPrompt = promptConfig.custom_prompt;
       } else {
-      finalPrompt = getDefaultPrompt(type as 'whatsapp' | 'youtube' | 'instagram', instagramType);
+        finalPrompt = getDefaultPrompt(type as 'whatsapp' | 'youtube' | 'instagram', instagramType);
         // Inject Clinical Brain Guard on default prompts
         const productCtx = mapProductToContext(product);
         finalPrompt = buildFullPrompt(productCtx, finalPrompt);
-
+      }
+    }
     // whatsapp_sequence é tratado anteriormente via early return
 
     // Processar variáveis no prompt
