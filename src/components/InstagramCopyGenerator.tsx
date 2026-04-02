@@ -1921,6 +1921,13 @@ ${slide.text}`;
                 </CardContent>
               </Card>
 
+              {/* === SEÇÃO CARROSSEL ENGAJAMENTO (6 SLIDES — PROGRESSÃO NARRATIVA) === */}
+              <EngagementCarouselSection
+                productId={productId}
+                productName={productName}
+                feedCopy={feedCopies[0]?.copy || ''}
+              />
+
               {/* === SEÇÃO CARROSSEL VISUAL (6 LAYOUTS ESTRATÉGICOS) === */}
               <Card>
                 <CardHeader>
