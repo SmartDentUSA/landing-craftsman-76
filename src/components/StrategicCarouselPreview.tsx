@@ -315,19 +315,27 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
                     maxLength={7}
                   />
                 </div>
+              ) : field.type === 'toggle' ? (
+                <button
+                  type="button"
+                  onClick={() => onSlideTextChange(field.key, (slideTexts?.[field.key] ?? 'true') === 'true' ? 'false' : 'true')}
+                  className={`text-xs px-3 py-1 rounded border cursor-pointer font-medium ${(slideTexts?.[field.key] ?? 'true') === 'true' ? 'bg-primary text-primary-foreground border-primary' : 'bg-muted text-muted-foreground border-border'}`}
+                >
+                  {(slideTexts?.[field.key] ?? 'true') === 'true' ? 'Ativado' : 'Desativado'}
+                </button>
               ) : field.type === 'slider' ? (
                 <div className="flex items-center gap-2 pt-1">
                   <input
                     type="range"
-                    min={50}
-                    max={150}
+                    min={field.min ?? 50}
+                    max={field.max ?? 150}
                     step={5}
-                    value={Number(slideTexts?.[field.key]) || 100}
+                    value={Number(slideTexts?.[field.key]) || (field.min != null ? Math.round(((field.min ?? 0) + (field.max ?? 150)) / 2) : 100)}
                     onChange={(e) => onSlideTextChange(field.key, e.target.value)}
                     className="flex-1 h-2 rounded cursor-pointer accent-primary"
                   />
                   <span className="text-xs font-mono text-muted-foreground w-10 text-right">
-                    {slideTexts?.[field.key] || '100'}%
+                    {slideTexts?.[field.key] || (field.min != null ? Math.round(((field.min ?? 0) + (field.max ?? 150)) / 2) : 100)}%
                   </span>
                 </div>
               ) : field.type === 'textarea' ? (
