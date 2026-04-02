@@ -429,13 +429,32 @@ function YouTubeQueueCard() {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex gap-2 items-end">
+        <div className="flex gap-2 items-end flex-wrap">
           <Input placeholder="YouTube Video ID" value={newVideoId} onChange={(e) => setNewVideoId(e.target.value)} className="max-w-[200px]" />
-          <Input placeholder="Produto vinculado" value={newProductName} onChange={(e) => setNewProductName(e.target.value)} className="max-w-[200px]" />
-          <Button size="sm" onClick={addToQueue} disabled={!newVideoId}>
+          <Select value={selectedProductId} onValueChange={(val) => {
+            setSelectedProductId(val);
+            const p = (products || []).find((pr: any) => pr.id === val);
+            if (p) setNewProductName(p.name);
+          }}>
+            <SelectTrigger className="max-w-[250px]">
+              <SelectValue placeholder="Selecione o produto *" />
+            </SelectTrigger>
+            <SelectContent>
+              {(products || []).map((p: any) => (
+                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button size="sm" onClick={addToQueue} disabled={!newVideoId || !selectedProductId}>
             <Plus className="h-4 w-4 mr-1" /> Adicionar
           </Button>
         </div>
+        {/* Alerta para items sem produto */}
+        {(items || []).some((i: any) => !i.product_id) && (
+          <div className="text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded p-2">
+            ⚠️ Existem vídeos na fila sem produto vinculado. A IA não pode gerar metadados sem produto.
+          </div>
+        )}
 
         {isLoading ? (
           <div className="flex justify-center py-4"><Loader2 className="h-6 w-6 animate-spin" /></div>

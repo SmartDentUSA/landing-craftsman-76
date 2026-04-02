@@ -85,6 +85,7 @@ async function generateResponses(supabase: any, limit: number, reviewId?: string
   const existingIds = new Set((existingResponses || []).map((r: any) => r.raw_review_id))
   const newReviews = reviews.filter((r: any) => !existingIds.has(r.id)).slice(0, limit)
 
+  console.log('[REVIEWS] Existing responses:', existingIds.size, '| New reviews to process:', newReviews.length)
   if (newReviews.length === 0) return { generated: 0, responses: [], message: 'Todas as reviews já possuem respostas geradas' }
 
   const apiKey = Deno.env.get('LOVABLE_API_KEY')
