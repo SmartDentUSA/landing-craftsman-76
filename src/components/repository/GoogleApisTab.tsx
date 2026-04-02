@@ -339,7 +339,7 @@ function YouTubeQueueCard() {
       const res = await supabase
         .from('products_repository' as any)
         .select('id, name, category')
-        .eq('is_active', true)
+        .eq('active', true)
         .order('name');
       return (res.data as any[]) || [];
     },
