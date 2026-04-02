@@ -84,8 +84,28 @@ function ReviewResponsesCard() {
   });
 
   const pendingCount = reviews?.filter((r: any) => r.response?.status === 'pending').length || 0;
-
+  const failedCount = reviews?.filter((r: any) => r.response?.status === 'failed').length || 0;
   const withoutResponseCount = reviews?.filter((r: any) => !r.response).length || 0;
+
+  const retryFailedMutation = useMutation({
+    mutationFn: async () => {
+      const failedIds = reviews
+        ?.filter((r: any) => r.response?.status === 'failed')
+        .map((r: any) => r.response.id) || [];
+      if (failedIds.length === 0) throw new Error('Nenhuma resposta falhada');
+      const { error } = await supabase
+        .from('review_responses')
+        .update({ status: 'pending' })
+        .in('id', failedIds);
+      if (error) throw error;
+      return { reset: failedIds.length };
+    },
+    onSuccess: (data) => {
+      toast({ title: 'Respostas resetadas', description: `${data.reset} respostas voltaram para pendente` });
+      queryClient.invalidateQueries({ queryKey: ['review-responses'] });
+    },
+    onError: (err: any) => toast({ title: 'Erro', description: err.message, variant: 'destructive' }),
+  });
 
   const generateMutation = useMutation({
     mutationFn: () => callEdgeFunction('respond-review-ai', { mode: 'generate', limit: 10 }),
