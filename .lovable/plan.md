@@ -1,44 +1,49 @@
 
 
-## Diagnóstico completo: Google APIs — 3 problemas identificados
+## Fix Google APIs — 4 Correções
 
-### Problema 1: Reviews — "generated: 0"
-**Causa**: O filtro `.is('response_from_owner', null)` não encontra reviews porque **todas as 20+ reviews já têm `response_from_owner` preenchido**. Não há reviews "novas" para gerar respostas.
-**Solução**: Não é bug — é ausência de dados novos. O botão funciona, mas precisa de reviews sem resposta do owner. Para testar, podemos adicionar um modo que regere respostas para reviews que existem mas não têm entrada na tabela `review_responses` (independente de `response_from_owner`).
+### Situação Atual (verificada via banco e logs)
 
-### Problema 2: YouTube — funciona parcialmente
-**Status**: A geração funciona (retornou `suggested_title` para vídeo `c9C5SpEB-7o`). O update retorna `updated: 0, failed: 0` porque não há items com `status: 'approved'` — o vídeo está com status `pending` (precisa ser aprovado na UI antes de aplicar no YouTube).
-**Solução**: A UI precisa de um botão "Aprovar" visível para cada sugestão, e o fluxo precisa estar claro.
+| Problema | Status real |
+|---|---|
+| Reviews | Código correto no arquivo, mas edge function possivelmente não redeployada. 27 reviews sem resposta confirmadas no banco |
+| YouTube hallucination | `product_id` e `product_name` são NULL no único item da fila. A função gera conteúdo inventado sem validação |
+| YouTube aprovação | Botão "Aprovar" já existe na UI (linha 456), funciona. O item tem `suggested_title` preenchido |
+| SEO Local | Fuzzy matching já funciona (log mostra 5 produtos encontrados). 16 targets aprovados pendentes |
 
-### Problema 3: SEO Local — páginas genéricas sem produtos reais
-**Causa raiz**: O filtro `.eq('category', target.category_name)` usa igualdade exata. As categorias no banco são `"SCANNERS 3D"` e `"IMPRESSÃO 3D"`, mas os targets têm `"Scanners Intraorais"` e `"Impressoras 3D"` — **não fazem match**. Resultado: `productsText` fica vazio, a IA inventa conteúdo genérico.
-**Solução**: Usar ILIKE fuzzy matching + buscar specs técnicas reais + injetar Clinical Brain Guard.
+### Correções necessárias
 
-### Mudanças propostas
+**FIX 1 — `supabase/functions/update-youtube-metadata/index.ts`** (linhas 65-78)
+- Adicionar validação antes de chamar a IA: se `product_id` e `product_name` são ambos null, marcar como `error` com mensagem clara e pular
+- Importar `injectClinicalBrainGuard` e `mapProductToContext` do `_shared/clinical-brain-guard.ts`
+- Se `product_id` existe, buscar produto do `products_repository` e injetar specs reais no prompt via `buildFullPrompt`
+- Se só `product_name` existe (sem `product_id`), usar no prompt mas sem specs detalhadas
 
-**Arquivo 1: `supabase/functions/generate-local-seo-page/index.ts`**
-- Substituir `.eq('category', target.category_name)` por busca fuzzy com ILIKE
-- Buscar mais campos do produto: `technical_specifications`, `benefits`, `features`, `competitive_advantages`
-- Injetar specs técnicas reais no prompt
-- Importar `injectClinicalBrainGuard` do `_shared/clinical-brain-guard.ts`
-- Melhorar o prompt para exigir dados reais dos produtos e proibir invenção
+**FIX 2 — `supabase/functions/respond-review-ai/index.ts`**
+- O código atual (linhas 56-84) já faz a lógica correta (busca 50 reviews, filtra por existência em review_responses)
+- Ação: **redeploy** da função para garantir que a versão correta está ativa
+- Adicionar log de diagnóstico: `console.log('[REVIEWS] Found reviews:', reviews.length, 'Without response:', newReviews.length)` para facilitar debug
 
-**Arquivo 2: `supabase/functions/respond-review-ai/index.ts`**
-- Adicionar modo alternativo: filtrar reviews que não têm entrada em `review_responses` (em vez de depender apenas de `response_from_owner`)
-- Assim, reviews existentes que ainda não foram processadas pelo sistema AI podem ser geradas
+**FIX 3 — `supabase/functions/generate-local-seo-page/index.ts`**
+- Já funciona (log confirma 5 produtos encontrados com ILIKE)
+- Ação: **redeploy** para garantir versão atualizada
+- Opcional: limpar o item com `suggested_title` inventado no `youtube_metadata_queue` (reset status para pending e limpar campos suggested_*)
 
-**Arquivo 3: `src/components/repository/GoogleApisTab.tsx`**
-- Na seção YouTube: tornar o botão "Aprovar" mais visível e funcional para items `pending`
-- Na seção Reviews: mostrar mensagem clara quando não há reviews pendentes
-- Na seção SEO Local: mostrar preview do HTML gerado
-
-**Deploy**: `generate-local-seo-page`, `respond-review-ai`
+**FIX 4 — `src/components/repository/GoogleApisTab.tsx`** (YouTubeQueueCard)
+- No formulário "Adicionar vídeo à fila": adicionar campo `product_id` obrigatório com select de produtos do repositório
+- Buscar produtos ativos do `products_repository` para popular o select
+- Salvar `product_id` junto com `product_name` ao inserir na fila
+- Mostrar alerta visual quando item existente tem `product_id` null
 
 ### Arquivos afetados
 
 | Arquivo | Ação |
 |---|---|
-| `supabase/functions/generate-local-seo-page/index.ts` | Editar (fuzzy match + specs reais + guard) |
-| `supabase/functions/respond-review-ai/index.ts` | Editar (filtro alternativo) |
-| `src/components/repository/GoogleApisTab.tsx` | Editar (UX melhorias) |
+| `supabase/functions/update-youtube-metadata/index.ts` | Editar (add product validation + Clinical Brain Guard) |
+| `supabase/functions/respond-review-ai/index.ts` | Editar (add diagnostic log) + redeploy |
+| `supabase/functions/generate-local-seo-page/index.ts` | Redeploy apenas |
+| `src/components/repository/GoogleApisTab.tsx` | Editar (product select no YouTube form) |
+
+### Deploy
+- `respond-review-ai`, `update-youtube-metadata`, `generate-local-seo-page`
 
