@@ -1926,6 +1926,11 @@ ${slide.text}`;
                 productId={productId}
                 productName={productName}
                 feedCopy={feedCopies[0]?.copy || ''}
+                productImages={allProductImages}
+                primaryColor={primaryColor}
+                accentColor={accentColor}
+                brandName={productName}
+                handleName={productName.toLowerCase().replace(/\s+/g, '')}
               />
 
               {/* === SEÇÃO CARROSSEL VISUAL (6 LAYOUTS ESTRATÉGICOS) === */}
