@@ -330,7 +330,20 @@ function YouTubeQueueCard() {
   const queryClient = useQueryClient();
   const [newVideoId, setNewVideoId] = useState('');
   const [newProductName, setNewProductName] = useState('');
+  const [selectedProductId, setSelectedProductId] = useState('');
   const [diffItem, setDiffItem] = useState<any>(null);
+
+  const { data: products } = useQuery({
+    queryKey: ['products-for-youtube'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('products_repository')
+        .select('id, name, category')
+        .eq('is_active', true)
+        .order('name');
+      return data || [];
+    },
+  });
 
   const { data: items, isLoading } = useQuery({
     queryKey: ['youtube-queue'],
