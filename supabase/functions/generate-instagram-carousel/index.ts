@@ -82,7 +82,66 @@ serve(async (req) => {
         .join(' | ');
     }
 
-    const systemPrompt = `Você é um Especialista em Copywriting para Instagram e Estrategista de Marketing Digital para a Smart Dent.
+    // === Prompt de Engajamento (novo) ===
+    const engagementSystemPrompt = `Você é um Especialista em Copywriting para Instagram e Estrategista de Marketing Digital para a Smart Dent.
+Sua especialidade é criar carrosséis de alta conversão com progressão narrativa: dor → solução → prova → autoridade → ação.
+
+MISSÃO: Usar SOMENTE as informações fornecidas no contexto do produto. Nunca inventar dados, números, claims clínicos ou características não documentadas.
+
+REGRAS DE ESTILO:
+- Linguagem técnica, porém acessível para dentistas e TPDs
+- Cada slide deve funcionar sozinho (independente dos outros)
+- Máx 40 palavras por corpo de slide
+- NUNCA repetir informação entre slides
+- PROIBIDO citar preços, condições comerciais ou valores monetários
+
+ESTRUTURA OBRIGATÓRIA DOS 6 SLIDES:
+
+SLIDE 1 — CAPA (GANCHO):
+- Título: frase de impacto, máx 6 palavras. Interrompe o scroll.
+  PROIBIDO: "Cansado de...", "Você sabia que...", "Revolucionário"
+- Texto: subtítulo que complementa sem revelar tudo. Máx 10 palavras.
+- Orientação visual: cena real com o produto ou demo clínica.
+
+SLIDE 2 — PROBLEMA:
+- Título: nomeia o problema em 4-5 palavras
+- Corpo: 2-3 frases com precisão clínica. Custo invisível: tempo, estoque, inconsistência.
+- Orientação visual: cena que representa a dor (antes do produto)
+
+SLIDE 3 — SOLUÇÃO PRINCIPAL:
+- Título: produto + principal diferencial em 1 linha
+- Corpo: como funciona a tecnologia. Máx 3 linhas. Specs reais obrigatórias.
+- OBRIGATÓRIO: 1 número técnico concreto das specs (ex: "5mm de bulk fill")
+- Orientação visual: produto em destaque, fundo limpo
+
+SLIDE 4 — PROVA TÉCNICA:
+- Título: "Por que funciona?" ou similar
+- Corpo: 3-4 specs reais em lista curta. Formato: "✓ [spec]: [valor real]"
+- PROIBIDO: specs não presentes no contexto
+- Orientação visual: infográfico com dados reais das specs
+
+SLIDE 5 — AUTORIDADE:
+- Título: credenciais e validações
+- Corpo: certificações reais (ISO, ANVISA), dados de performance
+  USAR APENAS dados do contexto. NUNCA inventar estudos.
+- Orientação visual: selos de certificação + logo Smart Dent
+
+SLIDE 6 — CTA:
+- Título: ação clara e direta (máx 5 palavras)
+- CTA variar por objetivo: Compra / Lead / Engajamento
+- cta_label: máx 6 palavras (ex: "Acesse pelo Link da Bio")
+- Orientação visual: produto + logo + chamada visual
+
+ANTI-ALUCINAÇÃO (OBRIGATÓRIO):
+- Use APENAS dados presentes abaixo
+- NÃO invente especificações, números ou resultados clínicos
+- Se um dado não existir, escreva de forma neutra
+- NUNCA mencione preços, promoções ou condições de pagamento
+
+Retorne APENAS um JSON válido, sem markdown.`;
+
+    // === Prompt Técnico original ===
+    const technicalSystemPrompt = `Você é um Especialista em Copywriting para Instagram e Estrategista de Marketing Digital para a Smart Dent.
 Sua especialidade é transformar especificações técnicas de produtos odontológicos em narrativas de vendas de alta conversão para carrosséis.
 
 MISSÃO: Usar SOMENTE as informações fornecidas no contexto do produto. Nunca inventar dados, números, claims clínicos ou características não documentadas.
@@ -109,6 +168,26 @@ ANTI-ALUCINAÇÃO (OBRIGATÓRIO):
 
 Retorne APENAS um JSON válido, sem markdown.`;
 
+    const systemPrompt = promptType === 'engajamento' ? engagementSystemPrompt : technicalSystemPrompt;
+
+    const slideStructure = promptType === 'engajamento'
+      ? `[
+  { "position": 1, "title": "Capa/Gancho", "text": "...", "image_suggestion": "..." },
+  { "position": 2, "title": "Problema", "text": "...", "image_suggestion": "..." },
+  { "position": 3, "title": "Solução Principal", "text": "...", "image_suggestion": "..." },
+  { "position": 4, "title": "Prova Técnica", "text": "...", "image_suggestion": "..." },
+  { "position": 5, "title": "Autoridade", "text": "...", "image_suggestion": "..." },
+  { "position": 6, "title": "CTA", "text": "...", "cta_label": "...", "image_suggestion": "..." }
+]`
+      : `[
+  { "position": 1, "title": "Gancho", "text": "...", "image_suggestion": "..." },
+  { "position": 2, "title": "Solução", "text": "...", "image_suggestion": "..." },
+  { "position": 3, "title": "Diferencial Técnico", "text": "...", "image_suggestion": "..." },
+  { "position": 4, "title": "Experiência / Fluxo", "text": "...", "image_suggestion": "..." },
+  { "position": 5, "title": "Autoridade Smart Dent", "text": "...", "image_suggestion": "..." },
+  { "position": 6, "title": "CTA", "text": "...", "cta_label": "...", "image_suggestion": "..." }
+]`;
+
     const userPrompt = `PRODUTO: ${product.name}
 CATEGORIA: ${product.category || 'Não informado'}
 DESCRIÇÃO: ${product.description || 'Não informado'}
@@ -127,14 +206,7 @@ Gere um CARROSSEL de 6 slides para Instagram.
 
 Retorne APENAS este JSON (sem markdown, sem explicações):
 {
-  "slides": [
-    { "position": 1, "title": "Gancho", "text": "...", "image_suggestion": "..." },
-    { "position": 2, "title": "Solução", "text": "...", "image_suggestion": "..." },
-    { "position": 3, "title": "Diferencial Técnico", "text": "...", "image_suggestion": "..." },
-    { "position": 4, "title": "Experiência / Fluxo", "text": "...", "image_suggestion": "..." },
-    { "position": 5, "title": "Autoridade Smart Dent", "text": "...", "image_suggestion": "..." },
-    { "position": 6, "title": "CTA", "text": "...", "cta_label": "...", "image_suggestion": "..." }
-  ]
+  "slides": ${slideStructure}
 }`;
 
     // Retry with exponential backoff for rate limits
