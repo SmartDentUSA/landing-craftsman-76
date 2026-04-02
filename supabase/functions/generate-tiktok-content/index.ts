@@ -96,7 +96,9 @@ serve(async (req) => {
       if (promptConfig?.custom_prompt) {
         finalPrompt = promptConfig.custom_prompt;
       } else {
-        finalPrompt = getDefaultTikTokPrompt();
+        // Use Clinical Brain Guard com template centralizado
+        const productCtx = mapProductToContext(product);
+        finalPrompt = buildFullPrompt(productCtx, PROMPTS.tiktok.script);
       }
     }
 
