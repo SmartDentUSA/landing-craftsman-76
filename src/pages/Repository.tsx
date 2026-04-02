@@ -286,6 +286,10 @@ const Repository = () => {
               <TabsContent value="prompts">
                 <EnhancedPromptsManager />
               </TabsContent>
+
+              <TabsContent value="google-apis">
+                <GoogleApisTab />
+              </TabsContent>
             </Tabs>
           </div>
         </main>
