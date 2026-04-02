@@ -1,137 +1,83 @@
 
-## Corrigir Google APIs logado pelo Google, mas sem funcionar
 
-### Diagnóstico resumido
-O problema não é “login Google”. O login do usuário está separado das credenciais usadas pelas integrações Google APIs.
+## Fix Google OAuth — Diagnóstico e Correção
 
-Hoje existem 4 quebras principais no fluxo:
+### Problemas encontrados
 
-1. **OAuth salvo em uma tabela, consumo em outra**
-   - As telas de OAuth salvam em `oauth_credentials`
-   - As edge functions críticas (`respond-review-ai`, `update-youtube-metadata`, `refresh-google-token`, `_shared/google-auth.ts`) ainda dependem de `google_oauth_tokens`
-   - Resultado: usuário conecta, mas as funções dizem que OAuth não está configurado
+A configuração no Google Console esta correta (client_id, origens, redirect URIs). Porem o fluxo de troca de token nunca completa por 5 razoes:
 
-2. **Callback OAuth volta para `/repository`, mas o processamento do código está nas páginas erradas**
-   - `OAuthCallback.tsx` redireciona para `/repository`
-   - Porém quem escuta `openOAuthModal/code` são `GoogleBusinessOAuthSettings.tsx` e `YouTubeOAuthSettings.tsx`
-   - Resultado: o código OAuth chega, mas muitas vezes não é trocado por refresh token no lugar certo
+1. **redirect_uri mismatch na troca**: A funcao `exchange-oauth-code` constroi `redirect_uri` a partir do header `origin` da requisicao HTTP. Mas `supabase.functions.invoke()` envia como origin o dominio do Supabase, nao o dominio do app. O Google exige que o redirect_uri na troca seja identico ao usado na autorizacao (`landing-craftsman-76.lovable.app/oauth2/callback`).
 
-3. **YouTube usa fonte antiga para testar**
-   - `test-youtube-connection` ainda busca `youtube_oauth_credentials`
-   - A UI nova salva em `oauth_credentials`
-   - Resultado: YouTube parece desconectado mesmo após configurar
+2. **Validacao de origin bloqueia chamadas**: A funcao valida `origin` contra uma lista fixa. Chamadas via `supabase.functions.invoke` podem ter origin diferente (preview domain, ou ate vazio).
 
-4. **Google Reviews posta no endpoint antigo**
-   - `respond-review-ai` usa `mybusiness.googleapis.com/v4/.../reply`
-   - O projeto já está migrando para APIs novas em outros pontos
-   - Mesmo com token válido, isso pode falhar ou ficar inconsistente
+3. **Funcao `exchange-oauth-code-direct` nao existe**: O fallback no `OAuthCallback.tsx` chama uma funcao que nunca foi criada. Quando `sessionStorage` perde o `config_id` (ex: por redirect cross-domain), o fluxo cai nesse fallback e falha silenciosamente.
 
-### O que vou implementar
+4. **sessionStorage perdido no redirect**: Quando o usuario inicia OAuth no preview (`id-preview--...lovable.app`), o `oauth.ts` redireciona para Google com `redirect_uri = landing-craftsman-76.lovable.app/oauth2/callback`. Ao retornar, o callback esta em `landing-craftsman-76.lovable.app` — dominio diferente do que salvou o sessionStorage. O `config_id` e perdido.
 
-#### 1) Unificar a leitura de credenciais Google
-Criar/ajustar a camada compartilhada para que **todas** as funções Google leiam primeiro de `oauth_credentials` e só usem `google_oauth_tokens` como fallback temporário.
+5. **Tabela `oauth_credentials` vazia**: Nenhum token foi salvo com sucesso. As funcoes que consultam essa tabela retornam null.
 
-Arquivos:
-- `supabase/functions/_shared/google-auth.ts`
-- `supabase/functions/refresh-google-token/index.ts`
+### Solucao
 
-Objetivo:
-- Buscar credenciais por usuário e provider (`google_business` / `youtube`)
-- Fazer refresh com `GOOGLE_CLIENT_ID/SECRET` ou com credenciais salvas do usuário, conforme o fluxo já existente
-- Parar de depender exclusivamente de `google_oauth_tokens`
+#### 1) Fixar redirect_uri no exchange (edge function)
+Em vez de usar o `origin` do request, passar o `redirect_uri` como parametro do body (vindo do frontend que sabe qual redirect usou). Validar que esteja na lista permitida.
 
-#### 2) Corrigir o callback OAuth no front
-Mover o processamento do retorno OAuth para o fluxo que realmente recebe o redirecionamento.
+**Arquivo**: `supabase/functions/exchange-oauth-code/index.ts`
+- Aceitar `redirect_uri` no body
+- Validar contra lista de URIs permitidos
+- Remover validacao de origin (desnecessaria com JWT + redirect_uri validado)
 
-Arquivos:
-- `src/pages/OAuthCallback.tsx`
-- `src/pages/Repository.tsx`
-- possivelmente `src/components/OAuthSettingsCard.tsx`
+#### 2) Persistir config_id no state do OAuth (nao sessionStorage)
+Em vez de salvar `config_id` no sessionStorage (que se perde no cross-domain redirect), codificar no parametro `state` da URL OAuth. O Google retorna `state` intacto no callback.
 
-Objetivo:
-- Quando o callback voltar com `code`, abrir a aba correta e encaminhar o código para o componente certo
-- Garantir que o token seja efetivamente salvo em `oauth_credentials`
-- Eliminar o estado “logado no Google, mas sem integração ativa”
+**Arquivo**: `src/lib/oauth.ts`
+- Mudar `state` de apenas `provider` para `provider:config_id`
 
-#### 3) Corrigir testes de conexão
-Padronizar testes de Google Business e YouTube para a mesma origem de dados.
+**Arquivo**: `src/hooks/useOAuth.ts`
+- Remover uso de sessionStorage para config_id
 
-Arquivos:
-- `supabase/functions/test-youtube-connection/index.ts`
-- `supabase/functions/test-google-business-connection/index.ts`
+**Arquivo**: `src/pages/OAuthCallback.tsx`
+- Parsear `state` como `provider:config_id`
+- Enviar `redirect_uri` correto no body do exchange
+- Remover fallback para funcao inexistente
 
-Objetivo:
-- YouTube passar a ler `oauth_credentials`
-- Google Business manter leitura coerente com o novo fluxo
-- Mensagens de erro ficarem claras: sem credencial, token expirado, escopo faltando, client inválido
+#### 3) Criar `exchange-oauth-code-direct` como fallback real
+Para casos onde nao ha config_id (ex: re-autenticacao via settings), criar funcao simples que usa GOOGLE_CLIENT_ID/SECRET do env.
 
-#### 4) Corrigir postagem de respostas de reviews
-Atualizar a função para usar token válido do novo fluxo e revisar o endpoint de reply.
+**Arquivo**: `supabase/functions/exchange-oauth-code-direct/index.ts`
+- Aceitar `code`, `provider`, `redirect_uri`
+- Usar secrets GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET
+- Salvar em `oauth_credentials`
 
-Arquivo:
-- `supabase/functions/respond-review-ai/index.ts`
+#### 4) Adicionar preview domain as origens permitidas
+**Arquivo**: `src/lib/oauth.ts`
+- Adicionar `https://id-preview--b282ae68-9aa1-4f3f-8597-81ef6773926f.lovable.app`
 
-Objetivo:
-- Gerar/postar respostas reais usando o token correto
-- Continuar usando a lógica já certa de “reviews sem resposta IA”, não a presença de resposta manual do dono
-- Melhorar logs para diferenciar: sem token, endpoint Google falhou, review sem identificador válido
+**Arquivo**: Google Console
+- Adicionar redirect URI: `https://id-preview--b282ae68-9aa1-4f3f-8597-81ef6773926f.lovable.app/oauth2/callback`
+- OU: sempre usar o canonico (ja funciona, so precisa fixar o exchange)
 
-#### 5) Corrigir pipeline do YouTube
-Fazer a geração e aplicação dependerem de credenciais consistentes e validação real de item.
-
-Arquivo:
-- `supabase/functions/update-youtube-metadata/index.ts`
-
-Objetivo:
-- Usar o mesmo resolvedor de token compartilhado
-- Evitar fila “presa” por credencial aparentemente conectada mas não utilizável
-- Manter a validação de `product_id`
-
-#### 6) Melhorar SEO Local para parecer SmartDent de verdade
-A função já injeta alguns produtos reais, mas ainda deixa o layout muito genérico porque o HTML final fica por conta do modelo sem um template visual mais rígido.
-
-Arquivo:
-- `supabase/functions/generate-local-seo-page/index.ts`
-
-Objetivo:
-- Forçar estrutura branded:
-  - header com marca SmartDent
-  - hero com proposta real da empresa
-  - cards de produtos reais com imagem real
-  - bloco de diferenciais da SmartDent
-  - CTA e visual mais profissional
-- Reduzir páginas “genéricas” mesmo quando houver poucos produtos compatíveis
-
-### Ordem de implementação
-1. Unificar token/refresh em `_shared/google-auth.ts` e `refresh-google-token`
-2. Corrigir callback OAuth no front
-3. Corrigir `test-youtube-connection` e alinhar testes
-4. Corrigir `respond-review-ai`
-5. Corrigir `update-youtube-metadata`
-6. Reforçar template branded em `generate-local-seo-page`
+### Ordem de implementacao
+1. `exchange-oauth-code/index.ts` — aceitar redirect_uri no body, remover origin check
+2. `src/lib/oauth.ts` — codificar config_id no state
+3. `src/pages/OAuthCallback.tsx` — parsear state, enviar redirect_uri
+4. `supabase/functions/exchange-oauth-code-direct/index.ts` — criar fallback
+5. Deploy das edge functions
 
 ### Resultado esperado
-- Usuário pode estar logado com Google e também ter a integração realmente ativa
-- Google Business passa a funcionar para postar respostas
-- YouTube deixa de parecer “desconectado” falsamente
-- SEO Local passa a gerar páginas com cara de SmartDent, usando logo/branding/produtos reais
-- O hub “Google APIs” finalmente reflete o estado real das integrações
+- OAuth completa o ciclo: authorize → callback → exchange → token salvo em oauth_credentials
+- Reviews, YouTube e SEO Local passam a ter token valido
+- Funciona tanto no dominio publicado quanto no preview
 
-### Detalhes técnicos
-```text
-Situação atual:
-Login Google do app -> OK
-OAuth integrações -> salvo em oauth_credentials
-Funções backend -> ainda leem google_oauth_tokens / tabela antiga
-Callback -> volta para /repository, mas listener fica em outra tela
+### Arquivos afetados
 
-Situação corrigida:
-Login Google do app -> independente
-OAuth integrações -> salvo e lido de oauth_credentials
-Shared token resolver -> centralizado
-Callback -> processado onde o usuário realmente retorna
-Reviews / YouTube / SEO -> usam a mesma base correta
-```
+| Arquivo | Acao |
+|---|---|
+| `supabase/functions/exchange-oauth-code/index.ts` | Editar (aceitar redirect_uri, remover origin check) |
+| `src/lib/oauth.ts` | Editar (state = provider:config_id) |
+| `src/hooks/useOAuth.ts` | Editar (remover sessionStorage) |
+| `src/pages/OAuthCallback.tsx` | Editar (parsear state, enviar redirect_uri) |
+| `supabase/functions/exchange-oauth-code-direct/index.ts` | Criar novo |
 
-Risco principal:
-- há coexistência de fluxos antigos e novos; vou preservar compatibilidade temporária com fallback para não quebrar credenciais já existentes durante a transição.
+### Acao do usuario (Google Console)
+Nenhuma mudanca necessaria no Console — o redirect URI `landing-craftsman-76.lovable.app/oauth2/callback` ja esta cadastrado e sera usado como canonico para todas as origens.
+
