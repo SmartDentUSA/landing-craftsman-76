@@ -143,6 +143,7 @@ function ReviewResponsesCard() {
           <CardTitle className="text-lg">Respostas de Reviews Google</CardTitle>
           {withoutResponseCount > 0 && <Badge variant="destructive">{withoutResponseCount} sem resposta</Badge>}
           {pendingCount > 0 && <Badge variant="secondary">{pendingCount} pendentes</Badge>}
+          {failedCount > 0 && <Badge className="bg-red-100 text-red-800">{failedCount} falhadas</Badge>}
         </div>
         <div className="flex gap-2">
           <Button size="sm" onClick={() => generateMutation.mutate()} disabled={generateMutation.isPending}>
