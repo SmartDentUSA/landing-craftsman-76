@@ -446,7 +446,9 @@ INSTRUÇÕES CRÍTICAS:
     systemPrompt = processPromptWithSelectedData(customPrompt, selectedData, existingContent);
     console.log('📝 Using custom prompt with selected fields and anti-duplication');
   } else {
-    systemPrompt = `${currentPrompt.role}
+    // Inject Clinical Brain Guard into default prompt
+    const productCtx = mapProductToContext(product);
+    systemPrompt = injectClinicalBrainGuard(`${currentPrompt.role}
 
 IMPORTANTE: Você DEVE escrever TODO o conteúdo em PORTUGUÊS BRASILEIRO. Jamais use espanhol ou outros idiomas.
 

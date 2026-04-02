@@ -597,6 +597,10 @@ FORMATO DE RESPOSTA OBRIGATÓRIO:
 
 RESPOSTA ESPERADA (copie este formato exato):
 ["palavra-chave 1", "palavra-chave 2", "palavra-chave 3"]`;
+    
+    // Inject Clinical Brain Guard
+    const productCtx = mapProductToContext(product);
+    prompt = buildFullPrompt(productCtx, prompt);
   }
 
   const systemPrompt = 'Você é um assistente de extração de dados. SEMPRE retorne APENAS arrays JSON puros sem texto explicativo, markdown ou formatação. Exemplo correto: ["item1", "item2"]. NUNCA inclua explicações, saudações ou qualquer texto fora do JSON.';
