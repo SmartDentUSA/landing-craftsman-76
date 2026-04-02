@@ -43,7 +43,7 @@ interface ProductData {
 
 // ========================= SlideTexts Types =========================
 export interface SlideTextsType {
-  1: { hook: string; productName: string; imageScale?: string; bgColor?: string };
+  1: { hook: string; productName: string; imageScale?: string; bgColor?: string; overlayOpacity?: string; faixaVisible?: string; faixaColor?: string };
   2: { category: string; introLabel?: string; productName: string; imageScale?: string; bgColor?: string };
   3: { title: string; headline?: string; body?: string; bullet1?: string; bullet2?: string; bullet3?: string; bullet4?: string; imageScale?: string; bgColor?: string };
   4: { label: string; keyword: string; benefit: string; imageScale?: string; bgColor?: string };
