@@ -57,8 +57,8 @@ async function generateMetadata(supabase: any, limit: number, videoId?: string) 
   if (error) throw new Error(`Failed to fetch queue: ${error.message}`)
   if (!items || items.length === 0) return { processed: 0, items: [] }
 
-  const apiKey = Deno.env.get('GOOGLE_AI_API_KEY')
-  if (!apiKey) throw new Error('GOOGLE_AI_API_KEY not configured')
+  const apiKey = Deno.env.get('LOVABLE_API_KEY')
+  if (!apiKey) throw new Error('LOVABLE_API_KEY not configured')
 
   const processed: any[] = []
 
