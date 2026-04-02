@@ -120,6 +120,8 @@ const Repository = () => {
                     ? 'Clone landing pages e publique blogs de produtos nos domínios Cloudflare'
                     : activeView === 'handbook'
                     ? 'Exporte todos os dados em formato estruturado para gerar apostila DOCX'
+                    : activeView === 'google-apis'
+                    ? 'Gerencie respostas de reviews, posts GBP, YouTube SEO e páginas SEO local'
                     : 'Configure prompts e dados utilizados na geração de conteúdo IA'
                   }
                 </p>
