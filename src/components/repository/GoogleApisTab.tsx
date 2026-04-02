@@ -453,10 +453,10 @@ function YouTubeQueueCard() {
                         )}
                         {item.status === 'pending' && item.suggested_title && (
                           <>
-                            <Button size="sm" variant="ghost" className="text-green-600" onClick={() => approveItem(item.id)}>
-                              <Check className="h-3 w-3" />
+                            <Button size="sm" variant="default" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => approveItem(item.id)}>
+                              <Check className="h-3 w-3 mr-1" /> Aprovar
                             </Button>
-                            <Button size="sm" variant="ghost" className="text-red-600" onClick={() => skipItem(item.id)}>
+                            <Button size="sm" variant="ghost" className="text-destructive" onClick={() => skipItem(item.id)}>
                               <X className="h-3 w-3" />
                             </Button>
                           </>
