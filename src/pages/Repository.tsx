@@ -25,11 +25,12 @@ import { ExternalVideosGallery } from '@/components/ExternalVideosGallery';
 import { ImageMigrationManager } from '@/components/ImageMigrationManager';
 import { LPClonePanel } from '@/components/LPClonePanel';
 import { CompleteHandbookExporter } from '@/components/CompleteHandbookExporter';
+import { GoogleApisTab } from '@/components/repository/GoogleApisTab';
 
 const Repository = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [activeView, setActiveView] = useState<'repository' | 'categories' | 'prompts' | 'links' | 'merchant' | 'youtube' | 'google-business' | 'coupons' | 'aftersales' | 'cs' | 'spin-selling' | 'external-videos' | 'image-migration' | 'lp-clone' | 'handbook'>('repository');
+  const [activeView, setActiveView] = useState<'repository' | 'categories' | 'prompts' | 'links' | 'merchant' | 'youtube' | 'google-business' | 'coupons' | 'aftersales' | 'cs' | 'spin-selling' | 'external-videos' | 'image-migration' | 'lp-clone' | 'handbook' | 'google-apis'>('repository');
 
   // Detectar redirecionamento OAuth e abrir aba correta
   useEffect(() => {
