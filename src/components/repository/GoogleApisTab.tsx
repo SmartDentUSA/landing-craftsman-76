@@ -507,8 +507,8 @@ function YouTubeQueueCard() {
 function LocalSEOCard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [filterUF, setFilterUF] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
+  const [filterUF, setFilterUF] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all');
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newTarget, setNewTarget] = useState({
