@@ -1,6 +1,8 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
+import { buildFullPrompt, mapProductToContext } from '../_shared/clinical-brain-guard.ts';
+import { PROMPTS } from '../_shared/prompt-templates.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -291,9 +293,11 @@ Retorne apenas o texto da mensagem formatada, sem explicações.
         finalPrompt = promptConfig.custom_prompt;
       } else {
         finalPrompt = getDefaultPrompt(type as 'whatsapp' | 'youtube' | 'instagram', instagramType);
+        // Inject Clinical Brain Guard on default prompts
+        const productCtx = mapProductToContext(product);
+        finalPrompt = buildFullPrompt(productCtx, finalPrompt);
       }
     }
-
     // whatsapp_sequence é tratado anteriormente via early return
 
     // Processar variáveis no prompt

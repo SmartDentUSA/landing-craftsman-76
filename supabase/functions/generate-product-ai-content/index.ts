@@ -1,6 +1,8 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
+import { buildFullPrompt, mapProductToContext } from '../_shared/clinical-brain-guard.ts';
+import { PROMPTS } from '../_shared/prompt-templates.ts';
 
 // ====== FASE 2: PRODUCT MASTER CONTEXT INTEGRATION ======
 interface ProductMasterContext {
@@ -420,6 +422,10 @@ FORMATO DE RESPOSTA OBRIGATÓRIO:
 
 RESPOSTA ESPERADA (copie este formato exato):
 ["benefício 1", "benefício 2", "benefício 3"]`;
+    
+    // Inject Clinical Brain Guard
+    const productCtx = mapProductToContext(product);
+    prompt = buildFullPrompt(productCtx, prompt);
   }
 
   const systemPrompt = 'Você é um assistente de extração de dados. SEMPRE retorne APENAS arrays JSON puros sem texto explicativo, markdown ou formatação. Exemplo correto: ["item1", "item2"]. NUNCA inclua explicações, saudações ou qualquer texto fora do JSON.';
@@ -591,6 +597,10 @@ FORMATO DE RESPOSTA OBRIGATÓRIO:
 
 RESPOSTA ESPERADA (copie este formato exato):
 ["palavra-chave 1", "palavra-chave 2", "palavra-chave 3"]`;
+    
+    // Inject Clinical Brain Guard
+    const productCtx = mapProductToContext(product);
+    prompt = buildFullPrompt(productCtx, prompt);
   }
 
   const systemPrompt = 'Você é um assistente de extração de dados. SEMPRE retorne APENAS arrays JSON puros sem texto explicativo, markdown ou formatação. Exemplo correto: ["item1", "item2"]. NUNCA inclua explicações, saudações ou qualquer texto fora do JSON.';

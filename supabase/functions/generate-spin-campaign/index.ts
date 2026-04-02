@@ -2,6 +2,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
 import { trackFromResponse } from '../_shared/track-ai-usage.ts';
 import { SPIN_SYSTEM_PROMPT } from "../_shared/spin-system-prompt.ts";
+import { injectClinicalBrainGuard, mapProductToContext } from '../_shared/clinical-brain-guard.ts';
 import {
   validateWhatsAppMessage,
   applyFallback,
@@ -342,8 +343,9 @@ serve(async (req) => {
       const maxAttempts = 3;
       const minQualityScore = 70;
 
-      // Construir prompt específico para storytelling
-      const whatsappPrompt = `
+      // Construir prompt específico para storytelling com Clinical Brain Guard
+      const productCtx = mapProductToContext(products[0]);
+      const whatsappPrompt = injectClinicalBrainGuard(`
 Você é um especialista em SPIN Selling e copywriting para WhatsApp B2B.
 
 CONTEXTO:
@@ -363,7 +365,7 @@ EXEMPLO:
 "${selectedHook} Imagine ter controle total sobre prazos, reduzir custos em 40% e conquistar autonomia profissional. Descubra como."
 
 Gere APENAS o texto, sem aspas ou formatação.
-`;
+`, productCtx);
 
       // Função de geração
       const generateStory = async (): Promise<string> => {

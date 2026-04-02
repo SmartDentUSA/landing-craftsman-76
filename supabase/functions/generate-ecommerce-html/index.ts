@@ -2,6 +2,7 @@ import "https://deno.land/x/xhr@0.3.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
 import { trackFromResponse } from '../_shared/track-ai-usage.ts';
+import { injectClinicalBrainGuard, mapProductToContext } from '../_shared/clinical-brain-guard.ts';
 // ✅ Tracking Pixels Injection v2.0
 import { generateTrackingHeadScripts, generateGTMNoScript, generateTrackingDebugComment, type TrackingPixels } from '../_shared/tracking-injector.ts';
 import { fetchAggregateRating, type AggregateRatingData } from "../_shared/aggregate-rating-helper.ts";
@@ -635,7 +636,9 @@ async function generateBenefitsWithAI(product: any): Promise<string[]> {
   const benefitsCount = hasRichData(product) ? 8 : 5;
   console.log(`🎯 Gerando ${benefitsCount} benefícios (adaptativo baseado em data richness)`);
   
-  const prompt = `Analise o seguinte produto e gere EXATAMENTE ${benefitsCount} benefícios objetivos e altamente persuasivos para a descrição de e-commerce. Priorize dados quantificáveis (ex: resistência, certificações, economia de tempo) no foco principal de cada benefício:
+  // Inject Clinical Brain Guard into benefits prompt
+  const productCtx = mapProductToContext(product);
+  const prompt = injectClinicalBrainGuard(`Analise o seguinte produto e gere EXATAMENTE ${benefitsCount} benefícios objetivos e altamente persuasivos para a descrição de e-commerce. Priorize dados quantificáveis (ex: resistência, certificações, economia de tempo) no foco principal de cada benefício:
 
 Produto: ${product.name}
 Descrição: ${product.description || 'N/A'}
@@ -666,7 +669,7 @@ Em cada um dos ${benefitsCount} benefícios, você DEVE utilizar a tag HTML <str
 IMPORTANTE: O dado destacado pode ser repetido em FAQs ou outros benefícios - a repetição é permitida quando o contexto for diferente. O critério é: "Este é o ponto focal mais importante desta frase específica?"
 
 Retorne APENAS o array JSON puro sem markdown:
-${JSON.stringify(Array(benefitsCount).fill('benefício X'))}`;
+${JSON.stringify(Array(benefitsCount).fill('benefício X'))}`, productCtx);
 
   console.log('🔑 API Key presente, chamando Deepseek...');
   
