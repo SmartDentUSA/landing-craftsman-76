@@ -335,13 +335,13 @@ function YouTubeQueueCard() {
 
   const { data: products } = useQuery({
     queryKey: ['products-for-youtube'],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('products_repository')
+    queryFn: async (): Promise<Array<{id: string; name: string; category: string}>> => {
+      const res = await supabase
+        .from('products_repository' as any)
         .select('id, name, category')
         .eq('is_active', true)
-        .order('name') as { data: any[] | null };
-      return data || [];
+        .order('name');
+      return (res.data as any[]) || [];
     },
   });
 
