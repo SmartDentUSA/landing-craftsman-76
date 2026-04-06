@@ -14,7 +14,8 @@ export interface EngagementSlideTexts {
   imageScale?: string;
   bgColor?: string;
   accentColor?: string;
-  mediaType?: 'image' | 'video'; // image or video
+  mediaType?: 'image' | 'video';
+  videoSrc?: string; // blob URL for video preview
 }
 
 export type EngagementSlideTextsMap = Record<number, EngagementSlideTexts>;
