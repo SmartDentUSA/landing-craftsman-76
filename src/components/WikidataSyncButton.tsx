@@ -66,11 +66,14 @@ export function WikidataSyncButton({ productId, wikidataItemId, onSyncSuccess }:
     try {
       const result = await testWikidataOAuth();
       if (result.success) {
+        setOauthStatus('ok');
+        setOauthError(null);
         toast({
           title: "✅ OAuth OK",
           description: `Site: ${result.sitename} | CSRF: ${result.csrfTokenStatus}`,
         });
       } else {
+        setOauthStatus('failed');
         const category = result.errorCategory || "unknown";
         let recommendation = "Verifique os secrets no Supabase.";
         if (category === "invalid_signature") {
@@ -80,6 +83,7 @@ export function WikidataSyncButton({ productId, wikidataItemId, onSyncSuccess }:
         } else if (category === "missing_secrets") {
           recommendation = "Secrets ausentes — configure WIKIDATA_CONSUMER_KEY, CONSUMER_SECRET, ACCESS_TOKEN, ACCESS_SECRET.";
         }
+        setOauthError(`${category}: ${recommendation}`);
         toast({
           title: `❌ OAuth falhou (${category})`,
           description: recommendation,
@@ -87,6 +91,8 @@ export function WikidataSyncButton({ productId, wikidataItemId, onSyncSuccess }:
         });
       }
     } catch (err) {
+      setOauthStatus('failed');
+      setOauthError(err instanceof Error ? err.message : "Erro desconhecido");
       toast({ title: "Erro no teste OAuth", description: err instanceof Error ? err.message : "Erro desconhecido", variant: "destructive" });
     } finally {
       setTestingOAuth(false);
