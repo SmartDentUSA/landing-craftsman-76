@@ -275,19 +275,22 @@ export function EngagementCarouselSection({
             imgUrl = await fetchAsDataUrl(imgUrl);
           } catch { /* use original */ }
         }
-        // Always generate PNG (thumbnail for videos)
+        const isVideo = texts.mediaType === 'video';
+        const folder = isVideo ? `slide_${i}/` : '';
+        
+        // Always generate PNG with full template (thumbnail for videos)
         const blob = await generateEngagementSlidePNG(i, imgUrl, texts, primaryColor, accentColor, brandName, handleName);
-        zip.file(`engajamento_slide_${i}.png`, blob);
+        zip.file(`${folder}slide_${i}${isVideo ? '_capa' : ''}.png`, blob);
 
-        // If slide has video, include the .mp4
-        if (texts.mediaType === 'video') {
+        // If slide has video, include the .mp4 alongside the PNG
+        if (isVideo) {
           const videoUrl = texts.videoStorageUrl || texts.videoSrc;
           if (videoUrl) {
             try {
               const videoResp = await fetch(videoUrl);
               if (videoResp.ok) {
                 const videoBlob = await videoResp.blob();
-                zip.file(`engajamento_slide_${i}_video.mp4`, videoBlob);
+                zip.file(`${folder}slide_${i}_video.mp4`, videoBlob);
                 hasVideos = true;
               }
             } catch (err) {
