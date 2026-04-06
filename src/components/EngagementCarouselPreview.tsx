@@ -685,6 +685,7 @@ function renderSlideContent(
 export function EngagementCarouselPreview({
   slideImageMap,
   onImageChange,
+  onImageFileUpload,
   productImages,
   primaryColor,
   accentColor,
@@ -710,6 +711,7 @@ export function EngagementCarouselPreview({
             productImages={productImages}
             currentImage={imgUrl}
             onImageChange={onImageChange}
+            onImageFileUpload={onImageFileUpload}
             primaryColor={primaryColor}
             slideTexts={stMap}
             onSlideTextChange={(key, value) => onSlideTextChange(num, key, value)}
