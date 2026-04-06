@@ -1,41 +1,27 @@
 
 
-## Fix: Carrossel Engajamento nao persiste dados
+## Fix: Erro "Cannot access 'companyName' before initialization" no E-commerce HTML
 
 ### Causa raiz
 
-Dois problemas criticos:
+Dentro da funcao `buildEcommerceHTML` (linhas 1859-2650), a variavel `companyName` e declarada com `const` na linha 2526, mas e usada muito antes — nas linhas 1972, 1993, 2000, 2012, 2014, etc. Em JavaScript/TypeScript, variaveis `const` sao "hoisted" mas ficam em "temporal dead zone" ate a linha da declaracao. Qualquer acesso antes disso causa `ReferenceError`.
 
-1. **Closures obsoletas nos saves com debounce**: `handleSlideTextChange` chama `persistData(updated, slideImageMap)` capturando o `slideImageMap` do momento da renderizacao — se imagens mudaram depois, o save antigo sobrescreve com dados velhos (e vice-versa para `handleImageChange` que captura `slideTexts` antigos).
+### Fix
 
-2. **Imagens salvas como base64 gigante no JSONB**: Uploads de imagem sao convertidos para data URL (base64) e salvos dentro do campo `instagram_copies` JSONB. Um unico JPEG em base64 pode ter 1-5MB. Com 6 slides, isso ultrapassa limites praticos do Supabase para update de JSONB, causando falha silenciosa (sem tratamento de erro no retorno do `.update()`).
+**Arquivo: `supabase/functions/generate-ecommerce-html/index.ts`**
 
-### Solucao
+Mover a declaracao de `companyName`, `companyUrl` e `productUrl` (atualmente nas linhas 2526-2528) para o inicio da funcao `buildEcommerceHTML`, logo apos a linha 1866 (primeira linha do corpo da funcao):
 
-**1. Corrigir closures com useRef** (`EngagementCarouselSection.tsx`)
-- Criar `slideTextsRef` e `slideImageMapRef` que sempre apontam para o estado atual
-- `persistData` le dos refs em vez de receber parametros
-- Debounce unico com `useRef<NodeJS.Timeout>` em vez de multiplos `setTimeout` soltos
+```typescript
+// Mover estas 3 linhas de ~2526 para ~1867:
+const companyName = company?.company_name || 'Smart Dent';
+const companyUrl = company?.website_url || 'https://smartdent.com.br';
+const productUrl = product.product_url || '#';
+```
 
-**2. Upload de imagens para Supabase Storage** (`EngagementCarouselSection.tsx` + `EngagementCarouselPreview.tsx`)
-- Ao fazer upload de imagem, enviar para bucket `product-images` (ja existe no projeto)
-- Salvar a URL publica no `slideImageMap` em vez de base64
-- Isso reduz o JSONB de megabytes para poucos bytes por slide
-- Videos: salvar thumbnail no Storage tambem, manter blob URL apenas para preview local (nao persistir)
-
-**3. Adicionar verificacao de erro no persist** (`EngagementCarouselSection.tsx`)
-- Checar `error` no retorno do `.update()` do Supabase
-- Mostrar toast de erro se o save falhar
-
-### Alteracoes
-
-| Arquivo | Acao |
-|---|---|
-| `src/components/EngagementCarouselSection.tsx` | Refs para estado atual, debounce unificado, upload de imagens para Storage, error handling no persist |
-| `src/components/EngagementCarouselPreview.tsx` | `onImageChange` passa `File` ou `Blob` em vez de data URL; componente pai faz upload |
+Remover as declaracoes duplicadas das linhas 2526-2528.
 
 ### Resultado esperado
-- Salvar funciona de forma confiavel (JSONB leve, sem closures obsoletas)
-- Imagens persistem entre sessoes via URLs do Storage
-- Erros de save sao visiveis ao usuario
+- Geracao de HTML E-commerce volta a funcionar sem erro
+- Todas as referencias a `companyName` no corpo da funcao acessam o valor correto
 
