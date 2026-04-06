@@ -476,19 +476,7 @@ function renderSlideContent(
     );
   };
 
-  // Header bar
-  const Header = () => (
-    <div style={{
-      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-      padding: '32px 48px', fontSize: 28, fontWeight: 600,
-      color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)',
-      letterSpacing: 1,
-    }}>
-      <span>Powered by <span style={{ color: accent, fontWeight: 700 }}>{brandName}</span></span>
-      <span style={{ color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)' }}>@{handleName}</span>
-      <span>2026 //</span>
-    </div>
-  );
+  // Header removed per design requirement
 
   // Image block
   const ImageBlock = ({ height = 440 }: { height?: number }) => (
@@ -521,6 +509,72 @@ function renderSlideContent(
     )
   );
 
+  // Slide 1: Full-bleed cover layout
+  if (slideNum === 1) {
+    return (
+      <div style={{
+        width: SLIDE_W, height: SLIDE_H, background: bg,
+        position: 'relative', overflow: 'hidden',
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+      }}>
+        {/* Full-bleed image */}
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt=""
+            style={{
+              position: 'absolute', top: 0, left: 0,
+              width: '100%', height: '100%', objectFit: 'cover',
+              transform: `scale(${imageScale / 100})`,
+            }}
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+          />
+        ) : (
+          <div style={{
+            position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+            background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: subTextColor, fontSize: 36,
+          }}>
+            📷 Upload imagem
+          </div>
+        )}
+
+        {/* Gradient overlay bottom 50% */}
+        <div style={{
+          position: 'absolute', bottom: 0, left: 0, width: '100%', height: '60%',
+          background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.5) 50%, transparent 100%)',
+        }} />
+
+        {/* Text over gradient */}
+        <div style={{
+          position: 'absolute', bottom: 60, left: 60, right: 60,
+          display: 'flex', flexDirection: 'column', gap: 20,
+        }}>
+          <div style={{ fontSize: 72, fontWeight: 900, color: '#ffffff', lineHeight: 1.15 }}>
+            <RichText text={texts.title || ''} />
+          </div>
+          {texts.text && (
+            <div style={{ fontSize: 36, lineHeight: 1.5, color: 'rgba(255,255,255,0.8)', fontWeight: 400 }}>
+              <RichText text={texts.text} />
+            </div>
+          )}
+        </div>
+
+        {/* Slide number badge */}
+        <div style={{
+          position: 'absolute', bottom: 40, right: 48,
+          width: 60, height: 60, borderRadius: '50%',
+          background: 'rgba(255,255,255,0.15)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 28, fontWeight: 900, color: 'rgba(255,255,255,0.5)',
+        }}>
+          1
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{
       width: SLIDE_W, height: SLIDE_H, background: bg,
@@ -529,12 +583,12 @@ function renderSlideContent(
       overflow: 'hidden',
       position: 'relative',
     }}>
-      <Header />
+      {/* Header removed */}
 
       {/* Main content area */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '0 60px 48px', gap: 28, justifyContent: 'center' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '48px 60px 48px', gap: 28, justifyContent: 'center' }}>
         {/* Title */}
-        <div style={{ fontSize: slideNum === 1 ? 72 : 56, fontWeight: 900, color: textColor, lineHeight: 1.15 }}>
+        <div style={{ fontSize: 56, fontWeight: 900, color: textColor, lineHeight: 1.15 }}>
           <RichText text={texts.title || ''} />
         </div>
 
@@ -650,22 +704,7 @@ export async function generateEngagementSlidePNG(
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
 
-  // Header
-  ctx.font = '600 28px system-ui, -apple-system, sans-serif';
-  const headerColor = isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)';
-  ctx.fillStyle = headerColor;
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'top';
-  ctx.fillText('Powered by', 48, 36);
-  ctx.fillStyle = accent;
-  const pwWidth = ctx.measureText('Powered by ').width;
-  ctx.fillText(brandName, 48 + pwWidth, 36);
-  ctx.fillStyle = isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)';
-  ctx.textAlign = 'center';
-  ctx.fillText(`@${handleName}`, W / 2, 36);
-  ctx.textAlign = 'right';
-  ctx.fillStyle = headerColor;
-  ctx.fillText('2026 //', W - 48, 36);
+  // No header drawn (removed per design)
 
   // Load image
   let img: HTMLImageElement | null = null;
@@ -679,6 +718,58 @@ export async function generateEngagementSlidePNG(
         i.src = imageUrl;
       });
     } catch { img = null; }
+  }
+
+  // Slide 1: Full-bleed cover with gradient
+  if (slideNum === 1) {
+    if (img) {
+      ctx.save();
+      const scaleF = imageScale / 100;
+      ctx.translate(W / 2, H / 2);
+      ctx.scale(scaleF, scaleF);
+      ctx.translate(-W / 2, -H / 2);
+      drawImageCover(ctx, img, 0, 0, W, H);
+      ctx.restore();
+    }
+
+    // Gradient overlay
+    const grad = ctx.createLinearGradient(0, H * 0.4, 0, H);
+    grad.addColorStop(0, 'rgba(0,0,0,0)');
+    grad.addColorStop(0.5, 'rgba(0,0,0,0.5)');
+    grad.addColorStop(1, 'rgba(0,0,0,0.85)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    // Title
+    const titleFont = '900 72px system-ui, -apple-system, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    let titleEndY = drawRichText(ctx, texts.title || '', 60, H - 300, W - 120, 86, titleFont, titleFont, '#ffffff', accent, 'left');
+
+    // Subtitle
+    if (texts.text) {
+      const bodyFont = '400 36px system-ui, -apple-system, sans-serif';
+      const bodyFontBold = '700 36px system-ui, -apple-system, sans-serif';
+      drawRichText(ctx, texts.text, 60, titleEndY + 20, W - 120, 54, bodyFont, bodyFontBold, 'rgba(255,255,255,0.8)', accent, 'left');
+    }
+
+    // Slide number badge
+    ctx.beginPath();
+    ctx.arc(W - 78, H - 70, 30, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.fill();
+    ctx.font = '900 28px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('1', W - 78, H - 70);
+
+    return new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (blob) resolve(blob);
+        else reject(new Error('Canvas toBlob failed'));
+      }, 'image/png');
+    });
   }
 
   // Title
