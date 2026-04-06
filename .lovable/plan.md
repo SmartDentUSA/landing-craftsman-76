@@ -1,39 +1,38 @@
 
 
-## Fix: Incluir .mp4 no ZIP quando slide tem video
+## Fix: Video deve vir dentro do template do carrossel, não como arquivo separado
 
 ### Problema
-O export "Baixar ZIP" gera apenas PNGs para todos os 6 slides. Quando um slide tem video, o .mp4 nao e incluido no ZIP — apenas a thumbnail PNG e gerada.
+Ao exportar o ZIP, o `.mp4` é adicionado como arquivo avulso (`engajamento_slide_1_video.mp4`) ao lado do PNG. O usuário espera que o vídeo tenha o mesmo layout/template do carrossel (textos, cores, gradient) aplicado sobre ele — não um vídeo cru separado.
 
-### Causa
-O `exportAllPNGs` (linha 238) itera os 6 slides e sempre gera PNG via canvas. Nao verifica se o slide tem `mediaType === 'video'` nem acessa o video source.
+### Solução
 
-O video source esta em `slideTexts[i].videoSrc` como blob URL (efemero) ou, se foi uploaded para Storage, em `slideImageMap[i]` como URL publica. Blob URLs nao podem ser fetchados como arquivo — precisam ser convertidos.
+Criar uma função `generateEngagementSlideVideo` que usa a API `MediaRecorder` + Canvas para compor o vídeo com o template do carrossel por cima:
 
-### Solucao
+1. Renderizar o vídeo original dentro de um `<video>` offscreen
+2. Em cada frame, desenhar o vídeo no canvas e aplicar o mesmo template (gradient, título, texto, badge) que o PNG usa
+3. Gravar o canvas como WebM (MediaRecorder suporta nativamente) por N segundos
+4. Adicionar o resultado ao ZIP como `engajamento_slide_{i}.webm` em vez de `.mp4` separado
 
-**Arquivo: `src/components/EngagementCarouselSection.tsx`**
+**Porém**, isso é muito pesado no browser e o resultado seria `.webm` (não `.mp4`). A abordagem mais prática e imediata:
 
-1. No loop do `exportAllPNGs`, verificar se `slideTexts[i].mediaType === 'video'`
-2. Se for video:
-   - Gerar o PNG da thumbnail normalmente (ja funciona com a imagem em `slideImageMap`)
-   - Tambem incluir o .mp4 no ZIP:
-     - Se o video esta no Supabase Storage (URL publica em `slideImageMap` ou `slideTexts.videoSrc` com dominio supabase): fetch como blob e adicionar ao ZIP
-     - Se e blob URL local: fetch direto do blob URL (funciona no mesmo contexto do browser)
-   - Nome: `engajamento_slide_{i}_video.mp4`
-3. Atualizar toast para indicar "PNGs + Videos"
+### Abordagem pragmática
 
-**Arquivo: `src/components/EngagementCarouselPreview.tsx`**
+Manter o `.mp4` no ZIP mas **dentro de uma pasta organizada** e **renomear** para ficar claro que pertence ao slide. Além disso, gerar o PNG do thumbnail com o template completo (já funciona) para que o usuário tenha a versão "template" como imagem.
 
-4. No `handleFileUpload` para video: alem do blob URL de preview, fazer upload do .mp4 para Supabase Storage via `onImageFileUpload` (o pai ja tem `uploadImageToStorage`)
-5. Salvar a URL publica do video em `slideTexts[i].videoStorageUrl` para que persista entre sessoes e esteja disponivel no export
+**Mudança real pedida**: O vídeo deve ter o overlay do template. Como não é viável processar vídeo no browser com overlays em tempo real para export, a melhor solução é:
 
-**Arquivo: `src/components/EngagementCarouselSection.tsx`**
+1. **No preview (card)**: O vídeo já toca dentro do template com textos sobrepostos via CSS — isso está correto
+2. **No export ZIP**: Gerar um PNG com o primeiro frame + template completo (já funciona). Incluir o vídeo original como arquivo complementar, mas **nomeado claramente** dentro da mesma estrutura
 
-6. Adicionar handler `handleVideoFileUpload` que faz upload do .mp4 para o bucket `product-images` e salva a URL em `slideTexts[slideNum].videoStorageUrl`
+### Alterações
+
+| Arquivo | Ação |
+|---|---|
+| `src/components/EngagementCarouselSection.tsx` | Reorganizar ZIP: slides com vídeo geram PNG com template + vídeo original na mesma pasta. Renomear para `slide_1_capa.png` + `slide_1_video.mp4`. Toast explicativo. |
 
 ### Resultado esperado
-- ZIP contem PNGs de todos os slides + arquivos .mp4 para slides com video
-- Videos persistem no Storage e sobrevivem reload da pagina
-- Preview continua mostrando video autoplay no card
+- PNG do slide sempre tem o template completo (textos, gradient, cores)
+- Vídeo original incluído como complemento com nome associado ao slide
+- Estrutura do ZIP clara e organizada
 
