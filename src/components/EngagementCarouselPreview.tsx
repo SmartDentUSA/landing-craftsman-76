@@ -23,6 +23,7 @@ export type EngagementSlideTextsMap = Record<number, EngagementSlideTexts>;
 interface EngagementCarouselPreviewProps {
   slideImageMap: Record<number, string>;
   onImageChange: (slideNum: number, url: string) => void;
+  onImageFileUpload?: (slideNum: number, file: File) => void;
   productImages: Array<{ url: string; alt?: string }>;
   primaryColor: string;
   accentColor: string;
@@ -202,6 +203,7 @@ interface SlideWrapperProps {
   productImages: Array<{ url: string; alt?: string }>;
   currentImage: string;
   onImageChange: (slideNum: number, url: string) => void;
+  onImageFileUpload?: (slideNum: number, file: File) => void;
   primaryColor: string;
   slideTexts?: Record<string, string>;
   onSlideTextChange?: (key: string, value: string) => void;
@@ -255,7 +257,7 @@ const EDITOR_FIELDS: Record<number, Array<{ key: string; label: string; type: 'i
   ],
 };
 
-function SlideWrapper({ slideNum, children, productImages, currentImage, onImageChange, primaryColor, slideTexts, onSlideTextChange, mediaType, onMediaTypeChange }: SlideWrapperProps) {
+function SlideWrapper({ slideNum, children, productImages, currentImage, onImageChange, onImageFileUpload, primaryColor, slideTexts, onSlideTextChange, mediaType, onMediaTypeChange }: SlideWrapperProps) {
   const containerW = SLIDE_W * SLIDE_SCALE;
   const containerH = SLIDE_H * SLIDE_SCALE;
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -300,13 +302,18 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
         console.warn('Video load error, keeping blob URL for preview');
       };
     } else {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const dataUrl = ev.target?.result as string;
-        onImageChange(slideNum, dataUrl);
-        onMediaTypeChange?.('image');
-      };
-      reader.readAsDataURL(file);
+      // Upload image file to Storage via parent
+      if (onImageFileUpload) {
+        onImageFileUpload(slideNum, file);
+      } else {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const dataUrl = ev.target?.result as string;
+          onImageChange(slideNum, dataUrl);
+        };
+        reader.readAsDataURL(file);
+      }
+      onMediaTypeChange?.('image');
     }
     e.target.value = '';
   };
@@ -678,6 +685,7 @@ function renderSlideContent(
 export function EngagementCarouselPreview({
   slideImageMap,
   onImageChange,
+  onImageFileUpload,
   productImages,
   primaryColor,
   accentColor,
@@ -703,6 +711,7 @@ export function EngagementCarouselPreview({
             productImages={productImages}
             currentImage={imgUrl}
             onImageChange={onImageChange}
+            onImageFileUpload={onImageFileUpload}
             primaryColor={primaryColor}
             slideTexts={stMap}
             onSlideTextChange={(key, value) => onSlideTextChange(num, key, value)}
