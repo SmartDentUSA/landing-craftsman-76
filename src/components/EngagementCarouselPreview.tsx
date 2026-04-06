@@ -490,9 +490,28 @@ function renderSlideContent(
 
   // Header removed per design requirement
 
-  // Image block
-  const ImageBlock = ({ height = 440 }: { height?: number }) => (
-    imageUrl ? (
+  // Media block (image or video)
+  const MediaBlock = ({ height = 440 }: { height?: number }) => {
+    const isVideo = texts.mediaType === 'video' && texts.videoSrc;
+    if (isVideo) {
+      return (
+        <div style={{
+          width: '100%', height, overflow: 'hidden',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <video
+            src={texts.videoSrc}
+            autoPlay muted loop playsInline
+            style={{
+              width: '100%', height: '100%', objectFit: 'cover',
+              transform: `scale(${imageScale / 100})`,
+              borderRadius: 16,
+            }}
+          />
+        </div>
+      );
+    }
+    return imageUrl ? (
       <div style={{
         width: '100%', height, overflow: 'hidden',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -518,8 +537,8 @@ function renderSlideContent(
       }}>
         📷 Upload imagem
       </div>
-    )
-  );
+    );
+  };
 
   // Slide 1: Full-bleed cover layout
   if (slideNum === 1) {
