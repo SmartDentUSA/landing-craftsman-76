@@ -1,28 +1,20 @@
 
 
-## Fix: Erro ao gerar carrossel de engajamento
+## Adicionar botões 📦 Baixar ZIP e 💾 Salvar ao Carrossel Engajamento
 
-### Causa raiz
+### Situação atual
+- O botão "Baixar ZIP" já existe mas sem o emoji 📦
+- Não existe botão "Salvar" — os dados são salvos automaticamente com debounce (1s) a cada edição
 
-A edge function `generate-instagram-carousel` (linha 35) exige que `feedCopy` seja truthy:
-```
-if (!productId || !feedCopy || !approach) { return 400 }
-```
+### Alterações
 
-O frontend envia `feedCopy: feedCopy || ''` — quando `feedCopy` é `undefined` (prop opcional), vira string vazia `''`, e `!''` é `true`, causando erro 400.
+**Arquivo: `src/components/EngagementCarouselSection.tsx`**
 
-### Fix
+1. Adicionar estado `saving` para feedback visual no botão Salvar
+2. Criar função `handleManualSave` que chama `persistData` diretamente e mostra toast de confirmação
+3. Adicionar import do ícone `Save` do lucide-react
+4. Atualizar o texto do botão ZIP para `📦 Baixar ZIP`
+5. Adicionar botão `💾 Salvar` com ícone Save, variante outline, que chama `handleManualSave`
 
-**Arquivo: `src/components/EngagementCarouselSection.tsx`** (linha 148-149)
-
-Enviar um fallback não-vazio quando feedCopy está ausente:
-```ts
-feedCopy: feedCopy || productName || 'Gerar conteúdo',
-```
-
-Isso garante que o campo nunca seja vazio, usando o nome do produto como contexto mínimo para a IA.
-
-### Resultado
-- Botão "Gerar Carrossel" funciona mesmo sem feedCopy preenchido
-- A IA usa o nome do produto como contexto quando não há copy de feed disponível
+Ordem dos botões: `Copiar Textos` → `💾 Salvar` → `📦 Baixar ZIP` → `Regenerar/Gerar com IA`
 
