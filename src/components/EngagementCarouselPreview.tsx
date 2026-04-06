@@ -517,7 +517,7 @@ function renderSlideContent(
       overflow: 'hidden',
       position: 'relative',
     }}>
-      <Header />
+      {/* Header removed */}
 
       {/* Main content area */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '0 60px 48px', gap: 28, justifyContent: 'center' }}>
