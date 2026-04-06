@@ -509,6 +509,72 @@ function renderSlideContent(
     )
   );
 
+  // Slide 1: Full-bleed cover layout
+  if (slideNum === 1) {
+    return (
+      <div style={{
+        width: SLIDE_W, height: SLIDE_H, background: bg,
+        position: 'relative', overflow: 'hidden',
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+      }}>
+        {/* Full-bleed image */}
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt=""
+            style={{
+              position: 'absolute', top: 0, left: 0,
+              width: '100%', height: '100%', objectFit: 'cover',
+              transform: `scale(${imageScale / 100})`,
+            }}
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+          />
+        ) : (
+          <div style={{
+            position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+            background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: subTextColor, fontSize: 36,
+          }}>
+            📷 Upload imagem
+          </div>
+        )}
+
+        {/* Gradient overlay bottom 50% */}
+        <div style={{
+          position: 'absolute', bottom: 0, left: 0, width: '100%', height: '60%',
+          background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.5) 50%, transparent 100%)',
+        }} />
+
+        {/* Text over gradient */}
+        <div style={{
+          position: 'absolute', bottom: 60, left: 60, right: 60,
+          display: 'flex', flexDirection: 'column', gap: 20,
+        }}>
+          <div style={{ fontSize: 72, fontWeight: 900, color: '#ffffff', lineHeight: 1.15 }}>
+            <RichText text={texts.title || ''} />
+          </div>
+          {texts.text && (
+            <div style={{ fontSize: 36, lineHeight: 1.5, color: 'rgba(255,255,255,0.8)', fontWeight: 400 }}>
+              <RichText text={texts.text} />
+            </div>
+          )}
+        </div>
+
+        {/* Slide number badge */}
+        <div style={{
+          position: 'absolute', bottom: 40, right: 48,
+          width: 60, height: 60, borderRadius: '50%',
+          background: 'rgba(255,255,255,0.15)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 28, fontWeight: 900, color: 'rgba(255,255,255,0.5)',
+        }}>
+          1
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{
       width: SLIDE_W, height: SLIDE_H, background: bg,
@@ -520,9 +586,9 @@ function renderSlideContent(
       {/* Header removed */}
 
       {/* Main content area */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '0 60px 48px', gap: 28, justifyContent: 'center' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '48px 60px 48px', gap: 28, justifyContent: 'center' }}>
         {/* Title */}
-        <div style={{ fontSize: slideNum === 1 ? 72 : 56, fontWeight: 900, color: textColor, lineHeight: 1.15 }}>
+        <div style={{ fontSize: 56, fontWeight: 900, color: textColor, lineHeight: 1.15 }}>
           <RichText text={texts.title || ''} />
         </div>
 
