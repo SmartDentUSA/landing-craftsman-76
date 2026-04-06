@@ -302,13 +302,18 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
         console.warn('Video load error, keeping blob URL for preview');
       };
     } else {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const dataUrl = ev.target?.result as string;
-        onImageChange(slideNum, dataUrl);
-        onMediaTypeChange?.('image');
-      };
-      reader.readAsDataURL(file);
+      // Upload image file to Storage via parent
+      if (onImageFileUpload) {
+        onImageFileUpload(slideNum, file);
+      } else {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const dataUrl = ev.target?.result as string;
+          onImageChange(slideNum, dataUrl);
+        };
+        reader.readAsDataURL(file);
+      }
+      onMediaTypeChange?.('image');
     }
     e.target.value = '';
   };
