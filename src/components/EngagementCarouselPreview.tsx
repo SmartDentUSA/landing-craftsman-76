@@ -476,19 +476,7 @@ function renderSlideContent(
     );
   };
 
-  // Header bar
-  const Header = () => (
-    <div style={{
-      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-      padding: '32px 48px', fontSize: 28, fontWeight: 600,
-      color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)',
-      letterSpacing: 1,
-    }}>
-      <span>Powered by <span style={{ color: accent, fontWeight: 700 }}>{brandName}</span></span>
-      <span style={{ color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)' }}>@{handleName}</span>
-      <span>2026 //</span>
-    </div>
-  );
+  // Header removed per design requirement
 
   // Image block
   const ImageBlock = ({ height = 440 }: { height?: number }) => (
