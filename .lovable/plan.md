@@ -1,33 +1,76 @@
 
+Correção do Wikidata — causa confirmada e plano
 
-## Fix: Lista de produtos vazia + Respostas de reviews falhando
+Diagnóstico confirmado
+- O problema atual não é de produto, permissão de admin nem flag desligada.
+- A edge `wikidata-sync` está falhando no primeiro request OAuth assinado com:
+  `mwoauth-invalid-authorization: Invalid signature`
+- Os 4 secrets existem e estão presentes:
+  - `WIKIDATA_CONSUMER_KEY`
+  - `WIKIDATA_CONSUMER_SECRET`
+  - `WIKIDATA_ACCESS_TOKEN`
+  - `WIKIDATA_ACCESS_SECRET`
+- O flag `WIKIDATA_WRITE_ENABLED` está ativo.
+- Então a quebra real está no fluxo OAuth de escrita do Wikidata.
+- Hoje o botão “Resolve” pode acabar entrando em escrita real quando o modo live está ativo, então ele bate no erro mesmo antes de você clicar em “Publish”.
 
-### Problema 1: Lista de produtos nao aparece no YouTube
+O que vou implementar
+1. Separar preview de escrita real
+- Ajustar `resolve_and_persist` para nunca publicar.
+- Ele deve apenas:
+  - montar payload
+  - validar score
+  - persistir estado `pending`
+  - retornar diagnóstico
+- Deixar `execute_write` como único caminho que realmente chama `wbeditentity`.
 
-**Causa raiz**: O codigo em `GoogleApisTab.tsx` linha 342 usa `.eq('is_active', true)` mas a coluna real na tabela `products_repository` se chama `active` (confirmado via erro SQL). Resultado: query retorna 0 produtos, select fica vazio.
+2. Melhorar o diagnóstico OAuth na edge
+- Em `supabase/functions/wikidata-sync/index.ts`:
+  - padronizar a classificação dos erros OAuth
+  - retornar a fase exata da falha: `siteinfo`, `csrf` ou `write`
+  - devolver um erro estruturado para o front distinguir:
+    - `invalid_signature`
+    - `invalid_token`
+    - `timestamp_nonce`
+    - `missing_secrets`
+- Isso vai transformar o erro atual em um diagnóstico claro em vez de toast genérico.
 
-**Fix**: Trocar `is_active` por `active` na query de produtos (linha 342).
+3. Melhorar a interface do botão Wikidata
+- Em `src/components/WikidataSyncButton.tsx` e `src/services/wikidata-sync.ts`:
+  - mostrar o motivo real da falha inline
+  - impedir tentativa de “Publish” quando o `Test OAuth` falhar
+  - manter “Resolve” funcionando mesmo com OAuth quebrado
+- Resultado: você continua conseguindo revisar payload e decisão sem travar o fluxo.
 
-### Problema 2: Envio de respostas nao funciona
+4. Adicionar teste do signer OAuth
+- Criar teste específico para o signer da edge:
+  - GET assinado (`siteinfo` / `csrf`)
+  - POST assinado (`wbeditentity`)
+  - montagem canônica de parâmetros
+- Objetivo: evitar regressão e confirmar que o problema restante, se houver, é segredo inválido e não código.
 
-Existem 2 sub-problemas:
+Ação necessária sua
+- Como o log mostra `Invalid signature` logo no primeiro request assinado, a causa mais provável é par de credenciais desalinhado.
+- Será necessário regenerar, no mesmo OAuth consumer aprovado:
+  - `WIKIDATA_ACCESS_TOKEN`
+  - `WIKIDATA_ACCESS_SECRET`
+- Se o consumer foi recriado ou teve secret trocado, então precisa rotacionar os 4 juntos:
+  - `WIKIDATA_CONSUMER_KEY`
+  - `WIKIDATA_CONSUMER_SECRET`
+  - `WIKIDATA_ACCESS_TOKEN`
+  - `WIKIDATA_ACCESS_SECRET`
 
-**2a) "Gerar Respostas" diz 0 geradas**: Todas as 30 reviews ja tem resposta em `review_responses` (30/30). Nao ha reviews novas para processar. O botao funciona, mas nao ha trabalho a fazer. As 20 "pendentes" que o usuario ve sao na verdade respostas com `status: failed` (todas as 30 estao com status `failed`).
+Arquivos afetados
+- `supabase/functions/wikidata-sync/index.ts`
+- `src/services/wikidata-sync.ts`
+- `src/components/WikidataSyncButton.tsx`
+- `supabase/functions/wikidata-sync/*_test.ts` (novo)
 
-**2b) "Postar Pendentes" falha**: Os logs mostram `No valid Google Business token found`. A tabela `oauth_credentials` esta vazia e os tokens antigos expiraram. Sem token valido, a funcao marca todas como `failed` com mensagem "OAuth nao configurado".
+Sem mudanças de banco
+- Não vou alterar tabelas nem schema para este ajuste.
 
-**Fix para 2a**: Resetar as 30 respostas falhadas para `pending` para que possam ser re-postadas quando o OAuth estiver configurado. Tambem corrigir o badge na UI — o card mostra "20 pendentes" mas na verdade sao `failed`, o que confunde.
-
-**Fix para 2b**: O OAuth precisa ser reconectado (problema separado ja em andamento). Porem, a UI deve mostrar claramente que o problema e OAuth, nao "sem respostas".
-
-### Alteracoes
-
-| Arquivo | O que muda |
-|---|---|
-| `src/components/repository/GoogleApisTab.tsx` | Linha 342: trocar `is_active` por `active`. Adicionar badge para respostas `failed`. Adicionar botao "Retentar Falhadas" que reseta status de `failed` para `pending`. |
-
-### Resultado esperado
-- Select de produtos mostra os 120 produtos ativos
-- UI mostra claramente quantas respostas falharam vs pendentes
-- Botao "Retentar" permite re-postar quando OAuth estiver configurado
-
+Resultado esperado
+- “Resolve” volta a funcionar como preview seguro
+- “Publish” só tenta escrita quando o OAuth estiver realmente válido
+- O sistema passa a mostrar a causa exata da falha
+- Depois da rotação correta dos secrets, a escrita no Wikidata deve voltar a funcionar
