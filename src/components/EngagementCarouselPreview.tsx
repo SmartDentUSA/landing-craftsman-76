@@ -704,22 +704,7 @@ export async function generateEngagementSlidePNG(
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
 
-  // Header
-  ctx.font = '600 28px system-ui, -apple-system, sans-serif';
-  const headerColor = isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)';
-  ctx.fillStyle = headerColor;
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'top';
-  ctx.fillText('Powered by', 48, 36);
-  ctx.fillStyle = accent;
-  const pwWidth = ctx.measureText('Powered by ').width;
-  ctx.fillText(brandName, 48 + pwWidth, 36);
-  ctx.fillStyle = isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)';
-  ctx.textAlign = 'center';
-  ctx.fillText(`@${handleName}`, W / 2, 36);
-  ctx.textAlign = 'right';
-  ctx.fillStyle = headerColor;
-  ctx.fillText('2026 //', W - 48, 36);
+  // No header drawn (removed per design)
 
   // Load image
   let img: HTMLImageElement | null = null;
@@ -733,6 +718,58 @@ export async function generateEngagementSlidePNG(
         i.src = imageUrl;
       });
     } catch { img = null; }
+  }
+
+  // Slide 1: Full-bleed cover with gradient
+  if (slideNum === 1) {
+    if (img) {
+      ctx.save();
+      const scaleF = imageScale / 100;
+      ctx.translate(W / 2, H / 2);
+      ctx.scale(scaleF, scaleF);
+      ctx.translate(-W / 2, -H / 2);
+      drawImageCover(ctx, img, 0, 0, W, H);
+      ctx.restore();
+    }
+
+    // Gradient overlay
+    const grad = ctx.createLinearGradient(0, H * 0.4, 0, H);
+    grad.addColorStop(0, 'rgba(0,0,0,0)');
+    grad.addColorStop(0.5, 'rgba(0,0,0,0.5)');
+    grad.addColorStop(1, 'rgba(0,0,0,0.85)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    // Title
+    const titleFont = '900 72px system-ui, -apple-system, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    let titleEndY = drawRichText(ctx, texts.title || '', 60, H - 300, W - 120, 86, titleFont, titleFont, '#ffffff', accent, 'left');
+
+    // Subtitle
+    if (texts.text) {
+      const bodyFont = '400 36px system-ui, -apple-system, sans-serif';
+      const bodyFontBold = '700 36px system-ui, -apple-system, sans-serif';
+      drawRichText(ctx, texts.text, 60, titleEndY + 20, W - 120, 54, bodyFont, bodyFontBold, 'rgba(255,255,255,0.8)', accent, 'left');
+    }
+
+    // Slide number badge
+    ctx.beginPath();
+    ctx.arc(W - 78, H - 70, 30, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.fill();
+    ctx.font = '900 28px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('1', W - 78, H - 70);
+
+    return new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (blob) resolve(blob);
+        else reject(new Error('Canvas toBlob failed'));
+      }, 'image/png');
+    });
   }
 
   // Title
