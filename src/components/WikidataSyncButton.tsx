@@ -52,12 +52,14 @@ export function WikidataSyncButton({ productId, wikidataItemId, onSyncSuccess }:
   const [payloadDialogOpen, setPayloadDialogOpen] = useState(false);
   const [payloadData, setPayloadData] = useState<{ payload: unknown; summary: unknown } | null>(null);
   const [resolveResult, setResolveResult] = useState<WikidataResolveResult | null>(null);
+  const [oauthStatus, setOauthStatus] = useState<'unknown' | 'ok' | 'failed'>('unknown');
+  const [oauthError, setOauthError] = useState<string | null>(null);
   const { toast } = useToast();
 
   const displayQid = localQid || wikidataItemId;
   const isAnyLoading = syncing || previewing || resolving || publishing || testingOAuth;
   const isLiveMode = resolveResult?.writeEnabled === true;
-  const canPublish = isLiveMode && resolveResult?.syncStatus === "pending" && resolveResult?.writeDecision !== "abort";
+  const canPublish = isLiveMode && resolveResult?.syncStatus === "pending" && resolveResult?.writeDecision !== "abort" && oauthStatus !== 'failed';
 
   const handleTestOAuth = async () => {
     setTestingOAuth(true);
