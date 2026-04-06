@@ -548,8 +548,18 @@ function renderSlideContent(
         position: 'relative', overflow: 'hidden',
         fontFamily: 'system-ui, -apple-system, sans-serif',
       }}>
-        {/* Full-bleed image */}
-        {imageUrl ? (
+        {/* Full-bleed media */}
+        {texts.mediaType === 'video' && texts.videoSrc ? (
+          <video
+            src={texts.videoSrc}
+            autoPlay muted loop playsInline
+            style={{
+              position: 'absolute', top: 0, left: 0,
+              width: '100%', height: '100%', objectFit: 'cover',
+              transform: `scale(${imageScale / 100})`,
+            }}
+          />
+        ) : imageUrl ? (
           <img
             src={imageUrl}
             alt=""
