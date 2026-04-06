@@ -269,34 +269,33 @@ export function EngagementCarouselSection({
       let hasVideos = false;
       for (let i = 1; i <= 6; i++) {
         const texts = slideTexts[i];
-        let imgUrl = slideImageMap[i] || '';
-        if (imgUrl && !imgUrl.startsWith('data:')) {
-          try {
-            imgUrl = await fetchAsDataUrl(imgUrl);
-          } catch { /* use original */ }
-        }
         const isVideo = texts.mediaType === 'video';
-        const folder = isVideo ? `slide_${i}/` : '';
-        
-        // Always generate PNG with full template (thumbnail for videos)
-        const blob = await generateEngagementSlidePNG(i, imgUrl, texts, primaryColor, accentColor, brandName, handleName);
-        zip.file(`${folder}slide_${i}${isVideo ? '_capa' : ''}.png`, blob);
 
-        // If slide has video, include the .mp4 alongside the PNG
         if (isVideo) {
+          // Video slide: export ONLY the .mp4
           const videoUrl = texts.videoStorageUrl || texts.videoSrc;
           if (videoUrl) {
             try {
               const videoResp = await fetch(videoUrl);
               if (videoResp.ok) {
                 const videoBlob = await videoResp.blob();
-                zip.file(`${folder}slide_${i}_video.mp4`, videoBlob);
+                zip.file(`slide_${i}.mp4`, videoBlob);
                 hasVideos = true;
               }
             } catch (err) {
               console.warn(`Could not fetch video for slide ${i}:`, err);
             }
           }
+        } else {
+          // Image slide: export PNG with template
+          let imgUrl = slideImageMap[i] || '';
+          if (imgUrl && !imgUrl.startsWith('data:')) {
+            try {
+              imgUrl = await fetchAsDataUrl(imgUrl);
+            } catch { /* use original */ }
+          }
+          const blob = await generateEngagementSlidePNG(i, imgUrl, texts, primaryColor, accentColor, brandName, handleName);
+          zip.file(`slide_${i}.png`, blob);
         }
       }
       const zipBlob = await zip.generateAsync({ type: 'blob' });
@@ -306,7 +305,7 @@ export function EngagementCarouselSection({
       a.download = `carrossel_engajamento_${productName.replace(/\s+/g, '_')}.zip`;
       a.click();
       URL.revokeObjectURL(url);
-      toast({ title: "✅ Download iniciado!", description: hasVideos ? "6 PNGs + vídeos em ZIP." : "6 PNGs 1080x1350 em ZIP." });
+      toast({ title: "✅ Download iniciado!", description: hasVideos ? "PNGs + Vídeos em ZIP." : "6 PNGs 1080x1350 em ZIP." });
     } catch (err) {
       console.error('Erro no export:', err);
       toast({ title: "Erro", description: "Falha ao exportar PNGs.", variant: "destructive" });
