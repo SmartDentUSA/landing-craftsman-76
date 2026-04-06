@@ -180,7 +180,34 @@ export function EngagementCarouselSection({
   };
 
   const handleImageFileUpload = async (slideNum: number, file: File) => {
-    // Show immediate preview with blob URL
+    if (file.type.startsWith('video/')) {
+      // Video upload — store in Storage and save URL in slideTexts
+      const blobUrl = URL.createObjectURL(file);
+      // Show immediate preview via slideTexts (videoSrc is set by child)
+
+      const ext = file.name.split('.').pop() || 'mp4';
+      const path = `engagement-carousel/${productId}/slide_${slideNum}_video_${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from('product-images')
+        .upload(path, file, { upsert: true });
+
+      if (uploadError) {
+        console.error('Video upload error:', uploadError);
+        toast({ title: "Erro no upload do vídeo", description: uploadError.message, variant: "destructive" });
+        return;
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(path);
+
+      if (urlData?.publicUrl) {
+        handleSlideTextChange(slideNum, 'videoStorageUrl', urlData.publicUrl);
+      }
+      return;
+    }
+
+    // Image upload (existing logic)
     const blobUrl = URL.createObjectURL(file);
     setSlideImageMap(prev => ({ ...prev, [slideNum]: blobUrl }));
 
@@ -239,6 +266,7 @@ export function EngagementCarouselSection({
     setExporting(true);
     try {
       const zip = new JSZip();
+      let hasVideos = false;
       for (let i = 1; i <= 6; i++) {
         const texts = slideTexts[i];
         let imgUrl = slideImageMap[i] || '';
@@ -247,8 +275,26 @@ export function EngagementCarouselSection({
             imgUrl = await fetchAsDataUrl(imgUrl);
           } catch { /* use original */ }
         }
+        // Always generate PNG (thumbnail for videos)
         const blob = await generateEngagementSlidePNG(i, imgUrl, texts, primaryColor, accentColor, brandName, handleName);
         zip.file(`engajamento_slide_${i}.png`, blob);
+
+        // If slide has video, include the .mp4
+        if (texts.mediaType === 'video') {
+          const videoUrl = texts.videoStorageUrl || texts.videoSrc;
+          if (videoUrl) {
+            try {
+              const videoResp = await fetch(videoUrl);
+              if (videoResp.ok) {
+                const videoBlob = await videoResp.blob();
+                zip.file(`engajamento_slide_${i}_video.mp4`, videoBlob);
+                hasVideos = true;
+              }
+            } catch (err) {
+              console.warn(`Could not fetch video for slide ${i}:`, err);
+            }
+          }
+        }
       }
       const zipBlob = await zip.generateAsync({ type: 'blob' });
       const url = URL.createObjectURL(zipBlob);
@@ -257,7 +303,7 @@ export function EngagementCarouselSection({
       a.download = `carrossel_engajamento_${productName.replace(/\s+/g, '_')}.zip`;
       a.click();
       URL.revokeObjectURL(url);
-      toast({ title: "✅ Download iniciado!", description: "6 PNGs 1080x1350 em ZIP." });
+      toast({ title: "✅ Download iniciado!", description: hasVideos ? "6 PNGs + vídeos em ZIP." : "6 PNGs 1080x1350 em ZIP." });
     } catch (err) {
       console.error('Erro no export:', err);
       toast({ title: "Erro", description: "Falha ao exportar PNGs.", variant: "destructive" });
