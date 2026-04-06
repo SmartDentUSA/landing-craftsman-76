@@ -146,7 +146,7 @@ export function EngagementCarouselSection({
       const { data, error } = await supabase.functions.invoke('generate-instagram-carousel', {
         body: {
           productId,
-          feedCopy: feedCopy || '',
+          feedCopy: feedCopy || productName || 'Gerar conteúdo',
           approach: 'engajamento',
           promptType: 'engajamento',
         }
