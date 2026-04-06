@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Copy, Sparkles, Image, RefreshCw, Download } from "lucide-react";
+import { Loader2, Copy, Sparkles, Image, RefreshCw, Download, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { EngagementCarouselPreview, generateEngagementSlidePNG, fetchAsDataUrl } from "./EngagementCarouselPreview";
@@ -42,6 +42,7 @@ export function EngagementCarouselSection({
   const [slideImageMap, setSlideImageMap] = useState<Record<number, string>>({});
   const [generating, setGenerating] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [hasContent, setHasContent] = useState(false);
   const { toast } = useToast();
@@ -213,6 +214,18 @@ export function EngagementCarouselSection({
     }
   };
 
+  const handleManualSave = async () => {
+    setSaving(true);
+    try {
+      await persistData(slideTexts, slideImageMap);
+      toast({ title: "💾 Salvo!", description: "Carrossel salvo com sucesso." });
+    } catch {
+      toast({ title: "Erro", description: "Falha ao salvar.", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const copyAllSlides = () => {
     const text = [1, 2, 3, 4, 5, 6].map(i => {
       const s = slideTexts[i];
@@ -245,9 +258,13 @@ export function EngagementCarouselSection({
                   <Copy className="h-4 w-4 mr-1" />
                   Copiar Textos
                 </Button>
+                <Button size="sm" variant="outline" onClick={handleManualSave} disabled={saving}>
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}
+                  💾 Salvar
+                </Button>
                 <Button size="sm" variant="outline" onClick={exportAllPNGs} disabled={exporting}>
                   {exporting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Download className="h-4 w-4 mr-1" />}
-                  Baixar ZIP
+                  📦 Baixar ZIP
                 </Button>
               </>
             )}
