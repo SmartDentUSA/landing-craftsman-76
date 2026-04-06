@@ -42,6 +42,7 @@ export function EngagementCarouselSection({
   const [slideImageMap, setSlideImageMap] = useState<Record<number, string>>({});
   const [generating, setGenerating] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [hasContent, setHasContent] = useState(false);
   const { toast } = useToast();
