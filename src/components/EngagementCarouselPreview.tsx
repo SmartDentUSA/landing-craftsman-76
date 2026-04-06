@@ -203,6 +203,7 @@ interface SlideWrapperProps {
   productImages: Array<{ url: string; alt?: string }>;
   currentImage: string;
   onImageChange: (slideNum: number, url: string) => void;
+  onImageFileUpload?: (slideNum: number, file: File) => void;
   primaryColor: string;
   slideTexts?: Record<string, string>;
   onSlideTextChange?: (key: string, value: string) => void;
@@ -256,7 +257,7 @@ const EDITOR_FIELDS: Record<number, Array<{ key: string; label: string; type: 'i
   ],
 };
 
-function SlideWrapper({ slideNum, children, productImages, currentImage, onImageChange, primaryColor, slideTexts, onSlideTextChange, mediaType, onMediaTypeChange }: SlideWrapperProps) {
+function SlideWrapper({ slideNum, children, productImages, currentImage, onImageChange, onImageFileUpload, primaryColor, slideTexts, onSlideTextChange, mediaType, onMediaTypeChange }: SlideWrapperProps) {
   const containerW = SLIDE_W * SLIDE_SCALE;
   const containerH = SLIDE_H * SLIDE_SCALE;
   const fileInputRef = useRef<HTMLInputElement>(null);
