@@ -214,6 +214,18 @@ export function EngagementCarouselSection({
     }
   };
 
+  const handleManualSave = async () => {
+    setSaving(true);
+    try {
+      await persistData(slideTexts, slideImageMap);
+      toast({ title: "💾 Salvo!", description: "Carrossel salvo com sucesso." });
+    } catch {
+      toast({ title: "Erro", description: "Falha ao salvar.", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const copyAllSlides = () => {
     const text = [1, 2, 3, 4, 5, 6].map(i => {
       const s = slideTexts[i];
