@@ -624,7 +624,7 @@ function renderSlideContent(
         </div>
 
         {/* Image */}
-        <ImageBlock height={slideNum === 6 ? 300 : 440} />
+        <MediaBlock height={slideNum === 6 ? 300 : 440} />
 
         {/* Body text */}
         {texts.text && (
