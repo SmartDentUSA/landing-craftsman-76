@@ -1,35 +1,40 @@
 
 
-## Fix Carrossel Engajamento — 2 Erros
+## Fix: Video upload não aparece no Carrossel Engajamento
 
-### Erro 1: Remover "Powered by..." e "@handle"
-O header `Powered by {brandName}` e `@{handleName}` aparece em todos os slides. Nao deveria aparecer.
+### Problema
+Quando o usuário faz upload de vídeo (.mp4), nada aparece no card. O código atual tenta extrair um frame do vídeo como thumbnail via canvas, mas:
+1. O evento `onloadeddata` dispara antes do vídeo estar pronto para seek
+2. Não há fallback se o seek falhar silenciosamente
+3. O vídeo real nunca é armazenado — apenas um frame estático
 
-**Fix**: Remover o componente `Header` do `renderSlideContent` (linhas 480-491) e sua invocacao (linha 532). Tambem remover do canvas export (`generateEngagementSlidePNG`) onde o mesmo header e desenhado.
+### Solução
 
-### Erro 2: Slide 1 — imagem cobrindo todo o card
-Conforme a referencia (@brandsdecoded), o slide 1 (Capa/Gancho) deve ter:
-- Imagem/video cobrindo 100% do card (1080x1350)
-- Gradient escuro na parte inferior (~40% do card)
-- Texto do titulo sobreposto na parte inferior, em branco, bold, grande
-- Sem header, sem bordas na imagem
+Duas mudanças no `src/components/EngagementCarouselPreview.tsx`:
 
-**Fix**: No `renderSlideContent`, quando `slideNum === 1`:
-- Renderizar imagem como fundo absoluto cobrindo todo o card (object-fit: cover, 100% width/height)
-- Adicionar overlay gradient (transparent -> rgba(0,0,0,0.75)) na metade inferior
-- Posicionar titulo e subtitulo sobre o gradient, na parte inferior
-- Sem `Header`, sem `ImageBlock` separado
+**1. Corrigir o upload de vídeo para armazenar o blob URL do vídeo real**
+- Guardar o blob URL do vídeo (não revogar imediatamente) para preview no card
+- Também extrair thumbnail como fallback para o export PNG
+- Armazenar ambos: `videoUrl` (blob para preview) e `imageUrl` (thumbnail para PNG)
+- Usar `onImageChange` para o thumbnail e um novo campo `videoSrc` no slideTexts para o blob URL
 
-Mesma logica no canvas export para PNG.
+**2. Renderizar `<video>` no card quando mediaType === 'video'**
+- No `renderSlideContent`, quando o slide tem `mediaType === 'video'` e um `videoSrc`:
+  - Renderizar `<video autoPlay muted loop playsInline>` em vez de `<img>`
+  - Aplicar mesmo posicionamento (full-bleed no slide 1, área de imagem nos demais)
+- No export PNG, continuar usando o thumbnail frame (canvas não suporta vídeo)
 
-### Arquivos afetados
+**3. Corrigir a sequência de eventos do video loader**
+- Usar `loadeddata` → `requestVideoFrameCallback` ou `setTimeout` antes do seek
+- Adicionar `onerror` handler para feedback ao usuário
 
-| Arquivo | Acao |
+### Arquivo afetado
+| Arquivo | Ação |
 |---|---|
-| `src/components/EngagementCarouselPreview.tsx` | Remover Header de todos os slides. Redesenhar slide 1 com imagem full-cover + gradient + texto sobreposto. Atualizar canvas export. |
+| `src/components/EngagementCarouselPreview.tsx` | Corrigir handleFileUpload para vídeo, renderizar `<video>` no card, manter thumbnail para PNG |
 
 ### Resultado esperado
-- Nenhum slide mostra "Powered by..." ou "@handle"
-- Slide 1: imagem cobre todo o card, texto aparece sobre gradient escuro na parte inferior (estilo @brandsdecoded)
-- Export PNG reflete o mesmo layout
+- Upload de vídeo mostra o vídeo tocando (autoplay, muted, loop) dentro do card
+- Thumbnail é gerado automaticamente para export PNG
+- Funciona no slide 1 (full-bleed) e nos demais slides
 
