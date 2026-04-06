@@ -107,6 +107,42 @@ function rfc3986Encode(str: string): string {
   return encodeURIComponent(str).replace(/[!'()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
 }
 
+/** Classify OAuth errors into actionable categories */
+function classifyOAuthError(error: { code?: string; info?: string }): { category: string; recommendation: string } {
+  const code = error.code || "";
+  const info = (error.info || "").toLowerCase();
+
+  if (code === "mwoauth-invalid-authorization") {
+    if (info.includes("signature")) {
+      return {
+        category: "invalid_signature",
+        recommendation: "Assinatura inválida — regenere ACCESS_TOKEN e ACCESS_SECRET do mesmo OAuth consumer aprovado.",
+      };
+    }
+    if (info.includes("token") || info.includes("consumer")) {
+      return {
+        category: "invalid_token",
+        recommendation: "Token/consumer rejeitado — verifique se o OAuth consumer está aprovado e os 4 secrets estão corretos.",
+      };
+    }
+    if (info.includes("timestamp") || info.includes("nonce")) {
+      return {
+        category: "timestamp_nonce",
+        recommendation: "Timestamp/nonce rejeitado — verifique se o relógio do servidor está sincronizado.",
+      };
+    }
+    return {
+      category: "invalid_authorization",
+      recommendation: "Autorização OAuth rejeitada — regenere todos os 4 secrets do consumer aprovado.",
+    };
+  }
+
+  return {
+    category: "other",
+    recommendation: "Erro inesperado — verifique os logs da edge function.",
+  };
+}
+
 function buildQueryString(params: Record<string, string>): string {
   return Object.keys(params)
     .sort()
