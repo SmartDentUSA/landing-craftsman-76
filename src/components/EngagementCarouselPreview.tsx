@@ -16,6 +16,7 @@ export interface EngagementSlideTexts {
   accentColor?: string;
   mediaType?: 'image' | 'video';
   videoSrc?: string; // blob URL for video preview
+  videoStorageUrl?: string; // persisted Supabase Storage URL for video
 }
 
 export type EngagementSlideTextsMap = Record<number, EngagementSlideTexts>;
@@ -271,9 +272,13 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
     if (file.type.startsWith('video/')) {
       // Store video blob URL for live preview, extract thumbnail for PNG export
       const blobUrl = URL.createObjectURL(file);
-      // Store video blob URL in slideTexts via onSlideTextChange
       onSlideTextChange?.('videoSrc', blobUrl);
       onMediaTypeChange?.('video');
+
+      // Upload the video file to Supabase Storage via parent handler
+      if (onImageFileUpload) {
+        onImageFileUpload(slideNum, file);
+      }
 
       // Also extract a thumbnail for PNG export
       const video = document.createElement('video');
