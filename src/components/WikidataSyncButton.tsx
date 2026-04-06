@@ -293,6 +293,18 @@ export function WikidataSyncButton({ productId, wikidataItemId, onSyncSuccess }:
             Score &lt; 0.7
           </Badge>
         )}
+        {oauthStatus === 'failed' && (
+          <Badge variant="destructive" className="text-[10px] gap-0.5">
+            <KeyRound className="h-3 w-3" />
+            OAuth ✗
+          </Badge>
+        )}
+        {oauthStatus === 'ok' && (
+          <Badge variant="outline" className="text-[10px] gap-0.5 border-emerald-500 text-emerald-600">
+            <KeyRound className="h-3 w-3" />
+            OAuth ✓
+          </Badge>
+        )}
       </div>
 
       <Dialog open={payloadDialogOpen} onOpenChange={setPayloadDialogOpen}>
