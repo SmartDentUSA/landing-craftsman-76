@@ -14,7 +14,8 @@ export interface EngagementSlideTexts {
   imageScale?: string;
   bgColor?: string;
   accentColor?: string;
-  mediaType?: 'image' | 'video'; // image or video
+  mediaType?: 'image' | 'video';
+  videoSrc?: string; // blob URL for video preview
 }
 
 export type EngagementSlideTextsMap = Record<number, EngagementSlideTexts>;
@@ -266,26 +267,37 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
     if (!file) return;
     
     if (file.type.startsWith('video/')) {
-      // For video, create a thumbnail from first frame
+      // Store video blob URL for live preview, extract thumbnail for PNG export
+      const blobUrl = URL.createObjectURL(file);
+      // Store video blob URL in slideTexts via onSlideTextChange
+      onSlideTextChange?.('videoSrc', blobUrl);
+      onMediaTypeChange?.('video');
+
+      // Also extract a thumbnail for PNG export
       const video = document.createElement('video');
-      video.preload = 'metadata';
-      const url = URL.createObjectURL(file);
-      video.src = url;
-      video.onloadeddata = () => {
-        video.currentTime = 1; // seek to 1s
+      video.preload = 'auto';
+      video.muted = true;
+      video.src = blobUrl;
+      video.onloadedmetadata = () => {
+        video.currentTime = Math.min(1, video.duration / 2);
       };
       video.onseeked = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(video, 0, 0);
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-          onImageChange(slideNum, dataUrl);
-          onMediaTypeChange?.('video');
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = video.videoWidth || 1080;
+          canvas.height = video.videoHeight || 1350;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+            onImageChange(slideNum, dataUrl); // thumbnail for PNG export
+          }
+        } catch (err) {
+          console.warn('Could not extract video thumbnail:', err);
         }
-        URL.revokeObjectURL(url);
+      };
+      video.onerror = () => {
+        console.warn('Video load error, keeping blob URL for preview');
       };
     } else {
       const reader = new FileReader();
@@ -478,9 +490,28 @@ function renderSlideContent(
 
   // Header removed per design requirement
 
-  // Image block
-  const ImageBlock = ({ height = 440 }: { height?: number }) => (
-    imageUrl ? (
+  // Media block (image or video)
+  const MediaBlock = ({ height = 440 }: { height?: number }) => {
+    const isVideo = texts.mediaType === 'video' && texts.videoSrc;
+    if (isVideo) {
+      return (
+        <div style={{
+          width: '100%', height, overflow: 'hidden',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <video
+            src={texts.videoSrc}
+            autoPlay muted loop playsInline
+            style={{
+              width: '100%', height: '100%', objectFit: 'cover',
+              transform: `scale(${imageScale / 100})`,
+              borderRadius: 16,
+            }}
+          />
+        </div>
+      );
+    }
+    return imageUrl ? (
       <div style={{
         width: '100%', height, overflow: 'hidden',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -506,8 +537,8 @@ function renderSlideContent(
       }}>
         📷 Upload imagem
       </div>
-    )
-  );
+    );
+  };
 
   // Slide 1: Full-bleed cover layout
   if (slideNum === 1) {
@@ -517,8 +548,18 @@ function renderSlideContent(
         position: 'relative', overflow: 'hidden',
         fontFamily: 'system-ui, -apple-system, sans-serif',
       }}>
-        {/* Full-bleed image */}
-        {imageUrl ? (
+        {/* Full-bleed media */}
+        {texts.mediaType === 'video' && texts.videoSrc ? (
+          <video
+            src={texts.videoSrc}
+            autoPlay muted loop playsInline
+            style={{
+              position: 'absolute', top: 0, left: 0,
+              width: '100%', height: '100%', objectFit: 'cover',
+              transform: `scale(${imageScale / 100})`,
+            }}
+          />
+        ) : imageUrl ? (
           <img
             src={imageUrl}
             alt=""
@@ -593,7 +634,7 @@ function renderSlideContent(
         </div>
 
         {/* Image */}
-        <ImageBlock height={slideNum === 6 ? 300 : 440} />
+        <MediaBlock height={slideNum === 6 ? 300 : 440} />
 
         {/* Body text */}
         {texts.text && (
