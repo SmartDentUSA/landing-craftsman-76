@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Copy, Sparkles, Image, RefreshCw, Download, Save } from "lucide-react";
@@ -47,9 +47,59 @@ export function EngagementCarouselSection({
   const [hasContent, setHasContent] = useState(false);
   const { toast } = useToast();
 
+  // Refs to always have current state for persist
+  const slideTextsRef = useRef(slideTexts);
+  const slideImageMapRef = useRef(slideImageMap);
+  const debounceRef = useRef<NodeJS.Timeout>();
+
+  // Keep refs in sync
+  useEffect(() => { slideTextsRef.current = slideTexts; }, [slideTexts]);
+  useEffect(() => { slideImageMapRef.current = slideImageMap; }, [slideImageMap]);
+
   useEffect(() => {
     loadSaved();
   }, [productId]);
+
+  const persistData = useCallback(async () => {
+    const currentTexts = slideTextsRef.current;
+    const currentImages = slideImageMapRef.current;
+    try {
+      const { data: existingData } = await supabase
+        .from('products_repository')
+        .select('instagram_copies')
+        .eq('id', productId)
+        .single();
+
+      const existingCopies = (existingData?.instagram_copies as any) || {};
+      const { error } = await supabase
+        .from('products_repository')
+        .update({
+          instagram_copies: {
+            ...existingCopies,
+            engagement_carousel: {
+              slideTexts: currentTexts,
+              slideImageMap: currentImages,
+              generated_at: new Date().toISOString(),
+              approach: 'engajamento',
+            },
+          } as any
+        })
+        .eq('id', productId);
+
+      if (error) {
+        console.error('Erro ao salvar carrossel:', error);
+        toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
+      }
+    } catch (err) {
+      console.error('Erro ao salvar:', err);
+      toast({ title: "Erro ao salvar", description: "Falha na persistência.", variant: "destructive" });
+    }
+  }, [productId, toast]);
+
+  const debouncedPersist = useCallback(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => persistData(), 1500);
+  }, [persistData]);
 
   const loadSaved = async () => {
     setLoading(true);
@@ -63,12 +113,10 @@ export function EngagementCarouselSection({
       const copies = data?.instagram_copies as any;
       if (copies?.engagement_carousel) {
         const ec = copies.engagement_carousel;
-        // Restore slide texts
         if (ec.slideTexts) {
           setSlideTexts(ec.slideTexts);
           setHasContent(true);
         } else if (ec.slides) {
-          // Legacy: convert from old format
           const newTexts = { ...DEFAULT_SLIDE_TEXTS };
           for (const slide of ec.slides) {
             newTexts[slide.position as keyof typeof newTexts] = {
@@ -81,7 +129,6 @@ export function EngagementCarouselSection({
           setSlideTexts(newTexts);
           setHasContent(true);
         }
-        // Restore images
         if (ec.slideImageMap) {
           setSlideImageMap(ec.slideImageMap);
         }
@@ -93,52 +140,56 @@ export function EngagementCarouselSection({
     }
   };
 
-  const persistData = async (newTexts: EngagementSlideTextsMap, newImages: Record<number, string>) => {
+  const uploadImageToStorage = async (file: File, slideNum: number): Promise<string | null> => {
     try {
-      const { data: existingData } = await supabase
-        .from('products_repository')
-        .select('instagram_copies')
-        .eq('id', productId)
-        .single();
+      const ext = file.name.split('.').pop() || 'jpg';
+      const path = `engagement-carousel/${productId}/slide_${slideNum}_${Date.now()}.${ext}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('product-images')
+        .upload(path, file, { upsert: true });
 
-      const existingCopies = (existingData?.instagram_copies as any) || {};
-      await supabase
-        .from('products_repository')
-        .update({
-          instagram_copies: {
-            ...existingCopies,
-            engagement_carousel: {
-              slideTexts: newTexts,
-              slideImageMap: newImages,
-              generated_at: new Date().toISOString(),
-              approach: 'engajamento',
-            },
-          } as any
-        })
-        .eq('id', productId);
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        toast({ title: "Erro no upload", description: uploadError.message, variant: "destructive" });
+        return null;
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(path);
+
+      return urlData?.publicUrl || null;
     } catch (err) {
-      console.error('Erro ao salvar:', err);
+      console.error('Upload failed:', err);
+      return null;
     }
   };
 
   const handleSlideTextChange = (slideNum: number, key: string, value: string) => {
-    setSlideTexts(prev => {
-      const updated = {
-        ...prev,
-        [slideNum]: { ...prev[slideNum], [key]: value }
-      };
-      // Debounced persist
-      setTimeout(() => persistData(updated, slideImageMap), 1000);
-      return updated;
-    });
+    setSlideTexts(prev => ({
+      ...prev,
+      [slideNum]: { ...prev[slideNum], [key]: value }
+    }));
+    debouncedPersist();
   };
 
   const handleImageChange = (slideNum: number, url: string) => {
-    setSlideImageMap(prev => {
-      const updated = { ...prev, [slideNum]: url };
-      setTimeout(() => persistData(slideTexts, updated), 500);
-      return updated;
-    });
+    setSlideImageMap(prev => ({ ...prev, [slideNum]: url }));
+    debouncedPersist();
+  };
+
+  const handleImageFileUpload = async (slideNum: number, file: File) => {
+    // Show immediate preview with blob URL
+    const blobUrl = URL.createObjectURL(file);
+    setSlideImageMap(prev => ({ ...prev, [slideNum]: blobUrl }));
+
+    // Upload to Supabase Storage
+    const publicUrl = await uploadImageToStorage(file, slideNum);
+    if (publicUrl) {
+      setSlideImageMap(prev => ({ ...prev, [slideNum]: publicUrl }));
+      debouncedPersist();
+    }
   };
 
   const generateCarousel = async () => {
@@ -167,7 +218,9 @@ export function EngagementCarouselSection({
         }
         setSlideTexts(newTexts);
         setHasContent(true);
-        await persistData(newTexts, slideImageMap);
+        // Persist immediately (not debounced)
+        slideTextsRef.current = newTexts;
+        await persistData();
         toast({ title: "🎯 Carrossel Engajamento gerado!", description: "6 slides visuais prontos para edição." });
       }
     } catch (error) {
@@ -189,7 +242,6 @@ export function EngagementCarouselSection({
       for (let i = 1; i <= 6; i++) {
         const texts = slideTexts[i];
         let imgUrl = slideImageMap[i] || '';
-        // Convert to data URL if needed
         if (imgUrl && !imgUrl.startsWith('data:')) {
           try {
             imgUrl = await fetchAsDataUrl(imgUrl);
@@ -217,7 +269,8 @@ export function EngagementCarouselSection({
   const handleManualSave = async () => {
     setSaving(true);
     try {
-      await persistData(slideTexts, slideImageMap);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      await persistData();
       toast({ title: "💾 Salvo!", description: "Carrossel salvo com sucesso." });
     } catch {
       toast({ title: "Erro", description: "Falha ao salvar.", variant: "destructive" });
@@ -301,6 +354,7 @@ export function EngagementCarouselSection({
           <EngagementCarouselPreview
             slideImageMap={slideImageMap}
             onImageChange={handleImageChange}
+            onImageFileUpload={handleImageFileUpload}
             productImages={productImages}
             primaryColor={primaryColor}
             accentColor={accentColor}

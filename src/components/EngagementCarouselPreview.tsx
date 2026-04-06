@@ -23,6 +23,7 @@ export type EngagementSlideTextsMap = Record<number, EngagementSlideTexts>;
 interface EngagementCarouselPreviewProps {
   slideImageMap: Record<number, string>;
   onImageChange: (slideNum: number, url: string) => void;
+  onImageFileUpload?: (slideNum: number, file: File) => void;
   productImages: Array<{ url: string; alt?: string }>;
   primaryColor: string;
   accentColor: string;
