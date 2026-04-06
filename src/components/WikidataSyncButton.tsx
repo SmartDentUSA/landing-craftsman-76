@@ -52,23 +52,28 @@ export function WikidataSyncButton({ productId, wikidataItemId, onSyncSuccess }:
   const [payloadDialogOpen, setPayloadDialogOpen] = useState(false);
   const [payloadData, setPayloadData] = useState<{ payload: unknown; summary: unknown } | null>(null);
   const [resolveResult, setResolveResult] = useState<WikidataResolveResult | null>(null);
+  const [oauthStatus, setOauthStatus] = useState<'unknown' | 'ok' | 'failed'>('unknown');
+  const [oauthError, setOauthError] = useState<string | null>(null);
   const { toast } = useToast();
 
   const displayQid = localQid || wikidataItemId;
   const isAnyLoading = syncing || previewing || resolving || publishing || testingOAuth;
   const isLiveMode = resolveResult?.writeEnabled === true;
-  const canPublish = isLiveMode && resolveResult?.syncStatus === "pending" && resolveResult?.writeDecision !== "abort";
+  const canPublish = isLiveMode && resolveResult?.syncStatus === "pending" && resolveResult?.writeDecision !== "abort" && oauthStatus !== 'failed';
 
   const handleTestOAuth = async () => {
     setTestingOAuth(true);
     try {
       const result = await testWikidataOAuth();
       if (result.success) {
+        setOauthStatus('ok');
+        setOauthError(null);
         toast({
           title: "✅ OAuth OK",
           description: `Site: ${result.sitename} | CSRF: ${result.csrfTokenStatus}`,
         });
       } else {
+        setOauthStatus('failed');
         const category = result.errorCategory || "unknown";
         let recommendation = "Verifique os secrets no Supabase.";
         if (category === "invalid_signature") {
@@ -78,6 +83,7 @@ export function WikidataSyncButton({ productId, wikidataItemId, onSyncSuccess }:
         } else if (category === "missing_secrets") {
           recommendation = "Secrets ausentes — configure WIKIDATA_CONSUMER_KEY, CONSUMER_SECRET, ACCESS_TOKEN, ACCESS_SECRET.";
         }
+        setOauthError(`${category}: ${recommendation}`);
         toast({
           title: `❌ OAuth falhou (${category})`,
           description: recommendation,
@@ -85,6 +91,8 @@ export function WikidataSyncButton({ productId, wikidataItemId, onSyncSuccess }:
         });
       }
     } catch (err) {
+      setOauthStatus('failed');
+      setOauthError(err instanceof Error ? err.message : "Erro desconhecido");
       toast({ title: "Erro no teste OAuth", description: err instanceof Error ? err.message : "Erro desconhecido", variant: "destructive" });
     } finally {
       setTestingOAuth(false);
@@ -283,6 +291,18 @@ export function WikidataSyncButton({ productId, wikidataItemId, onSyncSuccess }:
           <Badge variant="destructive" className="text-[10px] gap-0.5">
             <AlertTriangle className="h-3 w-3" />
             Score &lt; 0.7
+          </Badge>
+        )}
+        {oauthStatus === 'failed' && (
+          <Badge variant="destructive" className="text-[10px] gap-0.5">
+            <KeyRound className="h-3 w-3" />
+            OAuth ✗
+          </Badge>
+        )}
+        {oauthStatus === 'ok' && (
+          <Badge variant="outline" className="text-[10px] gap-0.5 border-emerald-500 text-emerald-600">
+            <KeyRound className="h-3 w-3" />
+            OAuth ✓
           </Badge>
         )}
       </div>
