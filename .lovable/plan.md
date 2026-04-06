@@ -1,20 +1,41 @@
 
 
-## Adicionar botões 📦 Baixar ZIP e 💾 Salvar ao Carrossel Engajamento
+## Fix: Carrossel Engajamento nao persiste dados
 
-### Situação atual
-- O botão "Baixar ZIP" já existe mas sem o emoji 📦
-- Não existe botão "Salvar" — os dados são salvos automaticamente com debounce (1s) a cada edição
+### Causa raiz
 
-### Alterações
+Dois problemas criticos:
 
-**Arquivo: `src/components/EngagementCarouselSection.tsx`**
+1. **Closures obsoletas nos saves com debounce**: `handleSlideTextChange` chama `persistData(updated, slideImageMap)` capturando o `slideImageMap` do momento da renderizacao — se imagens mudaram depois, o save antigo sobrescreve com dados velhos (e vice-versa para `handleImageChange` que captura `slideTexts` antigos).
 
-1. Adicionar estado `saving` para feedback visual no botão Salvar
-2. Criar função `handleManualSave` que chama `persistData` diretamente e mostra toast de confirmação
-3. Adicionar import do ícone `Save` do lucide-react
-4. Atualizar o texto do botão ZIP para `📦 Baixar ZIP`
-5. Adicionar botão `💾 Salvar` com ícone Save, variante outline, que chama `handleManualSave`
+2. **Imagens salvas como base64 gigante no JSONB**: Uploads de imagem sao convertidos para data URL (base64) e salvos dentro do campo `instagram_copies` JSONB. Um unico JPEG em base64 pode ter 1-5MB. Com 6 slides, isso ultrapassa limites praticos do Supabase para update de JSONB, causando falha silenciosa (sem tratamento de erro no retorno do `.update()`).
 
-Ordem dos botões: `Copiar Textos` → `💾 Salvar` → `📦 Baixar ZIP` → `Regenerar/Gerar com IA`
+### Solucao
+
+**1. Corrigir closures com useRef** (`EngagementCarouselSection.tsx`)
+- Criar `slideTextsRef` e `slideImageMapRef` que sempre apontam para o estado atual
+- `persistData` le dos refs em vez de receber parametros
+- Debounce unico com `useRef<NodeJS.Timeout>` em vez de multiplos `setTimeout` soltos
+
+**2. Upload de imagens para Supabase Storage** (`EngagementCarouselSection.tsx` + `EngagementCarouselPreview.tsx`)
+- Ao fazer upload de imagem, enviar para bucket `product-images` (ja existe no projeto)
+- Salvar a URL publica no `slideImageMap` em vez de base64
+- Isso reduz o JSONB de megabytes para poucos bytes por slide
+- Videos: salvar thumbnail no Storage tambem, manter blob URL apenas para preview local (nao persistir)
+
+**3. Adicionar verificacao de erro no persist** (`EngagementCarouselSection.tsx`)
+- Checar `error` no retorno do `.update()` do Supabase
+- Mostrar toast de erro se o save falhar
+
+### Alteracoes
+
+| Arquivo | Acao |
+|---|---|
+| `src/components/EngagementCarouselSection.tsx` | Refs para estado atual, debounce unificado, upload de imagens para Storage, error handling no persist |
+| `src/components/EngagementCarouselPreview.tsx` | `onImageChange` passa `File` ou `Blob` em vez de data URL; componente pai faz upload |
+
+### Resultado esperado
+- Salvar funciona de forma confiavel (JSONB leve, sem closures obsoletas)
+- Imagens persistem entre sessoes via URLs do Storage
+- Erros de save sao visiveis ao usuario
 
