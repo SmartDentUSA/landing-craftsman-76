@@ -266,26 +266,37 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
     if (!file) return;
     
     if (file.type.startsWith('video/')) {
-      // For video, create a thumbnail from first frame
+      // Store video blob URL for live preview, extract thumbnail for PNG export
+      const blobUrl = URL.createObjectURL(file);
+      // Store video blob URL in slideTexts via onSlideTextChange
+      onSlideTextChange?.('videoSrc', blobUrl);
+      onMediaTypeChange?.('video');
+
+      // Also extract a thumbnail for PNG export
       const video = document.createElement('video');
-      video.preload = 'metadata';
-      const url = URL.createObjectURL(file);
-      video.src = url;
-      video.onloadeddata = () => {
-        video.currentTime = 1; // seek to 1s
+      video.preload = 'auto';
+      video.muted = true;
+      video.src = blobUrl;
+      video.onloadedmetadata = () => {
+        video.currentTime = Math.min(1, video.duration / 2);
       };
       video.onseeked = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(video, 0, 0);
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-          onImageChange(slideNum, dataUrl);
-          onMediaTypeChange?.('video');
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = video.videoWidth || 1080;
+          canvas.height = video.videoHeight || 1350;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+            onImageChange(slideNum, dataUrl); // thumbnail for PNG export
+          }
+        } catch (err) {
+          console.warn('Could not extract video thumbnail:', err);
         }
-        URL.revokeObjectURL(url);
+      };
+      video.onerror = () => {
+        console.warn('Video load error, keeping blob URL for preview');
       };
     } else {
       const reader = new FileReader();
