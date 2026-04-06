@@ -258,9 +258,13 @@ export function EngagementCarouselSection({
                   <Copy className="h-4 w-4 mr-1" />
                   Copiar Textos
                 </Button>
+                <Button size="sm" variant="outline" onClick={handleManualSave} disabled={saving}>
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}
+                  💾 Salvar
+                </Button>
                 <Button size="sm" variant="outline" onClick={exportAllPNGs} disabled={exporting}>
                   {exporting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Download className="h-4 w-4 mr-1" />}
-                  Baixar ZIP
+                  📦 Baixar ZIP
                 </Button>
               </>
             )}
