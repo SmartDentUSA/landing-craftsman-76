@@ -370,7 +370,6 @@ async function handleTestOAuth(): Promise<Response> {
       format: "json",
     };
 
-    // CRITICAL FIX: sign with base URL + data, NOT full URL
     const authHeader = buildOAuthHeader(secrets, { url: baseUrl, method: "GET", data: apiParams });
     const fullUrl = `${baseUrl}?${buildQueryString(apiParams)}`;
 
@@ -385,21 +384,14 @@ async function handleTestOAuth(): Promise<Response> {
     try { json = JSON.parse(text); } catch { json = null; }
 
     if (json?.error) {
-      const errorCode = json.error.code || "unknown";
-      let errorCategory = "other";
-      if (errorCode === "mwoauth-invalid-authorization") {
-        const info = (json.error.info || "").toLowerCase();
-        if (info.includes("signature")) errorCategory = "invalid_signature";
-        else if (info.includes("token") || info.includes("consumer")) errorCategory = "invalid_token";
-        else if (info.includes("timestamp") || info.includes("nonce")) errorCategory = "timestamp_nonce";
-        else errorCategory = "invalid_authorization";
-      }
-
+      const classified = classifyOAuthError(json.error);
       console.error("[wikidata-sync] test_oauth: FAILED", JSON.stringify(json.error));
       return jsonResponse({
         success: false,
-        error: `OAuth test failed: ${json.error.info || errorCode}`,
-        errorCategory,
+        error: `OAuth test failed: ${json.error.info || json.error.code}`,
+        errorCategory: classified.category,
+        errorPhase: "siteinfo",
+        recommendation: classified.recommendation,
         httpStatus: res.status,
         secretFragments: fragments,
       });
@@ -410,26 +402,40 @@ async function handleTestOAuth(): Promise<Response> {
 
     // Step 2: Test CSRF token acquisition
     let csrfTokenStatus = "not_tested";
+    let csrfErrorCategory: string | null = null;
     try {
       const csrf = await getWikidataCsrfToken(secrets);
       csrfTokenStatus = csrf && csrf !== "+\\" ? "valid" : "invalid";
     } catch (e) {
-      csrfTokenStatus = `error: ${e instanceof Error ? e.message : String(e)}`;
+      const errMsg = e instanceof Error ? e.message : String(e);
+      csrfTokenStatus = `error: ${errMsg}`;
+      if (errMsg.includes("WIKIDATA_OAUTH_INVALID_AUTHORIZATION")) {
+        csrfErrorCategory = "invalid_signature";
+      }
     }
 
     return jsonResponse({
-      success: true,
+      success: csrfTokenStatus === "valid",
       sitename,
       csrfTokenStatus,
+      errorCategory: csrfErrorCategory,
+      errorPhase: csrfErrorCategory ? "csrf" : undefined,
       secretFragments: fragments,
-      message: "OAuth 1.0a authentication working correctly!",
+      message: csrfTokenStatus === "valid"
+        ? "OAuth 1.0a authentication working correctly!"
+        : `Siteinfo OK but CSRF failed: ${csrfTokenStatus}`,
     });
   } catch (e) {
     console.error("[wikidata-sync] test_oauth: Exception", e);
+    const errMsg = e instanceof Error ? e.message : String(e);
+    const classified = classifyOAuthError({ code: "exception", info: errMsg });
     return jsonResponse({
       success: false,
-      error: e instanceof Error ? e.message : String(e),
-      errorCategory: "exception",
+      error: errMsg,
+      errorCategory: classified.category,
+      errorPhase: "siteinfo",
+      recommendation: classified.recommendation,
+      secretFragments: fragments,
     }, 500);
   }
 }
@@ -1338,126 +1344,12 @@ async function handleResolveAndPersist(
       repairSource,
     }));
 
-    // 6. If write enabled and decision requires write, execute real write
+    // 6. resolve_and_persist is ALWAYS preview-only.
+    // Real writes go through execute_write action only.
+    // This prevents OAuth errors from blocking the resolve flow.
     if (writeEnabled && writeDecision !== "skip" && writeDecision !== "abort") {
-      const secrets = getWikidataSecrets();
-      if (secrets) {
-        try {
-          // Anti-duplication: check if entity already exists on Wikidata
-          const ptLabel = payload.labels?.pt?.value || payload.labels?.["pt-br"]?.value;
-          let existingQid: string | null = null;
-
-          if (writeDecision === "create" && ptLabel) {
-            existingQid = await findExistingEntity(ptLabel);
-            if (existingQid) {
-              console.log(`[wikidata-sync] Anti-duplication: found existing ${existingQid} for "${ptLabel}"`);
-            }
-          }
-
-          const targetQid = wikidataQid || existingQid || null;
-
-          if (targetQid && writeDecision === "create") writeDecision = "update";
-
-          // Anti-dup recheck (race condition mitigation)
-          let finalTargetQid = targetQid;
-          if (!finalTargetQid && writeDecision === "create" && ptLabel) {
-            const recheck = await findExistingEntity(normalizeLabel(ptLabel));
-            if (recheck) {
-              finalTargetQid = recheck;
-              writeDecision = "update";
-              console.log("[wikidata-sync] Anti-dup recheck:", recheck);
-            }
-          }
-
-          const finalQid = await withRetry(
-            () => executeWbEditEntity(payload, secrets, finalTargetQid),
-            { max: 3, delays: [600, 1500, 3000], retryOn: ["API_RATE_LIMIT", "NETWORK_ERROR", "maxlag", "readonly", "timeout"] },
-          );
-
-          // Persist QID back to entity_map
-          if (entityMapId) {
-            await db
-              .from("wikidata_entity_map")
-              .update({
-                wikidata_qid: finalQid,
-                sync_status: "synced",
-                last_synced_at: new Date().toISOString(),
-              })
-              .eq("id", entityMapId);
-          }
-
-          // Also persist to source table
-          if (entityType === "company") {
-            await db
-              .from("company_profile")
-              .update({ wikidata_id: finalQid, updated_at: new Date().toISOString() })
-              .eq("id", internalId);
-          } else {
-            await db
-              .from("products_repository")
-              .update({ wikidata_item_id: finalQid, updated_at: new Date().toISOString() })
-              .eq("id", internalId);
-          }
-
-          wikidataQid = finalQid;
-          syncStatus = "synced";
-          console.log(`[wikidata-sync] ✅ Live write complete: ${finalQid}`);
-
-          // Read-after-write verification (non-blocking)
-          const capturedQid = finalQid;
-          setTimeout(async () => {
-            try {
-              const vRes = await fetch(`https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${capturedQid}&props=labels|descriptions|claims&format=json`);
-              const vJson = await vRes.json();
-              const e = vJson?.entities?.[capturedQid];
-              const labelPt = e?.labels?.pt?.value;
-              const labelEn = e?.labels?.en?.value;
-              const validLabels = [labelPt, labelEn].filter((v: string | undefined) => v && v.trim().length >= 2);
-              const hasCoreData = validLabels.length > 0 && Object.keys(e?.claims || {}).length > 0;
-              console.log(`[wikidata-sync] Verify: ${capturedQid} hasCoreData=${hasCoreData} labels=${validLabels.length}`);
-              if (!hasCoreData) console.warn(`[wikidata-sync] ⚠ Weak write: ${capturedQid}`);
-            } catch { /* non-blocking */ }
-          }, 1500);
-        } catch (writeErr) {
-          console.error("[wikidata-sync] Live write FAILED", writeErr);
-
-          // Update entity_map status to failed
-          if (entityMapId) {
-            await db
-              .from("wikidata_entity_map")
-              .update({ sync_status: "failed", retry_count: 1 })
-              .eq("id", entityMapId);
-          }
-
-          syncStatus = "failed";
-          const writeErrorMessage = writeErr instanceof Error ? writeErr.message : "Write failed";
-          const writeErrorCode = writeErrorMessage.includes("WIKIDATA_OAUTH_INVALID_AUTHORIZATION")
-            ? "WIKIDATA_OAUTH_INVALID_AUTHORIZATION"
-            : "WRITE_FAILED";
-          const friendlyWriteError = writeErrorCode === "WIKIDATA_OAUTH_INVALID_AUTHORIZATION"
-            ? "Credenciais OAuth do Wikidata inválidas ou expiradas. Atualize os secrets WIKIDATA_ACCESS_TOKEN / WIKIDATA_ACCESS_SECRET."
-            : writeErrorMessage;
-
-          return logAndReturn(db, {
-            action: "resolve_and_persist",
-            entityType, internalId, payloadHash,
-            writeDecision,
-            success: false,
-            semanticScore: score.overall,
-            semanticGrade: score.grade,
-            wikidataQid,
-            entityMapId,
-            syncStatus: "failed",
-            writeEnabled,
-            errorCode: writeErrorCode,
-            errorMessage: friendlyWriteError,
-            durationMs: Date.now() - startTime,
-            requestPayload: payload,
-          });
-        }
-      } else {
-        console.warn("[wikidata-sync] Write enabled but OAuth secrets missing — staying in preview mode");
-      }
+      console.log("[wikidata-sync] resolve_and_persist: preview-only mode — use execute_write for real writes");
+      syncStatus = "pending";
     }
 
     // 7. Log and return
