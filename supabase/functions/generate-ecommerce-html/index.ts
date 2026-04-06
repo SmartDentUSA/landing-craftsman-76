@@ -1864,6 +1864,9 @@ function buildEcommerceHTML(
   technicalDocsWithDescriptions: any[] = []
 ): string {
   const desc = product.description || '';
+  const companyName = company?.company_name || 'Smart Dent';
+  const companyUrl = company?.website_url || 'https://smartdent.com.br';
+  const productUrl = product.product_url || '#';
   
   // ✅ SEMPRE REGENERAR (remover bypass de pré-formatado)
   console.log('🔄 Regenerando HTML com SPIN Design System (bypass desabilitado)');
@@ -2523,9 +2526,7 @@ function buildEcommerceHTML(
   html += `</section>`;
 
   // ✅ AI-READINESS: Injetar JSON-LD com Product + WebPage + mainEntity/about/mentions
-  const companyName = company?.company_name || 'Smart Dent';
-  const companyUrl = company?.website_url || 'https://smartdent.com.br';
-  const productUrl = product.product_url || '#';
+  // companyName, companyUrl, productUrl declarados no início da função
   const ecommerceSchema = {
     "@context": "https://schema.org",
     "@graph": [
