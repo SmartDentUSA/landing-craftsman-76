@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Copy, Sparkles, Image, RefreshCw, Download, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { EngagementCarouselPreview, generateEngagementSlidePNG, fetchAsDataUrl } from "./EngagementCarouselPreview";
+import { EngagementCarouselPreview, generateEngagementSlidePNG, generateEngagementSlideVideo, fetchAsDataUrl } from "./EngagementCarouselPreview";
 import type { EngagementSlideTexts, EngagementSlideTextsMap } from "./EngagementCarouselPreview";
 import JSZip from "jszip";
 

@@ -921,5 +921,234 @@ export async function generateEngagementSlidePNG(
   });
 }
 
+// ========================= Video Export with Overlay =========================
+
+/** Draw a single frame of the engagement slide template onto a canvas context,
+ *  using a video element as the media source instead of a static image. */
+function drawSlideFrameWithVideo(
+  ctx: CanvasRenderingContext2D,
+  slideNum: number,
+  videoEl: HTMLVideoElement,
+  texts: EngagementSlideTexts,
+  primaryColor: string,
+  accentColor: string,
+) {
+  const W = SLIDE_W;
+  const H = SLIDE_H;
+
+  const bg = texts.bgColor || DEFAULT_BG[slideNum] || '#1a1a1a';
+  const accent = texts.accentColor || accentColor || '#FF6B35';
+  const isDark = getLuminance(bg) < 0.5;
+  const textColor = isDark ? '#ffffff' : '#111111';
+  const subTextColor = isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)';
+  const imageScale = Number(texts.imageScale) || 100;
+
+  // Background
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  if (slideNum === 1) {
+    // Full-bleed video cover
+    ctx.save();
+    const scaleF = imageScale / 100;
+    ctx.translate(W / 2, H / 2);
+    ctx.scale(scaleF, scaleF);
+    ctx.translate(-W / 2, -H / 2);
+    drawImageCover(ctx, videoEl, 0, 0, W, H);
+    ctx.restore();
+
+    // Gradient overlay
+    const grad = ctx.createLinearGradient(0, H * 0.4, 0, H);
+    grad.addColorStop(0, 'rgba(0,0,0,0)');
+    grad.addColorStop(0.5, 'rgba(0,0,0,0.5)');
+    grad.addColorStop(1, 'rgba(0,0,0,0.85)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    // Title
+    const titleFont = '900 72px system-ui, -apple-system, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    let titleEndY = drawRichText(ctx, texts.title || '', 60, H - 300, W - 120, 86, titleFont, titleFont, '#ffffff', accent, 'left');
+
+    // Subtitle
+    if (texts.text) {
+      const bodyFont = '400 36px system-ui, -apple-system, sans-serif';
+      const bodyFontBold = '700 36px system-ui, -apple-system, sans-serif';
+      drawRichText(ctx, texts.text, 60, titleEndY + 20, W - 120, 54, bodyFont, bodyFontBold, 'rgba(255,255,255,0.8)', accent, 'left');
+    }
+
+    // Badge
+    ctx.beginPath();
+    ctx.arc(W - 78, H - 70, 30, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.fill();
+    ctx.font = '900 28px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('1', W - 78, H - 70);
+  } else {
+    // Title
+    const titleFontSize = 56;
+    const titleFont = `900 ${titleFontSize}px system-ui, -apple-system, sans-serif`;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    const titleY = 100;
+    const titleEndY = drawRichText(ctx, texts.title || '', 60, titleY, W - 120, titleFontSize * 1.2, titleFont, titleFont, textColor, accent, 'left');
+
+    // Video area
+    const imgY = Math.max(titleEndY + 20, 320);
+    const imgH = slideNum === 6 ? 300 : 440;
+    ctx.save();
+    const scaleF = imageScale / 100;
+    const cx = W / 2;
+    const cy = imgY + imgH / 2;
+    ctx.translate(cx, cy);
+    ctx.scale(scaleF, scaleF);
+    ctx.translate(-cx, -cy);
+    ctx.beginPath();
+    const rr = 16;
+    ctx.moveTo(60 + rr, imgY);
+    ctx.lineTo(W - 60 - rr, imgY);
+    ctx.arcTo(W - 60, imgY, W - 60, imgY + rr, rr);
+    ctx.lineTo(W - 60, imgY + imgH - rr);
+    ctx.arcTo(W - 60, imgY + imgH, W - 60 - rr, imgY + imgH, rr);
+    ctx.lineTo(60 + rr, imgY + imgH);
+    ctx.arcTo(60, imgY + imgH, 60, imgY + imgH - rr, rr);
+    ctx.lineTo(60, imgY + rr);
+    ctx.arcTo(60, imgY, 60 + rr, imgY, rr);
+    ctx.closePath();
+    ctx.clip();
+    drawImageCover(ctx, videoEl, 60, imgY, W - 120, imgH);
+    ctx.restore();
+
+    // Body text
+    const bodyY = imgY + imgH + 28;
+    if (texts.text) {
+      const bodyFont = '400 36px system-ui, -apple-system, sans-serif';
+      const bodyFontBold = '700 36px system-ui, -apple-system, sans-serif';
+      drawRichText(ctx, texts.text, 60, bodyY, W - 120, 54, bodyFont, bodyFontBold, subTextColor, accent, 'left');
+    }
+
+    // CTA
+    if (slideNum === 6 && texts.cta_label) {
+      const btnW = 600;
+      const btnH = 100;
+      const btnX = (W - btnW) / 2;
+      const btnY = H - 200;
+      ctx.fillStyle = accent;
+      ctx.beginPath();
+      ctx.moveTo(btnX + 20, btnY);
+      ctx.lineTo(btnX + btnW - 20, btnY);
+      ctx.arcTo(btnX + btnW, btnY, btnX + btnW, btnY + 20, 20);
+      ctx.lineTo(btnX + btnW, btnY + btnH - 20);
+      ctx.arcTo(btnX + btnW, btnY + btnH, btnX + btnW - 20, btnY + btnH, 20);
+      ctx.lineTo(btnX + 20, btnY + btnH);
+      ctx.arcTo(btnX, btnY + btnH, btnX, btnY + btnH - 20, 20);
+      ctx.lineTo(btnX, btnY + 20);
+      ctx.arcTo(btnX, btnY, btnX + 20, btnY, 20);
+      ctx.closePath();
+      ctx.fill();
+      ctx.font = '900 44px system-ui, -apple-system, sans-serif';
+      ctx.fillStyle = getLuminance(accent) > 0.5 ? '#000' : '#fff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(texts.cta_label, W / 2, btnY + btnH / 2);
+    }
+
+    // Badge
+    ctx.beginPath();
+    ctx.arc(W - 78, H - 70, 30, 0, Math.PI * 2);
+    ctx.fillStyle = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)';
+    ctx.fill();
+    ctx.font = '900 28px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(slideNum), W - 78, H - 70);
+  }
+}
+
+/**
+ * Generate a WEBM video with the engagement slide template overlaid on the source video.
+ * Uses canvas.captureStream() + MediaRecorder to render frame-by-frame.
+ */
+export async function generateEngagementSlideVideo(
+  slideNum: number,
+  videoUrl: string,
+  texts: EngagementSlideTexts,
+  primaryColor: string,
+  accentColor: string,
+  brandName: string,
+  handleName: string,
+): Promise<Blob> {
+  const W = SLIDE_W;
+  const H = SLIDE_H;
+
+  // Load video
+  const videoEl = document.createElement('video');
+  videoEl.crossOrigin = 'anonymous';
+  videoEl.muted = true;
+  videoEl.playsInline = true;
+  videoEl.preload = 'auto';
+  videoEl.src = videoUrl;
+
+  await new Promise<void>((resolve, reject) => {
+    videoEl.onloadeddata = () => resolve();
+    videoEl.onerror = () => reject(new Error('Failed to load video for export'));
+    videoEl.load();
+  });
+
+  // Create offscreen canvas
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d')!;
+
+  // Setup recording
+  const stream = canvas.captureStream(30); // 30fps
+  const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+    ? 'video/webm;codecs=vp9'
+    : 'video/webm';
+  const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 });
+  const chunks: Blob[] = [];
+  recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+
+  const recordingDone = new Promise<Blob>((resolve, reject) => {
+    recorder.onstop = () => {
+      const blob = new Blob(chunks, { type: mimeType });
+      resolve(blob);
+    };
+    recorder.onerror = (e) => reject(e);
+  });
+
+  // Play and record
+  recorder.start();
+  videoEl.currentTime = 0;
+  await videoEl.play();
+
+  const fps = 30;
+  const duration = Math.min(videoEl.duration || 10, 60); // cap at 60s
+  const totalFrames = Math.ceil(duration * fps);
+  let frame = 0;
+
+  await new Promise<void>((resolve) => {
+    const drawFrame = () => {
+      if (videoEl.ended || videoEl.paused || frame >= totalFrames) {
+        recorder.stop();
+        resolve();
+        return;
+      }
+      drawSlideFrameWithVideo(ctx, slideNum, videoEl, texts, primaryColor, accentColor);
+      frame++;
+      requestAnimationFrame(drawFrame);
+    };
+    requestAnimationFrame(drawFrame);
+  });
+
+  return recordingDone;
+}
+
 // Reuse fetchAsDataUrl from Strategic
 export { fetchAsDataUrl } from './StrategicCarouselPreview';
