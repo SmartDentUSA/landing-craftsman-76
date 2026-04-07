@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Copy, Sparkles, Image, RefreshCw, Download, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { EngagementCarouselPreview, generateEngagementSlidePNG, fetchAsDataUrl } from "./EngagementCarouselPreview";
+import { EngagementCarouselPreview, generateEngagementSlidePNG, generateEngagementSlideVideo, fetchAsDataUrl } from "./EngagementCarouselPreview";
 import type { EngagementSlideTexts, EngagementSlideTextsMap } from "./EngagementCarouselPreview";
 import JSZip from "jszip";
 
@@ -272,18 +272,22 @@ export function EngagementCarouselSection({
         const isVideo = texts.mediaType === 'video';
 
         if (isVideo) {
-          // Video slide: export ONLY the .mp4
+          // Video slide: render video with template overlay
           const videoUrl = texts.videoStorageUrl || texts.videoSrc;
           if (videoUrl) {
             try {
-              const videoResp = await fetch(videoUrl);
-              if (videoResp.ok) {
-                const videoBlob = await videoResp.blob();
-                zip.file(`slide_${i}.mp4`, videoBlob);
-                hasVideos = true;
-              }
+              const videoBlob = await generateEngagementSlideVideo(i, videoUrl, texts, primaryColor, accentColor, brandName, handleName);
+              zip.file(`slide_${i}.webm`, videoBlob);
+              hasVideos = true;
             } catch (err) {
-              console.warn(`Could not fetch video for slide ${i}:`, err);
+              console.warn(`Could not render video for slide ${i}:`, err);
+              // Fallback: generate PNG with thumbnail
+              let imgUrl = slideImageMap[i] || '';
+              if (imgUrl && !imgUrl.startsWith('data:')) {
+                try { imgUrl = await fetchAsDataUrl(imgUrl); } catch { /* use original */ }
+              }
+              const blob = await generateEngagementSlidePNG(i, imgUrl, texts, primaryColor, accentColor, brandName, handleName);
+              zip.file(`slide_${i}.png`, blob);
             }
           }
         } else {
@@ -305,10 +309,10 @@ export function EngagementCarouselSection({
       a.download = `carrossel_engajamento_${productName.replace(/\s+/g, '_')}.zip`;
       a.click();
       URL.revokeObjectURL(url);
-      toast({ title: "✅ Download iniciado!", description: hasVideos ? "PNGs + Vídeos em ZIP." : "6 PNGs 1080x1350 em ZIP." });
+      toast({ title: "✅ Download iniciado!", description: hasVideos ? "PNGs + Vídeos com template em ZIP." : "6 PNGs 1080x1350 em ZIP." });
     } catch (err) {
       console.error('Erro no export:', err);
-      toast({ title: "Erro", description: "Falha ao exportar PNGs.", variant: "destructive" });
+      toast({ title: "Erro", description: "Falha ao exportar. Verifique se o navegador suporta gravação de vídeo.", variant: "destructive" });
     } finally {
       setExporting(false);
     }
