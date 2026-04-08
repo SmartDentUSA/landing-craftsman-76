@@ -1,63 +1,99 @@
 
-## Fix: exportar o vídeo já com o template/textos sobrepostos
 
-### Diagnóstico confirmado
-Hoje o preview mostra o vídeo dentro do card com overlay via JSX/CSS, mas o export do ZIP em `EngagementCarouselSection.tsx` só faz `fetch` do arquivo cru e salva `slide_X.mp4`. Por isso o resultado final vem sem textos, gradiente e badge.
+## Plano: Gerar Documento de Auditoria Completa do Sistema (.MD)
 
-### O que vou ajustar
+### Objetivo
+Gerar um documento Markdown completo e detalhado em `/mnt/documents/` contendo a auditoria profunda de todo o sistema Smart Dent Content Intelligence Platform.
 
-#### 1) Criar gerador de vídeo final com overlay
-**Arquivo:** `src/components/EngagementCarouselPreview.tsx`
+### Estrutura do Documento
 
-Adicionar uma nova função de export, ao lado de `generateEngagementSlidePNG`, por exemplo:
-- `generateEngagementSlideVideo(...)`
+O arquivo `AUDITORIA_SISTEMA_COMPLETA.md` contera as seguintes secoes:
 
-Essa função vai:
-- carregar o vídeo original em um `<video>` offscreen
-- desenhar frame a frame em um `<canvas>` 1080x1350
-- aplicar por cima o mesmo template já usado no preview/PNG:
-  - slide 1: vídeo full-bleed + gradiente inferior + título/subtítulo + badge
-  - slides 2-6: layout editorial com título, bloco de mídia, texto e CTA quando existir
-- gravar o canvas com `canvas.captureStream()` + `MediaRecorder`
-- retornar um único arquivo final de vídeo para download
+**1. Visao Geral da Arquitetura**
+- Stack tecnologico (React 18, Vite 5, Tailwind CSS, TypeScript, Supabase)
+- Projeto Supabase ref: pgfgripuanuwwolmtknn
+- 62 tabelas, 91+ Edge Functions, 4 Storage Buckets, 111 RLS Policies
+- Separacao Sistema A (Knowledge Brain) vs Sistema B (Marketing/Revenue)
 
-#### 2) Reaproveitar a mesma lógica visual do PNG
-**Arquivo:** `src/components/EngagementCarouselPreview.tsx`
+**2. Banco de Dados — 62 Tabelas Detalhadas**
+- Cada tabela com: nome, RLS status, todas as colunas com tipos/defaults
+- Agrupamento por dominio: Empresa, Produtos, Landing Pages, Blog, Videos, Reviews, L.I.A., SEO, Wikidata, Analytics, Content Pipeline, OAuth, Calendar
 
-Para não duplicar layout de forma inconsistente:
-- extrair helpers de desenho comuns para canvas
-- reutilizar `drawImageCover`, `drawRichText`, cores, gradiente, badge e posicionamento
-- garantir que vídeo exportado e PNG tenham a mesma identidade visual
+**3. Seguranca — 111 Politicas RLS**
+- Cada politica com tabela, comando, condicao USING/WITH CHECK
+- Funcao `has_role` (SECURITY DEFINER) documentada
+- 4 Storage Buckets com 16 politicas de objetos
 
-#### 3) Trocar o export do ZIP para usar vídeo renderizado
-**Arquivo:** `src/components/EngagementCarouselSection.tsx`
+**4. Edge Functions — 91+ Funcoes**
+- Cada funcao com: nome, verify_jwt, descricao funcional, integracao com IA
+- Agrupamento: Geracao de Conteudo, SEO, Publicacao, Integracao APIs, OAuth, Dados, Wikidata, Videos, RAG/Knowledge Base
 
-No `exportAllPNGs`:
-- se `mediaType === 'video'`, parar de exportar o `.mp4` cru
-- chamar o novo `generateEngagementSlideVideo(...)`
-- salvar no ZIP apenas o arquivo final desse slide, por exemplo `slide_1.webm` ou `slide_3.webm`
-- slides com imagem continuam saindo como `slide_X.png`
+**5. Integracao com IA**
+- Gateway: `ai.gateway.lovable.dev` com modelo `google/gemini-2.5-flash`
+- Clinical Brain v2.0 (anti-alucinacao, 8 regras obrigatorias)
+- Dual-AI Competition (Gemini vs DeepSeek)
+- Quality Gate v2.0 (scoring 0-100)
+- Monitoramento de tokens via `ai_token_usage`
+- Modulos compartilhados: `clinical-brain-guard.ts`, `prompt-templates.ts`, `master-system-prompt.ts`
 
-### Formato final
-Como você aceitou “tanto faz”, o formato mais viável no browser será:
-- **WEBM** para slides com vídeo
-- **PNG** para slides com imagem
+**6. Frontend — Paginas e Componentes**
+- 18 paginas (rotas com protecao de acesso)
+- 120+ componentes organizados por funcao
+- 60+ hooks customizados
+- Servicos SEO (13 modulos)
 
-Isso evita tentar converter para MP4 no frontend, o que é pouco confiável no navegador.
+**7. Ferramentas de Conteudo**
+- Instagram Carousel (Tecnico 7 slides + Engajamento 6 slides)
+- Blog Generator (Consolidado, Estrategico, Individual por produto)
+- WhatsApp Message/Sequence/Promo Generator
+- TikTok Content Generator
+- YouTube Description/Script Generator
+- Google Ads (Display Banners 16 formatos + Ad Copies + CSV Export)
+- SPIN Selling (Campaign, FAQ, Journey, Metrics, Hero Banner, Landing Page)
+- E-commerce HTML Generator
+- Landing Page Clone
+- Knowledge Feed
 
-### Fallback e comportamento
-Se o navegador não suportar `MediaRecorder` ou a renderização falhar:
-- mostrar toast claro dizendo que o vídeo final com overlay não pôde ser gerado
-- não baixar vídeo cru “sem template” silenciosamente
-- manter erro explícito para evitar arquivo incorreto
+**8. Integracoes Externas**
+- Google Business Profile (Reviews, Posts)
+- YouTube (OAuth, Metadata, Captions, Upload)
+- Loja Integrada (API v1, polling, sincronizacao)
+- Cloudflare Pages (publicacao)
+- FTP Publishing
+- Git Deploy (KingHost via GitHub API)
+- WordPress (teste de conexao)
+- Wikidata (OAuth 1.0a, sincronizacao de entidades)
+- Sistema B (sincronizacao de documentos)
 
-### Arquivos afetados
-| Arquivo | Ação |
-|---|---|
-| `src/components/EngagementCarouselPreview.tsx` | Adicionar gerador de vídeo com overlay e extrair helpers de render canvas |
-| `src/components/EngagementCarouselSection.tsx` | Alterar export do ZIP para usar o vídeo final renderizado em vez do arquivo cru |
+**9. SEO e Publicacao Semantica**
+- Cabeçalho SEO centralizado (`seo-fine-tuning.ts`)
+- Knowledge Graph Orchestrator (`fetchKnowledgeGraph.ts`)
+- Schema.org (JSON-LD @graph unificado)
+- Programmatic SEO (variações de URL indexaveis)
+- Auto-linking inteligente
+- Sitemap/Robots.txt/Video Sitemap dinamicos
+- Tracking pixels (GTM, Meta, TikTok, GA4)
 
-### Resultado esperado
-- Slide com vídeo exporta **um único arquivo final**, já com textos e sobreposições
-- Nada sai “separado” para slides com vídeo
-- O visual exportado bate com o template visto no card do carrossel
+**10. Sistema Dra. L.I.A. (Chatbot RAG)**
+- Memoria Longitudinal (leads, conversations, messages, events)
+- RAG com Knowledge Base vetorial (`knowledge_vectors`)
+- Validacao LLM-as-Judge (`evaluate-interaction`)
+- Lead scoring e perfil sumarizado
+
+**11. Pipeline Autonomo de Conteudo**
+- Content Submissions (Sistema B → Sistema A)
+- Content Jobs (fila com retry)
+- Pipeline Audit Logs
+- Process Job Queue
+
+**12. Monitoramento e Observabilidade**
+- AI Token Dashboard
+- System Monitoring Dashboard
+- RAG Metrics Dashboard
+- Content Quality Dashboard
+- Pipeline Audit Viewer
+
+### Execucao
+- Script Python que gera o .MD completo em `/mnt/documents/AUDITORIA_SISTEMA_COMPLETA.md`
+- Documento estimado: ~2000-3000 linhas
+
