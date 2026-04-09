@@ -52,6 +52,7 @@ export function LPPublishDialog({ open, onOpenChange, landingPage }: LPPublishDi
   const [selectedDomain, setSelectedDomain] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [slug, setSlug] = useState('');
+  const [customPath, setCustomPath] = useState('');
   const [isHomepage, setIsHomepage] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
 
@@ -83,6 +84,7 @@ export function LPPublishDialog({ open, onOpenChange, landingPage }: LPPublishDi
     if (!open) {
       setSelectedDomain('');
       setSelectedCategory('');
+      setCustomPath('');
       setIsHomepage(false);
     }
   }, [open]);
@@ -104,19 +106,27 @@ export function LPPublishDialog({ open, onOpenChange, landingPage }: LPPublishDi
   const previewUrl = useMemo(() => {
     if (!selectedDomain) return '';
     if (isHomepage) return `https://${selectedDomain}/`;
+    if (selectedCategory === 'custom') {
+      const p = customPath.startsWith('/') ? customPath : `/${customPath}`;
+      return `https://${selectedDomain}${p || '/meu-path'}`;
+    }
     const cat = categories.find(c => c.key === selectedCategory);
     if (cat) {
       return `https://${selectedDomain}${cat.pattern.replace('{slug}', slug || 'meu-slug')}`;
     }
     return `https://${selectedDomain}/${slug || 'meu-slug'}`;
-  }, [selectedDomain, isHomepage, selectedCategory, slug, categories]);
+  }, [selectedDomain, isHomepage, selectedCategory, slug, customPath, categories]);
 
   const pagePath = useMemo(() => {
     if (isHomepage) return '/';
+    if (selectedCategory === 'custom') {
+      const p = customPath.startsWith('/') ? customPath : `/${customPath}`;
+      return p || '/';
+    }
     const cat = categories.find(c => c.key === selectedCategory);
     if (cat) return cat.pattern.replace('{slug}', slug);
     return `/${slug}`;
-  }, [isHomepage, selectedCategory, slug, categories]);
+  }, [isHomepage, selectedCategory, slug, customPath, categories]);
 
   const handlePublish = async () => {
     if (!landingPage || !selectedDomain) return;
@@ -330,13 +340,26 @@ export function LPPublishDialog({ open, onOpenChange, landingPage }: LPPublishDi
                       {c.label}
                     </SelectItem>
                   ))}
+                  <SelectItem value="custom">📝 Personalizado</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           )}
 
+          {/* Custom path input */}
+          {!isHomepage && selectedCategory === 'custom' && (
+            <div className="space-y-2">
+              <Label>Path personalizado</Label>
+              <Input
+                value={customPath}
+                onChange={(e) => setCustomPath(e.target.value)}
+                placeholder="/meu-path-customizado"
+              />
+            </div>
+          )}
+
           {/* Slug input */}
-          {!isHomepage && (
+          {!isHomepage && selectedCategory !== 'custom' && (
             <div className="space-y-2">
               <Label>Slug</Label>
               <Input
@@ -362,7 +385,7 @@ export function LPPublishDialog({ open, onOpenChange, landingPage }: LPPublishDi
           </Button>
           <Button
             onClick={handlePublish}
-            disabled={isPublishing || !selectedDomain || (!isHomepage && !slug)}
+            disabled={isPublishing || !selectedDomain || (!isHomepage && selectedCategory === 'custom' ? !customPath : !isHomepage && !slug)}
           >
             {isPublishing ? (
               <>
