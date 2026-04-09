@@ -1,32 +1,36 @@
 
 
-## Plano: Priorizar "Resinas" + Igualar layout mobile de Recursos ao de Ofertas
+## Plano: Popular CTAs de Recursos automaticamente com IFU e FDS dos Documentos Tecnicos
 
-### 1. Priorizar categoria "Resinas" no topo
+### Contexto confirmado
+- 56 produtos nas categorias RESINAS 3D e DENTISTICA possuem `technical_documents` com documentos nomeados "IFU" e "FDS" (importados do Sistema B)
+- Os campos `resource_cta1`, `resource_cta2`, `resource_cta3` estao todos vazios (`visible: false`)
+- Cada documento tem `nome` (ex: "IFU", "FDS") e `url_download` com link direto
 
-**Arquivo: `src/lib/template-engine.ts`** — linhas ~3572 e ~4159
+### Mapeamento dos CTAs
 
-Substituir `.sort()` por ordenação customizada nos dois locais onde `resources_categories` é montado:
+| CTA | Conteudo | Label |
+|-----|----------|-------|
+| CTA 1 | FDS (Ficha de Dados de Seguranca) | "FDS" |
+| CTA 2 | IFU (Instructions for Use) | "IFU" |
+| CTA 3 | Perfil Tecnico (quando existir) | "Perfil Tecnico" |
 
-```typescript
-Object.keys(grouped).sort((a, b) => {
-  const aIsResinas = a.toLowerCase().includes('resina');
-  const bIsResinas = b.toLowerCase().includes('resina');
-  if (aIsResinas && !bIsResinas) return -1;
-  if (!aIsResinas && bIsResinas) return 1;
-  return a.localeCompare(b);
-})
-```
+### Implementacao
 
-### 2. Igualar layout mobile de Recursos ao de Ofertas
+**Script SQL batch** que para cada produto dessas categorias:
 
-**Arquivo: `src/lib/template-engine.ts`**
+1. Extrai do array `technical_documents` o documento com `nome = 'IFU'` → popula `resource_cta2` com `{label: "IFU - {nome_arquivo}", url: "{url_download}", visible: true}`
+2. Extrai documento com `nome = 'FDS'` → popula `resource_cta1` com `{label: "FDS - {nome_arquivo}", url: "{url_download}", visible: true}`
+3. Extrai documento com nome contendo "Perfil" → popula `resource_cta3` com `{label: "{nome}", url: "{url_download}", visible: true}`
+4. Atualiza `resource_descriptions` com descricoes extraidas dos documentos
 
-- **HTML mobile (~2332-2369)**: Substituir `carousel-track` por `resources-grid` no bloco mobile de Recursos
-- **CSS mobile (~1355-1385)**: Garantir que `.resources-grid` no mobile use `repeat(2, 1fr)` e que os cards tenham mesmo sizing (imagem, padding, font-size) que `.offers-grid`
-- Remover estilos/lógica de carousel do mobile de recursos
+**Execucao**: Script Python via `code--exec` que consulta os 56 produtos, monta os CTAs e faz UPDATE via Supabase client.
+
+### Abrangencia
+- Categoria "RESINAS 3D" → subcategorias Biocompativeis e Uso Geral
+- Categoria "DENTISTICA, ESTETICA E ORTODONTIA" → subcategorias Adesivos, Ceromero, Cimentos, Resinas Compostas
 
 ### Resultado
-- "Resinas" sempre aparece primeiro, demais em ordem alfabética
-- Cards de Recursos no mobile idênticos aos de Ofertas (grid 2 colunas, sem scroll horizontal)
+- 56 produtos terao CTAs populados automaticamente com links diretos para IFU, FDS e Perfil Tecnico
+- Os botoes aparecerao imediatamente na secao "Recursos e Downloads" do editor
 
