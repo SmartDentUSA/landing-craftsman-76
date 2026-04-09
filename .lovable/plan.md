@@ -1,99 +1,54 @@
 
 
-## Plano: Gerar Documento de Auditoria Completa do Sistema (.MD)
+## Plano: Incluir TODOS os campos de TODAS as abas na exportacao da Apostila
 
-### Objetivo
-Gerar um documento Markdown completo e detalhado em `/mnt/documents/` contendo a auditoria profunda de todo o sistema Smart Dent Content Intelligence Platform.
+### Problema
+A funcao `generateCompanyMarkdown` (linhas 66-137) exporta apenas ~15 campos. A tabela `company_profile` tem ~60 campos organizados em 10 abas no frontend. Mais da metade esta ausente.
 
-### Estrutura do Documento
+### Campos faltantes por aba
 
-O arquivo `AUDITORIA_SISTEMA_COMPLETA.md` contera as seguintes secoes:
+| Aba | Campos ausentes |
+|-----|----------------|
+| **Dados Basicos** | `company_logo_url`, `country`, `latitude`, `longitude`, `main_products_services`, `number_of_employees`, `duns_number`, `price_range`, `opening_hours`, `areas_served` |
+| **Redes Sociais** | `instagram_profile`, `youtube_channel`, `social_media_handles`, `social_media_hashtags`, `youtube_tags`, `youtube_verified`, `instagram_verified` |
+| **Videos da Empresa** | `company_videos` (4 arrays: youtube, instagram, testimonial, technical) |
+| **Reviews** | `company_reviews` (manual_reviews array, google_place_id, last_google_sync) |
+| **NPS & Interesses** | `nps_metrics` (score, total_responses, satisfaction, themes) |
+| **SEO Hidden** | `seo_context_keywords`, `seo_market_positioning`, `seo_service_areas`, `seo_technical_expertise`, `seo_competitive_advantages`, `seo_domains` |
+| **Parcerias** | `institutional_links` (array com label, url, category) |
+| **TRK SEO** | `tracking_pixels` (GTM, Meta, TikTok, GA4 — enabled + IDs) |
+| **Navegacao & Footer** | `navigation_footer_config` (menu, footer links, locations, social) |
+| **Marcos** | Ja tem secao separada — OK |
+| **Cultura/Metodologia** | `company_culture`, `working_methodology`, `delivery_approach` |
+| **Fundador extras** | `founder_instagram`, `founder_twitter` |
+| **Outros** | `wikidata_id`, `youtube_company_footer` |
 
-**1. Visao Geral da Arquitetura**
-- Stack tecnologico (React 18, Vite 5, Tailwind CSS, TypeScript, Supabase)
-- Projeto Supabase ref: pgfgripuanuwwolmtknn
-- 62 tabelas, 91+ Edge Functions, 4 Storage Buckets, 111 RLS Policies
-- Separacao Sistema A (Knowledge Brain) vs Sistema B (Marketing/Revenue)
+### Alteracao
 
-**2. Banco de Dados — 62 Tabelas Detalhadas**
-- Cada tabela com: nome, RLS status, todas as colunas com tipos/defaults
-- Agrupamento por dominio: Empresa, Produtos, Landing Pages, Blog, Videos, Reviews, L.I.A., SEO, Wikidata, Analytics, Content Pipeline, OAuth, Calendar
+**Arquivo: `supabase/functions/export-complete-handbook/index.ts`**
 
-**3. Seguranca — 111 Politicas RLS**
-- Cada politica com tabela, comando, condicao USING/WITH CHECK
-- Funcao `has_role` (SECURITY DEFINER) documentada
-- 4 Storage Buckets com 16 politicas de objetos
+Reescrever `generateCompanyMarkdown` (linhas 66-137) para incluir todas as subsecoes:
 
-**4. Edge Functions — 91+ Funcoes**
-- Cada funcao com: nome, verify_jwt, descricao funcional, integracao com IA
-- Agrupamento: Geracao de Conteudo, SEO, Publicacao, Integracao APIs, OAuth, Dados, Wikidata, Videos, RAG/Knowledge Base
+```text
+## 1. PERFIL DA EMPRESA
+### Informacoes Gerais (+ logo, country, lat/lng, employees, price_range)
+### Contato e Endereco (sem mudanca)
+### Missao, Visao e Valores (sem mudanca)
+### Posicionamento (+ main_products_services)
+### Cultura e Metodologia (company_culture, working_methodology, delivery_approach)
+### Fundador / E-E-A-T (+ founder_instagram, founder_twitter)
+### Redes Sociais (instagram_profile, youtube_channel, handles, hashtags, youtube_tags, verificacao)
+### Videos da Empresa (4 categorias com url + description)
+### SEO (6 campos seo_*)
+### Tracking Pixels (GTM, Meta, TikTok, GA4 — status e IDs)
+### Reviews (manual_reviews listados, google_place_id)
+### NPS e Metricas (score, responses, satisfaction, themes)
+### Links Institucionais / Parcerias (cada link com label, url, category)
+### Navegacao e Footer (menu items, footer links, locations)
+### Dados Juridicos (+ duns_number, opening_hours, areas_served)
+### Wikidata (wikidata_id)
+### YouTube Footer Template (youtube_company_footer)
+```
 
-**5. Integracao com IA**
-- Gateway: `ai.gateway.lovable.dev` com modelo `google/gemini-2.5-flash`
-- Clinical Brain v2.0 (anti-alucinacao, 8 regras obrigatorias)
-- Dual-AI Competition (Gemini vs DeepSeek)
-- Quality Gate v2.0 (scoring 0-100)
-- Monitoramento de tokens via `ai_token_usage`
-- Modulos compartilhados: `clinical-brain-guard.ts`, `prompt-templates.ts`, `master-system-prompt.ts`
-
-**6. Frontend — Paginas e Componentes**
-- 18 paginas (rotas com protecao de acesso)
-- 120+ componentes organizados por funcao
-- 60+ hooks customizados
-- Servicos SEO (13 modulos)
-
-**7. Ferramentas de Conteudo**
-- Instagram Carousel (Tecnico 7 slides + Engajamento 6 slides)
-- Blog Generator (Consolidado, Estrategico, Individual por produto)
-- WhatsApp Message/Sequence/Promo Generator
-- TikTok Content Generator
-- YouTube Description/Script Generator
-- Google Ads (Display Banners 16 formatos + Ad Copies + CSV Export)
-- SPIN Selling (Campaign, FAQ, Journey, Metrics, Hero Banner, Landing Page)
-- E-commerce HTML Generator
-- Landing Page Clone
-- Knowledge Feed
-
-**8. Integracoes Externas**
-- Google Business Profile (Reviews, Posts)
-- YouTube (OAuth, Metadata, Captions, Upload)
-- Loja Integrada (API v1, polling, sincronizacao)
-- Cloudflare Pages (publicacao)
-- FTP Publishing
-- Git Deploy (KingHost via GitHub API)
-- WordPress (teste de conexao)
-- Wikidata (OAuth 1.0a, sincronizacao de entidades)
-- Sistema B (sincronizacao de documentos)
-
-**9. SEO e Publicacao Semantica**
-- Cabeçalho SEO centralizado (`seo-fine-tuning.ts`)
-- Knowledge Graph Orchestrator (`fetchKnowledgeGraph.ts`)
-- Schema.org (JSON-LD @graph unificado)
-- Programmatic SEO (variações de URL indexaveis)
-- Auto-linking inteligente
-- Sitemap/Robots.txt/Video Sitemap dinamicos
-- Tracking pixels (GTM, Meta, TikTok, GA4)
-
-**10. Sistema Dra. L.I.A. (Chatbot RAG)**
-- Memoria Longitudinal (leads, conversations, messages, events)
-- RAG com Knowledge Base vetorial (`knowledge_vectors`)
-- Validacao LLM-as-Judge (`evaluate-interaction`)
-- Lead scoring e perfil sumarizado
-
-**11. Pipeline Autonomo de Conteudo**
-- Content Submissions (Sistema B → Sistema A)
-- Content Jobs (fila com retry)
-- Pipeline Audit Logs
-- Process Job Queue
-
-**12. Monitoramento e Observabilidade**
-- AI Token Dashboard
-- System Monitoring Dashboard
-- RAG Metrics Dashboard
-- Content Quality Dashboard
-- Pipeline Audit Viewer
-
-### Execucao
-- Script Python que gera o .MD completo em `/mnt/documents/AUDITORIA_SISTEMA_COMPLETA.md`
-- Documento estimado: ~2000-3000 linhas
+A query ja faz `SELECT *` (linha 486), entao todos os dados ja estao disponiveis — so falta renderiza-los no Markdown.
 
