@@ -1,47 +1,32 @@
 
 
-## Plano: Agrupar produtos por categoria na seção Recursos e Downloads
+## Plano: Priorizar "Resinas" + Igualar layout mobile de Recursos ao de Ofertas
 
-### Problema atual
-A seção "Recursos e Downloads" renderiza todos os produtos em uma lista/grid plana sem organização. O usuário quer ver os produtos agrupados por categoria.
+### 1. Priorizar categoria "Resinas" no topo
 
-### Alterações
+**Arquivo: `src/lib/template-engine.ts`** — linhas ~3572 e ~4159
 
-**1. Template HTML — `src/lib/template-engine.ts` (linhas 2263-2350)**
+Substituir `.sort()` por ordenação customizada nos dois locais onde `resources_categories` é montado:
 
-Substituir a iteração plana `{{#resources_products}}` por uma iteração agrupada `{{#resources_categories}}`, onde cada categoria tem um título e seus produtos:
-
-```text
-{{#resources_categories}}
-  <div class="resources-category-block">
-    <h3 class="resources-category-title">{{category_name}}</h3>
-    <div class="resources-grid">
-      {{#products}}
-        <div class="offer-card">...</div>
-      {{/products}}
-    </div>
-  </div>
-{{/resources_categories}}
+```typescript
+Object.keys(grouped).sort((a, b) => {
+  const aIsResinas = a.toLowerCase().includes('resina');
+  const bIsResinas = b.toLowerCase().includes('resina');
+  if (aIsResinas && !bIsResinas) return -1;
+  if (!aIsResinas && bIsResinas) return 1;
+  return a.localeCompare(b);
+})
 ```
 
-Manter a mesma estrutura de card (imagem, nome, CTAs). Aplicar tanto para desktop quanto mobile.
+### 2. Igualar layout mobile de Recursos ao de Ofertas
 
-**2. Dados do template — `src/lib/template-engine.ts` (linhas 3511-3528 e 4073-4110)**
+**Arquivo: `src/lib/template-engine.ts`**
 
-Nos dois pontos onde `resources_products` é montado, adicionar um novo campo `resources_categories` que agrupa os produtos por `category`:
-
-- Agrupar offers com `show_in_resources === true` por `offer.category || 'Outros'`
-- Gerar array `[{ category_name, products: [...] }]` ordenado alfabeticamente
-- Manter `resources_products` para compatibilidade (flat list)
-
-**3. CSS — `src/lib/template-engine.ts` (seção de estilos)**
-
-Adicionar estilos para `.resources-category-block` e `.resources-category-title`:
-- Título da categoria com margem superior, font-size médio, cor do tema
-- Separação visual entre blocos de categorias
+- **HTML mobile (~2332-2369)**: Substituir `carousel-track` por `resources-grid` no bloco mobile de Recursos
+- **CSS mobile (~1355-1385)**: Garantir que `.resources-grid` no mobile use `repeat(2, 1fr)` e que os cards tenham mesmo sizing (imagem, padding, font-size) que `.offers-grid`
+- Remover estilos/lógica de carousel do mobile de recursos
 
 ### Resultado
-- Produtos organizados por categoria com títulos visuais
-- Categorias ordenadas alfabeticamente
-- Produtos sem categoria agrupados sob "Outros"
+- "Resinas" sempre aparece primeiro, demais em ordem alfabética
+- Cards de Recursos no mobile idênticos aos de Ofertas (grid 2 colunas, sem scroll horizontal)
 
