@@ -1,23 +1,47 @@
 
 
-## Fix: Publicação com URL personalizada — trimming e link de resultado
+## Plano: Agrupar produtos por categoria na seção Recursos e Downloads
 
-### Problemas identificados
-
-1. **Trailing space no path**: O `customPath` não é sanitizado — o registro no banco mostra `page_path: "/suport-resurces "` (com espaço no final), o que gera URLs quebradas
-2. **Sem link clicável após publicar**: O toast só mostra texto "está sendo publicada em..." mas não gera um link clicável para o usuário acessar a página publicada
+### Problema atual
+A seção "Recursos e Downloads" renderiza todos os produtos em uma lista/grid plana sem organização. O usuário quer ver os produtos agrupados por categoria.
 
 ### Alterações
 
-**Arquivo: `src/components/LPPublishDialog.tsx`**
+**1. Template HTML — `src/lib/template-engine.ts` (linhas 2263-2350)**
 
-1. **Sanitizar `customPath`**: Aplicar `.trim()` no `pagePath` e `previewUrl` quando `selectedCategory === 'custom'`, e também sanitizar no `onChange` do input
-2. **Toast com link clicável**: Após publicação bem-sucedida, mostrar a URL final como link clicável no toast (usando `description` com a URL completa) e/ou adicionar um botão "Copiar Link" que copia a URL para o clipboard
-3. **Atualizar `publish_status` para `published`**: Após a Edge Function retornar sucesso, atualizar o registro em `cloned_landing_pages` com `publish_status: 'published'`
+Substituir a iteração plana `{{#resources_products}}` por uma iteração agrupada `{{#resources_categories}}`, onde cada categoria tem um título e seus produtos:
 
-### Detalhes
+```text
+{{#resources_categories}}
+  <div class="resources-category-block">
+    <h3 class="resources-category-title">{{category_name}}</h3>
+    <div class="resources-grid">
+      {{#products}}
+        <div class="offer-card">...</div>
+      {{/products}}
+    </div>
+  </div>
+{{/resources_categories}}
+```
 
-- No `pagePath` useMemo: adicionar `.trim()` ao resultado do customPath
-- No `handlePublish`: após sucesso da edge function, mostrar toast com `action` contendo botão "Abrir" que abre `previewUrl` em nova aba
-- Sanitizar slug também com `.trim()` por precaução
+Manter a mesma estrutura de card (imagem, nome, CTAs). Aplicar tanto para desktop quanto mobile.
+
+**2. Dados do template — `src/lib/template-engine.ts` (linhas 3511-3528 e 4073-4110)**
+
+Nos dois pontos onde `resources_products` é montado, adicionar um novo campo `resources_categories` que agrupa os produtos por `category`:
+
+- Agrupar offers com `show_in_resources === true` por `offer.category || 'Outros'`
+- Gerar array `[{ category_name, products: [...] }]` ordenado alfabeticamente
+- Manter `resources_products` para compatibilidade (flat list)
+
+**3. CSS — `src/lib/template-engine.ts` (seção de estilos)**
+
+Adicionar estilos para `.resources-category-block` e `.resources-category-title`:
+- Título da categoria com margem superior, font-size médio, cor do tema
+- Separação visual entre blocos de categorias
+
+### Resultado
+- Produtos organizados por categoria com títulos visuais
+- Categorias ordenadas alfabeticamente
+- Produtos sem categoria agrupados sob "Outros"
 
