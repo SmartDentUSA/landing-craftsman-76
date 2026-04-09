@@ -2333,7 +2333,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                     {{#resources_categories}}
                     <div class="resources-category-block">
                         <h3 class="resources-category-title">{{category_name}}</h3>
-                        <div class="carousel-track">
+                        <div class="resources-grid">
                             {{#products}}
                             <div class="offer-card">
                                 {{#image}}
@@ -3569,7 +3569,13 @@ export const generatePreviewHTML = async (data: any): Promise<string> => {
           first: index === 0
         });
       });
-      return Object.keys(grouped).sort().map(cat => ({
+      return Object.keys(grouped).sort((a, b) => {
+        const aIsResinas = a.toLowerCase().includes('resina');
+        const bIsResinas = b.toLowerCase().includes('resina');
+        if (aIsResinas && !bIsResinas) return -1;
+        if (!aIsResinas && bIsResinas) return 1;
+        return a.localeCompare(b);
+      }).map(cat => ({
         category_name: cat,
         products: grouped[cat]
       }));
@@ -4156,7 +4162,13 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
       if (!grouped[cat]) grouped[cat] = [];
       grouped[cat].push(processResourceOffer(offer, index));
     });
-    processedData.resources_categories = Object.keys(grouped).sort().map(cat => ({
+    processedData.resources_categories = Object.keys(grouped).sort((a, b) => {
+      const aIsResinas = a.toLowerCase().includes('resina');
+      const bIsResinas = b.toLowerCase().includes('resina');
+      if (aIsResinas && !bIsResinas) return -1;
+      if (!aIsResinas && bIsResinas) return 1;
+      return a.localeCompare(b);
+    }).map(cat => ({
       category_name: cat,
       products: grouped[cat]
     }));
