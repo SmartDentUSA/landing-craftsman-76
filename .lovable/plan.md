@@ -1,36 +1,39 @@
 
 
-## Plano: Popular CTAs de Recursos automaticamente com IFU e FDS dos Documentos Tecnicos
+## Plano: Popular CTAs com documentos técnicos disponíveis (não apenas IFU/FDS)
 
-### Contexto confirmado
-- 56 produtos nas categorias RESINAS 3D e DENTISTICA possuem `technical_documents` com documentos nomeados "IFU" e "FDS" (importados do Sistema B)
-- Os campos `resource_cta1`, `resource_cta2`, `resource_cta3` estao todos vazios (`visible: false`)
-- Cada documento tem `nome` (ex: "IFU", "FDS") e `url_download` com link direto
+### Problema
+O script anterior só mapeava documentos com nome exato "IFU" ou "FDS". Os 9 produtos restantes (incluindo Bio Vitality com 13 documentos) possuem laudos técnicos com nomes descritivos que não foram reconhecidos.
 
-### Mapeamento dos CTAs
+### Solução
+Executar um novo script batch que popula os CTAs usando os **primeiros documentos disponíveis** no array `technical_documents`, independente do nome:
 
-| CTA | Conteudo | Label |
-|-----|----------|-------|
-| CTA 1 | FDS (Ficha de Dados de Seguranca) | "FDS" |
-| CTA 2 | IFU (Instructions for Use) | "IFU" |
-| CTA 3 | Perfil Tecnico (quando existir) | "Perfil Tecnico" |
+| CTA | Conteúdo |
+|-----|----------|
+| CTA 1 | 1º documento técnico disponível |
+| CTA 2 | 2º documento técnico disponível |
+| CTA 3 | 3º documento técnico disponível |
 
-### Implementacao
+### Produtos afetados (9)
+- Resina 3D Smart Print Bio Bite Splint +Flex (2 docs)
+- Resina 3D Smart Print Bio Bite Splint Clear (10 docs)
+- Resina 3D Smart Print Bio Denture (1 doc)
+- Resina 3D Smart Print Bio Temp B1 (1 doc)
+- **Resina 3D Smart Print Bio Vitality (13 docs)**
+- Resina 3D Smart Print Modelo Ocre (2 docs)
+- Resina 3D Smart Print Try-In Calcinável (1 doc)
+- Resina Smart 3D Print Bio Clear Guide (3 docs)
+- Resina Smart Print Modelo Láqua (2 docs)
 
-**Script SQL batch** que para cada produto dessas categorias:
-
-1. Extrai do array `technical_documents` o documento com `nome = 'IFU'` → popula `resource_cta2` com `{label: "IFU - {nome_arquivo}", url: "{url_download}", visible: true}`
-2. Extrai documento com `nome = 'FDS'` → popula `resource_cta1` com `{label: "FDS - {nome_arquivo}", url: "{url_download}", visible: true}`
-3. Extrai documento com nome contendo "Perfil" → popula `resource_cta3` com `{label: "{nome}", url: "{url_download}", visible: true}`
-4. Atualiza `resource_descriptions` com descricoes extraidas dos documentos
-
-**Execucao**: Script Python via `code--exec` que consulta os 56 produtos, monta os CTAs e faz UPDATE via Supabase client.
-
-### Abrangencia
-- Categoria "RESINAS 3D" → subcategorias Biocompativeis e Uso Geral
-- Categoria "DENTISTICA, ESTETICA E ORTODONTIA" → subcategorias Adesivos, Ceromero, Cimentos, Resinas Compostas
+### Execução
+Script Python via `code--exec` que para cada produto:
+1. Lê `technical_documents[0]` → `resource_cta1 = {label: nome, url: url_download, visible: true}`
+2. Lê `technical_documents[1]` → `resource_cta2` (se existir)
+3. Lê `technical_documents[2]` → `resource_cta3` (se existir)
+4. Atualiza `resource_descriptions` com as descrições dos documentos
+5. Faz PATCH via Supabase REST API
 
 ### Resultado
-- 56 produtos terao CTAs populados automaticamente com links diretos para IFU, FDS e Perfil Tecnico
-- Os botoes aparecerao imediatamente na secao "Recursos e Downloads" do editor
+- Todos os 9 produtos terão CTAs ativos com links diretos para seus documentos técnicos
+- Os botões aparecerão imediatamente na seção "Recursos e Downloads"
 
