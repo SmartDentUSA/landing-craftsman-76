@@ -68,25 +68,36 @@ function generateCompanyMarkdown(company: any): string {
   
   let md = `## 1. PERFIL DA EMPRESA\n\n`;
   
+  // === Informações Gerais ===
   md += `### Informações Gerais\n`;
   md += `- **Nome:** ${company.company_name || 'N/A'}\n`;
   md += `- **Descrição:** ${stripHtml(company.company_description) || 'N/A'}\n`;
   md += `- **Setor:** ${company.business_sector || 'N/A'}\n`;
   md += `- **Website:** ${company.website_url || 'N/A'}\n`;
   md += `- **Fundação:** ${company.founded_year || 'N/A'}\n`;
-  md += `- **Tamanho da Equipe:** ${company.team_size || 'N/A'}\n\n`;
-  
-  md += `### Contato\n`;
+  md += `- **Tamanho da Equipe:** ${company.team_size || 'N/A'}\n`;
+  if (company.number_of_employees) md += `- **Número de Funcionários:** ${company.number_of_employees}\n`;
+  if (company.company_logo_url) md += `- **Logo URL:** ${company.company_logo_url}\n`;
+  if (company.company_logo_supabase_path) md += `- **Logo Storage Path:** ${company.company_logo_supabase_path}\n`;
+  if (company.price_range) md += `- **Faixa de Preço:** ${company.price_range}\n`;
+  md += `\n`;
+
+  // === Contato e Endereço ===
+  md += `### Contato e Endereço\n`;
   md += `- **Email:** ${company.contact_email || 'N/A'}\n`;
   md += `- **Telefone:** ${company.contact_phone || 'N/A'}\n`;
-  
-  if (company.street_address || company.city) {
-    md += `- **Endereço:** ${[company.street_address, company.address_number, company.city, company.state, company.postal_code].filter(Boolean).join(', ')}\n`;
+  const addressParts = [company.street_address, company.address_number, company.city, company.state, company.postal_code, company.country].filter(Boolean);
+  if (addressParts.length > 0) {
+    md += `- **Endereço:** ${addressParts.join(', ')}\n`;
   } else if (company.location) {
     md += `- **Localização:** ${company.location}\n`;
   }
+  if (company.latitude && company.longitude) {
+    md += `- **Coordenadas:** ${company.latitude}, ${company.longitude}\n`;
+  }
   md += `\n`;
-  
+
+  // === Missão, Visão e Valores ===
   if (company.mission_statement || company.vision_statement || company.brand_values) {
     md += `### Missão, Visão e Valores\n`;
     if (company.mission_statement) md += `- **Missão:** ${company.mission_statement}\n`;
@@ -94,44 +105,271 @@ function generateCompanyMarkdown(company: any): string {
     if (company.brand_values) md += `- **Valores:** ${company.brand_values}\n`;
     md += `\n`;
   }
-  
-  if (company.differentiators || company.target_audience) {
+
+  // === Posicionamento ===
+  if (company.differentiators || company.target_audience || company.main_products_services) {
     md += `### Posicionamento\n`;
     if (company.target_audience) md += `- **Público-alvo:** ${company.target_audience}\n`;
     if (company.differentiators) md += `- **Diferenciais:** ${company.differentiators}\n`;
+    if (company.main_products_services) md += `- **Principais Produtos/Serviços:** ${company.main_products_services}\n`;
     md += `\n`;
   }
-  
+
+  // === Cultura e Metodologia ===
+  if (company.company_culture || company.working_methodology || company.delivery_approach) {
+    md += `### Cultura e Metodologia\n`;
+    if (company.company_culture) md += `- **Cultura da Empresa:** ${company.company_culture}\n`;
+    if (company.working_methodology) md += `- **Metodologia de Trabalho:** ${company.working_methodology}\n`;
+    if (company.delivery_approach) md += `- **Abordagem de Entrega:** ${company.delivery_approach}\n`;
+    md += `\n`;
+  }
+
+  // === Fundador / E-E-A-T ===
   if (company.founder_name) {
-    md += `### Fundador\n`;
+    md += `### Fundador / E-E-A-T\n`;
     md += `- **Nome:** ${company.founder_name}\n`;
     if (company.founder_title) md += `- **Cargo:** ${company.founder_title}\n`;
     if (company.founder_linkedin) md += `- **LinkedIn:** ${company.founder_linkedin}\n`;
     md += `\n`;
   }
-  
-  if (company.social_media_links && Array.isArray(company.social_media_links) && company.social_media_links.length > 0) {
+
+  // === Redes Sociais ===
+  const hasSocial = (company.social_media_links && Array.isArray(company.social_media_links) && company.social_media_links.length > 0) ||
+    company.instagram_profile || company.youtube_channel;
+  if (hasSocial) {
     md += `### Redes Sociais\n`;
-    company.social_media_links.forEach((link: any) => {
-      md += `- **${link.platform || 'Link'}:** ${link.url}\n`;
-    });
+    if (company.instagram_profile) md += `- **Instagram:** ${company.instagram_profile} ${company.instagram_verified ? '✅ Verificado' : ''}\n`;
+    if (company.youtube_channel) md += `- **YouTube:** ${company.youtube_channel} ${company.youtube_verified ? '✅ Verificado' : ''}\n`;
+    if (company.social_media_links && Array.isArray(company.social_media_links)) {
+      company.social_media_links.forEach((link: any) => {
+        md += `- **${link.platform || 'Link'}:** ${link.url}\n`;
+      });
+    }
+    if (company.social_media_handles && Array.isArray(company.social_media_handles) && company.social_media_handles.length > 0) {
+      md += `- **Handles:** ${company.social_media_handles.join(', ')}\n`;
+    }
+    if (company.social_media_hashtags && Array.isArray(company.social_media_hashtags) && company.social_media_hashtags.length > 0) {
+      md += `- **Hashtags:** ${company.social_media_hashtags.join(', ')}\n`;
+    }
+    if (company.youtube_tags && Array.isArray(company.youtube_tags) && company.youtube_tags.length > 0) {
+      md += `- **YouTube Tags:** ${company.youtube_tags.join(', ')}\n`;
+    }
     md += `\n`;
   }
-  
+
+  // === Vídeos da Empresa ===
+  if (company.company_videos) {
+    const vids = company.company_videos;
+    const categories = [
+      { key: 'youtube_videos', label: 'YouTube' },
+      { key: 'instagram_videos', label: 'Instagram' },
+      { key: 'testimonial_videos', label: 'Depoimentos' },
+      { key: 'technical_videos', label: 'Técnicos' },
+    ];
+    const hasAny = categories.some(c => vids[c.key] && Array.isArray(vids[c.key]) && vids[c.key].length > 0);
+    if (hasAny) {
+      md += `### Vídeos da Empresa\n`;
+      categories.forEach(cat => {
+        const arr = vids[cat.key];
+        if (arr && Array.isArray(arr) && arr.length > 0) {
+          md += `\n#### ${cat.label}\n`;
+          arr.forEach((v: any, i: number) => {
+            md += `${i + 1}. ${v.title || v.description || 'Vídeo'}\n`;
+            if (v.url) md += `   - URL: ${v.url}\n`;
+            if (v.description && v.title) md += `   - Descrição: ${v.description}\n`;
+          });
+        }
+      });
+      md += `\n`;
+    }
+  }
+
+  // === Avaliação Google ===
   if (company.google_aggregate_rating) {
     md += `### Avaliação Google\n`;
     md += `- **Rating:** ${company.google_aggregate_rating.ratingValue || '5.0'}⭐\n`;
     md += `- **Total de Reviews:** ${company.google_aggregate_rating.reviewCount || 0}\n`;
     md += `\n`;
   }
-  
-  if (company.legal_name || company.tax_id) {
-    md += `### Dados Jurídicos\n`;
-    if (company.legal_name) md += `- **Razão Social:** ${company.legal_name}\n`;
-    if (company.tax_id) md += `- **CNPJ:** ${company.tax_id}\n`;
+
+  // === Company Reviews ===
+  if (company.company_reviews) {
+    const cr = company.company_reviews;
+    md += `### Reviews da Empresa\n`;
+    if (cr.google_place_id) md += `- **Google Place ID:** ${cr.google_place_id}\n`;
+    if (cr.google_reviews_imported) md += `- **Google Reviews Importadas:** Sim\n`;
+    if (cr.last_google_sync) md += `- **Última Sincronização Google:** ${formatDate(cr.last_google_sync)}\n`;
+    if (cr.manual_reviews && Array.isArray(cr.manual_reviews) && cr.manual_reviews.length > 0) {
+      md += `\n#### Reviews Manuais (${cr.manual_reviews.length})\n`;
+      cr.manual_reviews.forEach((r: any, i: number) => {
+        md += `${i + 1}. **${r.author || 'Anônimo'}** — ${r.rating || 5}⭐\n`;
+        if (r.text) md += `   > ${r.text}\n`;
+      });
+    }
     md += `\n`;
   }
-  
+
+  // === NPS & Métricas ===
+  if (company.nps_metrics) {
+    const nps = company.nps_metrics;
+    md += `### NPS & Métricas\n`;
+    if (nps.score != null) md += `- **NPS Score:** ${nps.score}\n`;
+    if (nps.total_responses != null) md += `- **Total de Respostas:** ${nps.total_responses}\n`;
+    if (nps.satisfaction != null) md += `- **Satisfação:** ${nps.satisfaction}%\n`;
+    if (nps.themes && Array.isArray(nps.themes) && nps.themes.length > 0) {
+      md += `- **Temas:** ${nps.themes.join(', ')}\n`;
+    }
+    // Render any extra keys
+    const knownNps = ['score', 'total_responses', 'satisfaction', 'themes'];
+    Object.keys(nps).filter(k => !knownNps.includes(k) && nps[k]).forEach(k => {
+      md += `- **${k}:** ${typeof nps[k] === 'object' ? JSON.stringify(nps[k]) : nps[k]}\n`;
+    });
+    md += `\n`;
+  }
+
+  // === SEO Hidden ===
+  const seoFields = [
+    { key: 'seo_market_positioning', label: 'Posicionamento de Mercado' },
+    { key: 'seo_service_areas', label: 'Áreas de Serviço' },
+    { key: 'seo_technical_expertise', label: 'Expertise Técnica' },
+    { key: 'seo_competitive_advantages', label: 'Vantagens Competitivas' },
+  ];
+  const hasSeo = seoFields.some(f => company[f.key]) || 
+    (company.seo_context_keywords && Array.isArray(company.seo_context_keywords) && company.seo_context_keywords.length > 0) ||
+    (company.seo_domains && Array.isArray(company.seo_domains) && company.seo_domains.length > 0);
+  if (hasSeo) {
+    md += `### SEO\n`;
+    seoFields.forEach(f => {
+      if (company[f.key]) md += `- **${f.label}:** ${company[f.key]}\n`;
+    });
+    if (company.seo_context_keywords && Array.isArray(company.seo_context_keywords) && company.seo_context_keywords.length > 0) {
+      md += `- **Keywords de Contexto:** ${company.seo_context_keywords.map((k: any) => typeof k === 'string' ? k : k.keyword || JSON.stringify(k)).join(', ')}\n`;
+    }
+    if (company.seo_domains && Array.isArray(company.seo_domains) && company.seo_domains.length > 0) {
+      md += `\n#### Domínios SEO\n`;
+      company.seo_domains.forEach((d: any, i: number) => {
+        if (typeof d === 'string') {
+          md += `${i + 1}. ${d}\n`;
+        } else {
+          md += `${i + 1}. ${d.domain || d.url || JSON.stringify(d)}\n`;
+        }
+      });
+    }
+    md += `\n`;
+  }
+
+  // === Tracking Pixels ===
+  if (company.tracking_pixels) {
+    const tp = company.tracking_pixels;
+    md += `### Tracking Pixels\n`;
+    const pixels = [
+      { key: 'google_tag_manager', label: 'Google Tag Manager', idField: 'container_id' },
+      { key: 'meta_pixel', label: 'Meta Pixel', idField: 'pixel_id' },
+      { key: 'tiktok_pixel', label: 'TikTok Pixel', idField: 'pixel_id' },
+      { key: 'google_analytics', label: 'Google Analytics 4', idField: 'measurement_id' },
+    ];
+    pixels.forEach(p => {
+      const px = tp[p.key];
+      if (px) {
+        md += `- **${p.label}:** ${px.enabled ? '✅ Ativo' : '❌ Inativo'}`;
+        if (px[p.idField]) md += ` — ID: \`${px[p.idField]}\``;
+        if (px.note) md += ` — ${px.note}`;
+        md += `\n`;
+      }
+    });
+    md += `\n`;
+  }
+
+  // === Links Institucionais / Parcerias ===
+  if (company.institutional_links && Array.isArray(company.institutional_links) && company.institutional_links.length > 0) {
+    md += `### Parcerias e Links Institucionais\n`;
+    company.institutional_links.forEach((link: any, i: number) => {
+      md += `${i + 1}. **${link.label || link.name || 'Parceiro'}**`;
+      if (link.category) md += ` (${link.category})`;
+      if (link.partnership_type) md += ` — Tipo: ${link.partnership_type}`;
+      if (link.country) md += ` — País: ${link.country}`;
+      if (link.since_year) md += ` — Desde: ${link.since_year}`;
+      md += `\n`;
+      if (link.url) md += `   - URL: ${link.url}\n`;
+    });
+    md += `\n`;
+  }
+
+  // === Navegação & Footer ===
+  if (company.navigation_footer_config) {
+    const nav = company.navigation_footer_config;
+    md += `### Navegação & Footer\n`;
+    if (nav.navigation_menu && Array.isArray(nav.navigation_menu) && nav.navigation_menu.length > 0) {
+      md += `\n#### Menu de Navegação\n`;
+      nav.navigation_menu.forEach((item: any, i: number) => {
+        md += `${i + 1}. ${item.label || item.title || JSON.stringify(item)}`;
+        if (item.url) md += ` → ${item.url}`;
+        md += `\n`;
+      });
+    }
+    if (nav.footer) {
+      const ft = nav.footer;
+      if (ft.title) md += `\n#### Footer — ${ft.title}\n`;
+      if (ft.links && Array.isArray(ft.links) && ft.links.length > 0) {
+        md += `\n**Links do Footer:**\n`;
+        ft.links.forEach((l: any) => {
+          md += `- ${l.label || l.text || 'Link'}: ${l.url || 'N/A'}\n`;
+        });
+      }
+      if (ft.locations && Array.isArray(ft.locations) && ft.locations.length > 0) {
+        md += `\n**Localizações:**\n`;
+        ft.locations.forEach((loc: any, i: number) => {
+          md += `${i + 1}. ${loc.name || loc.city || JSON.stringify(loc)}\n`;
+          if (loc.address) md += `   - Endereço: ${loc.address}\n`;
+          if (loc.phone) md += `   - Telefone: ${loc.phone}\n`;
+        });
+      }
+      if (ft.social_links && Array.isArray(ft.social_links) && ft.social_links.length > 0) {
+        md += `\n**Redes Sociais (Footer):**\n`;
+        ft.social_links.forEach((s: any) => {
+          md += `- ${s.platform || s.label || 'Link'}: ${s.url || 'N/A'}\n`;
+        });
+      }
+    }
+    md += `\n`;
+  }
+
+  // === Dados Jurídicos ===
+  const hasLegal = company.legal_name || company.tax_id || company.duns_number;
+  if (hasLegal || (company.opening_hours && Array.isArray(company.opening_hours) && company.opening_hours.length > 0) || (company.areas_served && Array.isArray(company.areas_served) && company.areas_served.length > 0)) {
+    md += `### Dados Jurídicos e Operacionais\n`;
+    if (company.legal_name) md += `- **Razão Social:** ${company.legal_name}\n`;
+    if (company.tax_id) md += `- **CNPJ:** ${company.tax_id}\n`;
+    if (company.duns_number) md += `- **DUNS Number:** ${company.duns_number}\n`;
+    if (company.opening_hours && Array.isArray(company.opening_hours) && company.opening_hours.length > 0) {
+      md += `- **Horário de Funcionamento:**\n`;
+      company.opening_hours.forEach((h: any) => {
+        if (typeof h === 'string') {
+          md += `  - ${h}\n`;
+        } else {
+          md += `  - ${h.day || h.dayOfWeek || ''}: ${h.opens || h.open || ''} - ${h.closes || h.close || ''}\n`;
+        }
+      });
+    }
+    if (company.areas_served && Array.isArray(company.areas_served) && company.areas_served.length > 0) {
+      md += `- **Áreas Atendidas:** ${company.areas_served.map((a: any) => typeof a === 'string' ? a : a.name || JSON.stringify(a)).join(', ')}\n`;
+    }
+    md += `\n`;
+  }
+
+  // === Wikidata ===
+  if (company.wikidata_id) {
+    md += `### Wikidata\n`;
+    md += `- **ID:** ${company.wikidata_id}\n`;
+    md += `- **URL:** https://www.wikidata.org/wiki/${company.wikidata_id}\n\n`;
+  }
+
+  // === YouTube Footer Template ===
+  if (company.youtube_company_footer) {
+    md += `### Template de Footer YouTube\n`;
+    md += `\`\`\`\n${company.youtube_company_footer}\n\`\`\`\n\n`;
+  }
+
   md += `---\n\n`;
   return md;
 }
