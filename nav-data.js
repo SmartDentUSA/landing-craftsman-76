@@ -17,12 +17,6 @@ window.__NAV_DATA__ = [
     "url": "https://smartdent.com.br/blog/onbording",
     "isHome": false,
     "brand": "Imersão 3 Dias"
-  },
-  {
-    "name": "QRCode",
-    "url": "https://smartdent.com.br/suport-resurces ",
-    "isHome": false,
-    "brand": null
   }
 ];
 (function() {
@@ -37,8 +31,8 @@ window.__NAV_DATA__ = [
   nav.appendChild(title);
   var links = document.createElement('div');
   links.style.cssText = 'display:flex;flex-wrap:wrap;justify-content:center;gap:8px;';
-  var currentUrl = window.location.href.replace(/\/$/, '');
-  data.forEach(function(item) {
+   var currentUrl = window.location.href.replace(/\/$/, '');
+   data.forEach(function(item) {
     if (item.url.replace(/\/$/, '') === currentUrl) return;
     var a = document.createElement('a');
     a.href = item.url;
