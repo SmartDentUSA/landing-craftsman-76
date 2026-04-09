@@ -107,7 +107,7 @@ export function LPPublishDialog({ open, onOpenChange, landingPage }: LPPublishDi
     if (!selectedDomain) return '';
     if (isHomepage) return `https://${selectedDomain}/`;
     if (selectedCategory === 'custom') {
-      const p = customPath.startsWith('/') ? customPath : `/${customPath}`;
+      const p = (customPath.startsWith('/') ? customPath : `/${customPath}`).trim();
       return `https://${selectedDomain}${p || '/meu-path'}`;
     }
     const cat = categories.find(c => c.key === selectedCategory);
@@ -120,12 +120,12 @@ export function LPPublishDialog({ open, onOpenChange, landingPage }: LPPublishDi
   const pagePath = useMemo(() => {
     if (isHomepage) return '/';
     if (selectedCategory === 'custom') {
-      const p = customPath.startsWith('/') ? customPath : `/${customPath}`;
+      const p = (customPath.startsWith('/') ? customPath : `/${customPath}`).trim();
       return p || '/';
     }
     const cat = categories.find(c => c.key === selectedCategory);
-    if (cat) return cat.pattern.replace('{slug}', slug);
-    return `/${slug}`;
+    if (cat) return cat.pattern.replace('{slug}', slug.trim());
+    return `/${slug.trim()}`;
   }, [isHomepage, selectedCategory, slug, customPath, categories]);
 
   const handlePublish = async () => {
@@ -238,9 +238,21 @@ export function LPPublishDialog({ open, onOpenChange, landingPage }: LPPublishDi
 
       if (fnError) throw fnError;
 
+      // Update publish_status to published
+      await supabase
+        .from('cloned_landing_pages')
+        .update({ publish_status: 'published', published_url: previewUrl, published_at: new Date().toISOString() })
+        .eq('id', clonedLPId);
+
+      const finalUrl = previewUrl;
       toast({
-        title: '✅ Publicação iniciada!',
-        description: `"${landingPage.name}" está sendo publicada em ${selectedDomain}${pagePath}`,
+        title: '✅ Publicação concluída!',
+        description: `${selectedDomain}${pagePath}`,
+        action: (
+          <Button variant="outline" size="sm" onClick={() => window.open(finalUrl, '_blank')}>
+            Abrir
+          </Button>
+        ),
       });
 
       // Fire-and-forget: republish all other pages to update nav links
@@ -352,7 +364,7 @@ export function LPPublishDialog({ open, onOpenChange, landingPage }: LPPublishDi
               <Label>Path personalizado</Label>
               <Input
                 value={customPath}
-                onChange={(e) => setCustomPath(e.target.value)}
+                onChange={(e) => setCustomPath(e.target.value.trim())}
                 placeholder="/meu-path-customizado"
               />
             </div>
