@@ -1,54 +1,24 @@
 
 
-## Plano: Incluir TODOS os campos de TODAS as abas na exportacao da Apostila
+## Plano: Permitir edicao livre da URL final no dialogo de publicacao
 
 ### Problema
-A funcao `generateCompanyMarkdown` (linhas 66-137) exporta apenas ~15 campos. A tabela `company_profile` tem ~60 campos organizados em 10 abas no frontend. Mais da metade esta ausente.
+Atualmente o usuario so pode escolher entre categorias pre-definidas (produtos, blog, guias, etc.) vindas do `url_structure` do dominio. Nao ha opcao de digitar um path customizado.
 
-### Campos faltantes por aba
+### Solucao
 
-| Aba | Campos ausentes |
-|-----|----------------|
-| **Dados Basicos** | `company_logo_url`, `country`, `latitude`, `longitude`, `main_products_services`, `number_of_employees`, `duns_number`, `price_range`, `opening_hours`, `areas_served` |
-| **Redes Sociais** | `instagram_profile`, `youtube_channel`, `social_media_handles`, `social_media_hashtags`, `youtube_tags`, `youtube_verified`, `instagram_verified` |
-| **Videos da Empresa** | `company_videos` (4 arrays: youtube, instagram, testimonial, technical) |
-| **Reviews** | `company_reviews` (manual_reviews array, google_place_id, last_google_sync) |
-| **NPS & Interesses** | `nps_metrics` (score, total_responses, satisfaction, themes) |
-| **SEO Hidden** | `seo_context_keywords`, `seo_market_positioning`, `seo_service_areas`, `seo_technical_expertise`, `seo_competitive_advantages`, `seo_domains` |
-| **Parcerias** | `institutional_links` (array com label, url, category) |
-| **TRK SEO** | `tracking_pixels` (GTM, Meta, TikTok, GA4 — enabled + IDs) |
-| **Navegacao & Footer** | `navigation_footer_config` (menu, footer links, locations, social) |
-| **Marcos** | Ja tem secao separada — OK |
-| **Cultura/Metodologia** | `company_culture`, `working_methodology`, `delivery_approach` |
-| **Fundador extras** | `founder_instagram`, `founder_twitter` |
-| **Outros** | `wikidata_id`, `youtube_company_footer` |
+**Arquivo: `src/components/LPPublishDialog.tsx`**
 
-### Alteracao
+1. Adicionar opcao "Personalizado" no Select de Categoria (alem das categorias do `url_structure`)
+2. Quando "Personalizado" estiver selecionado, mostrar um campo Input para o usuario digitar o path completo (ex: `/qrcode`, `/promo/verao-2026`)
+3. Tornar o campo "URL final" editavel — o usuario pode clicar e editar diretamente o path gerado, independente da categoria
+4. Atualizar `pagePath` e `previewUrl` para refletir o path customizado
 
-**Arquivo: `supabase/functions/export-complete-handbook/index.ts`**
+### Detalhes da implementacao
 
-Reescrever `generateCompanyMarkdown` (linhas 66-137) para incluir todas as subsecoes:
-
-```text
-## 1. PERFIL DA EMPRESA
-### Informacoes Gerais (+ logo, country, lat/lng, employees, price_range)
-### Contato e Endereco (sem mudanca)
-### Missao, Visao e Valores (sem mudanca)
-### Posicionamento (+ main_products_services)
-### Cultura e Metodologia (company_culture, working_methodology, delivery_approach)
-### Fundador / E-E-A-T (+ founder_instagram, founder_twitter)
-### Redes Sociais (instagram_profile, youtube_channel, handles, hashtags, youtube_tags, verificacao)
-### Videos da Empresa (4 categorias com url + description)
-### SEO (6 campos seo_*)
-### Tracking Pixels (GTM, Meta, TikTok, GA4 — status e IDs)
-### Reviews (manual_reviews listados, google_place_id)
-### NPS e Metricas (score, responses, satisfaction, themes)
-### Links Institucionais / Parcerias (cada link com label, url, category)
-### Navegacao e Footer (menu items, footer links, locations)
-### Dados Juridicos (+ duns_number, opening_hours, areas_served)
-### Wikidata (wikidata_id)
-### YouTube Footer Template (youtube_company_footer)
-```
-
-A query ja faz `SELECT *` (linha 486), entao todos os dados ja estao disponiveis — so falta renderiza-los no Markdown.
+- Novo estado `customPath` para path livre
+- No Select de categoria, adicionar item `custom` com label "📝 Personalizado"
+- Quando `selectedCategory === 'custom'`, mostrar Input de path livre em vez do slug
+- O `pagePath` usa `customPath` quando categoria e custom
+- Manter compatibilidade com fluxo existente (categorias pre-definidas continuam funcionando)
 
