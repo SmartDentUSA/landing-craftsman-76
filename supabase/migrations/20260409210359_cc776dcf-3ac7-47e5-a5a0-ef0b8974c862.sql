@@ -1,0 +1,6 @@
+UPDATE products_repository SET 
+  resource_cta1 = '{"label": "Avaliação da Atividade Mutagênica", "url": "https://okeogjgqijbfkudfjadz.supabase.co/storage/v1/object/public/resin-documents/resina-smart-print-bio-vitality-1762257560625.pdf", "visible": true}'::jsonb,
+  resource_cta2 = '{"label": "Avaliação de Efeitos Genotóxicos", "url": "https://okeogjgqijbfkudfjadz.supabase.co/storage/v1/object/public/resin-documents/resina-smart-print-bio-vitality-1762261618111.pdf", "visible": true}'::jsonb,
+  resource_cta3 = '{"label": "Avaliação Módulo e Resistência a flexão", "url": "https://okeogjgqijbfkudfjadz.supabase.co/storage/v1/object/public/resin-documents/resina-smart-print-bio-vitality-1762262447628.pdf", "visible": true}'::jsonb,
+  resource_descriptions = '{"cta1": "Teste de Mutação Reversa em Bactérias", "cta2": "Teste do Micronúcleo - ensaio genotóxico", "cta3": "Ensaio de módulo e resistência à flexão conforme ABNT NBR ISO 4049:2017"}'::jsonb
+WHERE id = 'bf091211-09ad-4057-9cb8-d4adf78a442b';
