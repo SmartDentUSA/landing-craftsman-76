@@ -1,24 +1,23 @@
 
 
-## Plano: Permitir edicao livre da URL final no dialogo de publicacao
+## Fix: Publicação com URL personalizada — trimming e link de resultado
 
-### Problema
-Atualmente o usuario so pode escolher entre categorias pre-definidas (produtos, blog, guias, etc.) vindas do `url_structure` do dominio. Nao ha opcao de digitar um path customizado.
+### Problemas identificados
 
-### Solucao
+1. **Trailing space no path**: O `customPath` não é sanitizado — o registro no banco mostra `page_path: "/suport-resurces "` (com espaço no final), o que gera URLs quebradas
+2. **Sem link clicável após publicar**: O toast só mostra texto "está sendo publicada em..." mas não gera um link clicável para o usuário acessar a página publicada
+
+### Alterações
 
 **Arquivo: `src/components/LPPublishDialog.tsx`**
 
-1. Adicionar opcao "Personalizado" no Select de Categoria (alem das categorias do `url_structure`)
-2. Quando "Personalizado" estiver selecionado, mostrar um campo Input para o usuario digitar o path completo (ex: `/qrcode`, `/promo/verao-2026`)
-3. Tornar o campo "URL final" editavel — o usuario pode clicar e editar diretamente o path gerado, independente da categoria
-4. Atualizar `pagePath` e `previewUrl` para refletir o path customizado
+1. **Sanitizar `customPath`**: Aplicar `.trim()` no `pagePath` e `previewUrl` quando `selectedCategory === 'custom'`, e também sanitizar no `onChange` do input
+2. **Toast com link clicável**: Após publicação bem-sucedida, mostrar a URL final como link clicável no toast (usando `description` com a URL completa) e/ou adicionar um botão "Copiar Link" que copia a URL para o clipboard
+3. **Atualizar `publish_status` para `published`**: Após a Edge Function retornar sucesso, atualizar o registro em `cloned_landing_pages` com `publish_status: 'published'`
 
-### Detalhes da implementacao
+### Detalhes
 
-- Novo estado `customPath` para path livre
-- No Select de categoria, adicionar item `custom` com label "📝 Personalizado"
-- Quando `selectedCategory === 'custom'`, mostrar Input de path livre em vez do slug
-- O `pagePath` usa `customPath` quando categoria e custom
-- Manter compatibilidade com fluxo existente (categorias pre-definidas continuam funcionando)
+- No `pagePath` useMemo: adicionar `.trim()` ao resultado do customPath
+- No `handlePublish`: após sucesso da edge function, mostrar toast com `action` contendo botão "Abrir" que abre `previewUrl` em nova aba
+- Sanitizar slug também com `.trim()` por precaução
 
