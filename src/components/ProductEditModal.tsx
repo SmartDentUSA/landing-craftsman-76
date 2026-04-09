@@ -480,7 +480,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         // Landing Page Section controls
         show_in_resources: product.show_in_resources || false,
         selected: product.selected || false,
-        // Resource CTAs - auto-populate from technical_documents if CTAs are empty
+        // Resource CTAs - auto-populate from technical_documents if CTAs are empty (strict FDS/IFU/Perfil rule)
         ...(() => {
           const cta1 = product.resource_cta1 as any;
           const cta2 = product.resource_cta2 as any;
@@ -490,19 +490,25 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
           const docs = (product.technical_documents as TechnicalDocument[]) || [];
           
           if (!hasCtas && docs.length > 0) {
-            // Auto-fill CTAs from technical_documents
-            const makeCta = (doc: TechnicalDocument) => ({ label: doc.nome, url: doc.url_download, visible: true });
-            const makeDesc = (doc: TechnicalDocument) => doc.descricao || doc.nome;
-            return {
-              resource_cta1: docs[0] ? makeCta(docs[0]) : { label: '', url: '', visible: false },
-              resource_cta2: docs[1] ? makeCta(docs[1]) : { label: '', url: '', visible: false },
-              resource_cta3: docs[2] ? makeCta(docs[2]) : { label: '', url: '', visible: false },
-              resource_descriptions: {
-                cta1: docs[0] ? makeDesc(docs[0]) : '',
-                cta2: docs[1] ? makeDesc(docs[1]) : '',
-                cta3: docs[2] ? makeDesc(docs[2]) : '',
-              },
-            };
+            // Auto-fill CTAs ONLY from FDS, IFU, Perfil Técnico documents
+            const fdsDoc = docs.find(d => d.nome?.trim().toLowerCase() === 'fds');
+            const ifuDoc = docs.find(d => d.nome?.trim().toLowerCase() === 'ifu');
+            const perfilDoc = docs.find(d => d.nome?.trim().toLowerCase().includes('perfil'));
+            
+            if (fdsDoc || ifuDoc || perfilDoc) {
+              const makeCta = (doc: TechnicalDocument) => ({ label: doc.nome, url: doc.url_download, visible: true });
+              const makeDesc = (doc: TechnicalDocument) => doc.descricao || doc.nome;
+              return {
+                resource_cta1: fdsDoc ? makeCta(fdsDoc) : { label: '', url: '', visible: false },
+                resource_cta2: ifuDoc ? makeCta(ifuDoc) : { label: '', url: '', visible: false },
+                resource_cta3: perfilDoc ? makeCta(perfilDoc) : { label: '', url: '', visible: false },
+                resource_descriptions: {
+                  cta1: fdsDoc ? makeDesc(fdsDoc) : '',
+                  cta2: ifuDoc ? makeDesc(ifuDoc) : '',
+                  cta3: perfilDoc ? makeDesc(perfilDoc) : '',
+                },
+              };
+            }
           }
           return {
             resource_cta1: cta1 || { label: '', url: '', visible: false },
