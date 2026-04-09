@@ -1271,6 +1271,24 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             transition: all 0.2s ease;
         }
         
+        /* Resources Category Block */
+        .resources-category-block {
+            margin-bottom: 2rem;
+        }
+        .resources-category-block:last-child {
+            margin-bottom: 0;
+        }
+        .resources-category-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--primary-color, #333);
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--primary-color, #0066cc);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
         /* Resources Grid Layout */
         .resources-grid {
             display: grid;
@@ -2272,77 +2290,82 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             </div>
             <div class="offers-content">
                 <div class="desktop-carousel desktop-only">
-                    <div class="resources-grid">
-                        {{#resources_products}}
-                        <div class="offer-card">
-                            {{#image}}
-                            <div class="offer-image-container">
-                                <img src="{{image}}" alt="{{name}}" class="offer-image">
-                            </div>
-                            {{/image}}
-                            <div class="offer-content">
-                                <h4 class="offer-title">{{name}}</h4>
-                                <div class="offer-buttons">
-                                    {{#resource_cta1}}
-                                    {{#visible}}
-                                    <a href="{{url}}" class="button button-secondary offer-link" target="_blank">{{label}}</a>
-                                    {{/visible}}
-                                    {{/resource_cta1}}
-                                    {{#resource_cta2}}
-                                    {{#visible}}
-                                    <a href="{{url}}" class="button button-secondary offer-link" target="_blank">{{label}}</a>
-                                    {{/visible}}
-                                    {{/resource_cta2}}
-                                    {{#resource_cta3}}
-                                    {{#visible}}
-                                    <a href="{{url}}" class="button button-secondary offer-link" target="_blank">{{label}}</a>
-                                    {{/visible}}
-                                    {{/resource_cta3}}
+                    {{#resources_categories}}
+                    <div class="resources-category-block">
+                        <h3 class="resources-category-title">{{category_name}}</h3>
+                        <div class="resources-grid">
+                            {{#products}}
+                            <div class="offer-card">
+                                {{#image}}
+                                <div class="offer-image-container">
+                                    <img src="{{image}}" alt="{{name}}" class="offer-image">
+                                </div>
+                                {{/image}}
+                                <div class="offer-content">
+                                    <h4 class="offer-title">{{name}}</h4>
+                                    <div class="offer-buttons">
+                                        {{#resource_cta1}}
+                                        {{#visible}}
+                                        <a href="{{url}}" class="button button-secondary offer-link" target="_blank">{{label}}</a>
+                                        {{/visible}}
+                                        {{/resource_cta1}}
+                                        {{#resource_cta2}}
+                                        {{#visible}}
+                                        <a href="{{url}}" class="button button-secondary offer-link" target="_blank">{{label}}</a>
+                                        {{/visible}}
+                                        {{/resource_cta2}}
+                                        {{#resource_cta3}}
+                                        {{#visible}}
+                                        <a href="{{url}}" class="button button-secondary offer-link" target="_blank">{{label}}</a>
+                                        {{/visible}}
+                                        {{/resource_cta3}}
+                                    </div>
                                 </div>
                             </div>
+                            {{/products}}
                         </div>
-                        {{/resources_products}}
                     </div>
+                    {{/resources_categories}}
                 </div>
 
                 <!-- Mobile Carousel -->
                 <div class="mobile-carousel mobile-only">
-                    <div class="carousel-track">
-                        {{#resources_products}}
-                        <div class="offer-card">
-                            {{#image}}
-                            <div class="offer-image-container">
-                                <img src="{{image}}" alt="{{name}}" class="offer-image">
-                            </div>
-                            {{/image}}
-                            <div class="offer-content">
-                                <h4 class="offer-title">{{name}}</h4>
-                                <div class="offer-buttons">
-                                    {{#resource_cta1}}
-                                    {{#visible}}
-                                    <a href="{{url}}" class="button button-secondary offer-link" target="_blank">{{label}}</a>
-                                    {{/visible}}
-                                    {{/resource_cta1}}
-                                    {{#resource_cta2}}
-                                    {{#visible}}
-                                    <a href="{{url}}" class="button button-secondary offer-link" target="_blank">{{label}}</a>
-                                    {{/visible}}
-                                    {{/resource_cta2}}
-                                    {{#resource_cta3}}
-                                    {{#visible}}
-                                    <a href="{{url}}" class="button button-secondary offer-link" target="_blank">{{label}}</a>
-                                    {{/visible}}
-                                    {{/resource_cta3}}
+                    {{#resources_categories}}
+                    <div class="resources-category-block">
+                        <h3 class="resources-category-title">{{category_name}}</h3>
+                        <div class="carousel-track">
+                            {{#products}}
+                            <div class="offer-card">
+                                {{#image}}
+                                <div class="offer-image-container">
+                                    <img src="{{image}}" alt="{{name}}" class="offer-image">
+                                </div>
+                                {{/image}}
+                                <div class="offer-content">
+                                    <h4 class="offer-title">{{name}}</h4>
+                                    <div class="offer-buttons">
+                                        {{#resource_cta1}}
+                                        {{#visible}}
+                                        <a href="{{url}}" class="button button-secondary offer-link" target="_blank">{{label}}</a>
+                                        {{/visible}}
+                                        {{/resource_cta1}}
+                                        {{#resource_cta2}}
+                                        {{#visible}}
+                                        <a href="{{url}}" class="button button-secondary offer-link" target="_blank">{{label}}</a>
+                                        {{/visible}}
+                                        {{/resource_cta2}}
+                                        {{#resource_cta3}}
+                                        {{#visible}}
+                                        <a href="{{url}}" class="button button-secondary offer-link" target="_blank">{{label}}</a>
+                                        {{/visible}}
+                                        {{/resource_cta3}}
+                                    </div>
                                 </div>
                             </div>
+                            {{/products}}
                         </div>
-                        {{/resources_products}}
                     </div>
-                    <div class="carousel-controls">
-                        {{#resources_products}}
-                        <button class="carousel-dot {{#first}}active{{/first}}"></button>
-                        {{/resources_products}}
-                    </div>
+                    {{/resources_categories}}
                 </div>
             </div>
         </div>
@@ -3512,20 +3535,45 @@ export const generatePreviewHTML = async (data: any): Promise<string> => {
       .filter((offer: any) => offer.show_in_resources === true)
       .map((offer: any, index: number) => ({
         ...offer,
-        // ✨ COMPLETE PRODUCT DATA MAPPINGS FOR RESOURCES
         features: offer.features || [],
         benefits: offer.benefits || [],
         technical_specifications: offer.technical_specifications || [],
         target_audience: offer.target_audience || [],
         market_keywords: offer.market_keywords || [],
         search_intent_keywords: offer.search_intent_keywords || [],
-        // Resource CTAs with complete mapping
         resource_cta1: offer.resource_cta1 || { url: '', label: '', visible: false },
         resource_cta2: offer.resource_cta2 || { url: '', label: '', visible: false },
         resource_cta3: offer.resource_cta3 || { url: '', label: '', visible: false },
         resource_descriptions: offer.resource_descriptions || { cta1: '', cta2: '', cta3: '' },
-        first: index === 0 // Flag for carousel dots
+        first: index === 0
       })),
+    
+    resources_categories: (() => {
+      const resourceOffers = (data.schema?.offers || []).filter((offer: any) => offer.show_in_resources === true);
+      const grouped: Record<string, any[]> = {};
+      resourceOffers.forEach((offer: any, index: number) => {
+        const cat = offer.category || 'Outros';
+        if (!grouped[cat]) grouped[cat] = [];
+        grouped[cat].push({
+          ...offer,
+          features: offer.features || [],
+          benefits: offer.benefits || [],
+          technical_specifications: offer.technical_specifications || [],
+          target_audience: offer.target_audience || [],
+          market_keywords: offer.market_keywords || [],
+          search_intent_keywords: offer.search_intent_keywords || [],
+          resource_cta1: offer.resource_cta1 || { url: '', label: '', visible: false },
+          resource_cta2: offer.resource_cta2 || { url: '', label: '', visible: false },
+          resource_cta3: offer.resource_cta3 || { url: '', label: '', visible: false },
+          resource_descriptions: offer.resource_descriptions || { cta1: '', cta2: '', cta3: '' },
+          first: index === 0
+        });
+      });
+      return Object.keys(grouped).sort().map(cat => ({
+        category_name: cat,
+        products: grouped[cat]
+      }));
+    })(),
     
     // ✅ Generate Schema.org for preview
     schema_json_ld: await (async () => {
@@ -4072,28 +4120,20 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
     };
     
     // Process resources products - only products with show_in_resources = true
-    processedData.resources_products = data.schema?.offers?.filter((offer: any) => offer.show_in_resources === true).map((offer: any, index: number) => {
+    const processResourceOffer = (offer: any, index: number) => {
       let processedOffer = { ...offer };
-      
-      // ✨ COMPLETE PRODUCT DATA MAPPINGS FOR RESOURCES
       processedOffer.features = offer.features || [];
       processedOffer.benefits = offer.benefits || [];
       processedOffer.technical_specifications = offer.technical_specifications || [];
       processedOffer.target_audience = offer.target_audience || [];
       processedOffer.market_keywords = offer.market_keywords || [];
       processedOffer.search_intent_keywords = offer.search_intent_keywords || [];
-      
-      // ✨ COMPLETE RESOURCE CTAs MAPPINGS  
       processedOffer.resource_cta1 = offer.resource_cta1 || { url: '', label: '', visible: false };
       processedOffer.resource_cta2 = offer.resource_cta2 || { url: '', label: '', visible: false };
       processedOffer.resource_cta3 = offer.resource_cta3 || { url: '', label: '', visible: false };
       processedOffer.resource_descriptions = offer.resource_descriptions || { cta1: '', cta2: '', cta3: '' };
-      
-      // Check if price is zero for "Pedir orçamento" logic  
       const priceValue = parseFloat(offer.price?.toString().replace(/[^\d.,]/g, '').replace(',', '.') || '0');
       processedOffer.isPriceZero = priceValue === 0;
-      
-      // Handle image URL processing (Cloudflare support)
       if (offer.image) {
         if (offer.image.includes('ACCOUNT_HASH_PLACEHOLDER') && typeof window !== 'undefined') {
           const accountHash = localStorage.getItem('cloudflareAccountHash');
@@ -4102,12 +4142,24 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
           }
         }
       }
-      
-      // Add first flag for carousel
       processedOffer.first = index === 0;
-      
       return processedOffer;
-    }) || [];
+    };
+
+    const resourceOffers = data.schema?.offers?.filter((offer: any) => offer.show_in_resources === true) || [];
+    processedData.resources_products = resourceOffers.map(processResourceOffer);
+    
+    // Group by category
+    const grouped: Record<string, any[]> = {};
+    resourceOffers.forEach((offer: any, index: number) => {
+      const cat = offer.category || 'Outros';
+      if (!grouped[cat]) grouped[cat] = [];
+      grouped[cat].push(processResourceOffer(offer, index));
+    });
+    processedData.resources_categories = Object.keys(grouped).sort().map(cat => ({
+      category_name: cat,
+      products: grouped[cat]
+    }));
   }
   
   // Process advisory section
