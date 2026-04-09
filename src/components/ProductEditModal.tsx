@@ -480,12 +480,37 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         // Landing Page Section controls
         show_in_resources: product.show_in_resources || false,
         selected: product.selected || false,
-        // Resource CTAs
-        resource_cta1: product.resource_cta1 || { label: '', url: '', visible: false },
-        resource_cta2: product.resource_cta2 || { label: '', url: '', visible: false },
-        resource_cta3: product.resource_cta3 || { label: '', url: '', visible: false },
-        // Resource descriptions
-        resource_descriptions: product.resource_descriptions || { cta1: '', cta2: '', cta3: '' },
+        // Resource CTAs - auto-populate from technical_documents if CTAs are empty
+        ...(() => {
+          const cta1 = product.resource_cta1 as any;
+          const cta2 = product.resource_cta2 as any;
+          const cta3 = product.resource_cta3 as any;
+          const descs = (product.resource_descriptions as any) || { cta1: '', cta2: '', cta3: '' };
+          const hasCtas = (cta1?.visible && cta1?.label) || (cta2?.visible && cta2?.label) || (cta3?.visible && cta3?.label);
+          const docs = (product.technical_documents as TechnicalDocument[]) || [];
+          
+          if (!hasCtas && docs.length > 0) {
+            // Auto-fill CTAs from technical_documents
+            const makeCta = (doc: TechnicalDocument) => ({ label: doc.nome, url: doc.url_download, visible: true });
+            const makeDesc = (doc: TechnicalDocument) => doc.descricao || doc.nome;
+            return {
+              resource_cta1: docs[0] ? makeCta(docs[0]) : { label: '', url: '', visible: false },
+              resource_cta2: docs[1] ? makeCta(docs[1]) : { label: '', url: '', visible: false },
+              resource_cta3: docs[2] ? makeCta(docs[2]) : { label: '', url: '', visible: false },
+              resource_descriptions: {
+                cta1: docs[0] ? makeDesc(docs[0]) : '',
+                cta2: docs[1] ? makeDesc(docs[1]) : '',
+                cta3: docs[2] ? makeDesc(docs[2]) : '',
+              },
+            };
+          }
+          return {
+            resource_cta1: cta1 || { label: '', url: '', visible: false },
+            resource_cta2: cta2 || { label: '', url: '', visible: false },
+            resource_cta3: cta3 || { label: '', url: '', visible: false },
+            resource_descriptions: descs,
+          };
+        })(),
         // Offer discount CTA
         offer_discount_cta: product.offer_discount_cta || { label: 'Comprar com Desconto', url: '', visible: false },
         // FAQ
