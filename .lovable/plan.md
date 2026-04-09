@@ -1,39 +1,44 @@
 
+Plano: corrigir o Vitality e impedir que os CTAs voltem a ficar vazios
 
-## Plano: Popular CTAs com documentos técnicos disponíveis (não apenas IFU/FDS)
+Diagnóstico do código
+- O editor de produto (`src/components/ProductEditModal.tsx`) só mostra os campos a partir do que já está salvo em `products_repository`: `show_in_resources`, `selected`, `resource_cta1`, `resource_cta2`, `resource_cta3` e `resource_descriptions`.
+- Ele não converte `technical_documents` em CTA automaticamente.
+- A landing (`src/pages/Editor.tsx` + `src/lib/template-engine.ts`) também só renderiza CTAs que já vierem nesses campos.
+- Então, se o Vitality continua vazio no editor, o problema é de dado persistido/registro errado, não do HTML da seção.
 
-### Problema
-O script anterior só mapeava documentos com nome exato "IFU" ou "FDS". Os 9 produtos restantes (incluindo Bio Vitality com 13 documentos) possuem laudos técnicos com nomes descritivos que não foram reconhecidos.
+O que vou fazer
+1. Validar o registro correto no banco
+- Conferir o produto exato “Resina 3D Smart Print Bio Vitality” em `products_repository`.
+- Verificar se existe duplicata com nome parecido/mesmo slug/mesma URL.
+- Ler estes campos no registro real: `technical_documents`, `show_in_resources`, `selected`, `resource_cta1`, `resource_cta2`, `resource_cta3`, `resource_descriptions`.
 
-### Solução
-Executar um novo script batch que popula os CTAs usando os **primeiros documentos disponíveis** no array `technical_documents`, independente do nome:
+2. Corrigir os dados do produto
+- Atualizar o registro correto para:
+  - `show_in_resources = true`
+  - `selected = true` se ele também deve aparecer em “Ofertas”
+  - `resource_cta1/2/3` usando os documentos técnicos disponíveis
+  - `resource_descriptions` com os nomes/descrições dos documentos
+- Se houver duplicata, corrigir o item certo e identificar o item incorreto para evitar nova edição do produto errado.
 
-| CTA | Conteúdo |
-|-----|----------|
-| CTA 1 | 1º documento técnico disponível |
-| CTA 2 | 2º documento técnico disponível |
-| CTA 3 | 3º documento técnico disponível |
+3. Blindar o editor para não depender só do batch
+- Em `src/components/ProductEditModal.tsx`, adicionar fallback/autopreenchimento:
+  - se o produto tiver `technical_documents`
+  - e os CTAs estiverem vazios
+  - o modal sugere/preenche CTA 1, CTA 2 e CTA 3 automaticamente
+- Isso evita que produtos com documentos técnicos apareçam “vazios” mesmo quando o batch falhar ou pegar nomes diferentes.
 
-### Produtos afetados (9)
-- Resina 3D Smart Print Bio Bite Splint +Flex (2 docs)
-- Resina 3D Smart Print Bio Bite Splint Clear (10 docs)
-- Resina 3D Smart Print Bio Denture (1 doc)
-- Resina 3D Smart Print Bio Temp B1 (1 doc)
-- **Resina 3D Smart Print Bio Vitality (13 docs)**
-- Resina 3D Smart Print Modelo Ocre (2 docs)
-- Resina 3D Smart Print Try-In Calcinável (1 doc)
-- Resina Smart 3D Print Bio Clear Guide (3 docs)
-- Resina Smart Print Modelo Láqua (2 docs)
+4. Validar na landing
+- Confirmar que o produto aparece com botões em “Recursos e Downloads”.
+- Confirmar que aparece em “Ofertas” quando `selected` estiver ativo.
+- Verificar o fluxo completo: repositório → editor do produto → editor da landing → preview final.
 
-### Execução
-Script Python via `code--exec` que para cada produto:
-1. Lê `technical_documents[0]` → `resource_cta1 = {label: nome, url: url_download, visible: true}`
-2. Lê `technical_documents[1]` → `resource_cta2` (se existir)
-3. Lê `technical_documents[2]` → `resource_cta3` (se existir)
-4. Atualiza `resource_descriptions` com as descrições dos documentos
-5. Faz PATCH via Supabase REST API
+Arquivos envolvidos
+- `src/components/ProductEditModal.tsx`
+- `src/pages/Editor.tsx`
+- `src/lib/template-engine.ts`
 
-### Resultado
-- Todos os 9 produtos terão CTAs ativos com links diretos para seus documentos técnicos
-- Os botões aparecerão imediatamente na seção "Recursos e Downloads"
-
+Resultado esperado
+- O Vitality abrirá no editor com os CTAs preenchidos.
+- O switch “Mostrar na seção Recursos e Downloads” ficará coerente com os documentos existentes.
+- Os botões aparecerão na landing, e também em “Ofertas” se essa flag estiver habilitada.
