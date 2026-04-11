@@ -3,6 +3,12 @@
 // Gera schema de autores/KOLs para SEO e Google Knowledge Graph
 // ═══════════════════════════════════════════════════════════
 
+export interface PersonIdentifier {
+  name: string;
+  value: string;
+  url: string;
+}
+
 export interface PersonSchemaData {
   id: string;
   full_name: string;
@@ -17,13 +23,20 @@ export interface PersonSchemaData {
     name: string;
     url: string;
   };
-  // ✅ MELHORIA 2: Campos expandidos para Person schema completo
+  // Campos expandidos para Person schema completo
   alumniOf?: string;
-  honorificPrefix?: string; // Dr., Prof., etc.
+  honorificPrefix?: string;
   knowsAbout?: string[];
   award?: string[];
   nationality?: string;
   worksFor?: { name: string; url?: string };
+  // Identificadores acadêmicos verificados
+  orcid?: string;
+  scopusId?: string;
+  googleScholarId?: string;
+  fapespId?: string;
+  dimensionsUrl?: string;
+  identifier?: PersonIdentifier[];
 }
 
 /**
