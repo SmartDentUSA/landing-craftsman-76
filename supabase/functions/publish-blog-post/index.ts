@@ -7,6 +7,8 @@ import { fetchLocalBusinessData, generateLocalBusinessSchema, type LocalBusiness
 import { generateHowToSchema, type ProductWithWorkflow } from "../_shared/howto-schema-helper.ts";
 // ✅ FASE 3: Person Schema para E-E-A-T
 import { fetchKOLData, generatePersonSchema, createAuthorReference, generatePersonMicrodataHTML, type PersonSchemaData } from "../_shared/person-schema-helper.ts";
+// ✅ Autores verificados com credenciais completas
+import { getVerifiedAuthor, generateVerifiedPersonSchema } from "../_shared/verified-authors.ts";
 // ✅ FASE 6: FAQ Schema Helper centralizado
 import { generateFAQPageSchema, type FAQItem } from "../_shared/faq-schema-helper.ts";
 // ✅ FASE 7: ItemList Schema Helper centralizado
@@ -32,7 +34,7 @@ import {
 } from "../_shared/authority-data-helper.ts";
 
 // ✅ SEO Fine-Tuning 10/10 - Shared Module
-import { deduplicateKeywords } from "../_shared/seo-fine-tuning.ts";
+import { deduplicateKeywords, generateSmartDentOrganizationSchema } from "../_shared/seo-fine-tuning.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
