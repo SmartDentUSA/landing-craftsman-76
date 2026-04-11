@@ -180,16 +180,42 @@ serve(async (req) => {
     // ✅ FASE 3: Buscar dados do autor KOL se existir
     currentAuthorData = null;
     if (blogPost.author_kol_id) {
-      try {
-        currentAuthorData = await fetchKOLData(supabase, blogPost.author_kol_id, {
-          name: currentLocalBusinessData.company_name,
-          url: currentLocalBusinessData.website_url || 'https://smartdent.com.br'
-        });
-        if (currentAuthorData) {
-          console.log(`✅ [Blog Post] Author KOL: ${currentAuthorData.full_name} (${currentAuthorData.specialty || 'sem especialidade'})`);
+      // Primeiro: verificar se é um autor verificado com credenciais completas
+      const verifiedAuthor = getVerifiedAuthor(blogPost.author_kol_id);
+      if (verifiedAuthor) {
+        // Usar dados verificados estáticos (mais completos que o banco)
+        currentAuthorData = {
+          id: verifiedAuthor.id,
+          full_name: verifiedAuthor.name,
+          specialty: verifiedAuthor.specialty,
+          mini_cv: verifiedAuthor.miniBio,
+          website_url: verifiedAuthor.website,
+          lattes_url: verifiedAuthor.lattes,
+          orcid: verifiedAuthor.orcid,
+          googleScholarId: verifiedAuthor.googleScholar?.match(/user=([^&]+)/)?.[1],
+          identifier: verifiedAuthor.identifiers,
+          affiliation: {
+            name: "Smart Dent",
+            url: "https://smartdent.com.br"
+          },
+          honorificPrefix: verifiedAuthor.academicTitle || undefined,
+          worksFor: verifiedAuthor.institution ? { name: verifiedAuthor.institution, url: verifiedAuthor.institutionUrl } : undefined,
+          alumniOf: verifiedAuthor.institution,
+        };
+        console.log(`✅ [Blog Post] Autor VERIFICADO: ${verifiedAuthor.name} (${verifiedAuthor.identifiers.length} identificadores)`);
+      } else {
+        // Fallback: buscar do banco
+        try {
+          currentAuthorData = await fetchKOLData(supabase, blogPost.author_kol_id, {
+            name: currentLocalBusinessData.company_name,
+            url: currentLocalBusinessData.website_url || 'https://smartdent.com.br'
+          });
+          if (currentAuthorData) {
+            console.log(`✅ [Blog Post] Author KOL (banco): ${currentAuthorData.full_name}`);
+          }
+        } catch (error) {
+          console.error('⚠️ [Blog Post] Erro ao buscar autor KOL:', error);
         }
-      } catch (error) {
-        console.error('⚠️ [Blog Post] Erro ao buscar autor KOL:', error);
       }
     }
 
