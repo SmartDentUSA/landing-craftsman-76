@@ -1,34 +1,57 @@
 
 
-## Plano: Corrigir CTAs do Vitality e dos 9 produtos — aplicar regra FDS/IFU/Perfil corretamente
+## Plano: Credenciais de Autores Verificadas e Perfil Institucional E-E-A-T
 
-### Problema raiz
-O Bio Vitality **tem** IFU e FDS (documentos 11 e 12 de 13), mas os scripts anteriores falharam porque:
-- O 1o script procurava `nome = 'FDS'` e `nome = 'IFU'` mas iterava apenas os primeiros documentos
-- O 2o script ignorou a regra e pegou os 3 primeiros documentos (laudos genéricos)
+### Contexto
+O projeto gera HTML via edge functions (Supabase) para landing pages, blogs e SPIN pages. O sistema de Person Schema atual (`supabase/functions/_shared/person-schema-helper.ts`) busca dados de KOLs do banco (`key_opinion_leaders`), com campos limitados. Os autores verificados (Weber Ricci, Marcelo Del Guerra, Marcelo Cestari) e o perfil institucional Smart Dent precisam ser integrados como dados estáticos de alta fidelidade para E-E-A-T.
 
-### Estado atual (errado)
-| CTA | Conteudo atual | Deveria ser |
-|-----|---------------|-------------|
-| CTA 1 | "Avaliacao da Atividade Mutagenica" | **FDS** |
-| CTA 2 | "Avaliacao de Efeitos Genotoxicos" | **IFU** |
-| CTA 3 | "Avaliacao Modulo e Resistencia a flexao" | Vazio (nao tem Perfil Tecnico) |
+### O que sera feito
 
-### Correcao
+**1. Criar `src/data/authors.ts`**
+- Todos os 4 registros conforme fornecido: WEBER_RICCI, MARCELO_DEL_GUERRA, MARCELO_CESTARI, SMART_DENT_TEAM
+- Incluir VITALITY_PRODUCT com dados verificados
+- Export consolidado AUTHORS
 
-**1. Script batch via insert tool** — para TODOS os 56 produtos das categorias alvo:
-- Varrer o array `technical_documents` COMPLETO (nao so os 3 primeiros)
-- CTA 1 = documento com `nome = 'FDS'` (busca case-insensitive)
-- CTA 2 = documento com `nome = 'IFU'` (busca case-insensitive)
-- CTA 3 = documento com `nome` contendo "Perfil" (busca case-insensitive)
-- Se nao encontrar o documento especifico, setar `{visible: false}`
+**2. Criar `src/lib/authorSchemas.ts`**
+- `generatePersonSchema(author)` — JSON-LD completo com identifiers, sameAs, alumniOf, worksFor
+- `generateOrganizationSchema()` — Smart Dent com ambos fundadores
+- `generateVitalityProductSchema()` — MedicalDevice schema
+- `getArticleSchemas(authorId)` — retorna array de schemas por autor (usando imports diretos, sem require)
 
-**2. Corrigir fallback no `ProductEditModal.tsx`**
-- Remover a logica de auto-preenchimento generico (que pega qualquer documento)
-- O fallback so deve sugerir CTAs se encontrar documentos com nome exato "FDS", "IFU" ou contendo "Perfil"
+**3. Criar `src/components/AuthorCard.tsx`**
+- Componente React/Tailwind com variantes "mini" e "full"
+- Badges coloridos por tipo de identificador acadêmico (ORCID, Scopus, Lattes, etc.)
+- Links sociais e acadêmicos
 
-### Resultado esperado para o Vitality
-- CTA 1: FDS (doc 12) com link correto
-- CTA 2: IFU (doc 11) com link correto
-- CTA 3: Vazio (nao tem Perfil Tecnico)
+**4. Expandir `supabase/functions/_shared/person-schema-helper.ts`**
+- Adicionar campos ao `PersonSchemaData`: `orcid`, `scopusId`, `googleScholarId`, `fapespId`, `dimensionsUrl`, `identifier[]`
+- Atualizar `generatePersonSchema()` para incluir `identifier` (PropertyValue) e expandir `sameAs` com ORCID, Scopus, Dimensions, Google Scholar
+- Isso faz com que blogs e landing pages geradas pelas edge functions tambem emitam schemas enriquecidos quando o KOL tiver esses campos no banco
+
+**5. Atualizar geradores de HTML nas edge functions**
+- Em `publish-blog-post/index.ts`, `clone-landing-page/index.ts` e `generate-spin-landing-page/generateHTML.ts`: quando o autor for um dos autores verificados (por ID), usar os dados estáticos completos de `authors.ts` em vez de apenas os dados do banco
+- Nota: como as edge functions rodam no Deno (Supabase), os dados dos autores verificados serao duplicados num arquivo `_shared/verified-authors.ts` compatível com Deno (sem path aliases `@/`)
+
+**6. Injetar Organization Schema globalmente**
+- Atualizar `seo-fine-tuning.ts` para exportar uma funcao `generateSmartDentOrganizationSchema()` com o schema completo (ambos fundadores, Wikidata, foundingLocation NUMA/USP)
+- Os geradores de HTML que ja usam `seo-fine-tuning.ts` passarao a incluir o Organization schema no `@graph`
+
+### Arquivos criados
+- `src/data/authors.ts`
+- `src/lib/authorSchemas.ts`
+- `src/components/AuthorCard.tsx`
+- `supabase/functions/_shared/verified-authors.ts`
+
+### Arquivos editados
+- `supabase/functions/_shared/person-schema-helper.ts` (expandir interface e schema)
+- `supabase/functions/_shared/seo-fine-tuning.ts` (Organization schema global)
+- `supabase/functions/publish-blog-post/index.ts` (usar autores verificados)
+- `supabase/functions/clone-landing-page/index.ts` (usar autores verificados)
+- `supabase/functions/generate-spin-landing-page/generateHTML.ts` (usar autores verificados)
+
+### Detalhes tecnicos
+- Edge functions usam Deno — o arquivo `verified-authors.ts` sera independente (sem path aliases)
+- O `AuthorCard` usa Tailwind + shadcn/ui Badge, sem dependencias externas
+- A funcao `getArticleSchemas` usara imports estaticos (nao `require`) para compatibilidade ESM
+- Os IDs dos autores verificados serao usados como chave de lookup nos geradores
 
