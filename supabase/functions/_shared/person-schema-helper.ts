@@ -119,7 +119,17 @@ export function generatePersonSchema(data: PersonSchemaData): any {
     personSchema.sameAs = sameAs;
   }
 
-  // ✅ MELHORIA 2: affiliation E worksFor
+  // Identificadores acadêmicos verificados (PropertyValue)
+  if (data.identifier && data.identifier.length > 0) {
+    personSchema.identifier = data.identifier.map(id => ({
+      "@type": "PropertyValue",
+      "name": id.name,
+      "value": id.value,
+      "url": id.url
+    }));
+  }
+
+  // affiliation E worksFor
   if (data.affiliation) {
     personSchema.affiliation = {
       "@type": "Organization",
