@@ -51,7 +51,11 @@ export function generatePersonSchema(data: PersonSchemaData): any {
     data.lattes_url,
     data.website_url,
     data.instagram_url,
-    data.youtube_url
+    data.youtube_url,
+    data.orcid ? `https://orcid.org/${data.orcid}` : undefined,
+    data.googleScholarId ? `https://scholar.google.com/citations?user=${data.googleScholarId}` : undefined,
+    data.fapespId ? `https://bv.fapesp.br/pt/pesquisador/${data.fapespId}/` : undefined,
+    data.dimensionsUrl,
   ].filter(Boolean);
 
   const personSchema: any = {
@@ -60,7 +64,7 @@ export function generatePersonSchema(data: PersonSchemaData): any {
     "name": data.full_name
   };
 
-  // ✅ Prefixo honorífico (Dr., Prof.)
+  // Prefixo honorífico (Dr., Prof.)
   if (data.honorificPrefix) {
     personSchema.honorificPrefix = data.honorificPrefix;
   }
