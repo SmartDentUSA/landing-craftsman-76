@@ -7,6 +7,8 @@ import { generateHowToSchema, fetchProductsWithWorkflow, type ProductWithWorkflo
 import { generateLandingPageBreadcrumbs, slugify as breadcrumbSlugify } from "../_shared/breadcrumb-schema-helper.ts";
 // ✅ FASE 3: Person Schema Helper (E-E-A-T)
 import { generatePersonSchema, fetchAllApprovedKOLs, type PersonSchemaData } from "../_shared/person-schema-helper.ts";
+// ✅ Autores verificados com credenciais completas
+import { getVerifiedAuthor, generateVerifiedPersonSchema, generateSmartDentOrganizationSchema as getVerifiedOrgSchema } from "../_shared/verified-authors.ts";
 // ✅ FASE 6: FAQPage Schema Helper
 import { generateFAQPageSchema, type FAQItem } from "../_shared/faq-schema-helper.ts";
 // ✅ FASE 7: ItemList Schema Helper
