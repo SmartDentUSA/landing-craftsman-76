@@ -10,6 +10,8 @@ import { generateVideoObjectSchemas, generateDocumentSchemas, type SystemBEnrich
 import { generateHowToSchema, type ProductWithWorkflow } from '../_shared/howto-schema-helper.ts';
 // ✅ FASE 3: Person Schema para E-E-A-T
 import { generatePersonSchema, type PersonSchemaData } from '../_shared/person-schema-helper.ts';
+// ✅ Autores verificados com credenciais completas
+import { getVerifiedAuthor, generateVerifiedPersonSchema, generateSmartDentOrganizationSchema as getVerifiedOrgSchema } from '../_shared/verified-authors.ts';
 // ✅ FASE 6: FAQ Schema Helper centralizado
 import { generateFAQPageSchema, type FAQItem } from '../_shared/faq-schema-helper.ts';
 // ✅ FASE 7: ItemList Schema Helper centralizado

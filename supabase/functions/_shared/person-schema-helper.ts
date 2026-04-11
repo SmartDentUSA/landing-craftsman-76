@@ -3,6 +3,12 @@
 // Gera schema de autores/KOLs para SEO e Google Knowledge Graph
 // ═══════════════════════════════════════════════════════════
 
+export interface PersonIdentifier {
+  name: string;
+  value: string;
+  url: string;
+}
+
 export interface PersonSchemaData {
   id: string;
   full_name: string;
@@ -17,13 +23,20 @@ export interface PersonSchemaData {
     name: string;
     url: string;
   };
-  // ✅ MELHORIA 2: Campos expandidos para Person schema completo
+  // Campos expandidos para Person schema completo
   alumniOf?: string;
-  honorificPrefix?: string; // Dr., Prof., etc.
+  honorificPrefix?: string;
   knowsAbout?: string[];
   award?: string[];
   nationality?: string;
   worksFor?: { name: string; url?: string };
+  // Identificadores acadêmicos verificados
+  orcid?: string;
+  scopusId?: string;
+  googleScholarId?: string;
+  fapespId?: string;
+  dimensionsUrl?: string;
+  identifier?: PersonIdentifier[];
 }
 
 /**
@@ -38,7 +51,11 @@ export function generatePersonSchema(data: PersonSchemaData): any {
     data.lattes_url,
     data.website_url,
     data.instagram_url,
-    data.youtube_url
+    data.youtube_url,
+    data.orcid ? `https://orcid.org/${data.orcid}` : undefined,
+    data.googleScholarId ? `https://scholar.google.com/citations?user=${data.googleScholarId}` : undefined,
+    data.fapespId ? `https://bv.fapesp.br/pt/pesquisador/${data.fapespId}/` : undefined,
+    data.dimensionsUrl,
   ].filter(Boolean);
 
   const personSchema: any = {
@@ -47,7 +64,7 @@ export function generatePersonSchema(data: PersonSchemaData): any {
     "name": data.full_name
   };
 
-  // ✅ Prefixo honorífico (Dr., Prof.)
+  // Prefixo honorífico (Dr., Prof.)
   if (data.honorificPrefix) {
     personSchema.honorificPrefix = data.honorificPrefix;
   }
@@ -102,7 +119,17 @@ export function generatePersonSchema(data: PersonSchemaData): any {
     personSchema.sameAs = sameAs;
   }
 
-  // ✅ MELHORIA 2: affiliation E worksFor
+  // Identificadores acadêmicos verificados (PropertyValue)
+  if (data.identifier && data.identifier.length > 0) {
+    personSchema.identifier = data.identifier.map(id => ({
+      "@type": "PropertyValue",
+      "name": id.name,
+      "value": id.value,
+      "url": id.url
+    }));
+  }
+
+  // affiliation E worksFor
   if (data.affiliation) {
     personSchema.affiliation = {
       "@type": "Organization",

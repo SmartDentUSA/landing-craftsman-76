@@ -472,3 +472,69 @@ export function generateHreflangHTML(
     .map(tag => `<link rel="alternate" hreflang="${tag.lang}" href="${tag.url}">`)
     .join('\n  ');
 }
+
+// ============================================
+// H. Smart Dent Organization Schema (E-E-A-T global)
+// ============================================
+
+/**
+ * Gera Organization Schema completo para Smart Dent
+ * Inclui ambos fundadores, Wikidata, foundingLocation NUMA/USP
+ * Para injeção no @graph de todas as páginas
+ */
+export function generateSmartDentOrganizationSchema(): Record<string, unknown> {
+  return {
+    "@type": "Organization",
+    name: "Smart Dent",
+    legalName: "MMTech Projetos Tecnológicos Importação e Exportação Ltda.",
+    foundingDate: "2009",
+    description: "Spin-off universitária da EESC/USP São Carlos. Pioneira em CAD/CAM e resinas 3D odontológicas no Brasil.",
+    url: "https://smartdent.com.br",
+    sameAs: [
+      "https://www.wikidata.org/entity/Q138636902",
+      "https://br.linkedin.com/company/smartdent-dental-cad-cam",
+      "https://www.instagram.com/smartdentoficial",
+      "https://bv.fapesp.br/pt/pesquisador/1694/marcelo-del-guerra/",
+    ],
+    founders: [
+      {
+        "@type": "Person",
+        name: "Dr. Marcelo Del Guerra",
+        description: "PhD Engenharia de Produção Mecânica, EESC/USP (2009). FAPESP ID 1694.",
+        sameAs: "https://scholar.google.com/citations?user=0sKZ0wMAAAAJ&hl=pt-BR",
+      },
+      {
+        "@type": "Person",
+        name: "Marcelo Cestari",
+        description: "Diretor MMTech. 1.343 citações Google Scholar. Engenharia de Materiais.",
+        sameAs: "https://scholar.google.com/citations?hl=pt-BR&user=5vx3EBsAAAAJ",
+      },
+    ],
+    foundingLocation: {
+      "@type": "Place",
+      name: "Núcleo de Manufatura Avançada (NUMA) — EESC/USP São Carlos",
+      address: {
+        "@type": "PostalAddress",
+        addressLocality: "São Carlos",
+        addressRegion: "SP",
+        addressCountry: "BR",
+      },
+    },
+    address: {
+      "@type": "PostalAddress",
+      streetAddress: "Rua Dr. Procópio de Tolêdo Malta, 62",
+      addressLocality: "São Carlos",
+      addressRegion: "SP",
+      postalCode: "13562-291",
+      addressCountry: "BR",
+    },
+    telephone: "+55-16-3415-0530",
+    knowsAbout: [
+      "CAD/CAM Dental",
+      "Impressão 3D Odontológica",
+      "Resinas 3D Odontológicas",
+      "Scanners Intraorais",
+      "Odontologia Digital",
+    ],
+  };
+}
