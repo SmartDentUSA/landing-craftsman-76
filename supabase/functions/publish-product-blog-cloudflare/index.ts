@@ -863,6 +863,9 @@ function generateProductBlogHTML(options: {
     schemas.push(faqSchema as any);
   }
 
+  // ✅ E-E-A-T: Organization Schema completo (fundadores, Wikidata, FDA, ANVISA)
+  schemas.push(generateSmartDentOrganizationSchema() as any);
+
   // PREÇOS REMOVIDOS - blogs não devem conter preços para evitar retrabalho em reajustes
 
   // Extract AI topic from keywords
