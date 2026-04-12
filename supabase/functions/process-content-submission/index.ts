@@ -606,8 +606,13 @@ function linkEntitiesToKnowledgeGraph(entities: any, kg: any): any {
 }
 
 function generateSchemaJsonLd(submission: any, seo: any, entities: any, kg: any): string {
-  const schema: any = {
-    '@context': 'https://schema.org',
+  const graph: any[] = [];
+
+  // ✅ E-E-A-T: Organization Schema completo (fundadores, Wikidata, FDA, ANVISA)
+  graph.push(generateSmartDentOrganizationSchema());
+
+  // WebPage schema
+  const webPageSchema: any = {
     '@type': 'WebPage',
     name: seo.title,
     description: seo.description,
@@ -615,10 +620,11 @@ function generateSchemaJsonLd(submission: any, seo: any, entities: any, kg: any)
     dateModified: new Date().toISOString(),
   };
 
-  // Add organization if company exists
+  // Add publisher
   if (kg.company) {
-    schema.publisher = {
+    webPageSchema.publisher = {
       '@type': 'Organization',
+      '@id': 'https://smartdent.com.br/#organization',
       name: kg.company.company_name,
       url: kg.company.website_url,
     };
@@ -626,11 +632,28 @@ function generateSchemaJsonLd(submission: any, seo: any, entities: any, kg: any)
 
   // Add mentions for linked products
   if (entities.products.length > 0) {
-    schema.mentions = entities.products.map((p: any) => ({
+    webPageSchema.mentions = entities.products.map((p: any) => ({
       '@type': 'Product',
       name: p.name,
     }));
   }
+
+  graph.push(webPageSchema);
+
+  // ✅ Verificar se experts são autores verificados e adicionar Person schemas
+  if (entities.experts && entities.experts.length > 0) {
+    for (const expert of entities.experts) {
+      const verified = getVerifiedAuthor(expert.id);
+      if (verified) {
+        graph.push(generateVerifiedPersonSchema(verified));
+      }
+    }
+  }
+
+  const schema = {
+    '@context': 'https://schema.org',
+    '@graph': graph,
+  };
 
   return JSON.stringify(schema, null, 2);
 }
