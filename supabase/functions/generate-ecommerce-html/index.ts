@@ -1470,7 +1470,9 @@ function generateProductSchema(product: any): string {
         maxVideos: 20 
       })] : []),
       // ✅ NOVO: FAQPage Schema adicionado ao @graph para Rich Snippets
-      generateFAQSchemaForGraph(product)
+      generateFAQSchemaForGraph(product),
+      // ✅ E-E-A-T: Organization Schema completo (fundadores, Wikidata, FDA, ANVISA)
+      generateSmartDentOrganizationSchema()
     ].filter(Boolean) // Remove nulls
   };
   
@@ -2572,13 +2574,8 @@ function buildEcommerceHTML(
           "seller": { "@type": "Organization", "name": companyName }
         }
       },
-      {
-        "@type": "Organization",
-        "@id": `${companyUrl}/#organization`,
-        "name": companyName,
-        "url": companyUrl,
-        ...(company?.company_logo_url && { "logo": { "@type": "ImageObject", "url": company.company_logo_url } })
-      }
+      // ✅ E-E-A-T: Organization Schema completo (fundadores, Wikidata, FDA, ANVISA)
+      generateSmartDentOrganizationSchema()
     ]
   };
   
