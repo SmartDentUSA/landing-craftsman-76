@@ -479,21 +479,24 @@ export function generateHreflangHTML(
 
 /**
  * Gera Organization Schema completo para Smart Dent
- * Inclui ambos fundadores, Wikidata, foundingLocation NUMA/USP
+ * Inclui ambos fundadores, Wikidata, foundingLocation NUMA/USP,
+ * hasCredential (FDA, ANVISA, ISO), endereços BR + USA
  * Para injeção no @graph de todas as páginas
  */
 export function generateSmartDentOrganizationSchema(): Record<string, unknown> {
   return {
     "@type": "Organization",
+    "@id": "https://smartdent.com.br/#organization",
     name: "Smart Dent",
     legalName: "MMTech Projetos Tecnológicos Importação e Exportação Ltda.",
     foundingDate: "2009",
-    description: "Spin-off universitária da EESC/USP São Carlos. Pioneira em CAD/CAM e resinas 3D odontológicas no Brasil.",
+    description: "Spin-off universitária da EESC/USP São Carlos. Pioneira em CAD/CAM e resinas 3D odontológicas no Brasil. Fundada por Dr. Marcelo Del Guerra (PhD Engenharia/USP) no NUMA/USP.",
     url: "https://smartdent.com.br",
     sameAs: [
       "https://www.wikidata.org/entity/Q138636902",
       "https://br.linkedin.com/company/smartdent-dental-cad-cam",
       "https://www.instagram.com/smartdentoficial",
+      "https://www.youtube.com/@SmartDentBrasil",
       "https://bv.fapesp.br/pt/pesquisador/1694/marcelo-del-guerra/",
     ],
     founders: [
@@ -501,7 +504,22 @@ export function generateSmartDentOrganizationSchema(): Record<string, unknown> {
         "@type": "Person",
         name: "Dr. Marcelo Del Guerra",
         description: "PhD Engenharia de Produção Mecânica, EESC/USP (2009). FAPESP ID 1694.",
-        sameAs: "https://scholar.google.com/citations?user=0sKZ0wMAAAAJ&hl=pt-BR",
+        identifier: [
+          { "@type": "PropertyValue", name: "Google Scholar", value: "0sKZ0wMAAAAJ" },
+          { "@type": "PropertyValue", name: "Lattes", value: "K4766815J6" },
+          { "@type": "PropertyValue", name: "FAPESP ID", value: "1694" },
+        ],
+        sameAs: [
+          "https://scholar.google.com/citations?user=0sKZ0wMAAAAJ&hl=pt-BR",
+          "https://bv.fapesp.br/pt/pesquisador/1694/marcelo-del-guerra/",
+          "https://buscatextual.cnpq.br/buscatextual/visualizacv.do?id=K4766815J6",
+          "https://br.linkedin.com/in/marcelo-del-guerra-70193166",
+        ],
+        alumniOf: {
+          "@type": "EducationalOrganization",
+          name: "Escola de Engenharia de São Carlos — EESC/USP",
+          sameAs: "https://eesc.usp.br",
+        },
       },
       {
         "@type": "Person",
@@ -520,21 +538,75 @@ export function generateSmartDentOrganizationSchema(): Record<string, unknown> {
         addressCountry: "BR",
       },
     },
-    address: {
-      "@type": "PostalAddress",
-      streetAddress: "Rua Dr. Procópio de Tolêdo Malta, 62",
-      addressLocality: "São Carlos",
-      addressRegion: "SP",
-      postalCode: "13562-291",
-      addressCountry: "BR",
-    },
+    address: [
+      {
+        "@type": "PostalAddress",
+        streetAddress: "Rua Dr. Procópio de Tolêdo Malta, 62",
+        addressLocality: "São Carlos",
+        addressRegion: "SP",
+        postalCode: "13562-291",
+        addressCountry: "BR",
+      },
+      {
+        "@type": "PostalAddress",
+        streetAddress: "University City Blvd",
+        addressLocality: "Charlotte",
+        addressRegion: "NC",
+        postalCode: "28223",
+        addressCountry: "US",
+      },
+    ],
     telephone: "+55-16-3415-0530",
+    hasCredential: [
+      {
+        "@type": "EducationalOccupationalCredential",
+        name: "FDA Classe II nº 3027526455",
+        credentialCategory: "regulatory",
+        recognizedBy: { "@type": "GovernmentOrganization", name: "FDA" },
+      },
+      {
+        "@type": "EducationalOccupationalCredential",
+        name: "ANVISA Dispositivo Médico Classe II",
+        credentialCategory: "regulatory",
+        recognizedBy: { "@type": "GovernmentOrganization", name: "ANVISA" },
+      },
+      {
+        "@type": "EducationalOccupationalCredential",
+        name: "ISO 10993-3 (Genotoxicidade)",
+        credentialCategory: "quality",
+        recognizedBy: { "@type": "Organization", name: "ISO" },
+      },
+      {
+        "@type": "EducationalOccupationalCredential",
+        name: "ISO 10993-12 (Biocompatibilidade)",
+        credentialCategory: "quality",
+        recognizedBy: { "@type": "Organization", name: "ISO" },
+      },
+      {
+        "@type": "EducationalOccupationalCredential",
+        name: "ISO 4049 (Materiais Restauradores)",
+        credentialCategory: "quality",
+        recognizedBy: { "@type": "Organization", name: "ISO" },
+      },
+    ],
     knowsAbout: [
       "CAD/CAM Dental",
       "Impressão 3D Odontológica",
       "Resinas 3D Odontológicas",
       "Scanners Intraorais",
       "Odontologia Digital",
+      "Smart Print Bio Vitality",
+      "Fresadoras Odontológicas",
+      "Prótese Dentária Digital",
     ],
+    makesOffer: {
+      "@type": "Offer",
+      itemOffered: {
+        "@type": "MedicalDevice",
+        name: "Smart Print Bio Vitality",
+        sameAs: "https://www.wikidata.org/entity/Q138790136",
+        description: "Resina nano-híbrida para impressão 3D odontológica definitiva. FDA Classe II nº 3027526455.",
+      },
+    },
   };
 }
