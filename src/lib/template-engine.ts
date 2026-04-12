@@ -5,6 +5,9 @@ import { generateSchemaFromCompanyProfile } from './schema-reviews';
 import { validateJsonLdSize, estimateJsonSizeKB } from './validate-jsonld';
 import { generateKnowledgeFeedSchema, extractTopKeywords, type KnowledgeArticle } from '@/services/seo/knowledgeFeedSchemaGenerator';
 import { enrichMetaWithFeedKeywords } from '@/services/seo/metaTagsBuilder';
+// ✅ E-E-A-T: Autores verificados e Organization Schema
+import { AUTHORS, MARCELO_DEL_GUERRA } from '@/data/authors';
+import { generateOrganizationSchema } from '@/lib/authorSchemas';
 
 // Interface para links SEO de artigos
 interface SEOArticleLink {
