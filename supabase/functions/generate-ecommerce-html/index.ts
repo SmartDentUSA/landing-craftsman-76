@@ -32,7 +32,9 @@ import {
 } from "../_shared/authority-data-helper.ts";
 
 // ✅ SEO Fine-Tuning 10/10 - Shared Module
-import { deduplicateKeywords, generateHreflangHTML } from "../_shared/seo-fine-tuning.ts";
+import { deduplicateKeywords, generateSmartDentOrganizationSchema } from "../_shared/seo-fine-tuning.ts";
+// ✅ Autores verificados com credenciais completas
+import { getVerifiedAuthor, generateVerifiedPersonSchema } from "../_shared/verified-authors.ts";
 
 // 🤖 AI Readiness Helpers
 import { enrichGraphWithAIReadiness, generateAISummaryBlock, generateLLMKnowledgeLayer, generateEntityIndexHTML, generateDefinedTermSetSchema } from "../_shared/ai-readiness-helpers.ts";
@@ -1468,7 +1470,9 @@ function generateProductSchema(product: any): string {
         maxVideos: 20 
       })] : []),
       // ✅ NOVO: FAQPage Schema adicionado ao @graph para Rich Snippets
-      generateFAQSchemaForGraph(product)
+      generateFAQSchemaForGraph(product),
+      // ✅ E-E-A-T: Organization Schema completo (fundadores, Wikidata, FDA, ANVISA)
+      generateSmartDentOrganizationSchema()
     ].filter(Boolean) // Remove nulls
   };
   
@@ -2570,13 +2574,8 @@ function buildEcommerceHTML(
           "seller": { "@type": "Organization", "name": companyName }
         }
       },
-      {
-        "@type": "Organization",
-        "@id": `${companyUrl}/#organization`,
-        "name": companyName,
-        "url": companyUrl,
-        ...(company?.company_logo_url && { "logo": { "@type": "ImageObject", "url": company.company_logo_url } })
-      }
+      // ✅ E-E-A-T: Organization Schema completo (fundadores, Wikidata, FDA, ANVISA)
+      generateSmartDentOrganizationSchema()
     ]
   };
   

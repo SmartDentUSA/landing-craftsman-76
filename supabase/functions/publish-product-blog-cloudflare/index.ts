@@ -61,8 +61,11 @@ import {
   expandFounderSameAs,
   generateServiceSchemas,
   generateHasCredential,
-  deduplicateKeywords
+  deduplicateKeywords,
+  generateSmartDentOrganizationSchema
 } from '../_shared/seo-fine-tuning.ts';
+// ✅ Autores verificados com credenciais completas
+import { getVerifiedAuthor, generateVerifiedPersonSchema } from '../_shared/verified-authors.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -859,6 +862,9 @@ function generateProductBlogHTML(options: {
   if (faqSchema) {
     schemas.push(faqSchema as any);
   }
+
+  // ✅ E-E-A-T: Organization Schema completo (fundadores, Wikidata, FDA, ANVISA)
+  schemas.push(generateSmartDentOrganizationSchema() as any);
 
   // PREÇOS REMOVIDOS - blogs não devem conter preços para evitar retrabalho em reajustes
 

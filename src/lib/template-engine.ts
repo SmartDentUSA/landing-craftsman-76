@@ -5,6 +5,9 @@ import { generateSchemaFromCompanyProfile } from './schema-reviews';
 import { validateJsonLdSize, estimateJsonSizeKB } from './validate-jsonld';
 import { generateKnowledgeFeedSchema, extractTopKeywords, type KnowledgeArticle } from '@/services/seo/knowledgeFeedSchemaGenerator';
 import { enrichMetaWithFeedKeywords } from '@/services/seo/metaTagsBuilder';
+// ✅ E-E-A-T: Autores verificados e Organization Schema
+import { AUTHORS, MARCELO_DEL_GUERRA } from '@/data/authors';
+import { generateOrganizationSchema } from '@/lib/authorSchemas';
 
 // Interface para links SEO de artigos
 interface SEOArticleLink {
@@ -4659,72 +4662,72 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
       schemaGraph.push(organizationSchema);
       console.log('✅ [Schema Enterprise] Organization schema adicionado ao @graph');
       
-      // ✅ Person Schema (Autor/Fundador) para E-E-A-T - EXPANDIDO
+      // ✅ Person Schema (Autor/Fundador) para E-E-A-T - VERIFICADO
       if (companyProfile.founder_name) {
-        const personSchema: Record<string, any> = {
-          "@type": "Person",
-          "@id": `${companyProfile.website_url || processedData.canonical_url}/#founder`,
-          "name": companyProfile.founder_name,
-          "jobTitle": companyProfile.founder_title || "Fundador",
-          "worksFor": {
-            "@type": "Organization",
-            "@id": `${companyProfile.website_url}/#organization`
-          }
-        };
+        // Verificar se o fundador é um autor verificado (Marcelo Del Guerra)
+        const isMarceloDelGuerra = companyProfile.founder_name?.toLowerCase().includes('marcelo') && companyProfile.founder_name?.toLowerCase().includes('guerra');
         
-        // ✅ PONTO C: Expandir sameAs com TODAS as redes sociais do fundador/empresa
-        const founderSameAs: string[] = [];
-        
-        // LinkedIn do fundador (prioridade)
-        if (companyProfile.founder_linkedin) {
-          founderSameAs.push(companyProfile.founder_linkedin);
-        }
-        
-        // Instagram do fundador ou da empresa
-        if (companyProfile.founder_instagram) {
-          const igUrl = companyProfile.founder_instagram.startsWith('http') 
-            ? companyProfile.founder_instagram 
-            : `https://instagram.com/${companyProfile.founder_instagram.replace('@', '')}`;
-          if (!founderSameAs.includes(igUrl)) founderSameAs.push(igUrl);
-        } else if (companyProfile.instagram_profile) {
-          const igUrl = companyProfile.instagram_profile.startsWith('http') 
-            ? companyProfile.instagram_profile 
-            : `https://instagram.com/${companyProfile.instagram_profile.replace('@', '')}`;
-          if (!founderSameAs.includes(igUrl)) founderSameAs.push(igUrl);
-        }
-        
-        // Twitter/X do fundador
-        if (companyProfile.founder_twitter) {
-          const twitterUrl = companyProfile.founder_twitter.startsWith('http') 
-            ? companyProfile.founder_twitter 
-            : `https://twitter.com/${companyProfile.founder_twitter.replace('@', '')}`;
-          if (!founderSameAs.includes(twitterUrl)) founderSameAs.push(twitterUrl);
-        }
-        
-        // YouTube da empresa como referência
-        if (companyProfile.youtube_channel) {
-          const ytUrl = companyProfile.youtube_channel.startsWith('http')
-            ? companyProfile.youtube_channel
-            : `https://youtube.com/${companyProfile.youtube_channel}`;
-          if (!founderSameAs.includes(ytUrl)) founderSameAs.push(ytUrl);
-        }
-        
-        // Agregar links de social_media_links se existirem
-        if (companyProfile.social_media_links && Array.isArray(companyProfile.social_media_links)) {
-          companyProfile.social_media_links.forEach((link: any) => {
-            const url = link.url || link.href;
-            if (url && !founderSameAs.includes(url)) {
-              founderSameAs.push(url);
+        if (isMarceloDelGuerra) {
+          // ✅ Usar dados estáticos verificados completos
+          const author = MARCELO_DEL_GUERRA;
+          const personSchema: Record<string, any> = {
+            "@type": "Person",
+            "@id": `${companyProfile.website_url || processedData.canonical_url}/#founder`,
+            "name": author.name,
+            "jobTitle": author.role || "Fundador Smart Dent",
+            "description": author.miniBio,
+            "worksFor": {
+              "@type": "Organization",
+              "@id": `${companyProfile.website_url}/#organization`
+            },
+            "alumniOf": {
+              "@type": "EducationalOrganization",
+              "name": author.institution || "EESC/USP",
+              "sameAs": author.institutionUrl
+            },
+            "identifier": author.identifiers.map(id => ({
+              "@type": "PropertyValue",
+              "name": id.name,
+              "value": id.value,
+              "url": id.url,
+            })),
+            "sameAs": author.sameAs
+          };
+          schemaGraph.push(personSchema);
+          console.log(`✅ [Schema Enterprise] Person (Founder VERIFICADO) schema com ${author.identifiers.length} identifiers e ${author.sameAs.length} sameAs`);
+        } else {
+          // Fallback: usar dados do banco
+          const personSchema: Record<string, any> = {
+            "@type": "Person",
+            "@id": `${companyProfile.website_url || processedData.canonical_url}/#founder`,
+            "name": companyProfile.founder_name,
+            "jobTitle": companyProfile.founder_title || "Fundador",
+            "worksFor": {
+              "@type": "Organization",
+              "@id": `${companyProfile.website_url}/#organization`
             }
-          });
+          };
+          
+          // Expandir sameAs com redes sociais do fundador/empresa
+          const founderSameAs: string[] = [];
+          if (companyProfile.founder_linkedin) founderSameAs.push(companyProfile.founder_linkedin);
+          if (companyProfile.instagram_profile) {
+            const igUrl = companyProfile.instagram_profile.startsWith('http') 
+              ? companyProfile.instagram_profile 
+              : `https://instagram.com/${companyProfile.instagram_profile.replace('@', '')}`;
+            if (!founderSameAs.includes(igUrl)) founderSameAs.push(igUrl);
+          }
+          if (companyProfile.youtube_channel) {
+            const ytUrl = companyProfile.youtube_channel.startsWith('http')
+              ? companyProfile.youtube_channel
+              : `https://youtube.com/${companyProfile.youtube_channel}`;
+            if (!founderSameAs.includes(ytUrl)) founderSameAs.push(ytUrl);
+          }
+          if (founderSameAs.length > 0) personSchema.sameAs = founderSameAs;
+          
+          schemaGraph.push(personSchema);
+          console.log(`✅ [Schema Enterprise] Person (Founder) schema adicionado ao @graph com ${founderSameAs.length} sameAs links`);
         }
-        
-        if (founderSameAs.length > 0) {
-          personSchema.sameAs = founderSameAs;
-        }
-        
-        schemaGraph.push(personSchema);
-        console.log(`✅ [Schema Enterprise] Person (Founder) schema adicionado ao @graph com ${founderSameAs.length} sameAs links`);
       }
       
       // ✅ FASE 2: WebPage Schema com Speakable SEMPRE

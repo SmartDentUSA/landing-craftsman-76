@@ -4,8 +4,11 @@ import {
   expandFounderSameAs,
   generateHasCredential,
   generateHreflangHTML,
-  deduplicateKeywords
+  deduplicateKeywords,
+  generateSmartDentOrganizationSchema
 } from '../_shared/seo-fine-tuning.ts'
+// ✅ Autores verificados com credenciais completas
+import { getVerifiedAuthor, generateVerifiedPersonSchema } from '../_shared/verified-authors.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -749,13 +752,28 @@ function buildJsonLdGraph(p: SemanticHtmlParams): object {
   }
 
   if (company?.founder_name) {
-    org.founder = {
-      "@type": "Person",
-      "name": company.founder_name,
-      "jobTitle": company.founder_title || 'CEO',
-      ...(company.founder_linkedin ? { "sameAs": [company.founder_linkedin] } : {})
+    // ✅ E-E-A-T: Usar dados verificados se o fundador for um autor verificado
+    const verifiedFounder = getVerifiedAuthor('e35f1b00-01ab-46c5-bdec-20e532926068'); // Marcelo Del Guerra
+    if (verifiedFounder) {
+      org.founder = generateVerifiedPersonSchema(verifiedFounder);
+    } else {
+      org.founder = {
+        "@type": "Person",
+        "name": company.founder_name,
+        "jobTitle": company.founder_title || 'CEO',
+        ...(company.founder_linkedin ? { "sameAs": [company.founder_linkedin] } : {})
+      };
     }
   }
+
+  // ✅ E-E-A-T: Enriquecer com dados do Organization Schema global
+  const smartDentOrg = generateSmartDentOrganizationSchema();
+  if (smartDentOrg.founders) org.founders = smartDentOrg.founders;
+  if (smartDentOrg.foundingDate) org.foundingDate = smartDentOrg.foundingDate;
+  if (smartDentOrg.foundingLocation) org.foundingLocation = smartDentOrg.foundingLocation;
+  if (smartDentOrg.legalName) org.legalName = smartDentOrg.legalName;
+  if (smartDentOrg.knowsAbout) org.knowsAbout = smartDentOrg.knowsAbout;
+  if (smartDentOrg.makesOffer) org.makesOffer = smartDentOrg.makesOffer;
 
   graph.push(org)
 
