@@ -32,7 +32,9 @@ import {
 } from "../_shared/authority-data-helper.ts";
 
 // ✅ SEO Fine-Tuning 10/10 - Shared Module
-import { deduplicateKeywords, generateHreflangHTML } from "../_shared/seo-fine-tuning.ts";
+import { deduplicateKeywords, generateSmartDentOrganizationSchema } from "../_shared/seo-fine-tuning.ts";
+// ✅ Autores verificados com credenciais completas
+import { getVerifiedAuthor, generateVerifiedPersonSchema } from "../_shared/verified-authors.ts";
 
 // 🤖 AI Readiness Helpers
 import { enrichGraphWithAIReadiness, generateAISummaryBlock, generateLLMKnowledgeLayer, generateEntityIndexHTML, generateDefinedTermSetSchema } from "../_shared/ai-readiness-helpers.ts";

@@ -61,8 +61,11 @@ import {
   expandFounderSameAs,
   generateServiceSchemas,
   generateHasCredential,
-  deduplicateKeywords
+  deduplicateKeywords,
+  generateSmartDentOrganizationSchema
 } from '../_shared/seo-fine-tuning.ts';
+// ✅ Autores verificados com credenciais completas
+import { getVerifiedAuthor, generateVerifiedPersonSchema } from '../_shared/verified-authors.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

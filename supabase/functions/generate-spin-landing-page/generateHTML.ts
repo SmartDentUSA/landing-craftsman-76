@@ -43,7 +43,8 @@ import {
   generateHasCredential,
   deduplicateKeywords,
   aggregateFAQsFromProducts as seoAggregateFAQs,
-  generateHreflangHTML
+  generateHreflangHTML,
+  generateSmartDentOrganizationSchema
 } from '../_shared/seo-fine-tuning.ts';
 
 // 🤖 AI Readiness Helpers
