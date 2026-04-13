@@ -8,7 +8,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useLandingPagesSupabase } from "@/hooks/useLandingPagesSupabase";
 import { type LandingPage } from "@/hooks/useLandingPagesSupabase";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -239,8 +239,10 @@ const DashboardContent = () => {
   // Separate effect to react to landing page approval/disapproval changes
   useEffect(() => {
     console.log('📊 Landing pages changed, approved IDs:', approvedLandingPagesIds);
-    fetchBlogPosts();
-  }, [approvedLandingPagesIds, fetchBlogPosts]);
+    if (approvedLandingPagesIds) {
+      fetchBlogPostsRef.current?.(landingPages);
+    }
+  }, [approvedLandingPagesIds]);
 
   useEffect(() => {
     const channel = supabase
@@ -250,21 +252,21 @@ const DashboardContent = () => {
         schema: 'public', 
         table: 'blog_posts' 
       }, () => {
-        fetchBlogPosts();
+        fetchBlogPostsRef.current?.(landingPages);
       })
       .on('postgres_changes', { 
         event: 'UPDATE', 
         schema: 'public', 
         table: 'blog_posts' 
       }, () => {
-        fetchBlogPosts();
+        fetchBlogPostsRef.current?.(landingPages);
       })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchBlogPosts]);
+  }, []);
 
   const handlePromoteToAdmin = async () => {
     if (!userEmail) return;
