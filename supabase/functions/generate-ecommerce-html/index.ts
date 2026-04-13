@@ -1864,12 +1864,12 @@ function buildEcommerceHTML(
   product: any, 
   benefits: string[], 
   options: any, 
-  companyData: any,
+  company: any,
   technicalDocsWithDescriptions: any[] = []
 ): string {
   const desc = product.description || '';
-  const companyName = companyData?.company_name || 'Smart Dent';
-  const companyUrl = companyData?.website_url || 'https://smartdent.com.br';
+  const companyName = company?.company_name || 'Smart Dent';
+  const companyUrl = company?.website_url || 'https://smartdent.com.br';
   const productUrl = product.product_url || '#';
   
   // ✅ SEMPRE REGENERAR (remover bypass de pré-formatado)
