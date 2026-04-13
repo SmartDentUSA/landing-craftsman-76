@@ -1,38 +1,32 @@
 
 
-## Plano: Corrigir acesso ao sistema
+## Plano: Corrigir erro "Erro ao ativar acesso" no Dashboard
 
-### Problema 1: Supabase Database Timeout
-O banco Supabase esta retornando "Connection terminated due to connection timeout". Isso faz todas as queries falharem (landing pages, categorias, Clinical Brain, etc). Isso e um problema de infraestrutura -- o projeto Supabase pode estar pausado ou com instabilidade.
+### Diagnostico
 
-**Acao**: Verificar no Supabase Dashboard se o projeto esta ativo. Se estiver pausado, reativar.
+O erro ocorre ao chamar `supabase.rpc('promote_user_to_admin')`. Ha dois problemas:
 
-### Problema 2: Loop infinito no Dashboard (bug de codigo)
-O `useEffect` na linha 246-250 dispara `fetchBlogPosts` toda vez que `approvedLandingPagesIds` ou `fetchBlogPosts` mudam. Porem:
-- `debouncedFetchBlogPosts` captura `landingPages` no closure (linha 116)
-- Quando `landingPages` muda, `debouncedFetchBlogPosts` recria -> `fetchBlogPosts` recria -> useEffect dispara novamente
-- Quando as queries falham (timeout), o estado reseta, causando novo ciclo
+1. **Instabilidade do Supabase** — os erros "Connection terminated" que vimos antes podem fazer o RPC falhar silenciosamente
+2. **Erro generico sem detalhes** — o catch block nao mostra qual erro ocorreu, dificultando o debug
+3. **Banner aparece mesmo quando o usuario ja e admin** — se a query `user_roles` falha, `userRole` fica como `'user'` e o banner aparece desnecessariamente
 
-Isso gera dezenas de chamadas por segundo ao Supabase, piorando o timeout.
+### Correcoes em `src/pages/Dashboard.tsx`
 
-### Correcao no codigo
+1. **Adicionar log do erro real** no catch do `handlePromoteToAdmin` para diagnosticar a causa exata:
+   ```typescript
+   console.error('Promote to admin failed:', error);
+   ```
 
-**Arquivo**: `src/pages/Dashboard.tsx`
+2. **Usar `has_role` RPC como fallback** no `getCurrentUser` — se a query direta a `user_roles` falhar, tentar o RPC `has_role` que ja existe e e SECURITY DEFINER
 
-1. **Remover `fetchBlogPosts` das dependencias do useEffect** -- usar ref para a funcao em vez de dependencia direta
-2. **Estabilizar `debouncedFetchBlogPosts`** -- passar `landingPages` como argumento em vez de capturar no closure
-3. **Adicionar guard contra chamadas quando nao ha landing pages** -- evitar queries desnecessarias
+3. **Melhorar mensagem de erro** — mostrar o erro real na descricao do toast para facilitar debug
 
-Mudancas especificas:
-- Linha 116-150: Refatorar `debouncedFetchBlogPosts` para receber `landingPages` como parametro
-- Linha 166-169: Remover wrapper `fetchBlogPosts` desnecessario
-- Linha 246-250: Chamar `debouncedFetchBlogPosts` diretamente com `landingPages`, remover `fetchBlogPosts` da lista de dependencias
+4. **Adicionar retry automatico** — se o RPC falhar por timeout, tentar uma segunda vez apos 2s
 
-### Resultado esperado
-- Loop infinito eliminado
-- Dashboard carrega normalmente quando Supabase responde
-- Menos pressao no banco de dados
+### Verificacao adicional
+
+Seria util verificar no Supabase se a funcao `promote_user_to_admin` existe e esta acessivel. Posso rodar uma query de teste.
 
 ### Arquivo editado
-- `src/pages/Dashboard.tsx` (~15 linhas alteradas)
+- `src/pages/Dashboard.tsx` (~10 linhas alteradas)
 
