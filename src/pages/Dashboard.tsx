@@ -113,10 +113,12 @@ const DashboardContent = () => {
     }
   };
 
-  const debouncedFetchBlogPosts = useDebounce(async () => {
+  const fetchBlogPostsRef = useRef<(pages: typeof landingPages) => void>();
+
+  const debouncedFetchBlogPosts = useDebounce(async (pages: typeof landingPages) => {
     try {
-      console.log('🔄 Fetching blog posts - Landing pages count:', landingPages.length);
-      const approvedLandingPages = landingPages.filter(lp => lp.status === 'approved');
+      console.log('🔄 Fetching blog posts - Landing pages count:', pages.length);
+      const approvedLandingPages = pages.filter(lp => lp.status === 'approved');
       console.log('✅ Approved landing pages:', approvedLandingPages.length);
       
       if (approvedLandingPages.length === 0) {
@@ -125,7 +127,6 @@ const DashboardContent = () => {
         return;
       }
 
-      // ✅ OTIMIZAÇÃO: 1 query em vez de N queries
       const landingPageIds = approvedLandingPages.map(lp => lp.id);
       
       const { data: blogs, error } = await supabase
@@ -141,13 +142,10 @@ const DashboardContent = () => {
       setBlogPosts(blogs || []);
     } catch (error: any) {
       console.error('❌ Erro ao buscar blogs:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao carregar blogs",
-        description: error.message
-      });
     }
-  }, 300);
+  }, 500);
+
+  fetchBlogPostsRef.current = (pages) => debouncedFetchBlogPosts(pages);
 
   // Force refresh landing pages when component mounts to sync names
   useEffect(() => {
@@ -162,11 +160,6 @@ const DashboardContent = () => {
       .sort()
       .join(',');
   }, [landingPages]);
-
-  const fetchBlogPosts = useCallback(() => {
-    console.log('🚀 Triggering blog posts fetch due to changes');
-    debouncedFetchBlogPosts();
-  }, [debouncedFetchBlogPosts]);
 
   const getCurrentUser = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
