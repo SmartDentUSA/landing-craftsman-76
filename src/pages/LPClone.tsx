@@ -648,7 +648,6 @@ const LPClone = () => {
           </Tabs>
         </div>
       </div>
-    </div>
   );
 };
 
