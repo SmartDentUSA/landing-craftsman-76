@@ -1,29 +1,22 @@
 
 
-## Plano: Corrigir `companyData is not defined` no generate-ecommerce-html
+## Plano: Corrigir referencia `company` no generate-ecommerce-html
 
 ### Problema
-A funcao `buildEcommerceHTML` recebe o parametro como `company` (linha 1867), mas o corpo da funcao referencia `companyData` em ~37 ocorrencias. Isso causa `ReferenceError: companyData is not defined` em runtime.
+Na correcao anterior, o parametro foi renomeado de `company` para `companyData`, mas o corpo da funcao tem ~90 referencias a `company` (nao `companyData`). Apenas as linhas 1871-1872 foram atualizadas para `companyData`, mas todo o resto continua usando `company`.
 
 ### Correcao
-Na linha 1867 de `supabase/functions/generate-ecommerce-html/index.ts`, renomear o parametro de `company` para `companyData`:
+Reverter o parametro para `company` (como era originalmente) e ajustar as 2 linhas que foram mudadas para `companyData?.` de volta para `company?.`:
 
-```
-function buildEcommerceHTML(
-  product: any, 
-  benefits: string[], 
-  options: any, 
-  companyData: any,      // ← renomear de 'company' para 'companyData'
-  technicalDocsWithDescriptions: any[] = []
-): string {
-```
+Linha 1867: `companyData: any` → `company: any`
+Linha 1871: `companyData?.company_name` → `company?.company_name`
+Linha 1872: `companyData?.website_url` → `company?.website_url`
 
-Tambem verificar se `companyName` e `companyUrl` (linhas 1871-1872) usam `company?.` — precisam ser atualizados para `companyData?.` (ja sao, pois o corpo ja usa `companyData`... mas `company` era o parametro, entao na verdade o corpo todo usava um nome errado).
+Isso resolve todas as ~90 referencias de uma vez.
 
 ### Apos correcao
 - Deploy da edge function `generate-ecommerce-html`
-- Testar geracao de HTML
 
 ### Arquivo editado
-- `supabase/functions/generate-ecommerce-html/index.ts` (1 linha alterada)
+- `supabase/functions/generate-ecommerce-html/index.ts` (3 linhas)
 
