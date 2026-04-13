@@ -1436,15 +1436,15 @@ function generateProductSchema(product: any): string {
         "brand": {
           "@type": "Brand",
           "name": product.brand || "Smartdent",
-          ...(companyData?.wikidata_id && { "sameAs": `https://www.wikidata.org/entity/${companyData.wikidata_id}` })
+          ...(company?.wikidata_id && { "sameAs": `https://www.wikidata.org/entity/${company.wikidata_id}` })
         },
         ...(product.wikidata_item_id && { "sameAs": `https://www.wikidata.org/entity/${product.wikidata_item_id}` }),
-        ...(companyData?.company_name && {
+        ...(company?.company_name && {
           "manufacturer": {
             "@type": "Organization",
-            "name": companyData.company_name,
-            ...(companyData.website_url && { "url": companyData.website_url }),
-            ...(companyData.wikidata_id && { "sameAs": `https://www.wikidata.org/entity/${companyData.wikidata_id}` })
+            "name": company.company_name,
+            ...(company.website_url && { "url": company.website_url }),
+            ...(company.wikidata_id && { "sameAs": `https://www.wikidata.org/entity/${company.wikidata_id}` })
           }
         }),
         // ✅ AggregateRating para Rich Snippets com estrelas no Google (dinâmico)
@@ -1477,7 +1477,7 @@ function generateProductSchema(product: any): string {
   };
   
   // 🤖 Enrich @graph with Wikidata entities and AI readiness
-  schema["@graph"] = enrichGraphWithAIReadiness(schema["@graph"], companyData?.website_url);
+  schema["@graph"] = enrichGraphWithAIReadiness(schema["@graph"], company?.website_url);
   
   const productSchema = schema["@graph"][0];
 
@@ -1692,8 +1692,8 @@ function buildSEOHead(product: any, company?: any): string {
   ${currentAuthorityData ? generateAuthorityMetaTags(currentAuthorityData) : ''}
   
   <!-- Wikidata Entity Integration -->
-  ${companyData?.wikidata_id ? `<meta name="wikidata-id" content="${companyData.wikidata_id}">
-  <link rel="alternate" type="application/ld+json" href="https://www.wikidata.org/wiki/Special:EntityData/${companyData.wikidata_id}.json">` : ''}
+  ${company?.wikidata_id ? `<meta name="wikidata-id" content="${company.wikidata_id}">
+  <link rel="alternate" type="application/ld+json" href="https://www.wikidata.org/wiki/Special:EntityData/${company.wikidata_id}.json">` : ''}
   
   <!-- Google Fonts Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2630,15 +2630,15 @@ function buildEcommerceHTML(
   html += `\n</article>\n</main>`;
 
   // 🧠 Entity Linking Thing (Wikidata) before closing
-  if (companyData?.wikidata_id) {
+  if (company?.wikidata_id) {
     html += `\n<script type="application/ld+json">
 ${JSON.stringify({
   "@context": "https://schema.org",
   "@type": "Thing",
-  "@id": `${companyData?.website_url || 'https://smartdent.com.br'}/#smartdent`,
-  "sameAs": `https://www.wikidata.org/wiki/${companyData.wikidata_id}`,
+  "@id": `${company?.website_url || 'https://smartdent.com.br'}/#smartdent`,
+  "sameAs": `https://www.wikidata.org/wiki/${company.wikidata_id}`,
   "name": companyName,
-  "description": (companyData?.company_description || '').substring(0, 200)
+  "description": (company?.company_description || '').substring(0, 200)
 }, null, 2)}
 </script>`;
   }
