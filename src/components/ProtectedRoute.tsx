@@ -9,7 +9,7 @@ interface ProtectedRouteProps {
   requiredRole?: 'admin' | 'user';
 }
 
-const RPC_TIMEOUT_MS = 5000;
+const RPC_TIMEOUT_MS = 2000;
 
 async function checkRoleWithTimeout(userId: string): Promise<'admin' | 'user'> {
   try {
@@ -43,11 +43,12 @@ const ProtectedRoute = ({ children, requiredRole = 'user' }: ProtectedRouteProps
     const resolveRole = async (sessionUser: User) => {
       if (!mounted) return;
       setUser(sessionUser);
-      // Set loading false with default role immediately, upgrade if RPC succeeds
+      // Show content immediately with default role, upgrade async
+      setUserRole('user');
+      setLoading(false);
       const role = await checkRoleWithTimeout(sessionUser.id);
       if (!mounted) return;
       setUserRole(role);
-      setLoading(false);
     };
 
     const checkAuth = async () => {
@@ -107,7 +108,7 @@ const ProtectedRoute = ({ children, requiredRole = 'user' }: ProtectedRouteProps
         setLoadingTimeout(true);
         setLoading(false);
       }
-    }, 8000);
+    }, 4000);
     return () => clearTimeout(timer);
   }, [loading]);
 
