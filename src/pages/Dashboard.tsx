@@ -804,11 +804,7 @@ const DashboardContent = () => {
 };
 
 const Dashboard = () => {
-  return (
-    <ProtectedRoute>
-      <DashboardContent />
-    </ProtectedRoute>
-  );
+  return <DashboardContent />;
 };
 
 export default Dashboard;
