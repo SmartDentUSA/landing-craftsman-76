@@ -1,32 +1,51 @@
+<final-text>Plano: estabilizar a sessão e parar o falso “deslogando”
 
+Diagnóstico
+- Do I know what the issue is? Sim.
+- O sistema provavelmente não está encerrando a sessão o tempo todo; o frontend está interpretando estados transitórios do Supabase como logout.
+- `src/pages/Auth.tsx` faz polling de `supabase.auth.getSession()` a cada 2s e força redirect para `/dashboard`, criando disputa com o fluxo normal de auth.
+- `src/components/ProtectedRoute.tsx` redireciona para `/auth` sempre que recebe um evento com `!session?.user`, mesmo quando ainda está restaurando a sessão ou em refresh.
+- Há `ProtectedRoute` duplicado em várias telas (`App.tsx` + a própria página), o que duplica listeners, checagens de sessão e navegações. Isso afeta especialmente `/dashboard`, `/repository`, `/editor`, `/lp-clone` e `/blog-image-test`.
+- Existem consultas autenticadas rodando cedo demais, antes de a sessão estar pronta, o que aumenta estados falsos de “não autenticado”.
 
-## Plano: Corrigir erro "Erro ao ativar acesso" no Dashboard
+O que vou implementar
+1. Centralizar auth em `src/hooks/useAuthReady.ts`
+   - Transformar o hook na fonte única para `isReady`, `user` e sessão restaurada.
+   - Deixar `onAuthStateChange` síncrono, sem `async/await` no callback.
 
-### Diagnostico
+2. Refatorar `src/components/ProtectedRoute.tsx`
+   - Parar de tratar qualquer `!session?.user` como `SIGNED_OUT`.
+   - Só redirecionar para `/auth` depois que a autenticação estiver realmente pronta e confirmada sem sessão.
+   - Separar “sessão pronta” de “role carregada”, mantendo a checagem de role em background sem derrubar o acesso.
 
-O erro ocorre ao chamar `supabase.rpc('promote_user_to_admin')`. Ha dois problemas:
+3. Limpar `src/pages/Auth.tsx`
+   - Remover o `setInterval` de 2s.
+   - Fazer redirect apenas com base no estado estável de auth.
+   - Manter login/signup/reset sem polling agressivo.
 
-1. **Instabilidade do Supabase** — os erros "Connection terminated" que vimos antes podem fazer o RPC falhar silenciosamente
-2. **Erro generico sem detalhes** — o catch block nao mostra qual erro ocorreu, dificultando o debug
-3. **Banner aparece mesmo quando o usuario ja e admin** — se a query `user_roles` falha, `userRole` fica como `'user'` e o banner aparece desnecessariamente
+4. Eliminar `ProtectedRoute` duplicado
+   - Deixar a proteção em um único nível.
+   - Ajustar `src/App.tsx` para carregar `requiredRole="admin"` nas rotas certas.
+   - Remover o wrapper interno das páginas: `Dashboard.tsx`, `Repository.tsx`, `Editor.tsx`, `LPClone.tsx` e `BlogImageTest.tsx`.
 
-### Correcoes em `src/pages/Dashboard.tsx`
+5. Blindar consultas dependentes de sessão
+   - Adiar chamadas até `isReady && user`.
+   - Fazer a primeira varredura nos pontos mais críticos: `Dashboard.tsx`, `useLandingPagesSupabase.ts`, `AdminStatusBadge.tsx` e `OAuthSettingsCard.tsx`.
 
-1. **Adicionar log do erro real** no catch do `handlePromoteToAdmin` para diagnosticar a causa exata:
-   ```typescript
-   console.error('Promote to admin failed:', error);
-   ```
+Resultado esperado
+- O usuário permanece logado ao navegar e ao recarregar páginas protegidas.
+- O app só manda para `/auth` quando realmente não houver sessão.
+- Menos chamadas redundantes ao Supabase.
+- Menos falsos “não autenticado” nas telas administrativas.
 
-2. **Usar `has_role` RPC como fallback** no `getCurrentUser` — se a query direta a `user_roles` falhar, tentar o RPC `has_role` que ja existe e e SECURITY DEFINER
+Verificação
+- Login com email e acesso ao `/dashboard`.
+- Refresh direto em `/dashboard` e `/repository`.
+- Ficar alguns minutos com a aba aberta para confirmar que não volta sozinho para `/auth`.
+- Logout manual para garantir que só sai quando deve.
+- Se ainda houver logout real depois disso, o próximo passo é revisar no Supabase Auth as políticas de sessão: single-session, inactivity timeout e max lifetime.
 
-3. **Melhorar mensagem de erro** — mostrar o erro real na descricao do toast para facilitar debug
-
-4. **Adicionar retry automatico** — se o RPC falhar por timeout, tentar uma segunda vez apos 2s
-
-### Verificacao adicional
-
-Seria util verificar no Supabase se a funcao `promote_user_to_admin` existe e esta acessivel. Posso rodar uma query de teste.
-
-### Arquivo editado
-- `src/pages/Dashboard.tsx` (~10 linhas alteradas)
-
+Detalhes técnicos
+- Arquivos principais: `src/hooks/useAuthReady.ts`, `src/components/ProtectedRoute.tsx`, `src/pages/Auth.tsx`, `src/App.tsx`.
+- Arquivos de apoio: `src/pages/Dashboard.tsx`, `src/pages/Repository.tsx`, `src/pages/Editor.tsx`, `src/pages/LPClone.tsx`, `src/pages/BlogImageTest.tsx`, `src/hooks/useLandingPagesSupabase.ts`, `src/components/AdminStatusBadge.tsx`, `src/components/OAuthSettingsCard.tsx`.
+- Sem migração de banco nesta etapa.</final-text>
