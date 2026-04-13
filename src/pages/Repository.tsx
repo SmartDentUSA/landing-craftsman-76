@@ -54,7 +54,7 @@ const Repository = () => {
   }, []);
 
   return (
-    <ProtectedRoute requiredRole="admin">
+    <div className="flex flex-col min-h-screen bg-background">
       <div className="flex flex-col min-h-screen bg-background">
         <TopNavigation />
         
@@ -294,7 +294,7 @@ const Repository = () => {
           </div>
         </main>
       </div>
-    </ProtectedRoute>
+    </div>
   );
 };
 

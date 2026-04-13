@@ -8146,11 +8146,7 @@ dataLayer = [{
 };
 
 const Editor = () => {
-  return (
-    <ProtectedRoute requiredRole="admin">
-      <EditorPageContent />
-    </ProtectedRoute>
-  );
+  return <EditorPageContent />;
 };
 
 export default Editor;

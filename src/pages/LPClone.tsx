@@ -649,7 +649,7 @@ const LPClone = () => {
           </Tabs>
         </div>
       </div>
-    </ProtectedRoute>
+    </div>
   );
 };
 
