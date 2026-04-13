@@ -17,6 +17,52 @@ const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const LOJA_INTEGRADA_API_KEY = Deno.env.get("LOJA_INTEGRADA_API_KEY")!;
 const LOJA_INTEGRADA_APP_KEY = Deno.env.get("LOJA_INTEGRADA_APP_KEY")!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
+const LOJA_INTEGRADA_API_BASE = "https://api.awsli.com.br/v1";
+
+function buildLojaIntegradaProductUrl(liProductId: string) {
+  return `${LOJA_INTEGRADA_API_BASE}/produto/${liProductId}?chave_api=${LOJA_INTEGRADA_API_KEY}&chave_aplicacao=${LOJA_INTEGRADA_APP_KEY}`;
+}
+
+function parseJsonResponse(text: string) {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { raw_response: text };
+  }
+}
+
+function extractProductIdFromResourceUri(resourceUri?: string | null) {
+  const match = resourceUri?.match(/\/produto\/(\d+)\/?$/);
+  return match?.[1] ?? null;
+}
+
+function normalizeHtmlForComparison(html?: string | null) {
+  return (html || '').replace(/\r\n/g, '\n').trim();
+}
+
+function sanitizeSlug(slug: string) {
+  return slug
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[™®©]/g, '')
+    .replace(/[^a-zA-Z0-9_-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .toLowerCase();
+}
+
+async function fetchLojaIntegradaProduct(liProductId: string) {
+  const response = await fetch(buildLojaIntegradaProductUrl(liProductId), {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+  });
+
+  const text = await response.text();
+  return {
+    response,
+    body: parseJsonResponse(text),
+  };
+}
 
 serve(async (req) => {
   // Handle CORS preflight
@@ -100,15 +146,10 @@ serve(async (req) => {
 
     // 1. Buscar dados atuais do produto via GET
     console.log('📥 Buscando dados atuais do produto via API...');
-    const getUrl = `https://api.awsli.com.br/v1/produto/${liProductId}?chave_api=${LOJA_INTEGRADA_API_KEY}&chave_aplicacao=${LOJA_INTEGRADA_APP_KEY}`;
-
-    const getResponse = await fetch(getUrl, {
-      method: 'GET',
-      headers: { "Accept": "application/json" },
-    });
+    const { response: getResponse, body: currentProduct } = await fetchLojaIntegradaProduct(liProductId);
 
     if (!getResponse.ok) {
-      const error = await getResponse.json().catch(() => ({}));
+      const error = currentProduct;
       console.error(`❌ Erro ao buscar produto: ${getResponse.status}`, error);
       return new Response(
         JSON.stringify({
@@ -119,11 +160,45 @@ serve(async (req) => {
       );
     }
 
-    const currentProduct = await getResponse.json();
     console.log('✅ Produto atual obtido, preparando atualização...');
 
+    let targetLiProductId = liProductId;
+    let targetProduct = currentProduct;
+
+    const parentLiProductId = extractProductIdFromResourceUri(currentProduct?.pai);
+    if (currentProduct?.tipo === 'atributo_opcao' && parentLiProductId) {
+      console.log('🔀 Produto de variação detectado, atualizando produto pai:', {
+        requestedLiProductId: liProductId,
+        parentLiProductId,
+      });
+
+      const { response: parentResponse, body: parentProduct } = await fetchLojaIntegradaProduct(parentLiProductId);
+
+      if (!parentResponse.ok) {
+        console.error(`❌ Erro ao buscar produto pai: ${parentResponse.status}`, parentProduct);
+        return new Response(
+          JSON.stringify({
+            success: false,
+            message: `Erro ao buscar produto pai: ${parentProduct.detail || parentProduct.message || parentResponse.status}`,
+          }),
+          { status: parentResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      targetLiProductId = parentLiProductId;
+      targetProduct = parentProduct;
+    }
+
+    console.log('🎯 Produto alvo da atualização:', {
+      requestedLiProductId: liProductId,
+      targetLiProductId,
+      requestedType: currentProduct?.tipo || null,
+      targetType: targetProduct?.tipo || null,
+    });
+
     // 🔄 Fallback robusto para garantir que 'nome' nunca seja null
-    const productName = currentProduct?.nome 
+    const productName = targetProduct?.nome 
+                     || currentProduct?.nome
                      || currentProduct?.produto?.nome
                      || product?.name
                      || product?.original_data?.nome
@@ -135,7 +210,7 @@ serve(async (req) => {
 
     // 2. Mesclar HTML atualizado com dados existentes
     const updatePayload = {
-      ...currentProduct,
+      ...targetProduct,
       descricao_completa: htmlContent,
       nome: productName,  // ← SEMPRE presente, sobrescreve null
     };
@@ -151,22 +226,19 @@ serve(async (req) => {
     delete updatePayload.id;
     delete updatePayload.created_at;
     delete updatePayload.updated_at;
+    delete updatePayload.data_criacao;
+    delete updatePayload.data_modificacao;
 
     // 5. Sanitizar apelido (slug) - remover caracteres inválidos
     if (updatePayload.apelido) {
-      updatePayload.apelido = updatePayload.apelido
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '') // remove acentos
-        .replace(/[™®©]/g, '')           // remove símbolos especiais
-        .replace(/[^a-zA-Z0-9_-]/g, '-') // substitui inválidos por hífen
-        .replace(/-+/g, '-')             // colapsa hífens múltiplos
-        .replace(/^-|-$/g, '')           // remove hífens nas bordas
-        .toLowerCase();
+      updatePayload.apelido = sanitizeSlug(updatePayload.apelido);
       console.log('🔤 Slug sanitizado:', updatePayload.apelido);
     }
     
     // ✅ DEBUG: Mostrar exatamente o que vai ser enviado
     console.log('📦 Campos principais do payload:', {
+      requestedLiProductId: liProductId,
+      targetLiProductId,
       nome: updatePayload.nome,
       disponibilidade: updatePayload.disponibilidade,
       categoria: updatePayload.categorias,
@@ -175,7 +247,7 @@ serve(async (req) => {
 
     // Enviar PUT com payload completo
     console.log('📤 Enviando PUT para Loja Integrada...');
-    const url = `https://api.awsli.com.br/v1/produto/${liProductId}?chave_api=${LOJA_INTEGRADA_API_KEY}&chave_aplicacao=${LOJA_INTEGRADA_APP_KEY}`;
+    const url = buildLojaIntegradaProductUrl(targetLiProductId);
 
     let attempt = 0;
     let response;
@@ -240,12 +312,56 @@ serve(async (req) => {
       );
     }
 
+    console.log('🔍 Validando descrição após PUT...');
+    const { response: verifyResponse, body: verifiedProduct } = await fetchLojaIntegradaProduct(targetLiProductId);
+
+    if (!verifyResponse.ok) {
+      console.error(`❌ Falha ao validar produto após PUT: ${verifyResponse.status}`, verifiedProduct);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: `Produto atualizado, mas não foi possível validar o resultado: ${verifiedProduct.detail || verifiedProduct.message || verifyResponse.status}`,
+        }),
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const normalizedSentHtml = normalizeHtmlForComparison(htmlContent);
+    const normalizedVerifiedHtml = normalizeHtmlForComparison(verifiedProduct?.descricao_completa);
+    const htmlVerified = normalizedSentHtml === normalizedVerifiedHtml;
+
+    console.log('🧪 Resultado da validação pós-PUT:', {
+      requestedLiProductId: liProductId,
+      targetLiProductId,
+      updatedParentProduct: targetLiProductId !== liProductId,
+      htmlVerified,
+      sentLength: normalizedSentHtml.length,
+      verifiedLength: normalizedVerifiedHtml.length,
+    });
+
+    if (!htmlVerified) {
+      console.error('❌ A Loja Integrada respondeu OK, mas a descrição visível não foi atualizada como esperado');
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: 'Loja Integrada respondeu com sucesso, mas a descrição visível do produto não foi atualizada como esperado',
+          requested_li_product_id: liProductId,
+          target_li_product_id: targetLiProductId,
+          updated_parent_product: targetLiProductId !== liProductId,
+        }),
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     console.log('✅ HTML + Categoria atualizados com sucesso!');
     return new Response(
       JSON.stringify({
         success: true,
         li_product_id: liProductId,
+        target_li_product_id: targetLiProductId,
+        updated_parent_product: targetLiProductId !== liProductId,
         category_sent: !!categoryId,
+        verified: true,
         updated_at: new Date().toISOString(),
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
