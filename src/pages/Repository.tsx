@@ -6,7 +6,7 @@ import { RepositoryPanel } from '@/components/RepositoryPanel';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Settings, Youtube, Building2, ArrowLeft, Package, Link2, Tag, Sparkles, MessageSquare, Headphones, Target, Image as ImageIcon, Copy, BookOpen } from 'lucide-react';
-import ProtectedRoute from '@/components/ProtectedRoute';
+
 import { AdminStatusBadge } from '@/components/AdminStatusBadge';
 import CategoryManager from '@/components/CategoryManager';
 import { EnhancedPromptsManager } from '@/components/EnhancedPromptsManager';
@@ -54,7 +54,7 @@ const Repository = () => {
   }, []);
 
   return (
-    <ProtectedRoute requiredRole="admin">
+    <div className="flex flex-col min-h-screen bg-background">
       <div className="flex flex-col min-h-screen bg-background">
         <TopNavigation />
         
@@ -294,7 +294,7 @@ const Repository = () => {
           </div>
         </main>
       </div>
-    </ProtectedRoute>
+    </div>
   );
 };
 

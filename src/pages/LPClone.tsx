@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { TopNavigation } from '@/components/TopNavigation';
-import ProtectedRoute from '@/components/ProtectedRoute';
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -243,8 +243,7 @@ const LPClone = () => {
   const domains = companyProfile?.seo_domains as { domain: string }[] || [];
   
   return (
-    <ProtectedRoute requiredRole="admin">
-      <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
         <TopNavigation />
         
         <div className="container mx-auto py-6 px-4 space-y-6">
@@ -649,7 +648,6 @@ const LPClone = () => {
           </Tabs>
         </div>
       </div>
-    </ProtectedRoute>
   );
 };
 

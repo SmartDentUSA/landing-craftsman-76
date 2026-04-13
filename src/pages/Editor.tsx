@@ -12,7 +12,7 @@ import { KnowledgeFeedSection } from "@/components/editor/KnowledgeFeedSection";
 import { KnowledgeFeed } from "@/components/KnowledgeFeed";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import ProtectedRoute from "@/components/ProtectedRoute";
+
 import { BreadcrumbNavigation } from "@/components/BreadcrumbNavigation";
 import { useBreadcrumbs } from "@/hooks/useBreadcrumbs";
 import { Input } from "@/components/ui/input";
@@ -8146,11 +8146,7 @@ dataLayer = [{
 };
 
 const Editor = () => {
-  return (
-    <ProtectedRoute requiredRole="admin">
-      <EditorPageContent />
-    </ProtectedRoute>
-  );
+  return <EditorPageContent />;
 };
 
 export default Editor;

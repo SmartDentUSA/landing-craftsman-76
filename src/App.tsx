@@ -42,11 +42,11 @@ const App = () => (
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           {/* Redirect /editor without ID to dashboard */}
           <Route path="/editor" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          <Route path="/editor/:id" element={<ProtectedRoute><Editor /></ProtectedRoute>} />
+          <Route path="/editor/:id" element={<ProtectedRoute requiredRole="admin"><Editor /></ProtectedRoute>} />
           <Route path="/code-view" element={<ProtectedRoute><CodeView /></ProtectedRoute>} />
           <Route path="/cloudflare-settings" element={<ProtectedRoute><CloudflareSettings /></ProtectedRoute>} />
           <Route path="/publication-settings" element={<ProtectedRoute><PublicationSettings /></ProtectedRoute>} />
-          <Route path="/repository" element={<ProtectedRoute><Repository /></ProtectedRoute>} />
+          <Route path="/repository" element={<ProtectedRoute requiredRole="admin"><Repository /></ProtectedRoute>} />
             <Route path="/google-business-settings" element={<ProtectedRoute><GoogleBusinessOAuthSettings /></ProtectedRoute>} />
             <Route path="/youtube-settings" element={<ProtectedRoute><YouTubeOAuthSettings /></ProtectedRoute>} />
             <Route path="/oauth2/callback" element={<OAuthCallback />} />

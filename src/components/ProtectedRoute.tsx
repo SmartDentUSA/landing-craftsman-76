@@ -1,118 +1,31 @@
-import { useEffect, useState, useRef } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { User } from "@supabase/supabase-js";
+import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useAuthReady } from "@/hooks/useAuthReady";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requiredRole?: 'admin' | 'user';
 }
 
-const RPC_TIMEOUT_MS = 2000;
-
-async function checkRoleWithTimeout(userId: string): Promise<'admin' | 'user'> {
-  try {
-    const rpcPromise = supabase.rpc('has_role', { _user_id: userId, _role: 'admin' });
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('RPC timeout')), RPC_TIMEOUT_MS)
-    );
-    const { data: isAdmin, error } = await Promise.race([rpcPromise, timeoutPromise]);
-    if (error) {
-      console.warn('Role check failed, defaulting to user:', error.message);
-      return 'user';
-    }
-    return isAdmin ? 'admin' : 'user';
-  } catch (err) {
-    console.warn('Role check timeout/error, defaulting to user:', err);
-    return 'user';
-  }
-}
-
 const ProtectedRoute = ({ children, requiredRole = 'user' }: ProtectedRouteProps) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [userRole, setUserRole] = useState<'admin' | 'user' | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [loadingTimeout, setLoadingTimeout] = useState(false);
+  const { isReady, user, userRole } = useAuthReady();
   const navigate = useNavigate();
   const hasNavigated = useRef(false);
 
+  // Only redirect when auth is confirmed ready and no user
   useEffect(() => {
-    let mounted = true;
+    if (isReady && !user && !hasNavigated.current) {
+      hasNavigated.current = true;
+      navigate("/auth", { replace: true });
+    }
+    // Reset flag if user comes back
+    if (user) {
+      hasNavigated.current = false;
+    }
+  }, [isReady, user, navigate]);
 
-    const resolveRole = async (sessionUser: User) => {
-      if (!mounted) return;
-      setUser(sessionUser);
-      // Show content immediately with default role, upgrade async
-      setUserRole('user');
-      setLoading(false);
-      const role = await checkRoleWithTimeout(sessionUser.id);
-      if (!mounted) return;
-      setUserRole(role);
-    };
-
-    const checkAuth = async () => {
-      try {
-        // 2 retries max (0s + 1s delay = 1s total wait)
-        for (let i = 0; i < 2; i++) {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session?.user) {
-            await resolveRole(session.user);
-            return;
-          }
-          if (i < 1) await new Promise(r => setTimeout(r, 1000));
-        }
-
-        // No session found
-        if (mounted && !hasNavigated.current) {
-          hasNavigated.current = true;
-          navigate("/auth", { replace: true });
-        }
-      } catch (error) {
-        console.error('Auth check failed:', error);
-        if (mounted) setLoading(false);
-      }
-    };
-
-    checkAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (!mounted) return;
-
-        if (event === 'SIGNED_OUT' || !session?.user) {
-          setUser(null);
-          setUserRole(null);
-          if (!hasNavigated.current) {
-            hasNavigated.current = true;
-            navigate("/auth", { replace: true });
-          }
-        } else if (event === 'SIGNED_IN' && session?.user) {
-          hasNavigated.current = false;
-          // Resolve role directly — don't re-run full checkAuth
-          resolveRole(session.user);
-        }
-      }
-    );
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
-  }, [navigate]);
-
-  // 8s fallback timeout
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (loading) {
-        setLoadingTimeout(true);
-        setLoading(false);
-      }
-    }, 4000);
-    return () => clearTimeout(timer);
-  }, [loading]);
-
-  if (loading) {
+  if (!isReady) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
@@ -123,27 +36,10 @@ const ProtectedRoute = ({ children, requiredRole = 'user' }: ProtectedRouteProps
     );
   }
 
-  if (loadingTimeout && !user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="max-w-md mx-auto text-center p-8">
-          <div className="bg-card rounded-lg shadow-medium p-6 border">
-            <div className="text-xl font-semibold mb-2 text-foreground">Problema de Conexão</div>
-            <p className="text-muted-foreground mb-4">
-              Não foi possível verificar sua autenticação. Verifique sua conexão e tente novamente.
-            </p>
-            <div className="flex gap-2 justify-center">
-              <Button onClick={() => window.location.reload()}>Tentar Novamente</Button>
-              <Button variant="outline" onClick={() => navigate('/auth')}>Ir para Login</Button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   if (!user) return null;
 
+  // Admin check — show content immediately if role not yet resolved,
+  // block only when confirmed as 'user' and admin is required
   if (requiredRole === 'admin' && userRole === 'user') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">

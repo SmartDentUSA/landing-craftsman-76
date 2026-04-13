@@ -17,65 +17,32 @@ const Auth = () => {
 
   useEffect(() => {
     let mounted = true;
-    let redirectTimer: NodeJS.Timeout;
 
-    const checkAndRedirect = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.warn('⚠️ Erro ao obter sessão:', error);
-        }
-
-        if (mounted && session?.user) {
-          console.log('✅ USUÁRIO AUTENTICADO DETECTADO');
-          console.log('📧 Email:', session.user.email);
-          console.log('🔑 User ID:', session.user.id);
-          
-          setUser(session.user);
-          
-          // 🔧 FORÇA redirecionamento imediato
-          console.log('🚀 Redirecionando para /dashboard...');
-          navigate('/dashboard', { replace: true });
-        } else {
-          setUser(null);
-        }
-      } catch (error) {
-        console.error('❌ Falha ao verificar sessão:', error);
+    // Check session once on mount
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
+      if (session?.user) {
+        setUser(session.user);
+        navigate('/dashboard', { replace: true });
       }
-    };
+    });
 
-    // Verificar sessão IMEDIATAMENTE
-    checkAndRedirect();
-    
-    // 🔧 ADICIONAR: Verificação periódica a cada 2 segundos
-    redirectTimer = setInterval(() => {
-      console.log('🔄 Verificando sessão novamente...');
-      checkAndRedirect();
-    }, 2000);
-
-    // Listen for auth changes
+    // Listen for auth changes (e.g. after login)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         if (!mounted) return;
-        
-        console.log('Auth state change:', event, session?.user?.email);
         
         if (event === 'SIGNED_IN' && session?.user) {
           setUser(session.user);
-          // Redirect to dashboard on successful login
           navigate('/dashboard', { replace: true });
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
-        } else {
-          setUser(session?.user ?? null);
         }
       }
     );
 
     return () => {
       mounted = false;
-      clearInterval(redirectTimer);
       subscription.unsubscribe();
     };
   }, [navigate]);
