@@ -1,48 +1,46 @@
 
-Objetivo
 
-Corrigir o fluxo do gerador de descrição e-commerce para que o HTML seja gerado com sucesso e só então possa ser enviado para a Loja Integrada.
+## Plano: Corrigir conteudo SEO/AI aparecendo visivel no HTML do e-commerce
 
-O que foi confirmado
+### Problema
+O HTML gerado pelo `generate-ecommerce-html` injeta blocos semanticos para SEO/AI que aparecem como texto visivel na Loja Integrada. A Loja Integrada so usa o campo `descricao_completa` (HTML puro) e:
+1. Nao carrega CSS externo, entao `class="visually-hidden"` nao esconde nada
+2. Provavelmente strip ou renderiza `<script type="application/ld+json">` como texto
+3. Blocos fora do `</article></main>` ficam soltos
 
-- O erro atual acontece antes do envio para a Loja Integrada.
-- O replay da sessão mostra a UI travando em “Gerando HTML com IA...” e depois retornando erro da Edge Function.
-- Os logs do `generate-ecommerce-html` mostram claramente:
-  `ReferenceError: companyData is not defined`
-- No código atual de `supabase/functions/generate-ecommerce-html/index.ts`, a função `buildEcommerceHTML` recebe `company`, mas ainda existem referências órfãs a `companyData`.
+### Blocos afetados no `generate-ecommerce-html/index.ts`
 
-Raiz do problema
+1. **GEO Context** (linhas 2504-2528) — usa `class="visually-hidden"` SEM inline style. Aparece toda a descricao da empresa, setor, expertise, etc.
 
-Há uma correção incompleta no arquivo do gerador:
-- `buildEcommerceHTML(...)` já voltou a usar `company`
-- porém ainda restam referências a `companyData`, inclusive dentro do fluxo ativo
-- isso faz a geração falhar antes de salvar o HTML e antes do botão de envio para a Loja Integrada conseguir avançar
+2. **JSON-LD principal** (linha 2604) — `<script type="application/ld+json">` com Product + WebPage + FAQPage + Organization + DefinedTermSet. Loja Integrada renderiza como texto.
 
-Plano de implementação
+3. **Entity Index HTML** (linha 2607) — `generateEntityIndexHTML()` gera links Wikidata com `VISUALLY_HIDDEN_STYLE` inline (OK para CSS, mas a Loja Integrada pode nao respeitar).
 
-1. Corrigir o erro ativo no gerador
-- Substituir as referências restantes de `companyData` por `company` dentro do fluxo realmente executado de `buildEcommerceHTML`
-- Corrigir especialmente o bloco final de Wikidata/Thing schema, que ainda usa `companyData`
+4. **Entity Index JSON-LD** (linha 2616) — outro `<script>` tag renderizado como texto.
 
-2. Higienizar helpers para não quebrar de novo
-- Revisar `generateProductSchema` e `buildSEOHead`
-- Padronizar esses helpers para receber o perfil da empresa explicitamente, ou remover referências fora de escopo
-- Garantir que não exista mais mistura entre `company`, `companyData` e `companyName` implícito
+5. **Thing JSON-LD Wikidata** (linhas 2634-2643) — mais um `<script>` tag.
 
-3. Redeploy e validação da geração
-- Publicar novamente `generate-ecommerce-html`
-- Testar a geração do mesmo produto do erro
-- Confirmar nos logs:
-  - fim da geração sem exception
-  - HTML salvo em `products_repository.ecommerce_html`
-  - UI entrando no estado “HTML E-commerce Gerado”
+### Correcao
 
-4. Validar envio para Loja Integrada
-- Depois da geração funcionar, testar o botão “Enviar Loja Integrada”
-- Se aparecer novo erro, aí sim investigar `update-loja-integrada-product` com logs e resposta da API
+**Remover TODOS os blocos que nao sao conteudo visual** do HTML destinado a Loja Integrada. Esses blocos so fazem sentido em paginas que voce controla (landing pages, blog). Na Loja Integrada, a plataforma ja tem seu proprio `<head>`, Schema, etc.
 
-Detalhes técnicos
+Alteracoes em `supabase/functions/generate-ecommerce-html/index.ts`:
 
-- Arquivo principal: `supabase/functions/generate-ecommerce-html/index.ts`
-- O problema atual não indica falha no PUT da Loja Integrada; o fluxo quebra antes, na geração do HTML
-- Há sinais de referências órfãs em blocos de schema/SEO que precisam ser normalizadas no mesmo ajuste para evitar nova regressão
+1. **Remover bloco GEO Context** (linhas 2489-2528) — empresa ja esta no Schema da Loja Integrada
+2. **Remover `<script>` JSON-LD principal** (linha 2604) — a Loja Integrada nao suporta scripts no `descricao_completa`
+3. **Remover Entity Index HTML** (linha 2607)
+4. **Remover Entity Index JSON-LD** (linhas 2609-2616)
+5. **Remover MedicalEntity push** (linhas 2618-2627) — ja esta depois do JSON-LD, mas tambem desnecessario
+6. **Remover Thing JSON-LD Wikidata** (linhas 2632-2644)
+7. **Manter** o `</article></main>` fechamento (linha 2630)
+
+Essencialmente, o HTML do e-commerce deve terminar em `</section></article></main>` sem nenhum bloco de schema/AI depois.
+
+### Arquivo editado
+- `supabase/functions/generate-ecommerce-html/index.ts` (~60 linhas removidas)
+
+### Apos correcao
+- Deploy da edge function
+- Gerar HTML novamente para o produto
+- Enviar para Loja Integrada e verificar que nao aparece texto de schema
+
