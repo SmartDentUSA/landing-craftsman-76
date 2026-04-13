@@ -213,9 +213,14 @@ export function ProductEcommerceGenerator({
       }
 
       if (data?.success) {
+        const targetLiProductId = data?.target_li_product_id || liProductId;
+        const updatedParentProduct = Boolean(data?.updated_parent_product);
+
         toast({
           title: "✅ Enviado com Sucesso!",
-          description: `Descrição atualizada na Loja Integrada (ID: ${liProductId})`,
+          description: updatedParentProduct
+            ? `Descrição atualizada no produto pai da Loja Integrada (ID: ${targetLiProductId})`
+            : `Descrição atualizada na Loja Integrada (ID: ${targetLiProductId})`,
         });
         console.log('✅ Atualização confirmada:', data);
       } else {
