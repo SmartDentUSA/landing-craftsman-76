@@ -166,13 +166,30 @@ const DashboardContent = () => {
     if (session?.user) {
       setUserEmail(session.user.email);
       
-      const { data: roleData } = await supabase
+      // Try direct query first
+      const { data: roleData, error: roleError } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', session.user.id)
         .single();
       
-      setUserRole(roleData?.role || 'user');
+      if (!roleError && roleData?.role) {
+        setUserRole(roleData.role);
+        return;
+      }
+
+      // Fallback: use has_role RPC (SECURITY DEFINER, more resilient)
+      console.warn('Direct role query failed, trying has_role RPC fallback:', roleError?.message);
+      try {
+        const { data: isAdmin } = await supabase.rpc('has_role', {
+          _user_id: session.user.id,
+          _role: 'admin'
+        });
+        setUserRole(isAdmin ? 'admin' : 'user');
+      } catch (rpcErr) {
+        console.error('has_role RPC also failed:', rpcErr);
+        setUserRole('user');
+      }
     }
   }, []);
 
@@ -268,7 +285,7 @@ const DashboardContent = () => {
     };
   }, []);
 
-  const handlePromoteToAdmin = async () => {
+  const handlePromoteToAdmin = async (retryCount = 0) => {
     if (!userEmail) return;
     
     setPromotingToAdmin(true);
@@ -277,7 +294,10 @@ const DashboardContent = () => {
         _email: userEmail 
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error('promote_user_to_admin RPC failed:', error);
+        throw error;
+      }
       
       if (data) {
         toast({
@@ -288,12 +308,24 @@ const DashboardContent = () => {
         setUserRole('admin');
         navigate('/editor');
       } else {
-        throw new Error('Não foi possível ativar o acesso de administrador');
+        throw new Error('RPC retornou false - verifique se o email está cadastrado');
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Promote to admin failed:', error);
+      
+      // Auto-retry once after 2s on timeout errors
+      if (retryCount < 1 && (error?.message?.includes('timeout') || error?.code === 'PGRST301')) {
+        toast({
+          title: "Conexão lenta, tentando novamente...",
+          description: "Aguarde alguns segundos.",
+        });
+        setTimeout(() => handlePromoteToAdmin(retryCount + 1), 2000);
+        return;
+      }
+      
       toast({
         title: "Erro ao ativar acesso",
-        description: "Não foi possível ativar o acesso de administrador. Tente novamente.",
+        description: error?.message || "Não foi possível ativar o acesso de administrador. Tente novamente.",
         variant: "destructive",
       });
     } finally {
@@ -494,7 +526,7 @@ const DashboardContent = () => {
                 </div>
               </div>
               <Button 
-                onClick={handlePromoteToAdmin}
+                onClick={() => handlePromoteToAdmin()}
                 disabled={promotingToAdmin}
                 className="gradient-primary"
               >
