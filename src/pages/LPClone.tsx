@@ -243,8 +243,7 @@ const LPClone = () => {
   const domains = companyProfile?.seo_domains as { domain: string }[] || [];
   
   return (
-    <ProtectedRoute requiredRole="admin">
-      <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
         <TopNavigation />
         
         <div className="container mx-auto py-6 px-4 space-y-6">
