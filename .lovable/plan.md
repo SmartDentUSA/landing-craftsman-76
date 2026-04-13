@@ -1,46 +1,29 @@
 
 
-## Plano: Corrigir conteudo SEO/AI aparecendo visivel no HTML do e-commerce
+## Plano: Corrigir tela travada em "Verificando autenticação..."
 
 ### Problema
-O HTML gerado pelo `generate-ecommerce-html` injeta blocos semanticos para SEO/AI que aparecem como texto visivel na Loja Integrada. A Loja Integrada so usa o campo `descricao_completa` (HTML puro) e:
-1. Nao carrega CSS externo, entao `class="visually-hidden"` nao esconde nada
-2. Provavelmente strip ou renderiza `<script type="application/ld+json">` como texto
-3. Blocos fora do `</article></main>` ficam soltos
+O `ProtectedRoute` trava porque a chamada RPC `has_role` fica pendente indefinidamente quando ha problemas de conectividade com o Supabase (vistos nos logs: "Failed to fetch"). O timeout de 12s existe, mas pode ser invalidado por re-montagens do componente ou pelo evento `SIGNED_IN` que chama `checkAuth()` novamente.
 
-### Blocos afetados no `generate-ecommerce-html/index.ts`
+### Raiz do problema
+1. A funcao `checkAuth` tem retries com delays (1s+2s+3s = 6s) antes de sequer tentar o RPC
+2. O RPC `has_role` nao tem timeout proprio — se o Supabase nao responder, fica pendente para sempre
+3. O evento `onAuthStateChange(SIGNED_IN)` chama `checkAuth()` de novo, reiniciando todo o ciclo
+4. Em re-montagens (navegacao), o estado `loading=true` reseta e o timeout de 12s recomeça
 
-1. **GEO Context** (linhas 2504-2528) — usa `class="visually-hidden"` SEM inline style. Aparece toda a descricao da empresa, setor, expertise, etc.
+### Correcao em `src/components/ProtectedRoute.tsx`
 
-2. **JSON-LD principal** (linha 2604) — `<script type="application/ld+json">` com Product + WebPage + FAQPage + Organization + DefinedTermSet. Loja Integrada renderiza como texto.
+1. **Adicionar timeout ao RPC `has_role`** — usar `Promise.race` com timeout de 5s. Se expirar, assumir role='user' e prosseguir
+2. **Reduzir retries de sessao** — de 3 tentativas (6s de delay) para 2 (3s de delay), ja que o usuario ja esta autenticado
+3. **Nao re-executar checkAuth no SIGNED_IN** — o user ja esta setado pelo onAuthStateChange. Apenas verificar role diretamente sem o ciclo completo de retries
+4. **Setar user imediatamente ao encontrar sessao** — mover `setUser` para antes do RPC, assim o timeout mostra o conteudo com role='user' em vez da tela de erro
 
-3. **Entity Index HTML** (linha 2607) — `generateEntityIndexHTML()` gera links Wikidata com `VISUALLY_HIDDEN_STYLE` inline (OK para CSS, mas a Loja Integrada pode nao respeitar).
-
-4. **Entity Index JSON-LD** (linha 2616) — outro `<script>` tag renderizado como texto.
-
-5. **Thing JSON-LD Wikidata** (linhas 2634-2643) — mais um `<script>` tag.
-
-### Correcao
-
-**Remover TODOS os blocos que nao sao conteudo visual** do HTML destinado a Loja Integrada. Esses blocos so fazem sentido em paginas que voce controla (landing pages, blog). Na Loja Integrada, a plataforma ja tem seu proprio `<head>`, Schema, etc.
-
-Alteracoes em `supabase/functions/generate-ecommerce-html/index.ts`:
-
-1. **Remover bloco GEO Context** (linhas 2489-2528) — empresa ja esta no Schema da Loja Integrada
-2. **Remover `<script>` JSON-LD principal** (linha 2604) — a Loja Integrada nao suporta scripts no `descricao_completa`
-3. **Remover Entity Index HTML** (linha 2607)
-4. **Remover Entity Index JSON-LD** (linhas 2609-2616)
-5. **Remover MedicalEntity push** (linhas 2618-2627) — ja esta depois do JSON-LD, mas tambem desnecessario
-6. **Remover Thing JSON-LD Wikidata** (linhas 2632-2644)
-7. **Manter** o `</article></main>` fechamento (linha 2630)
-
-Essencialmente, o HTML do e-commerce deve terminar em `</section></article></main>` sem nenhum bloco de schema/AI depois.
+### Resultado esperado
+- Se sessao existe: mostrar conteudo em <3s (user com role default 'user')
+- Se RPC responde: atualizar role corretamente
+- Se RPC falha/trava: prosseguir com role='user' (somente leitura)
+- Se sem sessao: redirecionar para /auth em <3s
 
 ### Arquivo editado
-- `supabase/functions/generate-ecommerce-html/index.ts` (~60 linhas removidas)
-
-### Apos correcao
-- Deploy da edge function
-- Gerar HTML novamente para o produto
-- Enviar para Loja Integrada e verificar que nao aparece texto de schema
+- `src/components/ProtectedRoute.tsx`
 
