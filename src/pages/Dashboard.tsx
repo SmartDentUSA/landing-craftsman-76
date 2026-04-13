@@ -526,7 +526,7 @@ const DashboardContent = () => {
                 </div>
               </div>
               <Button 
-                onClick={handlePromoteToAdmin}
+                onClick={() => handlePromoteToAdmin()}
                 disabled={promotingToAdmin}
                 className="gradient-primary"
               >
