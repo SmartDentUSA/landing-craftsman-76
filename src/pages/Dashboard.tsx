@@ -14,7 +14,7 @@ import { type LandingPage } from "@/hooks/useLandingPagesSupabase";
 import { useDebounce } from "@/hooks/useDebounce";
 import { generateBlogHTML } from '@/services/seo/blogHTMLGenerator';
 import { getTrackingConfig, type TrackingConfig } from '@/lib/tracking-injector';
-import ProtectedRoute from "@/components/ProtectedRoute";
+
 import { BreadcrumbNavigation } from "@/components/BreadcrumbNavigation";
 import { useBlogStatusMonitor } from '@/hooks/useBlogStatusMonitor';
 import { ProductMigrationModal } from "@/components/ProductMigrationModal";
