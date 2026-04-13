@@ -1,29 +1,38 @@
 
 
-## Plano: Corrigir tela travada em "Verificando autenticação..."
+## Plano: Corrigir acesso ao sistema
 
-### Problema
-O `ProtectedRoute` trava porque a chamada RPC `has_role` fica pendente indefinidamente quando ha problemas de conectividade com o Supabase (vistos nos logs: "Failed to fetch"). O timeout de 12s existe, mas pode ser invalidado por re-montagens do componente ou pelo evento `SIGNED_IN` que chama `checkAuth()` novamente.
+### Problema 1: Supabase Database Timeout
+O banco Supabase esta retornando "Connection terminated due to connection timeout". Isso faz todas as queries falharem (landing pages, categorias, Clinical Brain, etc). Isso e um problema de infraestrutura -- o projeto Supabase pode estar pausado ou com instabilidade.
 
-### Raiz do problema
-1. A funcao `checkAuth` tem retries com delays (1s+2s+3s = 6s) antes de sequer tentar o RPC
-2. O RPC `has_role` nao tem timeout proprio — se o Supabase nao responder, fica pendente para sempre
-3. O evento `onAuthStateChange(SIGNED_IN)` chama `checkAuth()` de novo, reiniciando todo o ciclo
-4. Em re-montagens (navegacao), o estado `loading=true` reseta e o timeout de 12s recomeça
+**Acao**: Verificar no Supabase Dashboard se o projeto esta ativo. Se estiver pausado, reativar.
 
-### Correcao em `src/components/ProtectedRoute.tsx`
+### Problema 2: Loop infinito no Dashboard (bug de codigo)
+O `useEffect` na linha 246-250 dispara `fetchBlogPosts` toda vez que `approvedLandingPagesIds` ou `fetchBlogPosts` mudam. Porem:
+- `debouncedFetchBlogPosts` captura `landingPages` no closure (linha 116)
+- Quando `landingPages` muda, `debouncedFetchBlogPosts` recria -> `fetchBlogPosts` recria -> useEffect dispara novamente
+- Quando as queries falham (timeout), o estado reseta, causando novo ciclo
 
-1. **Adicionar timeout ao RPC `has_role`** — usar `Promise.race` com timeout de 5s. Se expirar, assumir role='user' e prosseguir
-2. **Reduzir retries de sessao** — de 3 tentativas (6s de delay) para 2 (3s de delay), ja que o usuario ja esta autenticado
-3. **Nao re-executar checkAuth no SIGNED_IN** — o user ja esta setado pelo onAuthStateChange. Apenas verificar role diretamente sem o ciclo completo de retries
-4. **Setar user imediatamente ao encontrar sessao** — mover `setUser` para antes do RPC, assim o timeout mostra o conteudo com role='user' em vez da tela de erro
+Isso gera dezenas de chamadas por segundo ao Supabase, piorando o timeout.
+
+### Correcao no codigo
+
+**Arquivo**: `src/pages/Dashboard.tsx`
+
+1. **Remover `fetchBlogPosts` das dependencias do useEffect** -- usar ref para a funcao em vez de dependencia direta
+2. **Estabilizar `debouncedFetchBlogPosts`** -- passar `landingPages` como argumento em vez de capturar no closure
+3. **Adicionar guard contra chamadas quando nao ha landing pages** -- evitar queries desnecessarias
+
+Mudancas especificas:
+- Linha 116-150: Refatorar `debouncedFetchBlogPosts` para receber `landingPages` como parametro
+- Linha 166-169: Remover wrapper `fetchBlogPosts` desnecessario
+- Linha 246-250: Chamar `debouncedFetchBlogPosts` diretamente com `landingPages`, remover `fetchBlogPosts` da lista de dependencias
 
 ### Resultado esperado
-- Se sessao existe: mostrar conteudo em <3s (user com role default 'user')
-- Se RPC responde: atualizar role corretamente
-- Se RPC falha/trava: prosseguir com role='user' (somente leitura)
-- Se sem sessao: redirecionar para /auth em <3s
+- Loop infinito eliminado
+- Dashboard carrega normalmente quando Supabase responde
+- Menos pressao no banco de dados
 
 ### Arquivo editado
-- `src/components/ProtectedRoute.tsx`
+- `src/pages/Dashboard.tsx` (~15 linhas alteradas)
 
