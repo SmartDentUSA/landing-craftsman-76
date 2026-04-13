@@ -1,0 +1,1 @@
+UPDATE public.company_profile SET founder_name = 'Dr. Marcelo Del Guerra', founder_title = 'PhD Engenharia de Produção Mecânica, EESC/USP · Fundador Smart Dent' WHERE wikidata_id = 'Q138636902';
