@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
 
 const SESSION_TIMEOUT_MS = 8000;
-const RPC_TIMEOUT_MS = 2000;
+const RPC_TIMEOUT_MS = 5000;
 const AUTH_STORAGE_KEY_PATTERN = /^sb-.*-auth-token$/;
 
 type AuthStatus = 'loading' | 'ready' | 'timeout' | 'error';
