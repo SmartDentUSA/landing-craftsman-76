@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Copy, Sparkles, Image, RefreshCw, Download, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { EngagementCarouselPreview, generateEngagementSlidePNG, generateEngagementSlideVideo, fetchAsDataUrl } from "./EngagementCarouselPreview";
+import { EngagementCarouselPreview, generateEngagementSlidePNG, generateEngagementSlideVideo, fetchAsDataUrl, resolveVideoSource } from "./EngagementCarouselPreview";
 import type { EngagementSlideTexts, EngagementSlideTextsMap } from "./EngagementCarouselPreview";
 import JSZip from "jszip";
 
@@ -276,24 +276,37 @@ export function EngagementCarouselSection({
           await Promise.race([
             (async () => {
               const texts = slideTexts[i];
-              const isVideo = texts.mediaType === 'video';
+              const videoUrl = resolveVideoSource(texts);
 
-              if (isVideo) {
-                const videoUrl = texts.videoStorageUrl || texts.videoSrc;
-                if (videoUrl) {
+              if (videoUrl) {
+                // Try video export — attempt both sources before falling back
+                const sources = [videoUrl];
+                // Add alternate source if available
+                if (texts.videoSrc && texts.videoSrc !== videoUrl) sources.push(texts.videoSrc);
+                if (texts.videoStorageUrl && texts.videoStorageUrl !== videoUrl) sources.push(texts.videoStorageUrl);
+
+                let videoRendered = false;
+                for (const src of sources) {
                   try {
-                    const videoBlob = await generateEngagementSlideVideo(i, videoUrl, texts, primaryColor, accentColor, brandName, handleName);
+                    const videoBlob = await generateEngagementSlideVideo(i, src, texts, primaryColor, accentColor, brandName, handleName);
                     zip.file(`slide_${i}.webm`, videoBlob);
                     hasVideos = true;
+                    videoRendered = true;
+                    break;
                   } catch (err) {
-                    console.warn(`Video render failed for slide ${i}, falling back to PNG:`, err);
-                    let imgUrl = slideImageMap[i] || '';
-                    if (imgUrl && !imgUrl.startsWith('data:')) {
-                      try { imgUrl = await fetchAsDataUrl(imgUrl); } catch (e) { console.warn(`fetchAsDataUrl failed slide ${i}:`, e); }
-                    }
-                    const blob = await generateEngagementSlidePNG(i, imgUrl, texts, primaryColor, accentColor, brandName, handleName);
-                    zip.file(`slide_${i}.png`, blob);
+                    console.warn(`Video render failed for slide ${i} with source ${src.substring(0, 60)}:`, err);
                   }
+                }
+
+                if (!videoRendered) {
+                  console.warn(`All video sources failed for slide ${i}, falling back to PNG`);
+                  toast({ title: `⚠️ Slide ${i}: vídeo falhou, exportando como imagem` });
+                  let imgUrl = slideImageMap[i] || '';
+                  if (imgUrl && !imgUrl.startsWith('data:')) {
+                    try { imgUrl = await fetchAsDataUrl(imgUrl); } catch (e) { console.warn(`fetchAsDataUrl failed slide ${i}:`, e); }
+                  }
+                  const blob = await generateEngagementSlidePNG(i, imgUrl, texts, primaryColor, accentColor, brandName, handleName);
+                  zip.file(`slide_${i}.png`, blob);
                 }
               } else {
                 let imgUrl = slideImageMap[i] || '';
