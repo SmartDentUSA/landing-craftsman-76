@@ -870,13 +870,13 @@ export async function generateEngagementSlidePNG(
     const titleFont = '900 52px system-ui, -apple-system, sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    let titleEndY = drawRichText(ctx, (texts.title || '').slice(0, 150), 60, H - 260, W - 120, 62, titleFont, titleFont, '#ffffff', accent, 'left', 3);
+    let titleEndY = drawRichText(ctx, (texts.title || '').slice(0, 150), 60, H - 260, W - 120, 62, titleFont, titleFont, '#ffffff', accent, 'left');
 
     // Subtitle (max 2 lines)
     if (texts.text) {
       const bodyFont = '400 24px system-ui, -apple-system, sans-serif';
       const bodyFontBold = '700 24px system-ui, -apple-system, sans-serif';
-      drawRichText(ctx, (texts.text).slice(0, 200), 60, titleEndY + 16, W - 120, 36, bodyFont, bodyFontBold, 'rgba(255,255,255,0.8)', accent, 'left', 2);
+      drawRichText(ctx, (texts.text).slice(0, 200), 60, titleEndY + 16, W - 120, 36, bodyFont, bodyFontBold, 'rgba(255,255,255,0.8)', accent, 'left');
     }
 
     // Slide number badge
@@ -1150,13 +1150,13 @@ function drawSlideFrameWithVideo(
     const titleFont = '900 52px system-ui, -apple-system, sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    let titleEndY = drawRichText(ctx, (texts.title || '').slice(0, 150), 60, H - 260, W - 120, 62, titleFont, titleFont, '#ffffff', accent, 'left', 3);
+    let titleEndY = drawRichText(ctx, (texts.title || '').slice(0, 150), 60, H - 260, W - 120, 62, titleFont, titleFont, '#ffffff', accent, 'left');
 
     // Subtitle (max 2 lines)
     if (texts.text) {
       const bodyFont = '400 24px system-ui, -apple-system, sans-serif';
       const bodyFontBold = '700 24px system-ui, -apple-system, sans-serif';
-      drawRichText(ctx, (texts.text).slice(0, 200), 60, titleEndY + 16, W - 120, 36, bodyFont, bodyFontBold, 'rgba(255,255,255,0.8)', accent, 'left', 2);
+      drawRichText(ctx, (texts.text).slice(0, 200), 60, titleEndY + 16, W - 120, 36, bodyFont, bodyFontBold, 'rgba(255,255,255,0.8)', accent, 'left');
     }
 
     // Badge
