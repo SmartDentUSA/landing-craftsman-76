@@ -21,6 +21,12 @@ export interface EngagementSlideTexts {
 
 export type EngagementSlideTextsMap = Record<number, EngagementSlideTexts>;
 
+/** Unified video source resolver — use everywhere instead of ad-hoc checks */
+export function resolveVideoSource(texts: EngagementSlideTexts): string | null {
+  if (texts.mediaType !== 'video') return null;
+  return texts.videoSrc || texts.videoStorageUrl || null;
+}
+
 interface EngagementCarouselPreviewProps {
   slideImageMap: Record<number, string>;
   onImageChange: (slideNum: number, url: string) => void;
@@ -504,15 +510,15 @@ function renderSlideContent(
 
   // Media block (image or video)
   const MediaBlock = ({ height = 440 }: { height?: number }) => {
-    const isVideo = texts.mediaType === 'video' && texts.videoSrc;
-    if (isVideo) {
+    const videoSource = resolveVideoSource(texts);
+    if (videoSource) {
       return (
         <div style={{
           width: '100%', height, overflow: 'hidden',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
           <video
-            src={texts.videoSrc}
+            src={videoSource}
             autoPlay muted loop playsInline
             style={{
               width: '100%', height: '100%', objectFit: 'cover',
@@ -561,9 +567,9 @@ function renderSlideContent(
         fontFamily: 'system-ui, -apple-system, sans-serif',
       }}>
         {/* Full-bleed media */}
-        {texts.mediaType === 'video' && texts.videoSrc ? (
+        {resolveVideoSource(texts) ? (
           <video
-            src={texts.videoSrc}
+            src={resolveVideoSource(texts)!}
             autoPlay muted loop playsInline
             style={{
               position: 'absolute', top: 0, left: 0,
