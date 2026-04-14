@@ -647,16 +647,19 @@ function renderSlideContent(
       {/* Main content area */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: slideNum === 6 ? '40px 60px 40px' : '48px 60px 48px', gap: slideNum === 6 ? 20 : 28, justifyContent: slideNum === 6 ? 'flex-start' : 'center' }}>
         {/* Title */}
-        <div style={{ fontSize: slideNum === 6 ? 36 : 56, fontWeight: 900, color: textColor, lineHeight: 1.15 }}>
+        <div style={{
+          fontSize: slideNum === 6 ? 28 : 56, fontWeight: 900, color: textColor, lineHeight: 1.15,
+          ...(slideNum === 6 ? { maxHeight: 160, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 5, WebkitBoxOrient: 'vertical' as const } : {}),
+        }}>
           <RichText text={texts.title || ''} />
         </div>
 
         {/* Image */}
-        <MediaBlock height={slideNum === 6 ? 200 : 440} />
+        <MediaBlock height={slideNum === 6 ? 160 : 440} />
 
         {/* Body text */}
         {texts.text && (
-          <div style={{ fontSize: slideNum === 6 ? 28 : 36, lineHeight: 1.5, color: subTextColor, fontWeight: 400, maxHeight: slideNum === 6 ? 200 : undefined, overflow: 'hidden' }}>
+          <div style={{ fontSize: slideNum === 6 ? 22 : 36, lineHeight: 1.5, color: subTextColor, fontWeight: 400, maxHeight: slideNum === 6 ? 120 : undefined, overflow: 'hidden' }}>
             <RichText text={texts.text} />
           </div>
         )}
@@ -667,14 +670,16 @@ function renderSlideContent(
             alignSelf: 'center',
             background: accent,
             color: getLuminance(accent) > 0.5 ? '#000' : '#fff',
-            padding: '16px 48px',
+            padding: '14px 32px',
             borderRadius: 20,
-            fontSize: 28,
+            fontSize: 24,
             fontWeight: 900,
             textAlign: 'center',
             flexShrink: 0,
-            maxWidth: '90%',
+            width: '100%',
+            maxWidth: '100%',
             wordBreak: 'break-word' as const,
+            overflowWrap: 'break-word' as const,
           }}>
             {texts.cta_label}
           </div>
@@ -837,7 +842,7 @@ export async function generateEngagementSlidePNG(
   }
 
   // Title
-  const titleFontSize = slideNum === 1 ? 72 : (slideNum === 6 ? 36 : 56);
+  const titleFontSize = slideNum === 1 ? 72 : (slideNum === 6 ? 28 : 56);
   const titleFont = `900 ${titleFontSize}px system-ui, -apple-system, sans-serif`;
   const titleFontBold = titleFont; // already bold
   ctx.textAlign = 'left';
@@ -847,7 +852,7 @@ export async function generateEngagementSlidePNG(
 
   // Image area
   const imgY = Math.max(titleEndY + 20, 320);
-  const imgH = slideNum === 6 ? 200 : 440;
+  const imgH = slideNum === 6 ? 160 : 440;
   if (img) {
     ctx.save();
     const scaleF = imageScale / 100;
@@ -880,7 +885,7 @@ export async function generateEngagementSlidePNG(
   // Body text
   const bodyY = imgY + imgH + (slideNum === 6 ? 20 : 28);
   if (texts.text) {
-    const bodyFontSize = slideNum === 6 ? 28 : 36;
+    const bodyFontSize = slideNum === 6 ? 22 : 36;
     const bodyFont = `400 ${bodyFontSize}px system-ui, -apple-system, sans-serif`;
     const bodyFontBold = `700 ${bodyFontSize}px system-ui, -apple-system, sans-serif`;
     drawRichText(ctx, texts.text, 60, bodyY, W - 120, bodyFontSize * 1.5, bodyFont, bodyFontBold, subTextColor, accent, 'left');
@@ -888,10 +893,10 @@ export async function generateEngagementSlidePNG(
 
   // CTA button for slide 6
   if (slideNum === 6 && texts.cta_label) {
-    const btnW = 600;
-    const btnH = 90;
-    const btnX = (W - btnW) / 2;
-    const btnY = H - 160;
+    const btnW = W - 120;
+    const btnH = 80;
+    const btnX = 60;
+    const btnY = H - 140;
     ctx.fillStyle = accent;
     ctx.beginPath();
     ctx.moveTo(btnX + 20, btnY);
@@ -905,7 +910,7 @@ export async function generateEngagementSlidePNG(
     ctx.arcTo(btnX, btnY, btnX + 20, btnY, 20);
     ctx.closePath();
     ctx.fill();
-    ctx.font = '900 28px system-ui, -apple-system, sans-serif';
+    ctx.font = '900 24px system-ui, -apple-system, sans-serif';
     ctx.fillStyle = getLuminance(accent) > 0.5 ? '#000' : '#fff';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -1009,7 +1014,7 @@ function drawSlideFrameWithVideo(
 
     // Video area
     const imgY = Math.max(titleEndY + 20, 320);
-    const imgH = slideNum === 6 ? 200 : 440;
+    const imgH = slideNum === 6 ? 160 : 440;
     ctx.save();
     const scaleF = imageScale / 100;
     const cx = W / 2;
@@ -1043,10 +1048,10 @@ function drawSlideFrameWithVideo(
 
     // CTA
     if (slideNum === 6 && texts.cta_label) {
-      const btnW = 600;
-      const btnH = 100;
-      const btnX = (W - btnW) / 2;
-      const btnY = H - 200;
+      const btnW = W - 120;
+      const btnH = 80;
+      const btnX = 60;
+      const btnY = H - 140;
       ctx.fillStyle = accent;
       ctx.beginPath();
       ctx.moveTo(btnX + 20, btnY);
@@ -1060,7 +1065,7 @@ function drawSlideFrameWithVideo(
       ctx.arcTo(btnX, btnY, btnX + 20, btnY, 20);
       ctx.closePath();
       ctx.fill();
-      ctx.font = '900 28px system-ui, -apple-system, sans-serif';
+      ctx.font = '900 24px system-ui, -apple-system, sans-serif';
       ctx.fillStyle = getLuminance(accent) > 0.5 ? '#000' : '#fff';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
