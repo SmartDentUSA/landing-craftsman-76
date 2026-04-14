@@ -1302,7 +1302,7 @@ function drawSlideFrameWithVideo(
 
     // --- Draw body ---
     if (displayBody) {
-      drawRichText(ctx, displayBody, pad, curY, contentW, bodyLineH, bodyFont, bodyFontBold, subTextColor, accent, 'center');
+      drawRichText(ctx, displayBody, W / 2, curY, contentW, bodyLineH, bodyFont, bodyFontBold, subTextColor, accent, 'center');
       curY += bodyH + gap;
     }
 
@@ -1364,13 +1364,17 @@ function drawSlideFrameWithVideo(
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
 
-    // Measure
+    // Measure (clamped)
     const titleMEnd = drawRichText(ctx, texts.title || '', -9999, -9999, contentW, titleLineH, titleFont, titleFont, 'transparent', 'transparent', 'left');
-    const titleH = titleMEnd - (-9999);
+    const titleHRaw = titleMEnd - (-9999);
+    const maxTitleH = 4 * titleLineH;
+    const titleH = Math.min(titleHRaw, maxTitleH);
     let bodyH = 0;
     if (texts.text) {
       const bodyMEnd = drawRichText(ctx, texts.text, -9999, -9999, contentW, bodyLineH, bodyFont, bodyFontBold, 'transparent', 'transparent', 'left');
-      bodyH = bodyMEnd - (-9999);
+      const bodyHRaw = bodyMEnd - (-9999);
+      const maxBodyH = 3 * bodyLineH;
+      bodyH = Math.min(bodyHRaw, maxBodyH);
     }
 
     const totalH = titleH + gap + imgH + (bodyH > 0 ? gap + bodyH : 0);
