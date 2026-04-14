@@ -23,7 +23,7 @@ interface CreateCategoryConfig {
   search_intent_keywords: string[];
 }
 
-export const useCategoryConfig = () => {
+export const useCategoryConfig = (enabled = true) => {
   const [configs, setConfigs] = useState<CategoryConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -194,8 +194,10 @@ export const useCategoryConfig = () => {
   }, [configs]);
 
   useEffect(() => {
-    fetchConfigs();
-  }, [fetchConfigs]);
+    if (enabled) {
+      fetchConfigs();
+    }
+  }, [fetchConfigs, enabled]);
 
   return {
     configs,
