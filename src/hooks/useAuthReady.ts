@@ -1,14 +1,18 @@
 /**
  * Hook centralizado de autenticação.
- * Fonte única de verdade para isReady, user e role.
- * Evita race conditions e falsos logouts.
+ * Fonte única de verdade para authStatus, user e role.
+ * Registra onAuthStateChange ANTES de getSession para não perder eventos.
+ * Inclui timeout para evitar spinner infinito.
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
 
+const SESSION_TIMEOUT_MS = 8000;
 const RPC_TIMEOUT_MS = 2000;
+
+type AuthStatus = 'loading' | 'ready' | 'timeout' | 'error';
 
 async function checkRoleWithTimeout(userId: string): Promise<'admin' | 'user'> {
   try {
@@ -29,112 +33,134 @@ async function checkRoleWithTimeout(userId: string): Promise<'admin' | 'user'> {
 }
 
 interface AuthReadyState {
+  authStatus: AuthStatus;
   isReady: boolean;
   user: User | null;
   isAuthenticated: boolean;
   userRole: 'admin' | 'user' | null;
   error: string | null;
+  clearSession: () => Promise<void>;
 }
 
 export function useAuthReady(): AuthReadyState {
-  const [isReady, setIsReady] = useState(false);
+  const [authStatus, setAuthStatus] = useState<AuthStatus>('loading');
   const [user, setUser] = useState<User | null>(null);
   const [userRole, setUserRole] = useState<'admin' | 'user' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
+    let sessionResolved = false;
 
-    // Verificar sessão inicial
-    const checkSession = async () => {
-      try {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
-        if (!mounted) return;
+    // Timeout fallback — if nothing resolves in time, mark as timeout
+    const timeoutId = setTimeout(() => {
+      if (mounted && !sessionResolved) {
+        console.warn('useAuthReady: session timeout after', SESSION_TIMEOUT_MS, 'ms');
+        sessionResolved = true;
+        setAuthStatus('timeout');
+      }
+    }, SESSION_TIMEOUT_MS);
 
-        if (sessionError) {
-          console.warn("useAuthReady: Session error", sessionError.message);
-          setError(sessionError.message);
-        }
+    const markReady = (u: User | null) => {
+      if (!mounted) return;
+      sessionResolved = true;
+      clearTimeout(timeoutId);
+      setUser(u);
+      setAuthStatus('ready');
+      setError(null);
 
-        const currentUser = session?.user ?? null;
-        setUser(currentUser);
-        setIsReady(true);
-
-        // Resolve role in background
-        if (currentUser) {
-          setUserRole('user'); // default immediately
-          const role = await checkRoleWithTimeout(currentUser.id);
+      if (u) {
+        setUserRole('user'); // default immediately
+        checkRoleWithTimeout(u.id).then(role => {
           if (mounted) setUserRole(role);
-        }
-      } catch (err: any) {
-        if (!mounted) return;
-        console.error("useAuthReady: Exception", err);
-        setError(err.message);
-        setIsReady(true);
+        });
+      } else {
+        setUserRole(null);
       }
     };
 
-    checkSession();
-
-    // Escutar mudanças de autenticação
+    // 1. Register listener FIRST to not miss events
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (!mounted) return;
+        console.log("useAuthReady: Auth event", event);
 
-        console.log("useAuthReady: Auth state change", event);
-
-        // Ignore transient events that don't indicate real logout
         if (event === 'TOKEN_REFRESHED') {
-          // Token refreshed — keep current user, just update if needed
-          if (session?.user) {
-            setUser(session.user);
-          }
+          if (session?.user) setUser(session.user);
           return;
         }
 
         if (event === 'SIGNED_OUT') {
+          sessionResolved = true;
+          clearTimeout(timeoutId);
           setUser(null);
           setUserRole(null);
           setError(null);
-          setIsReady(true);
+          setAuthStatus('ready');
           return;
         }
 
         if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-          const newUser = session?.user ?? null;
-          setUser(newUser);
-          setError(null);
-          setIsReady(true);
-
-          if (newUser) {
-            setUserRole('user');
-            checkRoleWithTimeout(newUser.id).then(role => {
-              if (mounted) setUserRole(role);
-            });
-          }
+          markReady(session?.user ?? null);
           return;
         }
 
-        // For any other event, update user but don't clear it unless explicitly null
+        // Other events — update user if present
         if (session?.user) {
           setUser(session.user);
         }
-        setIsReady(true);
       }
     );
 
+    // 2. Then check initial session
+    supabase.auth.getSession().then(({ data: { session }, error: sessionError }) => {
+      if (!mounted || sessionResolved) return;
+
+      if (sessionError) {
+        console.warn("useAuthReady: getSession error", sessionError.message);
+        setError(sessionError.message);
+        // Don't block — mark ready with no user
+        markReady(null);
+        return;
+      }
+
+      markReady(session?.user ?? null);
+    }).catch((err: any) => {
+      if (!mounted || sessionResolved) return;
+      console.error("useAuthReady: getSession exception", err);
+      setError(err?.message || 'Session fetch failed');
+      sessionResolved = true;
+      clearTimeout(timeoutId);
+      setAuthStatus('error');
+    });
+
     return () => {
       mounted = false;
+      clearTimeout(timeoutId);
       subscription.unsubscribe();
     };
   }, []);
 
+  const clearSession = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      // Force clear local storage as fallback
+      localStorage.removeItem('sb-pgfgripuanuwwolmtknn-auth-token');
+    }
+    setUser(null);
+    setUserRole(null);
+    setAuthStatus('ready');
+    setError(null);
+  };
+
   return {
-    isReady,
+    authStatus,
+    isReady: authStatus === 'ready' || authStatus === 'timeout',
     user,
     isAuthenticated: !!user,
     userRole,
-    error
+    error,
+    clearSession,
   };
 }

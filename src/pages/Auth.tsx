@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,44 +7,59 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { useAuthReady } from "@/hooks/useAuthReady";
+
+const PUBLISHED_URL = "https://landing-craftsman-76.lovable.app";
 
 const Auth = () => {
-  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { authStatus, user, clearSession } = useAuthReady();
 
+  const isPreview = window.self !== window.top;
+
+  // Redirect if already authenticated
   useEffect(() => {
-    let mounted = true;
+    if (authStatus === 'ready' && user) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [authStatus, user, navigate]);
 
-    // Check session once on mount
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!mounted) return;
-      if (session?.user) {
-        setUser(session.user);
+  const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+
+    const formData = new FormData(e.currentTarget);
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+      if (error) {
+        console.error('Login error:', error);
+        toast({
+          variant: "destructive",
+          title: "Erro no Login",
+          description: error.message
+        });
+      } else if (data.session) {
+        toast({ title: "Login realizado com sucesso" });
+        // Explicit navigate as fallback — onAuthStateChange should also handle this
         navigate('/dashboard', { replace: true });
       }
-    });
+    } catch (error: any) {
+      console.error('Unexpected login error:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro inesperado",
+        description: error?.message || "Tente novamente em alguns segundos"
+      });
+    }
 
-    // Listen for auth changes (e.g. after login)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (!mounted) return;
-        
-        if (event === 'SIGNED_IN' && session?.user) {
-          setUser(session.user);
-          navigate('/dashboard', { replace: true });
-        } else if (event === 'SIGNED_OUT') {
-          setUser(null);
-        }
-      }
-    );
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
-  }, [navigate]);
+    setLoading(false);
+  };
 
   const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -57,11 +71,7 @@ const Auth = () => {
     const confirmPassword = formData.get('confirmPassword') as string;
 
     if (password !== confirmPassword) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Passwords don't match"
-      });
+      toast({ variant: "destructive", title: "Erro", description: "As senhas não coincidem" });
       setLoading(false);
       return;
     }
@@ -69,62 +79,13 @@ const Auth = () => {
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/dashboard`
-      }
+      options: { emailRedirectTo: `${window.location.origin}/dashboard` }
     });
 
     if (error) {
-      toast({
-        variant: "destructive",
-        title: "Sign Up Failed",
-        description: error.message
-      });
+      toast({ variant: "destructive", title: "Erro no cadastro", description: error.message });
     } else {
-      toast({
-        title: "Success",
-        description: "Check your email for the confirmation link"
-      });
-    }
-
-    setLoading(false);
-  };
-
-  const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setLoading(true);
-
-    const formData = new FormData(e.currentTarget);
-    const email = formData.get('email') as string;
-    const password = formData.get('password') as string;
-
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-
-      if (error) {
-        console.error('Login error:', error);
-        toast({
-          variant: "destructive",
-          title: "Erro no Login",
-          description: error.message
-        });
-      } else if (data.user) {
-        toast({
-          title: "Login realizado com sucesso",
-          description: "Redirecionando para o dashboard..."
-        });
-        // Navigation will be handled by onAuthStateChange
-      }
-    } catch (error) {
-      console.error('Unexpected login error:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro inesperado",
-        description: "Tente novamente em alguns segundos"
-      });
+      toast({ title: "Sucesso", description: "Verifique seu email para o link de confirmação" });
     }
 
     setLoading(false);
@@ -133,22 +94,15 @@ const Auth = () => {
   const handleGoogleSignIn = async () => {
     setLoading(true);
     try {
-      console.log('🔐 Iniciando login com Google...');
-      
       const inIframe = window.self !== window.top;
-      
+
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
           redirectTo: `${window.location.origin}/dashboard`,
-          queryParams: {
-            access_type: "offline",
-            prompt: "consent",
-          },
+          queryParams: { access_type: "offline", prompt: "consent" },
           scopes: [
-            "openid",
-            "email",
-            "profile",
+            "openid", "email", "profile",
             "https://www.googleapis.com/auth/youtube.force-ssl",
             "https://www.googleapis.com/auth/business.manage"
           ].join(" "),
@@ -156,41 +110,20 @@ const Auth = () => {
         },
       });
 
-      if (error) {
-        console.error('❌ Google login error:', error);
-        throw error;
-      }
-
-      if (!data?.url) {
-        throw new Error('URL de autorização não retornada');
-      }
+      if (error) throw error;
+      if (!data?.url) throw new Error('URL de autorização não retornada');
 
       if (inIframe) {
-        console.log('⚠️ Iframe detectado — usando /auth/launch');
         const launchUrl = `${window.location.origin}/auth/launch?target=${encodeURIComponent(data.url)}`;
         const newTab = window.open(launchUrl, "_blank", "noopener,noreferrer");
-        
         if (!newTab) {
-          toast({
-            title: "Bloqueio de popup detectado",
-            description: "Permita popups para este site e tente novamente",
-            variant: "destructive",
-          });
-        } else {
-          console.log('✅ Nova aba aberta com sucesso');
+          toast({ title: "Bloqueio de popup", description: "Permita popups e tente novamente", variant: "destructive" });
         }
       } else {
-        console.log('✅ Ambiente top-level — redirecionamento direto');
         window.location.assign(data.url);
       }
-      
     } catch (error: any) {
-      console.error('❌ Unexpected Google login error:', error);
-      toast({
-        title: "Erro no login com Google",
-        description: error.message || "Tente novamente",
-        variant: "destructive",
-      });
+      toast({ title: "Erro no login com Google", description: error.message || "Tente novamente", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -208,67 +141,35 @@ const Auth = () => {
     });
 
     if (error) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao enviar email",
-        description: error.message
-      });
+      toast({ variant: "destructive", title: "Erro ao enviar email", description: error.message });
     } else {
-      toast({
-        title: "Email enviado",
-        description: "Verifique sua caixa de entrada para o link de redefinição de senha"
-      });
+      toast({ title: "Email enviado", description: "Verifique sua caixa de entrada" });
     }
 
     setLoading(false);
   };
 
   const handleSignOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message
-      });
-    } else {
-      navigate("/");
-    }
+    await clearSession();
+    navigate("/", { replace: true });
   };
 
-  if (user) {
+  // Already logged in
+  if (authStatus === 'ready' && user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted">
         <Card className="w-[400px]">
           <CardHeader>
             <CardTitle>✅ Você já está logado</CardTitle>
-            <CardDescription>
-              Conectado como: <strong>{user.email}</strong>
-            </CardDescription>
+            <CardDescription>Conectado como: <strong>{user.email}</strong></CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {/* 🔧 BOTÃO PRINCIPAL */}
-            <Button 
-              onClick={() => navigate('/dashboard', { replace: true })} 
-              className="w-full"
-              size="lg"
-            >
+            <Button onClick={() => navigate('/dashboard', { replace: true })} className="w-full" size="lg">
               Acessar Dashboard
             </Button>
-            
-            {/* 🔧 BOTÃO SECUNDÁRIO */}
-            <Button 
-              onClick={handleSignOut} 
-              className="w-full" 
-              variant="outline"
-            >
+            <Button onClick={handleSignOut} className="w-full" variant="outline">
               Sair da Conta
             </Button>
-            
-            {/* 🔧 INFORMAÇÃO EXTRA */}
-            <div className="text-xs text-muted-foreground text-center pt-2">
-              Se não for redirecionado automaticamente, clique no botão acima
-            </div>
           </CardContent>
         </Card>
       </div>
@@ -279,17 +180,22 @@ const Auth = () => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted">
       <Card className="w-[400px]">
         <CardHeader>
-          <CardTitle>Welcome</CardTitle>
-          <CardDescription>Sign in to your account or create a new one</CardDescription>
+          <CardTitle>Bem-vindo</CardTitle>
+          <CardDescription>Entre na sua conta ou crie uma nova</CardDescription>
         </CardHeader>
         <CardContent>
-          {/* ===== NOVO BOTÃO GOOGLE ===== */}
-          <Button
-            onClick={handleGoogleSignIn}
-            variant="outline"
-            className="w-full mb-4"
-            disabled={loading}
-          >
+          {/* Preview warning */}
+          {isPreview && (
+            <div className="mb-4 p-3 bg-muted rounded-md border text-sm text-muted-foreground">
+              <p className="font-medium mb-1">⚠️ Ambiente de Preview</p>
+              <p className="mb-2">A autenticação pode não funcionar no Preview. Use o site publicado:</p>
+              <a href={`${PUBLISHED_URL}/auth`} target="_blank" rel="noopener noreferrer">
+                <Button variant="secondary" size="sm" className="w-full">Abrir site publicado</Button>
+              </a>
+            </div>
+          )}
+
+          <Button onClick={handleGoogleSignIn} variant="outline" className="w-full mb-4" disabled={loading}>
             <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
               <path fill="#EA4335" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
               <path fill="#4285F4" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -300,16 +206,11 @@ const Auth = () => {
           </Button>
 
           <div className="relative mb-4">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
+            <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">
-                Ou continue com email
-              </span>
+              <span className="bg-background px-2 text-muted-foreground">Ou continue com email</span>
             </div>
           </div>
-          {/* ===== FIM NOVO BOTÃO ===== */}
 
           <Tabs defaultValue="signin" className="w-full">
             <TabsList className="grid w-full grid-cols-3">
@@ -317,84 +218,48 @@ const Auth = () => {
               <TabsTrigger value="signup">Cadastrar</TabsTrigger>
               <TabsTrigger value="forgot">Esqueci</TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="signin">
               <form onSubmit={handleSignIn} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="signin-email">Email</Label>
-                  <Input
-                    id="signin-email"
-                    name="email"
-                    type="email"
-                    placeholder="your@email.com"
-                    required
-                  />
+                  <Input id="signin-email" name="email" type="email" placeholder="seu@email.com" required />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signin-password">Password</Label>
-                  <Input
-                    id="signin-password"
-                    name="password"
-                    type="password"
-                    placeholder="Your password"
-                    required
-                  />
+                  <Label htmlFor="signin-password">Senha</Label>
+                  <Input id="signin-password" name="password" type="password" placeholder="Sua senha" required />
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? "Entrando..." : "Entrar"}
                 </Button>
               </form>
             </TabsContent>
-            
+
             <TabsContent value="signup">
               <form onSubmit={handleSignUp} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="signup-email">Email</Label>
-                  <Input
-                    id="signup-email"
-                    name="email"
-                    type="email"
-                    placeholder="your@email.com"
-                    required
-                  />
+                  <Input id="signup-email" name="email" type="email" placeholder="seu@email.com" required />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
-                  <Input
-                    id="signup-password"
-                    name="password"
-                    type="password"
-                    placeholder="Choose a password"
-                    required
-                  />
+                  <Label htmlFor="signup-password">Senha</Label>
+                  <Input id="signup-password" name="password" type="password" placeholder="Escolha uma senha" required />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-confirm">Confirm Password</Label>
-                  <Input
-                    id="signup-confirm"
-                    name="confirmPassword"
-                    type="password"
-                    placeholder="Confirm your password"
-                    required
-                  />
+                  <Label htmlFor="signup-confirm">Confirmar Senha</Label>
+                  <Input id="signup-confirm" name="confirmPassword" type="password" placeholder="Confirme sua senha" required />
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? "Criando conta..." : "Criar Conta"}
                 </Button>
               </form>
             </TabsContent>
-            
+
             <TabsContent value="forgot">
               <form onSubmit={handleForgotPassword} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="forgot-email">Email</Label>
-                  <Input
-                    id="forgot-email"
-                    name="email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    required
-                  />
+                  <Input id="forgot-email" name="email" type="email" placeholder="seu@email.com" required />
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? "Enviando..." : "Enviar Link de Reset"}
@@ -402,6 +267,18 @@ const Auth = () => {
               </form>
             </TabsContent>
           </Tabs>
+
+          {/* Clear session button */}
+          <div className="mt-4 pt-4 border-t">
+            <Button
+              onClick={async () => { await clearSession(); toast({ title: "Sessão limpa", description: "Tente fazer login novamente" }); }}
+              variant="ghost"
+              size="sm"
+              className="w-full text-xs text-muted-foreground"
+            >
+              Problemas para entrar? Limpar sessão local
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>
