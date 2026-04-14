@@ -28,7 +28,7 @@ interface CategoryData {
   configByProductType: Record<string, CategoryConfigItem>;
 }
 
-export const useProductCategories = () => {
+export const useProductCategories = (enabled = true) => {
   const [categoryData, setCategoryData] = useState<CategoryData>({
     categories: [],
     subcategories: [],
@@ -138,8 +138,10 @@ export const useProductCategories = () => {
   }, [toast]);
 
   useEffect(() => {
-    fetchCategories();
-  }, [fetchCategories]);
+    if (enabled) {
+      fetchCategories();
+    }
+  }, [fetchCategories, enabled]);
 
   const getSubcategoriesForCategory = useCallback((category: string) => {
     return categoryData.categorySubcategoryMap[category] || [];

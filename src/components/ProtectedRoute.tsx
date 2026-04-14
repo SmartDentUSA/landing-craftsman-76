@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuthReady } from "@/hooks/useAuthReady";
+import { CategoryProvider } from "@/contexts/CategoryContext";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -114,7 +115,7 @@ const ProtectedRoute = ({ children, requiredRole = 'user' }: ProtectedRouteProps
     );
   }
 
-  return <>{children}</>;
+  return <CategoryProvider>{children}</CategoryProvider>;
 };
 
 export default ProtectedRoute;
