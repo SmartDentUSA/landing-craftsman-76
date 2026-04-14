@@ -1,44 +1,34 @@
 
 
-## Plano: Alinhar exportação PNG/WEBM do Slide 6 com o preview
+## Plano: Corrigir bloqueio de acesso ao Repositório
 
-### Problema real
-O **preview HTML** do Slide 6 usa flexbox com `justifyContent: 'center'`, que distribui título, imagem, corpo e CTA de forma equilibrada. Mas o **canvas export** (PNG e WEBM) usa posicionamento fixo com `btnY = Math.max(curY, H - btnH - 120)`, que empurra o CTA para o fundo e deixa um vazio enorme no meio.
+### Problema
+A rota `/repository` exige `requiredRole="admin"`, mas a verificação de role está retornando `'user'` para seu usuário. Isso acontece porque o `checkRoleWithTimeout` no `useAuthReady.ts` faz fallback para `'user'` em caso de timeout ou erro no RPC `has_role`.
 
-Além disso, o título no canvas começa em `curY = 120` (topo), enquanto no preview tudo é centralizado verticalmente.
+### Diagnóstico necessário
+Antes de alterar código, preciso verificar se seu usuário tem a role `admin` no banco. Vou consultar a tabela `user_roles` via Supabase.
 
-### Correções em `src/components/EngagementCarouselPreview.tsx`
+### Ações
 
-**1. Centralizar verticalmente no canvas (PNG e WEBM)**
-- Calcular a altura total dos blocos (título + gap + imagem + gap + corpo + gap + CTA) antes de desenhar
-- Derivar o `startY` como `(H - totalHeight) / 2` para centralizar tudo
-- Remover o `Math.max(curY, H - btnH - 120)` que empurra o botão para baixo
+**1. Verificar se existe registro admin na tabela `user_roles`**
+- Consultar via `supabase--read_query` se há uma entrada com `role = 'admin'` para o seu `user_id`
 
-**2. Corrigir alinhamento do título**
-- O `ctx.textAlign` está como `'left'` mas `drawRichText` recebe `'center'` — o `drawRichText` já lida com alinhamento internamente, então basta garantir que `ctx.textAlign` não interfira
+**2a. Se NÃO existir o registro:**
+- Criar migration para inserir a role `admin` para o seu usuário
+- Ou usar o RPC `promote_user_to_admin` se já existir
 
-**3. Corrigir build errors (TS2554)**
-- Verificar e corrigir chamadas a `drawRichText` que possam ter argumentos extras em algum estado do build
+**2b. Se existir mas o RPC falhar:**
+- Aumentar o `RPC_TIMEOUT_MS` no `useAuthReady.ts` (atualmente pode estar muito curto)
+- Adicionar log mais detalhado para entender a falha
 
-### Lógica proposta para o canvas (simplificada)
-
-```text
-// Calcular alturas antes de desenhar:
-titleH  = estimativa de linhas * lineHeight
-imgH    = 320
-bodyH   = estimativa de linhas * lineHeight  
-ctaBtnH = linhas CTA * lineHeight + padding
-gaps    = 24 * 3
-
-totalH  = titleH + imgH + bodyH + ctaBtnH + gaps
-startY  = (1350 - totalH) / 2   // centralizar
-
-// Desenhar sequencialmente a partir de startY
-```
+**3. Alternativa rápida (se for só seu usuário)**
+- O `ProtectedRoute` poderia ser ajustado para não exigir `admin` no `/repository`, se todos os usuários autenticados devem ter acesso
 
 ### Arquivo
-- `src/components/EngagementCarouselPreview.tsx` — seções do Slide 6 no PNG (~linhas 901-1034) e no WEBM (~linhas 1172-1286)
+- `src/hooks/useAuthReady.ts` — ajuste de timeout se necessário
+- `src/App.tsx` — remover `requiredRole="admin"` do `/repository` se a intenção é acesso geral
+- Migration SQL — se precisar inserir role
 
 ### Resultado
-A exportação PNG e WEBM do Slide 6 vai ficar visualmente idêntica ao preview: conteúdo centralizado, sem vazio, CTA logo abaixo do corpo.
+Acesso ao Repositório restaurado sem a tela de "Acesso Restrito".
 
