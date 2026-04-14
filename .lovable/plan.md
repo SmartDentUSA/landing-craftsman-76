@@ -1,36 +1,22 @@
 
+## Plano: Gerar planilha com produtos e documentos técnicos
 
-## Plan: Stop resource exhaustion by gating data queries behind authentication
+Vou criar um arquivo Excel (.xlsx) com todos os 120 produtos do repositório, contendo:
 
-### Root cause
-`CategoryProvider` wraps the entire `App` in `src/App.tsx` (line 34). It calls `useProductCategories` and `useCategoryConfig`, which both fetch from `categories_config` on mount -- even on public routes like `/` and `/auth`. Every visitor, every preview reload, every bot hit fires 2+ Supabase queries unnecessarily.
+**Colunas:**
+- Nome do Produto
+- ID Loja Integrada
+- Documentos Técnicos (nome + link de cada documento, separados por quebra de linha na célula)
 
-### Changes
+**Dados:**
+- 63 produtos possuem documentos técnicos (de 1 a 10 docs cada)
+- 57 produtos não possuem documentos técnicos (célula ficará vazia ou "Sem documentos")
 
-**1. Move `CategoryProvider` inside `ProtectedRoute` (`src/App.tsx`)**
-- Remove `<CategoryProvider>` from wrapping the entire app
-- Create a small wrapper component that applies `CategoryProvider` only around protected children
+**Formato:**
+- Arquivo XLSX com formatação profissional (cabeçalho em destaque, colunas ajustadas)
+- Links dos documentos clicáveis
+- Salvo em `/mnt/documents/produtos_documentos_tecnicos.xlsx`
 
-**2. Gate `useProductCategories` and `useCategoryConfig` behind auth (`src/hooks/useProductCategories.ts`, `src/hooks/useCategoryConfig.ts`)**
-- Accept an `enabled` parameter (default `true`)
-- Skip the initial fetch when `enabled` is false
-- This is a safety net in case the hooks are used outside the provider
-
-**3. Update `ProtectedRoute` to include `CategoryProvider` (`src/components/ProtectedRoute.tsx`)**
-- Wrap children with `CategoryProvider` only after user is authenticated
-- This ensures categories only load when a logged-in user reaches a protected page
-
-**4. Handle `useCategoryContext` on public routes**
-- Any public component that might call `useCategoryContext` will get a graceful fallback instead of a crash (the context won't exist on public routes)
-
-### Files to edit
-- `src/App.tsx` -- remove global `CategoryProvider`
-- `src/components/ProtectedRoute.tsx` -- add `CategoryProvider` wrapper around children
-- `src/hooks/useProductCategories.ts` -- add `enabled` guard
-- `src/hooks/useCategoryConfig.ts` -- add `enabled` guard
-
-### Result
-- Public routes (`/`, `/auth`) make zero Supabase queries on load
-- Resource consumption drops significantly
-- Auth flow becomes faster and more reliable
-
+**Implementação:**
+- Script Python com openpyxl consultando os dados já extraídos do banco
+- Uma linha por produto, documentos agrupados na mesma célula
