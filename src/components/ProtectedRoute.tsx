@@ -11,7 +11,7 @@ interface ProtectedRouteProps {
 const PUBLISHED_URL = "https://landing-craftsman-76.lovable.app";
 
 const ProtectedRoute = ({ children, requiredRole = 'user' }: ProtectedRouteProps) => {
-  const { authStatus, isReady, user, userRole, clearSession } = useAuthReady();
+  const { authStatus, user, userRole, error, clearSession } = useAuthReady();
   const navigate = useNavigate();
   const hasNavigated = useRef(false);
 
@@ -54,9 +54,9 @@ const ProtectedRoute = ({ children, requiredRole = 'user' }: ProtectedRouteProps
               {authStatus === 'timeout' ? 'Conexão lenta' : 'Erro de autenticação'}
             </h2>
             <p className="text-muted-foreground text-sm">
-              {authStatus === 'timeout' 
+              {error || (authStatus === 'timeout'
                 ? 'A verificação de sessão demorou demais. Isso pode acontecer com conexão instável.'
-                : 'Não foi possível verificar sua sessão.'}
+                : 'Não foi possível verificar sua sessão.')}
             </p>
 
             <div className="space-y-2">

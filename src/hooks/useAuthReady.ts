@@ -1,18 +1,51 @@
 /**
  * Hook centralizado de autenticação.
  * Fonte única de verdade para authStatus, user e role.
- * Registra onAuthStateChange ANTES de getSession para não perder eventos.
- * Inclui timeout para evitar spinner infinito.
+ * Compartilha o mesmo estado entre componentes para evitar listeners duplicados.
+ * Faz limpeza local automática quando encontra sessão persistida inválida.
  */
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
 
 const SESSION_TIMEOUT_MS = 8000;
 const RPC_TIMEOUT_MS = 2000;
+const AUTH_STORAGE_KEY_PATTERN = /^sb-.*-auth-token$/;
 
 type AuthStatus = 'loading' | 'ready' | 'timeout' | 'error';
+
+interface AuthStoreState {
+  authStatus: AuthStatus;
+  user: User | null;
+  userRole: 'admin' | 'user' | null;
+  error: string | null;
+}
+
+interface AuthReadyState {
+  authStatus: AuthStatus;
+  isReady: boolean;
+  user: User | null;
+  isAuthenticated: boolean;
+  userRole: 'admin' | 'user' | null;
+  error: string | null;
+  clearSession: () => Promise<void>;
+}
+
+const INITIAL_AUTH_STATE: AuthStoreState = {
+  authStatus: 'loading',
+  user: null,
+  userRole: null,
+  error: null,
+};
+
+let authState: AuthStoreState = INITIAL_AUTH_STATE;
+const listeners = new Set<(state: AuthStoreState) => void>();
+let isInitialized = false;
+let authSubscription: { unsubscribe: () => void } | null = null;
+let sessionTimeoutId: ReturnType<typeof setTimeout> | null = null;
+let currentRoleRequestId = 0;
+let pendingRecoveryMessage: string | null = null;
 
 async function checkRoleWithTimeout(userId: string): Promise<'admin' | 'user'> {
   try {
@@ -32,135 +65,244 @@ async function checkRoleWithTimeout(userId: string): Promise<'admin' | 'user'> {
   }
 }
 
-interface AuthReadyState {
-  authStatus: AuthStatus;
-  isReady: boolean;
-  user: User | null;
-  isAuthenticated: boolean;
-  userRole: 'admin' | 'user' | null;
-  error: string | null;
-  clearSession: () => Promise<void>;
+function emitAuthState() {
+  listeners.forEach((listener) => listener(authState));
 }
 
-export function useAuthReady(): AuthReadyState {
-  const [authStatus, setAuthStatus] = useState<AuthStatus>('loading');
-  const [user, setUser] = useState<User | null>(null);
-  const [userRole, setUserRole] = useState<'admin' | 'user' | null>(null);
-  const [error, setError] = useState<string | null>(null);
+function setAuthState(patch: Partial<AuthStoreState>) {
+  authState = { ...authState, ...patch };
+  emitAuthState();
+}
 
-  useEffect(() => {
-    let mounted = true;
-    let sessionResolved = false;
+function getStoredSessionKeys(): string[] {
+  if (typeof window === 'undefined') return [];
 
-    // Timeout fallback — if nothing resolves in time, mark as timeout
-    const timeoutId = setTimeout(() => {
-      if (mounted && !sessionResolved) {
-        console.warn('useAuthReady: session timeout after', SESSION_TIMEOUT_MS, 'ms');
-        sessionResolved = true;
-        setAuthStatus('timeout');
-      }
-    }, SESSION_TIMEOUT_MS);
-
-    const markReady = (u: User | null) => {
-      if (!mounted) return;
-      sessionResolved = true;
-      clearTimeout(timeoutId);
-      setUser(u);
-      setAuthStatus('ready');
-      setError(null);
-
-      if (u) {
-        setUserRole('user'); // default immediately
-        checkRoleWithTimeout(u.id).then(role => {
-          if (mounted) setUserRole(role);
-        });
-      } else {
-        setUserRole(null);
-      }
-    };
-
-    // 1. Register listener FIRST to not miss events
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (!mounted) return;
-        console.log("useAuthReady: Auth event", event);
-
-        if (event === 'TOKEN_REFRESHED') {
-          if (session?.user) setUser(session.user);
-          return;
-        }
-
-        if (event === 'SIGNED_OUT') {
-          sessionResolved = true;
-          clearTimeout(timeoutId);
-          setUser(null);
-          setUserRole(null);
-          setError(null);
-          setAuthStatus('ready');
-          return;
-        }
-
-        if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-          markReady(session?.user ?? null);
-          return;
-        }
-
-        // Other events — update user if present
-        if (session?.user) {
-          setUser(session.user);
-        }
-      }
+  try {
+    return Object.keys(window.localStorage).filter(
+      (key) => AUTH_STORAGE_KEY_PATTERN.test(key) || key === 'supabase.auth.token'
     );
+  } catch {
+    return [];
+  }
+}
 
-    // 2. Then check initial session
-    supabase.auth.getSession().then(({ data: { session }, error: sessionError }) => {
-      if (!mounted || sessionResolved) return;
+function hasStoredSession() {
+  return getStoredSessionKeys().length > 0;
+}
 
+function clearStoredSession() {
+  if (typeof window === 'undefined') return;
+
+  try {
+    getStoredSessionKeys().forEach((key) => window.localStorage.removeItem(key));
+  } catch (error) {
+    console.warn('useAuthReady: could not clear local session storage', error);
+  }
+}
+
+function clearSessionTimeout() {
+  if (sessionTimeoutId) {
+    clearTimeout(sessionTimeoutId);
+    sessionTimeoutId = null;
+  }
+}
+
+function isFetchFailure(error: unknown) {
+  const status = typeof error === 'object' && error !== null ? (error as { status?: number }).status : undefined;
+  const message = error instanceof Error
+    ? error.message
+    : typeof error === 'object' && error !== null && 'message' in error
+      ? String((error as { message?: unknown }).message ?? '')
+      : String(error ?? '');
+
+  return status === 0 || message.toLowerCase().includes('failed to fetch');
+}
+
+function markReady(user: User | null, error: string | null = null) {
+  clearSessionTimeout();
+
+  const preservedRole = user && authState.user?.id === user.id ? authState.userRole : null;
+
+  authState = {
+    authStatus: 'ready',
+    user,
+    userRole: user ? preservedRole ?? 'user' : null,
+    error,
+  };
+  emitAuthState();
+
+  if (!user) {
+    currentRoleRequestId += 1;
+    return;
+  }
+
+  const roleRequestId = ++currentRoleRequestId;
+  setAuthState({ userRole: preservedRole ?? 'user' });
+
+  void checkRoleWithTimeout(user.id).then((role) => {
+    if (roleRequestId !== currentRoleRequestId || authState.user?.id !== user.id) return;
+    setAuthState({ userRole: role });
+  });
+}
+
+async function signOutLocally() {
+  pendingRecoveryMessage = null;
+  clearStoredSession();
+
+  try {
+    await supabase.auth.signOut({ scope: 'local' });
+  } catch (error) {
+    console.warn('useAuthReady: local signOut fallback failed', error);
+  }
+}
+
+function recoverBrokenSession(message: string) {
+  console.warn('useAuthReady: clearing broken persisted session');
+  pendingRecoveryMessage = message;
+  clearStoredSession();
+  void supabase.auth.signOut({ scope: 'local' }).catch((error) => {
+    console.warn('useAuthReady: failed to finalize broken session cleanup', error);
+  });
+  markReady(null, message);
+}
+
+function initializeAuth() {
+  if (isInitialized) return;
+  isInitialized = true;
+
+  setAuthState({ authStatus: 'loading', error: null });
+
+  sessionTimeoutId = setTimeout(() => {
+    console.warn('useAuthReady: session timeout after', SESSION_TIMEOUT_MS, 'ms');
+    setAuthState({
+      authStatus: 'timeout',
+      error: 'A verificação da sessão demorou demais. Limpe a sessão local e tente novamente.',
+      user: null,
+      userRole: null,
+    });
+  }, SESSION_TIMEOUT_MS);
+
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    console.log('useAuthReady: Auth event', event);
+
+    if (event === 'TOKEN_REFRESHED') {
+      if (session?.user) {
+        markReady(session.user);
+      }
+      return;
+    }
+
+    if (event === 'SIGNED_OUT') {
+      const recoveryMessage = pendingRecoveryMessage;
+      pendingRecoveryMessage = null;
+      markReady(null, recoveryMessage);
+      return;
+    }
+
+    if (event === 'INITIAL_SESSION' && !session?.user && hasStoredSession()) {
+      recoverBrokenSession('Sua sessão anterior expirou ou ficou inválida. Faça login novamente.');
+      return;
+    }
+
+    if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'USER_UPDATED') {
+      pendingRecoveryMessage = null;
+      markReady(session?.user ?? null);
+      return;
+    }
+
+    if (session?.user) {
+      setAuthState({ user: session.user, error: null });
+    }
+  });
+
+  authSubscription = subscription;
+
+  supabase.auth.getSession()
+    .then(({ data: { session }, error: sessionError }) => {
       if (sessionError) {
-        console.warn("useAuthReady: getSession error", sessionError.message);
-        setError(sessionError.message);
-        // Don't block — mark ready with no user
-        markReady(null);
+        console.warn('useAuthReady: getSession error', sessionError.message);
+
+        if (isFetchFailure(sessionError) && hasStoredSession()) {
+          recoverBrokenSession('Não foi possível restaurar sua sessão salva. Faça login novamente.');
+          return;
+        }
+
+        setAuthState({
+          authStatus: 'error',
+          user: null,
+          userRole: null,
+          error: sessionError.message,
+        });
+        clearSessionTimeout();
         return;
       }
 
+      if (!session?.user && hasStoredSession()) {
+        recoverBrokenSession('Sua sessão anterior expirou ou ficou inválida. Faça login novamente.');
+        return;
+      }
+
+      pendingRecoveryMessage = null;
       markReady(session?.user ?? null);
-    }).catch((err: any) => {
-      if (!mounted || sessionResolved) return;
-      console.error("useAuthReady: getSession exception", err);
-      setError(err?.message || 'Session fetch failed');
-      sessionResolved = true;
-      clearTimeout(timeoutId);
-      setAuthStatus('error');
+    })
+    .catch((error: unknown) => {
+      console.error('useAuthReady: getSession exception', error);
+
+      if (isFetchFailure(error) && hasStoredSession()) {
+        recoverBrokenSession('Não foi possível restaurar sua sessão salva. Faça login novamente.');
+        return;
+      }
+
+      setAuthState({
+        authStatus: 'error',
+        user: null,
+        userRole: null,
+        error: error instanceof Error ? error.message : 'Session fetch failed',
+      });
+      clearSessionTimeout();
     });
+}
+
+const clearSession = async () => {
+  await signOutLocally();
+  markReady(null);
+};
+
+export function useAuthReady(): AuthReadyState {
+  const [snapshot, setSnapshot] = useState<AuthStoreState>(authState);
+
+  useEffect(() => {
+    initializeAuth();
+
+    const listener = (nextState: AuthStoreState) => {
+      setSnapshot(nextState);
+    };
+
+    listeners.add(listener);
+    listener(authState);
 
     return () => {
-      mounted = false;
-      clearTimeout(timeoutId);
-      subscription.unsubscribe();
+      listeners.delete(listener);
     };
   }, []);
 
-  const clearSession = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch {
-      // Force clear local storage as fallback
-      localStorage.removeItem('sb-pgfgripuanuwwolmtknn-auth-token');
-    }
-    setUser(null);
-    setUserRole(null);
-    setAuthStatus('ready');
-    setError(null);
-  };
-
   return {
-    authStatus,
-    isReady: authStatus === 'ready' || authStatus === 'timeout',
-    user,
-    isAuthenticated: !!user,
-    userRole,
-    error,
+    authStatus: snapshot.authStatus,
+    isReady: snapshot.authStatus === 'ready' || snapshot.authStatus === 'timeout',
+    user: snapshot.user,
+    isAuthenticated: !!snapshot.user,
+    userRole: snapshot.userRole,
+    error: snapshot.error,
     clearSession,
   };
+}
+
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    clearSessionTimeout();
+    authSubscription?.unsubscribe();
+    authSubscription = null;
+    isInitialized = false;
+    listeners.clear();
+  });
 }

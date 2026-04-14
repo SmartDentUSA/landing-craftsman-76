@@ -10,12 +10,27 @@ import { useNavigate } from "react-router-dom";
 import { useAuthReady } from "@/hooks/useAuthReady";
 
 const PUBLISHED_URL = "https://landing-craftsman-76.lovable.app";
+const LOGIN_TIMEOUT_MS = 12000;
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number) {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error("Tempo limite de autenticação esgotado")), timeoutMs);
+    }),
+  ]);
+}
+
+function isNetworkError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return message.toLowerCase().includes("failed to fetch") || message.toLowerCase().includes("tempo limite");
+}
 
 const Auth = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { authStatus, user, clearSession } = useAuthReady();
+  const { authStatus, user, error, clearSession } = useAuthReady();
 
   const isPreview = window.self !== window.top;
 
@@ -35,7 +50,14 @@ const Auth = () => {
     const password = formData.get('password') as string;
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (authStatus === 'timeout' || authStatus === 'error') {
+        await clearSession();
+      }
+
+      const { data, error } = await withTimeout(
+        supabase.auth.signInWithPassword({ email, password }),
+        LOGIN_TIMEOUT_MS
+      );
 
       if (error) {
         console.error('Login error:', error);
@@ -48,17 +70,27 @@ const Auth = () => {
         toast({ title: "Login realizado com sucesso" });
         // Explicit navigate as fallback — onAuthStateChange should also handle this
         navigate('/dashboard', { replace: true });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Login não concluído",
+          description: "A sessão não foi criada. Limpe a sessão local e tente novamente."
+        });
       }
     } catch (error: any) {
       console.error('Unexpected login error:', error);
       toast({
         variant: "destructive",
         title: "Erro inesperado",
-        description: error?.message || "Tente novamente em alguns segundos"
+        description: isNetworkError(error)
+          ? isPreview
+            ? "Falha de conexão no Preview. Abra o site publicado para entrar."
+            : "Falha de conexão com a autenticação. Limpe a sessão local e tente novamente."
+          : error?.message || "Tente novamente em alguns segundos"
       });
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -184,6 +216,13 @@ const Auth = () => {
           <CardDescription>Entre na sua conta ou crie uma nova</CardDescription>
         </CardHeader>
         <CardContent>
+          {(authStatus === 'timeout' || authStatus === 'error' || error) && (
+            <div className="mb-4 rounded-md border bg-muted p-3 text-sm text-muted-foreground">
+              <p className="font-medium text-foreground mb-1">Sessão anterior inválida</p>
+              <p>{error || "Não foi possível restaurar sua sessão. Limpe a sessão local e tente de novo."}</p>
+            </div>
+          )}
+
           {/* Preview warning */}
           {isPreview && (
             <div className="mb-4 p-3 bg-muted rounded-md border text-sm text-muted-foreground">
