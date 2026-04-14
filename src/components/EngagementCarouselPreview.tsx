@@ -608,13 +608,20 @@ function renderSlideContent(
         {/* Text over gradient */}
         <div style={{
           position: 'absolute', bottom: 60, left: 60, right: 60,
-          display: 'flex', flexDirection: 'column', gap: 20,
+          maxHeight: '55%', overflow: 'hidden',
+          display: 'flex', flexDirection: 'column', gap: 16,
         }}>
-          <div style={{ fontSize: 72, fontWeight: 900, color: '#ffffff', lineHeight: 1.15 }}>
+          <div style={{
+            fontSize: 52, fontWeight: 900, color: '#ffffff', lineHeight: 1.15,
+            display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as any, overflow: 'hidden',
+          }}>
             <RichText text={texts.title || ''} />
           </div>
           {texts.text && (
-            <div style={{ fontSize: 36, lineHeight: 1.5, color: 'rgba(255,255,255,0.8)', fontWeight: 400 }}>
+            <div style={{
+              fontSize: 24, lineHeight: 1.5, color: 'rgba(255,255,255,0.8)', fontWeight: 400,
+              display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any, overflow: 'hidden',
+            }}>
               <RichText text={texts.text} />
             </div>
           )}
@@ -859,17 +866,17 @@ export async function generateEngagementSlidePNG(
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, H);
 
-    // Title
-    const titleFont = '900 72px system-ui, -apple-system, sans-serif';
+    // Title (max 3 lines)
+    const titleFont = '900 52px system-ui, -apple-system, sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    let titleEndY = drawRichText(ctx, texts.title || '', 60, H - 300, W - 120, 86, titleFont, titleFont, '#ffffff', accent, 'left');
+    let titleEndY = drawRichText(ctx, (texts.title || '').slice(0, 150), 60, H - 260, W - 120, 62, titleFont, titleFont, '#ffffff', accent, 'left', 3);
 
-    // Subtitle
+    // Subtitle (max 2 lines)
     if (texts.text) {
-      const bodyFont = '400 36px system-ui, -apple-system, sans-serif';
-      const bodyFontBold = '700 36px system-ui, -apple-system, sans-serif';
-      drawRichText(ctx, texts.text, 60, titleEndY + 20, W - 120, 54, bodyFont, bodyFontBold, 'rgba(255,255,255,0.8)', accent, 'left');
+      const bodyFont = '400 24px system-ui, -apple-system, sans-serif';
+      const bodyFontBold = '700 24px system-ui, -apple-system, sans-serif';
+      drawRichText(ctx, (texts.text).slice(0, 200), 60, titleEndY + 16, W - 120, 36, bodyFont, bodyFontBold, 'rgba(255,255,255,0.8)', accent, 'left', 2);
     }
 
     // Slide number badge
@@ -1139,17 +1146,17 @@ function drawSlideFrameWithVideo(
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, H);
 
-    // Title
-    const titleFont = '900 72px system-ui, -apple-system, sans-serif';
+    // Title (max 3 lines)
+    const titleFont = '900 52px system-ui, -apple-system, sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    let titleEndY = drawRichText(ctx, texts.title || '', 60, H - 300, W - 120, 86, titleFont, titleFont, '#ffffff', accent, 'left');
+    let titleEndY = drawRichText(ctx, (texts.title || '').slice(0, 150), 60, H - 260, W - 120, 62, titleFont, titleFont, '#ffffff', accent, 'left', 3);
 
-    // Subtitle
+    // Subtitle (max 2 lines)
     if (texts.text) {
-      const bodyFont = '400 36px system-ui, -apple-system, sans-serif';
-      const bodyFontBold = '700 36px system-ui, -apple-system, sans-serif';
-      drawRichText(ctx, texts.text, 60, titleEndY + 20, W - 120, 54, bodyFont, bodyFontBold, 'rgba(255,255,255,0.8)', accent, 'left');
+      const bodyFont = '400 24px system-ui, -apple-system, sans-serif';
+      const bodyFontBold = '700 24px system-ui, -apple-system, sans-serif';
+      drawRichText(ctx, (texts.text).slice(0, 200), 60, titleEndY + 16, W - 120, 36, bodyFont, bodyFontBold, 'rgba(255,255,255,0.8)', accent, 'left', 2);
     }
 
     // Badge
