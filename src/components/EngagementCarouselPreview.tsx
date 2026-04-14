@@ -639,9 +639,9 @@ function renderSlideContent(
       {/* Header removed */}
 
       {/* Main content area */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: slideNum === 6 ? '40px 60px 40px' : '48px 60px 48px', gap: slideNum === 6 ? 20 : 28, justifyContent: 'center' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: slideNum === 6 ? '40px 60px 40px' : '48px 60px 48px', gap: slideNum === 6 ? 20 : 28, justifyContent: slideNum === 6 ? 'flex-start' : 'center' }}>
         {/* Title */}
-        <div style={{ fontSize: slideNum === 6 ? 44 : 56, fontWeight: 900, color: textColor, lineHeight: 1.15 }}>
+        <div style={{ fontSize: slideNum === 6 ? 36 : 56, fontWeight: 900, color: textColor, lineHeight: 1.15 }}>
           <RichText text={texts.title || ''} />
         </div>
 
@@ -661,12 +661,14 @@ function renderSlideContent(
             alignSelf: 'center',
             background: accent,
             color: getLuminance(accent) > 0.5 ? '#000' : '#fff',
-            padding: '20px 60px',
+            padding: '16px 48px',
             borderRadius: 20,
-            fontSize: 36,
+            fontSize: 28,
             fontWeight: 900,
             textAlign: 'center',
             flexShrink: 0,
+            maxWidth: '90%',
+            wordBreak: 'break-word' as const,
           }}>
             {texts.cta_label}
           </div>
@@ -829,7 +831,7 @@ export async function generateEngagementSlidePNG(
   }
 
   // Title
-  const titleFontSize = slideNum === 1 ? 72 : (slideNum === 6 ? 44 : 56);
+  const titleFontSize = slideNum === 1 ? 72 : (slideNum === 6 ? 36 : 56);
   const titleFont = `900 ${titleFontSize}px system-ui, -apple-system, sans-serif`;
   const titleFontBold = titleFont; // already bold
   ctx.textAlign = 'left';
@@ -897,7 +899,7 @@ export async function generateEngagementSlidePNG(
     ctx.arcTo(btnX, btnY, btnX + 20, btnY, 20);
     ctx.closePath();
     ctx.fill();
-    ctx.font = '900 36px system-ui, -apple-system, sans-serif';
+    ctx.font = '900 28px system-ui, -apple-system, sans-serif';
     ctx.fillStyle = getLuminance(accent) > 0.5 ? '#000' : '#fff';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -1001,7 +1003,7 @@ function drawSlideFrameWithVideo(
 
     // Video area
     const imgY = Math.max(titleEndY + 20, 320);
-    const imgH = slideNum === 6 ? 300 : 440;
+    const imgH = slideNum === 6 ? 200 : 440;
     ctx.save();
     const scaleF = imageScale / 100;
     const cx = W / 2;
@@ -1052,7 +1054,7 @@ function drawSlideFrameWithVideo(
       ctx.arcTo(btnX, btnY, btnX + 20, btnY, 20);
       ctx.closePath();
       ctx.fill();
-      ctx.font = '900 44px system-ui, -apple-system, sans-serif';
+      ctx.font = '900 28px system-ui, -apple-system, sans-serif';
       ctx.fillStyle = getLuminance(accent) > 0.5 ? '#000' : '#fff';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
