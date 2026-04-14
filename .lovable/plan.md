@@ -1,25 +1,30 @@
 
 
-## Plano: Corrigir overflow do Slide 6 (CTA) no Carrossel de Engajamento
+## Plano: Corrigir layout do Slide 6 (CTA)
 
-### Problema
-No slide 6, o conteúdo (título grande + imagem 300px + texto do corpo + botão CTA) estoura os 1350px de altura. O botão CTA é cortado na parte inferior, como mostra o screenshot.
+### Problemas identificados no screenshot
+1. **Espaço vazio enorme** entre o texto do corpo e o CTA — causado por `justifyContent: 'center'` no container flex, que distribui os elementos verticalmente
+2. **CTA cortado horizontalmente** — o texto do botão é muito longo e ultrapassa as laterais do quadro porque não há `maxWidth` nem quebra de linha forçada
+3. **Título ainda muito grande** — ocupa muitas linhas, comprimindo o espaço disponível
 
 ### Correções em `src/components/EngagementCarouselPreview.tsx`
 
-**1. Reduzir imagem do slide 6 de 300px para 200px** (linha 649)
+**1. Mudar `justifyContent` para `'flex-start'` no slide 6** (linha 642)
+- Elementos ficam empilhados do topo para baixo, sem espaço vazio no meio
 
-**2. Reduzir fonte e padding do slide 6:**
-- Título: de 56px para 44px
-- Texto do corpo: de 36px para 28px  
-- CTA padding: de `28px 80px` para `20px 60px`
-- CTA fontSize: de 44px para 36px
-- Gap do container: de 28px para 20px no slide 6
+**2. Adicionar `maxWidth` e quebra de texto no CTA** (linhas 660-672)
+- `maxWidth: '90%'` para o botão não ultrapassar as laterais
+- `wordBreak: 'break-word'` para texto longo quebrar em múltiplas linhas
+- Reduzir fontSize do CTA de 36px para 28px
 
-**3. Limitar altura do texto do corpo no slide 6** com `maxHeight` e `overflow: hidden` para garantir que o CTA sempre caiba
+**3. Reduzir título do slide 6** de 44px para 36px
 
-**4. Atualizar a lógica PNG correspondente** (se houver posicionamento fixo do CTA no canvas) para usar as mesmas proporções reduzidas
+**4. Atualizar lógica PNG correspondente** para refletir as mesmas proporções
+
+### Arquivo
+- `src/components/EngagementCarouselPreview.tsx`
 
 ### Resultado
-Todos os elementos do slide 6 ficam visíveis dentro do quadro 1080x1350, com o botão CTA totalmente legível.
+- Conteúdo do slide 6 flui de cima para baixo sem gaps
+- CTA visível por completo, centralizado, com texto quebrando se necessário
 
