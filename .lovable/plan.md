@@ -1,35 +1,34 @@
 
 
-## Plano: Sincronizar exportação PNG/WEBM dos Slides 2–5 com o preview
+## Plano: Corrigir exportação PNG/WEBM — texto cortado e alinhamento
 
-### Problema
-O preview HTML dos slides 2–5 usa `flexDirection: 'column'` com `justifyContent: 'center'`, distribuindo título, imagem e corpo de forma equilibrada e centralizada verticalmente. Mas a exportação PNG usa posições fixas:
-- `titleY = 100` (sempre no topo)
-- `imgY = Math.max(titleEndY + 20, 320)` (mínimo Y=320)
-- `imgH = 440`
-- Body text logo abaixo da imagem
+### Problemas identificados
 
-Isso resulta em texto cortado ou layout desbalanceado quando o título é longo — o conteúdo não cabe ou fica espremido no topo com espaço vazio embaixo.
+**1. Slides 2-5: Título longo empurra imagem/body para fora do canvas**
+O export mede a altura total do texto sem limitar linhas. Títulos longos (como o do Slide 4 com ~10 linhas) consomem todo o espaço vertical. O preview funciona porque o flexbox com `overflow: hidden` corta naturalmente. O export precisa limitar linhas.
 
-### Correção em `src/components/EngagementCarouselPreview.tsx`
+**2. Slide 6: Título cortado na esquerda**
+O `drawRichText` com `align: 'center'` calcula `cx = x - lineWidth/2`. O export passa `x = pad` (60), então `cx = 60 - lineWidth/2` que fica **negativo** para linhas largas, cortando o texto na esquerda. Deveria passar `x = W/2` (540) como centro.
 
-**1. Slides 2–5 PNG (~linhas 1062-1128): centralizar verticalmente**
-- Pré-medir a altura de cada bloco (título, imagem, corpo) antes de desenhar
-- Calcular `totalH = titleH + gap + imgH + gap + bodyH`
-- Calcular `startY = (H - totalH) / 2` para centralizar
-- Desenhar sequencialmente a partir de `startY` — sem posições fixas
-- Manter `imgH = 440` e `gap = 28` como no preview
+### Correções em `src/components/EngagementCarouselPreview.tsx`
 
-**2. Slides 2–5 Video (~linhas 1290+): mesma lógica**
-- Aplicar a mesma centralização vertical no `drawSlideFrameWithVideo` para slides 2-5
+**1. Slides 2-5 PNG (~linha 1076-1130): Limitar linhas do título e body**
+- Após medir, limitar `titleH` a no máximo 4 linhas (`4 * titleLineH`)
+- Limitar `bodyH` a no máximo 3 linhas (`3 * bodyLineH`)
+- Isso garante que a soma `titleH + imgH + bodyH` cabe no canvas
 
-**3. Manter fontes iguais ao preview**
-- Título: `fontSize: 56` (já correto)
-- Corpo: `fontSize: 36` (já correto)
+**2. Slides 2-5 Video (~linha 1346-1419): Mesma limitação de linhas**
+
+**3. Slide 6 PNG (~linha 975): Corrigir x do drawRichText para centro**
+- Trocar `drawRichText(ctx, displayTitle, pad, curY, contentW, ...)` por `drawRichText(ctx, displayTitle, W/2, curY, contentW, ..., 'center')` — usando `W/2` como ponto central
+- Mesma correção para o body do slide 6
+
+**4. Slide 6 Video (~linha 1270-1301): Mesma correção de x para centro**
 
 ### Arquivo
-- `src/components/EngagementCarouselPreview.tsx` — seções de slides 2-5 no PNG e no WEBM
+- `src/components/EngagementCarouselPreview.tsx`
 
 ### Resultado
-As imagens e vídeos exportados dos slides 2–5 ficam visualmente idênticos ao preview: conteúdo centralizado verticalmente, sem texto cortado, sem vazio excessivo.
+- Slides 2-5: títulos longos são limitados a 4 linhas, o layout permanece equilibrado como no preview
+- Slide 6: título e body ficam centralizados sem cortar na esquerda
 
