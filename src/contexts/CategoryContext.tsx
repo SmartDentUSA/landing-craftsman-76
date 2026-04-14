@@ -121,10 +121,22 @@ export const CategoryProvider: React.FC<CategoryProviderProps> = ({ children }) 
   );
 };
 
+const defaultCategoryContext: CategoryContextType = {
+  categories: [],
+  subcategories: [],
+  getSubcategoriesForCategory: () => [],
+  configs: [],
+  loading: false,
+  unifiedCategories: [],
+  unifiedSubcategories: [],
+  getUnifiedSubcategoriesForCategory: () => [],
+  refreshAllCategories: async () => {},
+  refreshProductCategories: () => {},
+  refreshCategoryConfigs: () => {},
+  notifyCategoryChange: () => {},
+};
+
 export const useCategoryContext = () => {
   const context = useContext(CategoryContext);
-  if (context === undefined) {
-    throw new Error('useCategoryContext must be used within a CategoryProvider');
-  }
-  return context;
+  return context ?? defaultCategoryContext;
 };
