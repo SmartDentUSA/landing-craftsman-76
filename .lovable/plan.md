@@ -1,52 +1,63 @@
+<final-text>Plano: destravar o acesso ao app
 
-Do I know what the issue is? Sim. Pelo código atual, o login está frágil em dois pontos principais e há um terceiro fator de ambiente:
-- `src/hooks/useAuthReady.ts` ainda pode deixar o app preso em “Verificando autenticação...” se a restauração da sessão travar ou demorar demais.
-- `src/pages/Auth.tsx` não usa o estado centralizado e depende do `onAuthStateChange` para concluir o redirecionamento após `signInWithPassword`, então o login pode “dar certo” mas não avançar.
-- Este projeto já teve limitação no Preview com autenticação; hoje a UI não trata isso bem e o usuário fica sem saída clara.
+Do I know what the issue is? Sim.
 
-Plano de correção
+Diagnóstico
+- O usuário está tentando acessar pelo Preview/iframe, e os logs mostram `Failed to fetch` e `Tempo limite de autenticação esgotado` no login.
+- O app ainda faz consultas ao Supabase na rota pública `/auth`, porque `CategoryProvider` envolve todo o `App` e dispara `useProductCategories` / `useCategoryConfig` logo na abertura.
+- `src/hooks/useAuthReady.ts` está agressivo demais: em falha genérica de rede, ele limpa a sessão salva como se ela estivesse inválida. Isso pode derrubar sessões boas e bloquear o acesso.
+- Há vários pontos consultando sessão diretamente, fora da fonte central de auth, o que aumenta corrida de estados e erros na inicialização.
 
-1. Fortalecer a inicialização da sessão em `src/hooks/useAuthReady.ts`
-- Registrar `onAuthStateChange` antes da checagem inicial.
-- Adicionar timeout/fallback para `getSession()`.
-- Expor um estado mais claro de auth (`loading`, `ready`, `timeout`, `error`) para parar o spinner infinito.
+O que vou implementar
+1. Corrigir `src/hooks/useAuthReady.ts`
+- Parar de limpar sessão local em erro genérico de rede/timeout.
+- Só invalidar a sessão quando houver sinal claro de token/sessão inválida.
+- Separar melhor “falha de conexão” de “sessão inválida”.
 
-2. Corrigir o fluxo de login em `src/pages/Auth.tsx`
-- Trocar o estado local pela fonte única (`useAuthReady`).
-- Após `signInWithPassword`, fazer fallback explícito para concluir a sessão/navegação, em vez de depender só do evento.
-- Melhorar a mensagem de erro com o retorno real do Supabase.
-- Adicionar ação “limpar sessão e tentar novamente” para remover sessão local corrompida.
+2. Ajustar `src/pages/Auth.tsx`
+- No Preview, deixar a UX explícita: abrir o site publicado em vez de insistir num login que já está falhando nesse ambiente.
+- Melhorar mensagens de erro para distinguir rede/Preview de credenciais inválidas.
+- Manter “Limpar sessão local” apenas como ação manual.
 
-3. Melhorar `src/components/ProtectedRoute.tsx`
-- Se a auth inicial falhar ou expirar no timeout, mostrar tela de recuperação em vez de spinner eterno.
-- Manter redirect para `/auth` apenas quando a ausência de sessão estiver confirmada.
+3. Tirar carga protegida das rotas públicas
+- Remover `CategoryProvider` do topo global em `src/App.tsx` ou aplicá-lo só na área autenticada.
+- Fazer `useProductCategories` e `useCategoryConfig` não carregarem dados ao abrir `/`, `/auth` e outras rotas públicas.
 
-4. Tratar Preview x URL publicada
-- Detectar quando o usuário estiver no Preview/iframe.
-- Exibir aviso claro de que a autenticação deve ser feita na URL publicada quando o Preview bloquear auth.
-- Incluir atalho para abrir `/auth` no app publicado.
+4. Blindar consultas que rodam cedo demais
+- Ajustar `Dashboard.tsx`, `useLandingPagesSupabase.ts`, `OAuthSettingsCard.tsx`, `useCompanyReviews.ts` e `useLinksRepository.ts` para só consultar depois de `isReady && user`.
+- Reduzir uso espalhado de `supabase.auth.getSession()` e reaproveitar `useAuthReady()`.
 
-5. Revisar `src/integrations/supabase/client.ts`
-- Explicitar opções de auth relevantes para recuperação/OAuth (ex.: `detectSessionInUrl`) para deixar o comportamento mais previsível.
+5. Refinar `src/components/ProtectedRoute.tsx`
+- Manter a rota protegida sem redirects agressivos em falha de rede.
+- Mostrar recuperação clara sem destruir sessão válida.
 
 Resultado esperado
-- O login com email/senha deixa de ficar “parado”.
-- `/dashboard` não fica preso em “Verificando autenticação...”.
-- Sessão local quebrada não impede novo login.
-- No Preview, o usuário recebe orientação clara em vez de falha silenciosa.
+- O app para de “se autodeslogar” em instabilidade de rede.
+- A tela de login deixa de falhar sem contexto no Preview.
+- Rotas públicas abrem sem disparar consultas protegidas e toasts desnecessários.
+- No site publicado, o login volta a concluir e o dashboard deixa de entrar em loop de erro.
 
 Arquivos principais
 - `src/hooks/useAuthReady.ts`
 - `src/pages/Auth.tsx`
+- `src/App.tsx`
+- `src/contexts/CategoryContext.tsx`
+- `src/hooks/useProductCategories.ts`
+- `src/hooks/useCategoryConfig.ts`
+- `src/hooks/useLandingPagesSupabase.ts`
+- `src/hooks/useLinksRepository.ts`
+- `src/hooks/useCompanyReviews.ts`
+- `src/components/OAuthSettingsCard.tsx`
 - `src/components/ProtectedRoute.tsx`
-- `src/integrations/supabase/client.ts`
+- `src/pages/Dashboard.tsx`
 
 Verificação
-- Fazer login com email/senha na URL publicada.
-- Recarregar `/dashboard` já autenticado.
-- Testar o botão de limpar sessão e entrar de novo.
-- Abrir no Preview e confirmar que aparece orientação clara, sem travar no spinner.
+- Abrir `/auth` no Preview e confirmar que a UI direciona corretamente para o site publicado.
+- Fazer login no site publicado.
+- Recarregar `/dashboard` autenticado.
+- Confirmar que `/auth` não dispara erros de `categories_config`.
+- Deixar a aba aberta alguns minutos e validar que a sessão não some sozinha.
 
-Detalhes técnicos
-- Sem migração de banco.
-- Correção focada no client-side de autenticação, recuperação de sessão e UX de erro.
+Detalhe técnico
+- Sem migração de banco nesta etapa.
+- Se o site publicado ainda falhar depois disso, o próximo passo é revisar a instabilidade do Supabase, porque já existem sinais de timeout/conexão nos logs.</final-text>
