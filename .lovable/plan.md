@@ -1,34 +1,35 @@
 
 
-## Plano: Corrigir bloqueio de acesso ao Repositório
+## Plano: Sincronizar exportação PNG/WEBM dos Slides 2–5 com o preview
 
 ### Problema
-A rota `/repository` exige `requiredRole="admin"`, mas a verificação de role está retornando `'user'` para seu usuário. Isso acontece porque o `checkRoleWithTimeout` no `useAuthReady.ts` faz fallback para `'user'` em caso de timeout ou erro no RPC `has_role`.
+O preview HTML dos slides 2–5 usa `flexDirection: 'column'` com `justifyContent: 'center'`, distribuindo título, imagem e corpo de forma equilibrada e centralizada verticalmente. Mas a exportação PNG usa posições fixas:
+- `titleY = 100` (sempre no topo)
+- `imgY = Math.max(titleEndY + 20, 320)` (mínimo Y=320)
+- `imgH = 440`
+- Body text logo abaixo da imagem
 
-### Diagnóstico necessário
-Antes de alterar código, preciso verificar se seu usuário tem a role `admin` no banco. Vou consultar a tabela `user_roles` via Supabase.
+Isso resulta em texto cortado ou layout desbalanceado quando o título é longo — o conteúdo não cabe ou fica espremido no topo com espaço vazio embaixo.
 
-### Ações
+### Correção em `src/components/EngagementCarouselPreview.tsx`
 
-**1. Verificar se existe registro admin na tabela `user_roles`**
-- Consultar via `supabase--read_query` se há uma entrada com `role = 'admin'` para o seu `user_id`
+**1. Slides 2–5 PNG (~linhas 1062-1128): centralizar verticalmente**
+- Pré-medir a altura de cada bloco (título, imagem, corpo) antes de desenhar
+- Calcular `totalH = titleH + gap + imgH + gap + bodyH`
+- Calcular `startY = (H - totalH) / 2` para centralizar
+- Desenhar sequencialmente a partir de `startY` — sem posições fixas
+- Manter `imgH = 440` e `gap = 28` como no preview
 
-**2a. Se NÃO existir o registro:**
-- Criar migration para inserir a role `admin` para o seu usuário
-- Ou usar o RPC `promote_user_to_admin` se já existir
+**2. Slides 2–5 Video (~linhas 1290+): mesma lógica**
+- Aplicar a mesma centralização vertical no `drawSlideFrameWithVideo` para slides 2-5
 
-**2b. Se existir mas o RPC falhar:**
-- Aumentar o `RPC_TIMEOUT_MS` no `useAuthReady.ts` (atualmente pode estar muito curto)
-- Adicionar log mais detalhado para entender a falha
-
-**3. Alternativa rápida (se for só seu usuário)**
-- O `ProtectedRoute` poderia ser ajustado para não exigir `admin` no `/repository`, se todos os usuários autenticados devem ter acesso
+**3. Manter fontes iguais ao preview**
+- Título: `fontSize: 56` (já correto)
+- Corpo: `fontSize: 36` (já correto)
 
 ### Arquivo
-- `src/hooks/useAuthReady.ts` — ajuste de timeout se necessário
-- `src/App.tsx` — remover `requiredRole="admin"` do `/repository` se a intenção é acesso geral
-- Migration SQL — se precisar inserir role
+- `src/components/EngagementCarouselPreview.tsx` — seções de slides 2-5 no PNG e no WEBM
 
 ### Resultado
-Acesso ao Repositório restaurado sem a tela de "Acesso Restrito".
+As imagens e vídeos exportados dos slides 2–5 ficam visualmente idênticos ao preview: conteúdo centralizado verticalmente, sem texto cortado, sem vazio excessivo.
 
