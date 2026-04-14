@@ -267,41 +267,56 @@ export function EngagementCarouselSection({
     try {
       const zip = new JSZip();
       let hasVideos = false;
-      for (let i = 1; i <= 6; i++) {
-        const texts = slideTexts[i];
-        const isVideo = texts.mediaType === 'video';
+      const skippedSlides: number[] = [];
 
-        if (isVideo) {
-          // Video slide: render video with template overlay
-          const videoUrl = texts.videoStorageUrl || texts.videoSrc;
-          if (videoUrl) {
-            try {
-              const videoBlob = await generateEngagementSlideVideo(i, videoUrl, texts, primaryColor, accentColor, brandName, handleName);
-              zip.file(`slide_${i}.webm`, videoBlob);
-              hasVideos = true;
-            } catch (err) {
-              console.warn(`Could not render video for slide ${i}:`, err);
-              // Fallback: generate PNG with thumbnail
-              let imgUrl = slideImageMap[i] || '';
-              if (imgUrl && !imgUrl.startsWith('data:')) {
-                try { imgUrl = await fetchAsDataUrl(imgUrl); } catch { /* use original */ }
+      for (let i = 1; i <= 6; i++) {
+        toast({ title: `📦 Exportando slide ${i}/6...` });
+
+        try {
+          await Promise.race([
+            (async () => {
+              const texts = slideTexts[i];
+              const isVideo = texts.mediaType === 'video';
+
+              if (isVideo) {
+                const videoUrl = texts.videoStorageUrl || texts.videoSrc;
+                if (videoUrl) {
+                  try {
+                    const videoBlob = await generateEngagementSlideVideo(i, videoUrl, texts, primaryColor, accentColor, brandName, handleName);
+                    zip.file(`slide_${i}.webm`, videoBlob);
+                    hasVideos = true;
+                  } catch (err) {
+                    console.warn(`Video render failed for slide ${i}, falling back to PNG:`, err);
+                    let imgUrl = slideImageMap[i] || '';
+                    if (imgUrl && !imgUrl.startsWith('data:')) {
+                      try { imgUrl = await fetchAsDataUrl(imgUrl); } catch (e) { console.warn(`fetchAsDataUrl failed slide ${i}:`, e); }
+                    }
+                    const blob = await generateEngagementSlidePNG(i, imgUrl, texts, primaryColor, accentColor, brandName, handleName);
+                    zip.file(`slide_${i}.png`, blob);
+                  }
+                }
+              } else {
+                let imgUrl = slideImageMap[i] || '';
+                if (imgUrl && !imgUrl.startsWith('data:')) {
+                  try { imgUrl = await fetchAsDataUrl(imgUrl); } catch (e) { console.warn(`fetchAsDataUrl failed slide ${i}:`, e); }
+                }
+                const blob = await generateEngagementSlidePNG(i, imgUrl, texts, primaryColor, accentColor, brandName, handleName);
+                zip.file(`slide_${i}.png`, blob);
               }
-              const blob = await generateEngagementSlidePNG(i, imgUrl, texts, primaryColor, accentColor, brandName, handleName);
-              zip.file(`slide_${i}.png`, blob);
-            }
-          }
-        } else {
-          // Image slide: export PNG with template
-          let imgUrl = slideImageMap[i] || '';
-          if (imgUrl && !imgUrl.startsWith('data:')) {
-            try {
-              imgUrl = await fetchAsDataUrl(imgUrl);
-            } catch { /* use original */ }
-          }
-          const blob = await generateEngagementSlidePNG(i, imgUrl, texts, primaryColor, accentColor, brandName, handleName);
-          zip.file(`slide_${i}.png`, blob);
+            })(),
+            new Promise<never>((_, reject) => setTimeout(() => reject(new Error(`Slide ${i} timeout (30s)`)), 30_000)),
+          ]);
+        } catch (err) {
+          console.error(`Slide ${i} export failed/timeout:`, err);
+          skippedSlides.push(i);
         }
       }
+
+      if (Object.keys(zip.files).length === 0) {
+        toast({ title: "Erro", description: "Nenhum slide pôde ser exportado.", variant: "destructive" });
+        return;
+      }
+
       const zipBlob = await zip.generateAsync({ type: 'blob' });
       const url = URL.createObjectURL(zipBlob);
       const a = document.createElement('a');
@@ -309,10 +324,15 @@ export function EngagementCarouselSection({
       a.download = `carrossel_engajamento_${productName.replace(/\s+/g, '_')}.zip`;
       a.click();
       URL.revokeObjectURL(url);
-      toast({ title: "✅ Download iniciado!", description: hasVideos ? "PNGs + Vídeos com template em ZIP." : "6 PNGs 1080x1350 em ZIP." });
+
+      if (skippedSlides.length > 0) {
+        toast({ title: "⚠️ Download com avisos", description: `Slides ${skippedSlides.join(', ')} foram pulados por erro/timeout.` });
+      } else {
+        toast({ title: "✅ Download iniciado!", description: hasVideos ? "PNGs + Vídeos com template em ZIP." : "6 PNGs 1080x1350 em ZIP." });
+      }
     } catch (err) {
       console.error('Erro no export:', err);
-      toast({ title: "Erro", description: "Falha ao exportar. Verifique se o navegador suporta gravação de vídeo.", variant: "destructive" });
+      toast({ title: "Erro", description: "Falha ao exportar. Verifique o console para detalhes.", variant: "destructive" });
     } finally {
       setExporting(false);
     }
