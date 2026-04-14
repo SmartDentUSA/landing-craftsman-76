@@ -116,7 +116,24 @@ function drawImageCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement | H
   ctx.drawImage(img as any, dx - (nw - dw) / 2, dy - (nh - dh) / 2, nw, nh);
 }
 
-// Draw rich text on canvas with bold/**highlight** support
+/** Estimate number of wrapped lines for a given text and max width */
+function measureWrappedLines(ctx: CanvasRenderingContext2D, text: string, maxW: number): number {
+  const words = text.split(/\s+/).filter(Boolean);
+  let lines = 1;
+  let currentWidth = 0;
+  for (const word of words) {
+    const ww = ctx.measureText(word + ' ').width;
+    if (currentWidth + ww > maxW && currentWidth > 0) {
+      lines++;
+      currentWidth = ww;
+    } else {
+      currentWidth += ww;
+    }
+  }
+  return lines || 1;
+}
+
+
 function drawRichText(
   ctx: CanvasRenderingContext2D,
   text: string,
