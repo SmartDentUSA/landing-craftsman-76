@@ -1059,54 +1059,74 @@ export async function generateEngagementSlidePNG(
     });
   }
 
-  // ===== Slides 2–5 PNG =====
-  // Title
+  // ===== Slides 2–5 PNG (centered layout) =====
   const titleFontSize = 56;
   const titleFont = `900 ${titleFontSize}px system-ui, -apple-system, sans-serif`;
   const titleFontBold = titleFont;
+  const bodyFontSize = 36;
+  const bodyFont = `400 ${bodyFontSize}px system-ui, -apple-system, sans-serif`;
+  const bodyFontBoldF = `700 ${bodyFontSize}px system-ui, -apple-system, sans-serif`;
+  const titleLineH = titleFontSize * 1.2;
+  const bodyLineH = bodyFontSize * 1.5;
+  const contentW = W - 120;
+  const pad = 60;
+  const gap = 28;
+  const imgH = 440;
+
+  // Measure title height
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
-  const titleY = 100;
-  const titleEndY = drawRichText(ctx, texts.title || '', 60, titleY, W - 120, titleFontSize * 1.2, titleFont, titleFont, textColor, accent, 'left');
+  const titleMeasureEnd = drawRichText(ctx, texts.title || '', -9999, -9999, contentW, titleLineH, titleFont, titleFont, 'transparent', 'transparent', 'left');
+  const titleH = titleMeasureEnd - (-9999);
 
-  // Image area
-  const imgY = Math.max(titleEndY + 20, 320);
-  const imgH = 440;
+  // Measure body height
+  let bodyH = 0;
+  if (texts.text) {
+    const bodyMeasureEnd = drawRichText(ctx, texts.text, -9999, -9999, contentW, bodyLineH, bodyFont, bodyFontBoldF, 'transparent', 'transparent', 'left');
+    bodyH = bodyMeasureEnd - (-9999);
+  }
+
+  // Center vertically
+  const totalH = titleH + gap + imgH + (bodyH > 0 ? gap + bodyH : 0);
+  let curY = Math.max((H - totalH) / 2, 40);
+
+  // Draw title
+  drawRichText(ctx, texts.title || '', pad, curY, contentW, titleLineH, titleFont, titleFont, textColor, accent, 'left');
+  curY += titleH + gap;
+
+  // Draw image
   if (img) {
     ctx.save();
     const scaleF = imageScale / 100;
     const cx = W / 2;
-    const cy = imgY + imgH / 2;
+    const cy = curY + imgH / 2;
     ctx.translate(cx, cy);
     ctx.scale(scaleF, scaleF);
     ctx.translate(-cx, -cy);
     ctx.beginPath();
     const rr = 16;
-    ctx.moveTo(60 + rr, imgY);
-    ctx.lineTo(W - 60 - rr, imgY);
-    ctx.arcTo(W - 60, imgY, W - 60, imgY + rr, rr);
-    ctx.lineTo(W - 60, imgY + imgH - rr);
-    ctx.arcTo(W - 60, imgY + imgH, W - 60 - rr, imgY + imgH, rr);
-    ctx.lineTo(60 + rr, imgY + imgH);
-    ctx.arcTo(60, imgY + imgH, 60, imgY + imgH - rr, rr);
-    ctx.lineTo(60, imgY + rr);
-    ctx.arcTo(60, imgY, 60 + rr, imgY, rr);
+    ctx.moveTo(pad + rr, curY);
+    ctx.lineTo(W - pad - rr, curY);
+    ctx.arcTo(W - pad, curY, W - pad, curY + rr, rr);
+    ctx.lineTo(W - pad, curY + imgH - rr);
+    ctx.arcTo(W - pad, curY + imgH, W - pad - rr, curY + imgH, rr);
+    ctx.lineTo(pad + rr, curY + imgH);
+    ctx.arcTo(pad, curY + imgH, pad, curY + imgH - rr, rr);
+    ctx.lineTo(pad, curY + rr);
+    ctx.arcTo(pad, curY, pad + rr, curY, rr);
     ctx.closePath();
     ctx.clip();
-    drawImageCover(ctx, img, 60, imgY, W - 120, imgH);
+    drawImageCover(ctx, img, pad, curY, contentW, imgH);
     ctx.restore();
   } else {
     ctx.fillStyle = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
-    ctx.fillRect(60, imgY, W - 120, imgH);
+    ctx.fillRect(pad, curY, contentW, imgH);
   }
+  curY += imgH + gap;
 
-  // Body text
-  const bodyY = imgY + imgH + 28;
-  if (texts.text) {
-    const bodyFontSize = 36;
-    const bodyFont = `400 ${bodyFontSize}px system-ui, -apple-system, sans-serif`;
-    const bodyFontBold = `700 ${bodyFontSize}px system-ui, -apple-system, sans-serif`;
-    drawRichText(ctx, texts.text, 60, bodyY, W - 120, bodyFontSize * 1.5, bodyFont, bodyFontBold, subTextColor, accent, 'left');
+  // Draw body
+  if (texts.text && bodyH > 0) {
+    drawRichText(ctx, texts.text, pad, curY, contentW, bodyLineH, bodyFont, bodyFontBoldF, subTextColor, accent, 'left');
   }
 
   // Slide number badge
@@ -1324,46 +1344,66 @@ function drawSlideFrameWithVideo(
     ctx.textBaseline = 'middle';
     ctx.fillText('6', W - 78, H - 70);
   } else {
-    // ===== Slides 2–5 Video =====
+    // ===== Slides 2–5 Video (centered layout) =====
     const titleFontSize = 56;
     const titleFont = `900 ${titleFontSize}px system-ui, -apple-system, sans-serif`;
+    const bodyFontSize = 36;
+    const bodyFont = `400 ${bodyFontSize}px system-ui, -apple-system, sans-serif`;
+    const bodyFontBold = `700 ${bodyFontSize}px system-ui, -apple-system, sans-serif`;
+    const titleLineH = titleFontSize * 1.2;
+    const bodyLineH = bodyFontSize * 1.5;
+    const contentW = W - 120;
+    const pad = 60;
+    const gap = 28;
+    const imgH = 440;
+
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    const titleY = 100;
-    const titleEndY = drawRichText(ctx, texts.title || '', 60, titleY, W - 120, titleFontSize * 1.2, titleFont, titleFont, textColor, accent, 'left');
+
+    // Measure
+    const titleMEnd = drawRichText(ctx, texts.title || '', -9999, -9999, contentW, titleLineH, titleFont, titleFont, 'transparent', 'transparent', 'left');
+    const titleH = titleMEnd - (-9999);
+    let bodyH = 0;
+    if (texts.text) {
+      const bodyMEnd = drawRichText(ctx, texts.text, -9999, -9999, contentW, bodyLineH, bodyFont, bodyFontBold, 'transparent', 'transparent', 'left');
+      bodyH = bodyMEnd - (-9999);
+    }
+
+    const totalH = titleH + gap + imgH + (bodyH > 0 ? gap + bodyH : 0);
+    let curY = Math.max((H - totalH) / 2, 40);
+
+    // Title
+    drawRichText(ctx, texts.title || '', pad, curY, contentW, titleLineH, titleFont, titleFont, textColor, accent, 'left');
+    curY += titleH + gap;
 
     // Video area
-    const imgY = Math.max(titleEndY + 20, 320);
-    const imgH = 440;
     ctx.save();
     const scaleF = imageScale / 100;
     const cx = W / 2;
-    const cy = imgY + imgH / 2;
+    const cy = curY + imgH / 2;
     ctx.translate(cx, cy);
     ctx.scale(scaleF, scaleF);
     ctx.translate(-cx, -cy);
     ctx.beginPath();
     const rr = 16;
-    ctx.moveTo(60 + rr, imgY);
-    ctx.lineTo(W - 60 - rr, imgY);
-    ctx.arcTo(W - 60, imgY, W - 60, imgY + rr, rr);
-    ctx.lineTo(W - 60, imgY + imgH - rr);
-    ctx.arcTo(W - 60, imgY + imgH, W - 60 - rr, imgY + imgH, rr);
-    ctx.lineTo(60 + rr, imgY + imgH);
-    ctx.arcTo(60, imgY + imgH, 60, imgY + imgH - rr, rr);
-    ctx.lineTo(60, imgY + rr);
-    ctx.arcTo(60, imgY, 60 + rr, imgY, rr);
+    ctx.moveTo(pad + rr, curY);
+    ctx.lineTo(W - pad - rr, curY);
+    ctx.arcTo(W - pad, curY, W - pad, curY + rr, rr);
+    ctx.lineTo(W - pad, curY + imgH - rr);
+    ctx.arcTo(W - pad, curY + imgH, W - pad - rr, curY + imgH, rr);
+    ctx.lineTo(pad + rr, curY + imgH);
+    ctx.arcTo(pad, curY + imgH, pad, curY + imgH - rr, rr);
+    ctx.lineTo(pad, curY + rr);
+    ctx.arcTo(pad, curY, pad + rr, curY, rr);
     ctx.closePath();
     ctx.clip();
-    drawImageCover(ctx, videoEl, 60, imgY, W - 120, imgH);
+    drawImageCover(ctx, videoEl, pad, curY, contentW, imgH);
     ctx.restore();
+    curY += imgH + gap;
 
-    // Body text
-    const bodyY = imgY + imgH + 28;
-    if (texts.text) {
-      const bodyFont = '400 36px system-ui, -apple-system, sans-serif';
-      const bodyFontBold = '700 36px system-ui, -apple-system, sans-serif';
-      drawRichText(ctx, texts.text, 60, bodyY, W - 120, 54, bodyFont, bodyFontBold, subTextColor, accent, 'left');
+    // Body
+    if (texts.text && bodyH > 0) {
+      drawRichText(ctx, texts.text, pad, curY, contentW, bodyLineH, bodyFont, bodyFontBold, subTextColor, accent, 'left');
     }
 
     // Badge
