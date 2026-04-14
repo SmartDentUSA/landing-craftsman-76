@@ -852,7 +852,7 @@ export async function generateEngagementSlidePNG(
 
   // Image area
   const imgY = Math.max(titleEndY + 20, 320);
-  const imgH = slideNum === 6 ? 200 : 440;
+  const imgH = slideNum === 6 ? 160 : 440;
   if (img) {
     ctx.save();
     const scaleF = imageScale / 100;
@@ -1014,7 +1014,7 @@ function drawSlideFrameWithVideo(
 
     // Video area
     const imgY = Math.max(titleEndY + 20, 320);
-    const imgH = slideNum === 6 ? 200 : 440;
+    const imgH = slideNum === 6 ? 160 : 440;
     ctx.save();
     const scaleF = imageScale / 100;
     const cx = W / 2;
