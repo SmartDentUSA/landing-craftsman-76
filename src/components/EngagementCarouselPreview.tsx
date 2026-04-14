@@ -1094,11 +1094,14 @@ export async function generateEngagementSlideVideo(
   videoEl.preload = 'auto';
   videoEl.src = videoUrl;
 
-  await new Promise<void>((resolve, reject) => {
-    videoEl.onloadeddata = () => resolve();
-    videoEl.onerror = () => reject(new Error('Failed to load video for export'));
-    videoEl.load();
-  });
+  await Promise.race([
+    new Promise<void>((resolve, reject) => {
+      videoEl.onloadeddata = () => resolve();
+      videoEl.onerror = () => reject(new Error('Failed to load video for export'));
+      videoEl.load();
+    }),
+    new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Video load timeout (15s)')), 15_000)),
+  ]);
 
   // Create offscreen canvas
   const canvas = document.createElement('canvas');

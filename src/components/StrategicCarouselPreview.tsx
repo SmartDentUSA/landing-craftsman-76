@@ -1132,33 +1132,48 @@ export function StrategicCarouselPreview({
 // ==================== CORS-safe image loader ====================
 const SUPABASE_PROJECT_URL = 'https://pgfgripuanuwwolmtknn.supabase.co';
 
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`Timeout: ${label} (${ms}ms)`)), ms)),
+  ]);
+}
+
 export async function fetchAsDataUrl(url: string): Promise<string> {
   if (!url) return '';
   if (url.startsWith('data:')) return url;
 
   // Layer 2: edge function proxy (server-side fetch → base64)
   try {
-    const res = await fetch(`${SUPABASE_PROJECT_URL}/functions/v1/optimize-image`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ imageUrl: url, returnBase64: true }),
-    });
+    const res = await withTimeout(
+      fetch(`${SUPABASE_PROJECT_URL}/functions/v1/optimize-image`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageUrl: url, returnBase64: true }),
+      }),
+      10_000,
+      'optimize-image edge function'
+    );
     if (res.ok) {
       const data = await res.json();
       if (data.dataUrl) return data.dataUrl;
     }
-  } catch {}
+  } catch (err) {
+    console.warn('[fetchAsDataUrl] Edge function failed:', err);
+  }
 
   // Layer 3: direct client-side fetch → blob → FileReader
   try {
-    const res = await fetch(url, { mode: 'cors' });
+    const res = await withTimeout(fetch(url, { mode: 'cors' }), 10_000, 'direct fetch');
     const blob = await res.blob();
     return await new Promise<string>((resolve) => {
       const reader = new FileReader();
       reader.onloadend = () => resolve(reader.result as string);
       reader.readAsDataURL(blob);
     });
-  } catch {}
+  } catch (err) {
+    console.warn('[fetchAsDataUrl] Direct fetch failed:', err);
+  }
 
   // Layer 4: original URL (canvas may taint, but we still try)
   return url;
