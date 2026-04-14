@@ -116,7 +116,24 @@ function drawImageCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement | H
   ctx.drawImage(img as any, dx - (nw - dw) / 2, dy - (nh - dh) / 2, nw, nh);
 }
 
-// Draw rich text on canvas with bold/**highlight** support
+/** Estimate number of wrapped lines for a given text and max width */
+function measureWrappedLines(ctx: CanvasRenderingContext2D, text: string, maxW: number): number {
+  const words = text.split(/\s+/).filter(Boolean);
+  let lines = 1;
+  let currentWidth = 0;
+  for (const word of words) {
+    const ww = ctx.measureText(word + ' ').width;
+    if (currentWidth + ww > maxW && currentWidth > 0) {
+      lines++;
+      currentWidth = ww;
+    } else {
+      currentWidth += ww;
+    }
+  }
+  return lines || 1;
+}
+
+
 function drawRichText(
   ctx: CanvasRenderingContext2D,
   text: string,
@@ -898,26 +915,65 @@ export async function generateEngagementSlidePNG(
     });
   }
 
-  // ===== Slide 6 PNG: dedicated CTA layout =====
+  // ===== Slide 6 PNG: dedicated CTA layout (vertically centered) =====
   if (slideNum === 6) {
     const pad = 60;
     const contentW = W - pad * 2;
     const centerX = W / 2;
+    const displayTitle = (texts.title || '').slice(0, 120);
+    const displayBody = (texts.text || '').slice(0, 160);
 
-    // Title — centered, capped at 4 lines
+    // --- Pre-measure all blocks to center vertically ---
     const titleFontSize = 40;
     const titleFont = `900 ${titleFontSize}px system-ui, -apple-system, sans-serif`;
+    const titleLineH = titleFontSize * 1.25;
+    ctx.font = titleFont;
+    const titleLines = Math.min(measureWrappedLines(ctx, displayTitle, contentW), 4);
+    const titleH = titleLines * titleLineH;
+
+    const imgH = 320;
+
+    const bodyFontSize = 28;
+    const bodyFont = `400 ${bodyFontSize}px system-ui, -apple-system, sans-serif`;
+    const bodyFontBold = `700 ${bodyFontSize}px system-ui, -apple-system, sans-serif`;
+    const bodyLineH = bodyFontSize * 1.5;
+    ctx.font = bodyFont;
+    const bodyLines = displayBody ? Math.min(measureWrappedLines(ctx, displayBody, contentW), 3) : 0;
+    const bodyH = bodyLines * bodyLineH;
+
+    const ctaFontSize = 32;
+    const ctaFont = `900 ${ctaFontSize}px system-ui, -apple-system, sans-serif`;
+    ctx.font = ctaFont;
+    const btnPadX = 40;
+    const maxCtaTextW = contentW - btnPadX * 2;
+    const ctaWords = (texts.cta_label || '').split(' ');
+    const ctaLinesArr: string[] = [];
+    let ctaLine = '';
+    for (const word of ctaWords) {
+      const test = ctaLine + word + ' ';
+      if (ctx.measureText(test).width > maxCtaTextW && ctaLine) {
+        ctaLinesArr.push(ctaLine.trim());
+        ctaLine = word + ' ';
+      } else {
+        ctaLine = test;
+      }
+    }
+    if (ctaLine.trim()) ctaLinesArr.push(ctaLine.trim());
+    const ctaLineH = ctaFontSize * 1.3;
+    const btnPadY = 20;
+    const btnH = texts.cta_label ? ctaLinesArr.length * ctaLineH + btnPadY * 2 : 0;
+
+    const gap = 24;
+    const totalH = titleH + gap + imgH + gap + (bodyH > 0 ? bodyH + gap : 0) + btnH;
+    let curY = Math.max(pad, (H - totalH) / 2);
+
+    // --- Draw title ---
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    const displayTitle = (texts.title || '').slice(0, 120);
-    let curY = 120;
-    curY = drawRichText(ctx, displayTitle, pad, curY, contentW, titleFontSize * 1.25, titleFont, titleFont, textColor, accent, 'center');
-    // Clamp title area
-    curY = Math.min(curY, 320);
-    curY += 24;
+    curY = drawRichText(ctx, displayTitle, pad, curY, contentW, titleLineH, titleFont, titleFont, textColor, accent, 'center');
+    curY += gap;
 
-    // Image area — centered
-    const imgH = 320;
+    // --- Draw image ---
     if (img) {
       ctx.save();
       const scaleF = imageScale / 100;
@@ -945,49 +1001,20 @@ export async function generateEngagementSlidePNG(
       ctx.fillStyle = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
       ctx.fillRect(pad, curY, contentW, imgH);
     }
-    curY += imgH + 24;
+    curY += imgH + gap;
 
-    // Body text — centered, max 3 lines
-    if (texts.text) {
-      const displayBody = (texts.text || '').slice(0, 160);
-      const bodyFontSize = 28;
-      const bodyFont = `400 ${bodyFontSize}px system-ui, -apple-system, sans-serif`;
-      const bodyFontBold = `700 ${bodyFontSize}px system-ui, -apple-system, sans-serif`;
-      const bodyEndY = drawRichText(ctx, displayBody, pad, curY, contentW, bodyFontSize * 1.5, bodyFont, bodyFontBold, subTextColor, accent, 'center');
-      curY = Math.min(bodyEndY, curY + bodyFontSize * 1.5 * 3); // max 3 lines
-      curY += 24;
+    // --- Draw body ---
+    if (displayBody) {
+      drawRichText(ctx, displayBody, pad, curY, contentW, bodyLineH, bodyFont, bodyFontBold, subTextColor, accent, 'center');
+      curY += bodyH + gap;
     }
 
-    // CTA button — positioned from current Y, word-wrapped
-    if (texts.cta_label) {
-      const ctaFontSize = 32;
-      const ctaFont = `900 ${ctaFontSize}px system-ui, -apple-system, sans-serif`;
-      ctx.font = ctaFont;
-      // Measure wrapped lines for button height
-      const ctaWords = texts.cta_label.split(' ');
-      const ctaLines: string[] = [];
-      let ctaLine = '';
-      const btnPadX = 40;
-      const maxCtaTextW = contentW - btnPadX * 2;
-      for (const word of ctaWords) {
-        const test = ctaLine + word + ' ';
-        if (ctx.measureText(test).width > maxCtaTextW && ctaLine) {
-          ctaLines.push(ctaLine.trim());
-          ctaLine = word + ' ';
-        } else {
-          ctaLine = test;
-        }
-      }
-      if (ctaLine.trim()) ctaLines.push(ctaLine.trim());
-
-      const lineH = ctaFontSize * 1.3;
-      const btnPadY = 20;
-      const btnH = ctaLines.length * lineH + btnPadY * 2;
-      const btnY = Math.max(curY, H - btnH - 120);
+    // --- Draw CTA button ---
+    if (texts.cta_label && ctaLinesArr.length > 0) {
       const btnX = pad;
       const btnW = contentW;
+      const btnY = curY;
 
-      // Draw rounded rect
       ctx.fillStyle = accent;
       ctx.beginPath();
       const br = 20;
@@ -1003,14 +1030,13 @@ export async function generateEngagementSlidePNG(
       ctx.closePath();
       ctx.fill();
 
-      // Draw text lines centered in button
       ctx.fillStyle = getLuminance(accent) > 0.5 ? '#000' : '#fff';
       ctx.font = ctaFont;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      const textStartY = btnY + btnPadY + lineH / 2;
-      for (let li = 0; li < ctaLines.length; li++) {
-        ctx.fillText(ctaLines[li], centerX, textStartY + li * lineH);
+      const textStartY = btnY + btnPadY + ctaLineH / 2;
+      for (let li = 0; li < ctaLinesArr.length; li++) {
+        ctx.fillText(ctaLinesArr[li], centerX, textStartY + li * ctaLineH);
       }
     }
 
@@ -1170,25 +1196,64 @@ function drawSlideFrameWithVideo(
     ctx.textBaseline = 'middle';
     ctx.fillText('1', W - 78, H - 70);
   } else if (slideNum === 6) {
-    // ===== Slide 6 Video: dedicated CTA layout =====
+    // ===== Slide 6 Video: dedicated CTA layout (vertically centered) =====
     const pad = 60;
     const contentW = W - pad * 2;
     const centerX = W / 2;
     const displayTitle = (texts.title || '').slice(0, 120);
     const displayBody = (texts.text || '').slice(0, 160);
 
-    // Title
+    // --- Pre-measure all blocks to center vertically ---
     const titleFontSize = 40;
     const titleFont = `900 ${titleFontSize}px system-ui, -apple-system, sans-serif`;
+    const titleLineH = titleFontSize * 1.25;
+    ctx.font = titleFont;
+    const titleLines = Math.min(measureWrappedLines(ctx, displayTitle, contentW), 4);
+    const titleH = titleLines * titleLineH;
+
+    const imgH = 320;
+
+    const bodyFontSize = 28;
+    const bodyFont = `400 ${bodyFontSize}px system-ui, -apple-system, sans-serif`;
+    const bodyFontBold = `700 ${bodyFontSize}px system-ui, -apple-system, sans-serif`;
+    const bodyLineH = bodyFontSize * 1.5;
+    ctx.font = bodyFont;
+    const bodyLines = displayBody ? Math.min(measureWrappedLines(ctx, displayBody, contentW), 3) : 0;
+    const bodyH = bodyLines * bodyLineH;
+
+    const ctaFontSize = 32;
+    const ctaFont = `900 ${ctaFontSize}px system-ui, -apple-system, sans-serif`;
+    ctx.font = ctaFont;
+    const btnPadX = 40;
+    const maxCtaTextW = contentW - btnPadX * 2;
+    const ctaWords = (texts.cta_label || '').split(' ');
+    const ctaLinesArr: string[] = [];
+    let ctaLine = '';
+    for (const word of ctaWords) {
+      const test = ctaLine + word + ' ';
+      if (ctx.measureText(test).width > maxCtaTextW && ctaLine) {
+        ctaLinesArr.push(ctaLine.trim());
+        ctaLine = word + ' ';
+      } else {
+        ctaLine = test;
+      }
+    }
+    if (ctaLine.trim()) ctaLinesArr.push(ctaLine.trim());
+    const ctaLineH = ctaFontSize * 1.3;
+    const btnPadY = 20;
+    const btnH = texts.cta_label ? ctaLinesArr.length * ctaLineH + btnPadY * 2 : 0;
+
+    const gap = 24;
+    const totalH = titleH + gap + imgH + gap + (bodyH > 0 ? bodyH + gap : 0) + btnH;
+    let curY = Math.max(pad, (H - totalH) / 2);
+
+    // --- Draw title ---
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    let curY = 120;
-    curY = drawRichText(ctx, displayTitle, pad, curY, contentW, titleFontSize * 1.25, titleFont, titleFont, textColor, accent, 'center');
-    curY = Math.min(curY, 320);
-    curY += 24;
+    curY = drawRichText(ctx, displayTitle, pad, curY, contentW, titleLineH, titleFont, titleFont, textColor, accent, 'center');
+    curY += gap;
 
-    // Video area
-    const imgH = 320;
+    // --- Draw video area ---
     ctx.save();
     const scaleF = imageScale / 100;
     ctx.translate(centerX, curY + imgH / 2);
@@ -1209,45 +1274,19 @@ function drawSlideFrameWithVideo(
     ctx.clip();
     drawImageCover(ctx, videoEl, pad, curY, contentW, imgH);
     ctx.restore();
-    curY += imgH + 24;
+    curY += imgH + gap;
 
-    // Body
+    // --- Draw body ---
     if (displayBody) {
-      const bodyFontSize = 28;
-      const bodyFont = `400 ${bodyFontSize}px system-ui, -apple-system, sans-serif`;
-      const bodyFontBold = `700 ${bodyFontSize}px system-ui, -apple-system, sans-serif`;
-      const bodyEndY = drawRichText(ctx, displayBody, pad, curY, contentW, bodyFontSize * 1.5, bodyFont, bodyFontBold, subTextColor, accent, 'center');
-      curY = Math.min(bodyEndY, curY + bodyFontSize * 1.5 * 3);
-      curY += 24;
+      drawRichText(ctx, displayBody, pad, curY, contentW, bodyLineH, bodyFont, bodyFontBold, subTextColor, accent, 'center');
+      curY += bodyH + gap;
     }
 
-    // CTA button with word wrap
-    if (texts.cta_label) {
-      const ctaFontSize = 32;
-      const ctaFont = `900 ${ctaFontSize}px system-ui, -apple-system, sans-serif`;
-      ctx.font = ctaFont;
-      const btnPadX = 40;
-      const maxCtaTextW = contentW - btnPadX * 2;
-      const ctaWords = texts.cta_label.split(' ');
-      const ctaLines: string[] = [];
-      let ctaLine = '';
-      for (const word of ctaWords) {
-        const test = ctaLine + word + ' ';
-        if (ctx.measureText(test).width > maxCtaTextW && ctaLine) {
-          ctaLines.push(ctaLine.trim());
-          ctaLine = word + ' ';
-        } else {
-          ctaLine = test;
-        }
-      }
-      if (ctaLine.trim()) ctaLines.push(ctaLine.trim());
-
-      const lineH = ctaFontSize * 1.3;
-      const btnPadY = 20;
-      const btnH = ctaLines.length * lineH + btnPadY * 2;
-      const btnY = Math.max(curY, H - btnH - 120);
+    // --- Draw CTA button ---
+    if (texts.cta_label && ctaLinesArr.length > 0) {
       const btnX = pad;
       const btnW = contentW;
+      const btnY = curY;
 
       ctx.fillStyle = accent;
       ctx.beginPath();
@@ -1268,9 +1307,9 @@ function drawSlideFrameWithVideo(
       ctx.font = ctaFont;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      const textStartY = btnY + btnPadY + lineH / 2;
-      for (let li = 0; li < ctaLines.length; li++) {
-        ctx.fillText(ctaLines[li], centerX, textStartY + li * lineH);
+      const textStartY = btnY + btnPadY + ctaLineH / 2;
+      for (let li = 0; li < ctaLinesArr.length; li++) {
+        ctx.fillText(ctaLinesArr[li], centerX, textStartY + li * ctaLineH);
       }
     }
 
