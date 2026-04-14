@@ -842,7 +842,7 @@ export async function generateEngagementSlidePNG(
   }
 
   // Title
-  const titleFontSize = slideNum === 1 ? 72 : (slideNum === 6 ? 36 : 56);
+  const titleFontSize = slideNum === 1 ? 72 : (slideNum === 6 ? 28 : 56);
   const titleFont = `900 ${titleFontSize}px system-ui, -apple-system, sans-serif`;
   const titleFontBold = titleFont; // already bold
   ctx.textAlign = 'left';
