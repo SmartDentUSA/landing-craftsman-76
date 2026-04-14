@@ -1,46 +1,25 @@
 
-## Plano: reconstruir o Slide 6 como um layout próprio de CTA
 
-### Diagnóstico
-O problema agora não é só overflow. As últimas correções evitaram corte, mas **desmontaram a composição** do último card:
-1. **O Slide 6 ainda usa o layout genérico dos slides 2–5**. Isso empilha tudo no topo e deixa um vazio enorme embaixo.
-2. **Preview, PNG e vídeo ficaram diferentes entre si**. O PNG recebeu parte dos ajustes, mas o renderer de vídeo ainda usa o layout antigo e desenha o CTA em linha única.
-3. **Título/corpo entram crus demais no Slide 6**. Quando vêm longos ou repetidos, o card fica visualmente quebrado mesmo sem “estourar”.
+## Plano: Corrigir texto cortado no Slide 1 do Carrossel de Engajamento
 
-### O que vou implementar
-1. **Criar um renderer exclusivo para o Slide 6 em `src/components/EngagementCarouselPreview.tsx`**
-   - parar de reaproveitar o bloco genérico
-   - montar áreas fixas para: título, mídia, corpo curto e CTA
-   - ancorar o botão mais perto da parte inferior
-   - devolver uma altura mais equilibrada para a mídia, em vez da faixa muito baixa atual
+### Problema
+O texto do Slide 1 (título + corpo) está sendo cortado na parte inferior. O container de texto usa `bottom: 60px` sem limite de altura — com `fontSize: 72` no título e `36` no corpo, conteúdo longo ultrapassa a área visível.
 
-2. **Unificar o Slide 6 entre preview, PNG e WEBM**
-   - extrair um config único com paddings, alturas, fontes, gaps e limites de linhas
-   - usar essa mesma regra no preview HTML, no `generateEngagementSlidePNG()` e no `drawSlideFrameWithVideo()`
+### Correções em `src/components/EngagementCarouselPreview.tsx`
 
-3. **Corrigir o CTA nos exports**
-   - trocar o `fillText(...)` simples por um helper com quebra de linha real
-   - deixar a altura do botão adaptável ao texto
-   - manter largura segura e centralização correta no PNG e no vídeo
+**1. Preview HTML (linhas ~608-621)**
+- Adicionar `maxHeight` ao container de texto (ex: `maxHeight: '55%'`) para limitar a área ocupada
+- Título: `fontSize: 72` → `52`, com `WebkitLineClamp: 3` e `overflow: hidden`
+- Corpo: `fontSize: 36` → `24`, com `WebkitLineClamp: 2` e `overflow: hidden`
+- Manter o posicionamento `bottom: 60` mas garantir que o conteúdo nunca ultrapasse
 
-4. **Adicionar sanitização visual só para exibição**
-   - limpar espaços/quebras exageradas
-   - reduzir repetição óbvia entre título e corpo
-   - limitar visualmente o que aparece no Slide 6 sem apagar nem sobrescrever o texto salvo
+**2. Canvas PNG (linhas ~862-873)**
+- Título: reduzir de 72px para 52px, e mover `H - 300` para um Y dinâmico que garante espaço
+- Corpo: reduzir de 36px para 24px
+- Limitar número de linhas renderizadas (máximo 3 título, 2 corpo)
 
-### Arquivo
-- `src/components/EngagementCarouselPreview.tsx`
+**3. Canvas Vídeo** — aplicar mesmas reduções de fonte
 
-### Detalhes técnicos
-- adicionar um branch explícito `if (slideNum === 6)` no preview JSX
-- criar helpers compartilhados para:
-  - conteúdo exibido do slide 6
-  - texto centralizado com quebra de linha
-  - clamp de linhas no canvas
-- atualizar também a parte de vídeo, porque hoje ela ainda está com a lógica antiga do Slide 6
+### Resultado
+O Slide 1 volta a exibir título e subtítulo compactos sobre o gradiente, sem cortar texto, como na referência enviada.
 
-### Resultado esperado
-- o último slide volta a parecer um **card de CTA**, não um slide comum espremido
-- o conteúdo fica distribuído de forma equilibrada
-- o botão fica correto no preview, no PNG e no WEBM
-- não será preciso regenerar o carrossel só para o slide voltar a ficar apresentável
