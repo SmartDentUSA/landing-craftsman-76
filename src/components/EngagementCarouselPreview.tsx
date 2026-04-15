@@ -1094,8 +1094,13 @@ export async function generateEngagementSlidePNG(
   const totalH = titleH + gap + imgH + (bodyH > 0 ? gap + bodyH : 0);
   let curY = Math.max((H - totalH) / 2, 40);
 
-  // Draw title
+  // Draw title (clipped to titleH)
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(pad, curY, contentW, titleH);
+  ctx.clip();
   drawRichText(ctx, texts.title || '', pad, curY, contentW, titleLineH, titleFont, titleFont, textColor, accent, 'left');
+  ctx.restore();
   curY += titleH + gap;
 
   // Draw image
@@ -1128,9 +1133,14 @@ export async function generateEngagementSlidePNG(
   }
   curY += imgH + gap;
 
-  // Draw body
+  // Draw body (clipped to bodyH)
   if (texts.text && bodyH > 0) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(pad, curY, contentW, bodyH);
+    ctx.clip();
     drawRichText(ctx, texts.text, pad, curY, contentW, bodyLineH, bodyFont, bodyFontBoldF, subTextColor, accent, 'left');
+    ctx.restore();
   }
 
   // Slide number badge
@@ -1380,8 +1390,13 @@ function drawSlideFrameWithVideo(
     const totalH = titleH + gap + imgH + (bodyH > 0 ? gap + bodyH : 0);
     let curY = Math.max((H - totalH) / 2, 40);
 
-    // Title
+    // Title (clipped to titleH)
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(pad, curY, contentW, titleH);
+    ctx.clip();
     drawRichText(ctx, texts.title || '', pad, curY, contentW, titleLineH, titleFont, titleFont, textColor, accent, 'left');
+    ctx.restore();
     curY += titleH + gap;
 
     // Video area
@@ -1409,9 +1424,14 @@ function drawSlideFrameWithVideo(
     ctx.restore();
     curY += imgH + gap;
 
-    // Body
+    // Body (clipped to bodyH)
     if (texts.text && bodyH > 0) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(pad, curY, contentW, bodyH);
+      ctx.clip();
       drawRichText(ctx, texts.text, pad, curY, contentW, bodyLineH, bodyFont, bodyFontBold, subTextColor, accent, 'left');
+      ctx.restore();
     }
 
     // Badge
