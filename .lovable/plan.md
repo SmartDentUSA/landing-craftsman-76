@@ -1,20 +1,81 @@
 
 
-## Plano: Adicionar rewrites para llms.txt e criar robots.txt
+## Plano: MCP Server para Claude acessar Edge Functions do Smart Dent
 
-### O que será feito
+### O que é
+Um servidor MCP (Model Context Protocol) hospedado como Supabase Edge Function que expõe as principais funções do sistema como "tools" para o Claude. Isso permite que o Claude, tanto no claude.ai quanto no Claude Code, execute funções diretamente — gerar blogs, SEO, conteúdo social, extrair legendas, etc.
 
-1. **Criar `vercel.json`** na raiz do projeto com as regras de rewrite apontando `/llms.txt` e `/.well-known/llms.txt` para a Edge Function `llms-txt` no Supabase (`okeogjgqijbfkudfjadz`).
+### Como funciona
 
-2. **Criar `public/robots.txt`** com as regras de permissão para agentes de IA (GPTBot, ChatGPT-User, PerplexityBot, ClaudeBot, Anthropic-ai, Google-Extended) e o apontamento `LLMs: /llms.txt`.
+```text
+Claude (web/CLI)
+     │
+     ▼
+MCP Server (Edge Function)
+     │  ← Streamable HTTP Transport
+     ▼
+Edge Functions existentes
+(generate-social-content, ai-seo-generator, etc.)
+```
 
-### Detalhes técnicos
+### Implementação
 
-- `vercel.json` não existe ainda — será criado do zero com apenas o array `rewrites`.
-- `public/robots.txt` também não existe — será criado com o conteúdo especificado.
-- Nenhum arquivo existente será modificado.
+**1. Criar `supabase/functions/mcp-server/index.ts`**
 
-### Nota sobre o título da mensagem
+- Usa `mcp-lite` (npm:mcp-lite@^0.10.0) + Hono para routing
+- Expõe as Edge Functions mais úteis como MCP tools:
+  - `generate_social_content` — WhatsApp, Instagram, TikTok, YouTube
+  - `generate_product_blog` — Blogs comerciais/técnicos
+  - `ai_seo_generator` — Meta descriptions, títulos, keywords
+  - `generate_ad_copies` — Google Ads copies
+  - `extract_youtube_captions` — Extração e análise de legendas
+  - `strategic_blog_generator` — Artigos estratégicos contextuais
+  - `knowledge_base` — Consulta à base de conhecimento (770+ artigos)
+  - `generate_product_ai_content` — Benefícios, keywords, características
+- Cada tool chama internamente a Edge Function correspondente via `fetch` local
+- Autenticação via API key no header (secret `MCP_API_KEY`)
 
-O título menciona "todos os domínios" — porém as instruções concretas pedem apenas alterações em `vercel.json` (que afeta o deploy Vercel/Lovable em `parametros.smartdent.com.br`) e `public/robots.txt`. Os domínios publicados via Cloudflare/KingHost não são afetados por estes arquivos. Se desejar replicar o `robots.txt` e rewrites nos outros domínios, será necessário um passo adicional após este.
+**2. Adicionar config em `supabase/config.toml`**
+
+```toml
+[functions.mcp-server]
+verify_jwt = false
+```
+
+JWT desabilitado porque o Claude autentica via `MCP_API_KEY` custom, não via Supabase Auth.
+
+**3. Adicionar secret `MCP_API_KEY`**
+
+Uma chave API que o Claude usará para autenticar. Será validada no código do MCP server.
+
+### Como o usuário conecta no Claude
+
+**Claude.ai:** Configurações → Conectores → Adicionar conector personalizado:
+- URL: `https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/mcp-server`
+- Header de autenticação com a `MCP_API_KEY`
+
+**Claude Code:** Adicionar ao `~/.claude/settings.json`:
+```json
+{
+  "mcpServers": {
+    "smartdent": {
+      "type": "streamable-http",
+      "url": "https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/mcp-server",
+      "headers": {
+        "X-API-Key": "<MCP_API_KEY>"
+      }
+    }
+  }
+}
+```
+
+### Arquivos afetados
+- **Criar:** `supabase/functions/mcp-server/index.ts` (MCP server com ~10 tools)
+- **Editar:** `supabase/config.toml` (adicionar entry para mcp-server)
+- **Secret:** `MCP_API_KEY` (nova)
+
+### Segurança
+- Validação de API key em todas as requisições
+- Sem acesso direto ao banco — apenas proxy para Edge Functions existentes
+- Rate limiting básico em memória
 
