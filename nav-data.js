@@ -1,14 +1,14 @@
 /* Smart Dent Navigation Data - Auto-generated */
 window.__NAV_DATA__ = [
   {
-    "name": "Comparativo Scanners intraorais ",
-    "url": "https://smartdent.com.br/comparativo-scanners-intraorais",
-    "isHome": false,
+    "name": "Home",
+    "url": "https://smartdent.com.br/",
+    "isHome": true,
     "brand": null
   },
   {
-    "name": "Detalhes do Processo por Fluxo  Placas Miorrelaxantes",
-    "url": "https://smartdent.com.br/manuais",
+    "name": "Comparativo Scanners intraorais ",
+    "url": "https://smartdent.com.br/comparativo-scanners-intraorais",
     "isHome": false,
     "brand": null
   },
