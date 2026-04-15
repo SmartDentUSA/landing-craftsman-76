@@ -1,20 +1,36 @@
 
 
-## Plano: Corrigir sobreposição imagem/texto nos Slides 2–5 exportados
+## Plano: Publicar redirect smartdent.com.br/support-resources → parametros.smartdent.com.br/support-resources
 
-### Problema raiz
-O `drawRichText` no canvas renderiza TODAS as linhas do título, mas o `curY` avança apenas pela altura "clampada" (máx 4 linhas). O resultado: a imagem é desenhada por cima das linhas extras do título. No preview HTML, o CSS `overflow: hidden` cuida disso automaticamente — no canvas, não há clipping.
+### O que será feito
 
-### Correção em `src/components/EngagementCarouselPreview.tsx`
+1. Inserir um registro na tabela `cloned_landing_pages` com o HTML de redirect para o domínio `smartdent.com.br` no path `/support-resources`
+2. Chamar a Edge Function `publish-git-kinghost` para fazer o commit do HTML no repositório Git (branch `stable-website`)
 
-**1. Slides 2–5 PNG (~linhas 1097-1134): Adicionar clipping rect ao título e body**
-- Antes de chamar `drawRichText` para o título, fazer `ctx.save()` → `ctx.beginPath()` → `ctx.rect(pad, curY, contentW, titleH)` → `ctx.clip()` → desenhar → `ctx.restore()`
-- Mesma lógica para o body: clipar a área de `bodyH` antes de renderizar
-- Isso impede que texto longo extravase para a área da imagem
+### HTML do redirect
 
-**2. Slides 2–5 Video (~linhas 1383-1415): Mesma correção de clipping**
-- Aplicar `ctx.save()/clip()/restore()` idêntico ao desenho de título e body
+```html
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="refresh" content="0;url=https://parametros.smartdent.com.br/support-resources">
+  <link rel="canonical" href="https://parametros.smartdent.com.br/support-resources">
+  <title>Redirecionando...</title>
+  <script>window.location.href="https://parametros.smartdent.com.br/support-resources";</script>
+</head>
+<body>
+  <p>Redirecionando para <a href="https://parametros.smartdent.com.br/support-resources">parametros.smartdent.com.br/support-resources</a>...</p>
+</body>
+</html>
+```
+
+### Execução
+
+1. Inserir registro via Supabase (insert em `cloned_landing_pages` com `target_domain='smartdent.com.br'`, `page_path='/support-resources'`)
+2. Invocar `publish-git-kinghost` via `curl` com o HTML acima, `pagePath=/support-resources`, `domain=smartdent.com.br`
+3. Confirmar que o commit foi criado e a URL está ativa
 
 ### Resultado
-O texto longo é cortado visualmente (como no preview), a imagem fica abaixo do título sem sobreposição, e o body fica abaixo da imagem — layout idêntico ao preview.
+QR Code apontando para `smartdent.com.br/support-resources` redirecionará instantaneamente para `parametros.smartdent.com.br/support-resources`.
 
