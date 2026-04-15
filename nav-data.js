@@ -8,7 +8,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Comparativo Scanners intraorais ",
-    "url": "https://smartdent.com.br/comparativo-scanners-intraorais",
+    "url": "https://smartdent.com.br/produtos/comparativo-scanners-intraorais",
     "isHome": false,
     "brand": null
   },
@@ -20,7 +20,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "QRCode",
-    "url": "https://smartdent.com.br/support-resources",
+    "url": "https://smartdent.com.br/suport-resurces ",
     "isHome": false,
     "brand": null
   }
@@ -37,8 +37,8 @@ window.__NAV_DATA__ = [
   nav.appendChild(title);
   var links = document.createElement('div');
   links.style.cssText = 'display:flex;flex-wrap:wrap;justify-content:center;gap:8px;';
-   var currentUrl = window.location.href.replace(/\/$/, '');
-   data.forEach(function(item) {
+  var currentUrl = window.location.href.replace(/\/$/, '');
+  data.forEach(function(item) {
     if (item.url.replace(/\/$/, '') === currentUrl) return;
     var a = document.createElement('a');
     a.href = item.url;
