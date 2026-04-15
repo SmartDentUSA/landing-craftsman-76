@@ -220,6 +220,12 @@ serve(async (req) => {
     const updatedPages: { id: string; html: string; repoPath: string }[] = [];
 
     for (const page of pagesToUpdate) {
+      // Skip redirect pages — they must not be modified by republish
+      if ((page.original_html || '').includes('http-equiv="refresh"')) {
+        console.log(`⏭️ Skipping redirect page: ${page.page_path}`);
+        continue;
+      }
+
       let html = page.transformed_html || page.original_html;
       if (!html) continue;
 
