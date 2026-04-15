@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { blake3 } from "https://deno.land/x/blake3@0.2.0/mod.ts";
+import { blake3 } from "https://esm.sh/hash-wasm@4.11.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
