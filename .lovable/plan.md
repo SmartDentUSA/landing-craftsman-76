@@ -1,54 +1,20 @@
 
 
-## Plano: Corrigir redirects persistentes para /support-resources e /manuais
+## Plano: Adicionar rewrites para llms.txt e criar robots.txt
 
-### Problema raiz
-O `republish-domain-pages` sobrescreve o HTML de TODOS os registros publicados no domínio, incluindo os redirects. Isso acontece porque a função não distingue páginas normais de redirects — ela re-injeta tracking e nav em tudo.
+### O que será feito
 
-### Solução (2 partes)
+1. **Criar `vercel.json`** na raiz do projeto com as regras de rewrite apontando `/llms.txt` e `/.well-known/llms.txt` para a Edge Function `llms-txt` no Supabase (`okeogjgqijbfkudfjadz`).
 
-**Parte 1: Blindar o `republish-domain-pages` contra redirects**
+2. **Criar `public/robots.txt`** com as regras de permissão para agentes de IA (GPTBot, ChatGPT-User, PerplexityBot, ClaudeBot, Anthropic-ai, Google-Extended) e o apontamento `LLMs: /llms.txt`.
 
-Adicionar uma verificação no loop de atualização: se o `original_html` contiver `meta http-equiv="refresh"`, pular essa página (não re-injetar tracking/nav, não sobrescrever `transformed_html`). Isso garante que redirects nunca mais sejam sobrescritos.
+### Detalhes técnicos
 
-Trecho a adicionar no loop `for (const page of pagesToUpdate)`:
-```typescript
-// Skip redirect pages — they must not be modified
-if ((page.original_html || '').includes('http-equiv="refresh"')) {
-  console.log(`⏭️ Skipping redirect page: ${page.page_path}`);
-  continue;
-}
-```
+- `vercel.json` não existe ainda — será criado do zero com apenas o array `rewrites`.
+- `public/robots.txt` também não existe — será criado com o conteúdo especificado.
+- Nenhum arquivo existente será modificado.
 
-**Parte 2: Restaurar os dados e republicar**
+### Nota sobre o título da mensagem
 
-1. Atualizar os 2 registros no banco (`original_html` e `transformed_html`) com o HTML de redirect correto
-2. Invocar `publish-git-kinghost` para cada um, commitando os HTMLs no `stable-website`
-
-Registros afetados:
-- `5b76749b-268e-4412-ab22-0ea59a31d00c` → `/support-resources`
-- `6416ca26-6d1c-424a-a6de-ffdc6444b4e4` → `/manuais`
-
-Ambos redirecionam para `https://parametros.smartdent.com.br/support-resources`.
-
-### HTML de redirect (idêntico para ambos)
-```html
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <meta http-equiv="refresh" content="0;url=https://parametros.smartdent.com.br/support-resources">
-  <link rel="canonical" href="https://parametros.smartdent.com.br/support-resources">
-  <title>Redirecionando...</title>
-  <script>window.location.href="https://parametros.smartdent.com.br/support-resources";</script>
-</head>
-<body>
-  <p>Redirecionando para <a href="https://parametros.smartdent.com.br/support-resources">parametros.smartdent.com.br/support-resources</a>...</p>
-</body>
-</html>
-```
-
-### Resultado
-- Os dois redirects voltam a funcionar imediatamente
-- Futuras execuções de `republish-domain-pages` não sobrescrevem mais páginas de redirect
+O título menciona "todos os domínios" — porém as instruções concretas pedem apenas alterações em `vercel.json` (que afeta o deploy Vercel/Lovable em `parametros.smartdent.com.br`) e `public/robots.txt`. Os domínios publicados via Cloudflare/KingHost não são afetados por estes arquivos. Se desejar replicar o `robots.txt` e rewrites nos outros domínios, será necessário um passo adicional após este.
 
