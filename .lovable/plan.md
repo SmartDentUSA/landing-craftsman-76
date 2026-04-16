@@ -1,21 +1,9 @@
 
+O usuário quer um botão que chama a edge function `sync-system-b-articles` em modo full com max_pages=7 e exibe o resultado.
 
-## Plano: Corrigir erro "Cannot read properties of undefined (reading 'publishedUrl')"
+**Pontos críticos:**
+1. **NUNCA usar service role key no frontend** — isso expõe a chave master do banco. Vou usar o anon key padrão do cliente Supabase, que já está configurado.
+2. A função `sync-system-b-articles` precisa existir. Vou verificar.
+3. Onde colocar o botão? O componente `SystemBDocumentSync` já existe em `/repository` (rota atual). Faz sentido adicionar um componente irmão `SystemBArticlesSync` no mesmo local.
 
-### Causa raiz
-A linha 540 de `LPClonePanel.tsx` acessa `data.deployment.publishedUrl`, mas a Edge Function `publish-git-kinghost` retorna `publishedUrl` diretamente na raiz do objeto (sem wrapper `deployment`). Já a `publish-cloudflare-pages` retorna dentro de `data.deployment.publishedUrl`.
-
-### Correção
-Alterar a linha 540 para ser compatível com ambos os formatos de resposta:
-
-```typescript
-// De:
-toast.success(`Publicado em ${data.deployment.publishedUrl}`);
-
-// Para:
-toast.success(`Publicado em ${data.deployment?.publishedUrl || data.publishedUrl || 'sucesso'}`);
-```
-
-### Arquivo afetado
-- `src/components/LPClonePanel.tsx` — linha 540 (apenas 1 linha alterada)
-
+Deixa eu verificar rapidamente se a função existe e onde o componente é usado.
