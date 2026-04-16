@@ -8,7 +8,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Comparativo Scanners intraorais ",
-    "url": "https://smartdent.com.br/produtos/comparativo-scanners-intraorais",
+    "url": "https://smartdent.com.br/comparativo-scanners-intraorais",
     "isHome": false,
     "brand": null
   },
@@ -23,6 +23,12 @@ window.__NAV_DATA__ = [
     "url": "https://smartdent.com.br/suport-resurces ",
     "isHome": false,
     "brand": null
+  },
+  {
+    "name": "Rayshape Edge Mini a Impressora 3D para Odontologia",
+    "url": "https://smartdent.com.br/linknabio",
+    "isHome": false,
+    "brand": "Smart Dent"
   }
 ];
 (function() {
