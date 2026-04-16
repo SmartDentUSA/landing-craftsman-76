@@ -1,51 +1,56 @@
 
 
-## Plano: Template HTML + CSS standalone para visualização de artigo
+## Plano: Criar Edge Function `sync-system-b-articles` no Smart Dent (Sistema A)
 
-### O que será entregue
-Um único arquivo `article-template.html` (autocontido — CSS inline em `<style>`, sem dependências externas exceto a fonte Poppins do Google Fonts) que serve como **template estático reutilizável** para visualizar artigos da base de conhecimento. Sem React, sem build, abrir direto no navegador.
+### Contexto
+O usuário forneceu o código completo da Edge Function que precisa ser criada no projeto Supabase **pgfgripuanuwwolmtknn** (Sistema A — Smart Dent). Ela:
+- Busca artigos do Sistema B (`okeogjgqijbfkudfjadz`) via `knowledge-feed`
+- Faz roteamento por domínio com base em `keyword_rules` da tabela `domain_config`
+- Persiste em `systemb_articles` com upsert por `systemb_id`
+- Modo `enrich` cruza com `products_repository` para gerar `answer_block` e `ai_context`
 
-### Decisão de formato
-Como é um arquivo estático para uso fora do React app (template para gerar artigos via Edge Function, copiar/colar em outros sistemas, etc.), vou gerar como **artifact** em `/mnt/documents/` — não como rota dentro do app.
+O botão de UI que dispara essa função (`SystemBArticlesSync`) já está implementado e aponta para `sync-system-b-articles?mode=full&max_pages=7`. Falta apenas a função no backend.
 
-### Seções incluídas (na ordem)
+### Verificações pendentes (durante implementação)
+1. Conferir se as tabelas `domain_config` e `systemb_articles` já existem no Sistema A com o schema esperado pelo código (colunas: `systemb_id`, `target_domain`, `publish_status`, `synced_at`, `enriched_json`, `enriched_at`, etc.).
+2. Se faltarem colunas/tabelas, criar via migration antes de deployar a função.
+3. `products_repository` já existe (referenciada em memória).
 
-1. **Header + Breadcrumb** — logo placeholder à esquerda, breadcrumb (`Início › Base de Conhecimento › Categoria › Artigo`) com separador `›`
-2. **Hero** — imagem de capa full-width (16:9), badge de categoria colorida, H1 (título), meta (autor + data + tempo de leitura)
-3. **Corpo do artigo** — container max-width 720px, parágrafos, H2/H3 com hierarquia, blockquote, listas, code inline. Conteúdo Lorem placeholder representativo
-4. **Caixa de autor** — card com foto circular 80px, nome, cargo, mini-bio, badges de credenciais (ORCID, Lattes), links sociais
-5. **FAQ accordion** — 4 perguntas em `<details>`/`<summary>` nativos (zero JS), com chevron rotacionando via CSS `[open]`
-6. **Produtos recomendados** — grid responsivo 3 colunas (desktop) / 1 coluna (mobile), cards com imagem, nome, descrição curta, CTA "Ver produto"
-7. **Footer** — 3 colunas (sobre, links rápidos, redes sociais) + copyright
+### O que será feito
 
-### Design system aplicado (espelhando o app)
+**1. Criar a Edge Function**
+- Arquivo: `supabase/functions/sync-system-b-articles/index.ts`
+- Código exatamente como o usuário forneceu (já está pronto, validado por ele)
+- A função usa `verify_jwt = false` implicitamente (não valida JWT no código) — compatível com o padrão Lovable atual
+- Usa `SUPABASE_SERVICE_ROLE_KEY` (já disponível como env nativo nas Edge Functions, não precisa adicionar secret)
+- Chave anon do Sistema B está hardcoded no código (é pública, sem risco)
 
-**Fonte:** Poppins (300, 400, 500, 600, 700) via Google Fonts
+**2. Verificar/criar schema do banco**
+- Inspecionar `domain_config` e `systemb_articles` no Sistema A
+- Se ausentes ou incompletas → criar migration com:
+  - `domain_config(domain, keyword_rules text[], product_categories text[], is_hub bool, active bool, priority int)`
+  - `systemb_articles(id uuid pk, systemb_id text unique, title, slug, target_domain, publish_status, synced_at, enriched_json jsonb, enriched_at, + todos campos do FeedItem)`
+  - RLS apropriado (somente service role escreve; leitura autenticada)
+  - Seed inicial de `domain_config` com hub `eodonto.com` e domínios não-hub
 
-**Cores (HSL, idênticas ao `index.css`):**
-- `--primary: 192 95% 35%` (verde-azulado brasileiro)
-- `--background: 250 100% 99%`, `--foreground: 222 15% 8%`
-- `--muted: 220 15% 96%`, `--border: 220 13% 91%`
-- `--accent: 280 65% 96%`
-- Gradiente hero: `linear-gradient(135deg, hsl(192 95% 35%) 0%, hsl(280 65% 50%) 100%)`
+**3. Não mexer no frontend**
+O componente `SystemBArticlesSync.tsx` já está correto e funcional. Apenas a função estava faltando.
 
-**Espaçamento:** escala `--spacing-xs` (4px) → `--spacing-2xl` (48px) do `design-system.css`
+### Resultado esperado após deploy
+Ao clicar "Sincronizar Artigos Sistema B", o botão chama a função que:
+- Busca até 7 páginas × 100 artigos do Sistema B
+- Roteia cada artigo para o domínio com maior score de keywords
+- Faz upsert em `systemb_articles`
+- Roda enrich cruzando com `products_repository`
+- Retorna JSON com `stats.articles_upserted` e `stats.domain_distribution`
 
-**Outros tokens:**
-- `--radius: 0.75rem`
-- Sombras: `--shadow-soft`, `--shadow-medium`, `--shadow-large`
-- Transição: `cubic-bezier(0.4, 0, 0.2, 1)` 0.3s
+### Riscos / observações
+- Schema de `systemb_articles` precisa bater 100% com o que o `buildArticleRecord` insere — qualquer coluna faltante fará o upsert quebrar
+- Tabela `domain_config` precisa ter pelo menos um registro com `is_hub=true`, senão o fallback hub vira string literal "eodonto.com"
+- Se a função demorar > 60s, será cortada pelo limite default de Edge Function (mitigação: já tem `max_pages=7` × 100 = 700 artigos, deve caber)
 
-### Acessibilidade & responsividade
-- HTML semântico: `<header>`, `<nav>`, `<main>`, `<article>`, `<aside>`, `<footer>`
-- `aria-label` no breadcrumb, `aria-current="page"` no item ativo
-- FAQ usando `<details>`/`<summary>` (acessível nativo)
-- Mobile-first com breakpoint único em 768px (grid colapsa, hero menor)
-- Imagens com `loading="lazy"` e `alt` descritivo
-
-### Arquivos a criar
-- `/mnt/documents/article-template.html` (~600 linhas, CSS interno)
-
-### Após gerar
-Renderizo screenshot da página completa (desktop + mobile) para QA visual antes de entregar, e disponibilizo via `<lov-artifact>` para download.
+### Arquivos afetados
+- **Criar:** `supabase/functions/sync-system-b-articles/index.ts` (~250 linhas)
+- **Possível migration:** `domain_config` + `systemb_articles` (apenas se não existirem com schema correto)
+- **Não editar:** `SystemBArticlesSync.tsx`, `Repository.tsx` (já prontos)
 
