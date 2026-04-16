@@ -154,6 +154,179 @@ export type Database = {
           },
         ]
       }
+      blog_articles: {
+        Row: {
+          author_kol_id: string | null
+          breadcrumb: Json | null
+          canonical_url: string | null
+          cloudflare_deployment_id: string | null
+          created_at: string | null
+          domain: string
+          eeat_score: number | null
+          error_message: string | null
+          external_links: Json | null
+          faq_blocks: Json | null
+          generation_cost_usd: number | null
+          generation_model: string | null
+          generation_prompt_hash: string | null
+          generation_tokens: number | null
+          geo_score: number | null
+          has_author_schema: boolean | null
+          has_comparison_table: boolean | null
+          has_definition_block: boolean | null
+          has_direct_answer: boolean | null
+          has_faq_schema: boolean | null
+          has_internal_links: boolean | null
+          has_structured_data: boolean | null
+          has_wikidata_link: boolean | null
+          hreflang_urls: Json | null
+          html_content: string | null
+          id: string
+          indexing_api_submitted: boolean | null
+          internal_links: Json | null
+          language: string | null
+          last_refreshed_at: string | null
+          markdown_content: string | null
+          meta_description: string | null
+          meta_title: string | null
+          publish_status: string | null
+          published_at: string | null
+          published_url: string | null
+          readability_score: number | null
+          schema_json: Json | null
+          seo_score: number | null
+          sitemap_included: boolean | null
+          systemb_article_id: string | null
+          topic_id: string | null
+          updated_at: string | null
+          version: number | null
+          word_count: number | null
+        }
+        Insert: {
+          author_kol_id?: string | null
+          breadcrumb?: Json | null
+          canonical_url?: string | null
+          cloudflare_deployment_id?: string | null
+          created_at?: string | null
+          domain: string
+          eeat_score?: number | null
+          error_message?: string | null
+          external_links?: Json | null
+          faq_blocks?: Json | null
+          generation_cost_usd?: number | null
+          generation_model?: string | null
+          generation_prompt_hash?: string | null
+          generation_tokens?: number | null
+          geo_score?: number | null
+          has_author_schema?: boolean | null
+          has_comparison_table?: boolean | null
+          has_definition_block?: boolean | null
+          has_direct_answer?: boolean | null
+          has_faq_schema?: boolean | null
+          has_internal_links?: boolean | null
+          has_structured_data?: boolean | null
+          has_wikidata_link?: boolean | null
+          hreflang_urls?: Json | null
+          html_content?: string | null
+          id?: string
+          indexing_api_submitted?: boolean | null
+          internal_links?: Json | null
+          language?: string | null
+          last_refreshed_at?: string | null
+          markdown_content?: string | null
+          meta_description?: string | null
+          meta_title?: string | null
+          publish_status?: string | null
+          published_at?: string | null
+          published_url?: string | null
+          readability_score?: number | null
+          schema_json?: Json | null
+          seo_score?: number | null
+          sitemap_included?: boolean | null
+          systemb_article_id?: string | null
+          topic_id?: string | null
+          updated_at?: string | null
+          version?: number | null
+          word_count?: number | null
+        }
+        Update: {
+          author_kol_id?: string | null
+          breadcrumb?: Json | null
+          canonical_url?: string | null
+          cloudflare_deployment_id?: string | null
+          created_at?: string | null
+          domain?: string
+          eeat_score?: number | null
+          error_message?: string | null
+          external_links?: Json | null
+          faq_blocks?: Json | null
+          generation_cost_usd?: number | null
+          generation_model?: string | null
+          generation_prompt_hash?: string | null
+          generation_tokens?: number | null
+          geo_score?: number | null
+          has_author_schema?: boolean | null
+          has_comparison_table?: boolean | null
+          has_definition_block?: boolean | null
+          has_direct_answer?: boolean | null
+          has_faq_schema?: boolean | null
+          has_internal_links?: boolean | null
+          has_structured_data?: boolean | null
+          has_wikidata_link?: boolean | null
+          hreflang_urls?: Json | null
+          html_content?: string | null
+          id?: string
+          indexing_api_submitted?: boolean | null
+          internal_links?: Json | null
+          language?: string | null
+          last_refreshed_at?: string | null
+          markdown_content?: string | null
+          meta_description?: string | null
+          meta_title?: string | null
+          publish_status?: string | null
+          published_at?: string | null
+          published_url?: string | null
+          readability_score?: number | null
+          schema_json?: Json | null
+          seo_score?: number | null
+          sitemap_included?: boolean | null
+          systemb_article_id?: string | null
+          topic_id?: string | null
+          updated_at?: string | null
+          version?: number | null
+          word_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blog_articles_author_kol_id_fkey"
+            columns: ["author_kol_id"]
+            isOneToOne: false
+            referencedRelation: "key_opinion_leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blog_articles_domain_fkey"
+            columns: ["domain"]
+            isOneToOne: false
+            referencedRelation: "domain_config"
+            referencedColumns: ["domain"]
+          },
+          {
+            foreignKeyName: "blog_articles_systemb_article_id_fkey"
+            columns: ["systemb_article_id"]
+            isOneToOne: false
+            referencedRelation: "systemb_articles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blog_articles_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "blog_topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       blog_posts: {
         Row: {
           author_kol_id: string | null
@@ -221,6 +394,103 @@ export type Database = {
             columns: ["author_kol_id"]
             isOneToOne: false
             referencedRelation: "key_opinion_leaders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      blog_topics: {
+        Row: {
+          article_id: string | null
+          brief_json: Json | null
+          content_type: string | null
+          created_at: string | null
+          domain: string
+          error_message: string | null
+          estimated_words: number | null
+          id: string
+          language: string | null
+          lsi_keywords: string[] | null
+          pillar_id: string | null
+          primary_keyword: string | null
+          priority_score: number | null
+          related_product_ids: string[] | null
+          scheduled_for: string | null
+          search_intent: string | null
+          slug: string | null
+          source: string | null
+          status: string | null
+          systemb_article_id: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          article_id?: string | null
+          brief_json?: Json | null
+          content_type?: string | null
+          created_at?: string | null
+          domain: string
+          error_message?: string | null
+          estimated_words?: number | null
+          id?: string
+          language?: string | null
+          lsi_keywords?: string[] | null
+          pillar_id?: string | null
+          primary_keyword?: string | null
+          priority_score?: number | null
+          related_product_ids?: string[] | null
+          scheduled_for?: string | null
+          search_intent?: string | null
+          slug?: string | null
+          source?: string | null
+          status?: string | null
+          systemb_article_id?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          article_id?: string | null
+          brief_json?: Json | null
+          content_type?: string | null
+          created_at?: string | null
+          domain?: string
+          error_message?: string | null
+          estimated_words?: number | null
+          id?: string
+          language?: string | null
+          lsi_keywords?: string[] | null
+          pillar_id?: string | null
+          primary_keyword?: string | null
+          priority_score?: number | null
+          related_product_ids?: string[] | null
+          scheduled_for?: string | null
+          search_intent?: string | null
+          slug?: string | null
+          source?: string | null
+          status?: string | null
+          systemb_article_id?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blog_topics_domain_fkey"
+            columns: ["domain"]
+            isOneToOne: false
+            referencedRelation: "domain_config"
+            referencedColumns: ["domain"]
+          },
+          {
+            foreignKeyName: "blog_topics_pillar_id_fkey"
+            columns: ["pillar_id"]
+            isOneToOne: false
+            referencedRelation: "blog_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blog_topics_systemb_article_id_fkey"
+            columns: ["systemb_article_id"]
+            isOneToOne: false
+            referencedRelation: "systemb_articles"
             referencedColumns: ["id"]
           },
         ]
@@ -555,6 +825,7 @@ export type Database = {
       company_profile: {
         Row: {
           address_number: string | null
+          anvisa_registrations: Json | null
           areas_served: Json | null
           brand_values: string | null
           business_sector: string | null
@@ -573,10 +844,12 @@ export type Database = {
           delivery_approach: string | null
           differentiators: string | null
           duns_number: string | null
+          fda_establishment_number: string | null
           founded_year: number | null
           founder_linkedin: string | null
           founder_name: string | null
           founder_title: string | null
+          founders: Json | null
           google_aggregate_rating: Json | null
           id: string
           instagram_profile: string | null
@@ -610,7 +883,9 @@ export type Database = {
           team_size: string | null
           tracking_pixels: Json | null
           updated_at: string
+          us_entity: Json | null
           user_id: string
+          verified_sources: Json | null
           vision_statement: string | null
           website_url: string | null
           wikidata_id: string | null
@@ -622,6 +897,7 @@ export type Database = {
         }
         Insert: {
           address_number?: string | null
+          anvisa_registrations?: Json | null
           areas_served?: Json | null
           brand_values?: string | null
           business_sector?: string | null
@@ -640,10 +916,12 @@ export type Database = {
           delivery_approach?: string | null
           differentiators?: string | null
           duns_number?: string | null
+          fda_establishment_number?: string | null
           founded_year?: number | null
           founder_linkedin?: string | null
           founder_name?: string | null
           founder_title?: string | null
+          founders?: Json | null
           google_aggregate_rating?: Json | null
           id?: string
           instagram_profile?: string | null
@@ -677,7 +955,9 @@ export type Database = {
           team_size?: string | null
           tracking_pixels?: Json | null
           updated_at?: string
+          us_entity?: Json | null
           user_id: string
+          verified_sources?: Json | null
           vision_statement?: string | null
           website_url?: string | null
           wikidata_id?: string | null
@@ -689,6 +969,7 @@ export type Database = {
         }
         Update: {
           address_number?: string | null
+          anvisa_registrations?: Json | null
           areas_served?: Json | null
           brand_values?: string | null
           business_sector?: string | null
@@ -707,10 +988,12 @@ export type Database = {
           delivery_approach?: string | null
           differentiators?: string | null
           duns_number?: string | null
+          fda_establishment_number?: string | null
           founded_year?: number | null
           founder_linkedin?: string | null
           founder_name?: string | null
           founder_title?: string | null
+          founders?: Json | null
           google_aggregate_rating?: Json | null
           id?: string
           instagram_profile?: string | null
@@ -744,7 +1027,9 @@ export type Database = {
           team_size?: string | null
           tracking_pixels?: Json | null
           updated_at?: string
+          us_entity?: Json | null
           user_id?: string
+          verified_sources?: Json | null
           vision_statement?: string | null
           website_url?: string | null
           wikidata_id?: string | null
@@ -1208,6 +1493,101 @@ export type Database = {
           },
         ]
       }
+      domain_config: {
+        Row: {
+          active: boolean | null
+          blog_author_kol_id: string | null
+          blog_base_path: string | null
+          blog_cta_url: string | null
+          blog_lang_default: string | null
+          brand_name: string
+          cf_status: string | null
+          cloudflare_project: string | null
+          created_at: string | null
+          description: string | null
+          domain: string
+          ftp_profile: string | null
+          google_indexing_enabled: boolean | null
+          hreflang_locales: string[] | null
+          hub_domain: string | null
+          is_hub: boolean | null
+          keyword_rules: string[] | null
+          main_theme: string
+          monthly_target: number | null
+          priority: number | null
+          product_categories: string[] | null
+          publish_method: string | null
+          schema_org_type: string | null
+          sitemap_url: string | null
+          updated_at: string | null
+          url_structure: Json | null
+        }
+        Insert: {
+          active?: boolean | null
+          blog_author_kol_id?: string | null
+          blog_base_path?: string | null
+          blog_cta_url?: string | null
+          blog_lang_default?: string | null
+          brand_name: string
+          cf_status?: string | null
+          cloudflare_project?: string | null
+          created_at?: string | null
+          description?: string | null
+          domain: string
+          ftp_profile?: string | null
+          google_indexing_enabled?: boolean | null
+          hreflang_locales?: string[] | null
+          hub_domain?: string | null
+          is_hub?: boolean | null
+          keyword_rules?: string[] | null
+          main_theme: string
+          monthly_target?: number | null
+          priority?: number | null
+          product_categories?: string[] | null
+          publish_method?: string | null
+          schema_org_type?: string | null
+          sitemap_url?: string | null
+          updated_at?: string | null
+          url_structure?: Json | null
+        }
+        Update: {
+          active?: boolean | null
+          blog_author_kol_id?: string | null
+          blog_base_path?: string | null
+          blog_cta_url?: string | null
+          blog_lang_default?: string | null
+          brand_name?: string
+          cf_status?: string | null
+          cloudflare_project?: string | null
+          created_at?: string | null
+          description?: string | null
+          domain?: string
+          ftp_profile?: string | null
+          google_indexing_enabled?: boolean | null
+          hreflang_locales?: string[] | null
+          hub_domain?: string | null
+          is_hub?: boolean | null
+          keyword_rules?: string[] | null
+          main_theme?: string
+          monthly_target?: number | null
+          priority?: number | null
+          product_categories?: string[] | null
+          publish_method?: string | null
+          schema_org_type?: string | null
+          sitemap_url?: string | null
+          updated_at?: string | null
+          url_structure?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "domain_config_blog_author_kol_id_fkey"
+            columns: ["blog_author_kol_id"]
+            isOneToOne: false
+            referencedRelation: "key_opinion_leaders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       external_links: {
         Row: {
           ai_generated: boolean | null
@@ -1643,48 +2023,69 @@ export type Database = {
       }
       key_opinion_leaders: {
         Row: {
+          academic_title: string | null
           approved: boolean
+          citations_count: number | null
           created_at: string
           display_order: number | null
           full_name: string
           id: string
           instagram_url: string | null
+          institution: string | null
           lattes_url: string | null
+          linkedin_url: string | null
           mini_cv: string | null
+          orcid_url: string | null
           photo_url: string | null
+          regulatory_ids: Json | null
           specialty: string | null
           updated_at: string
           website_url: string | null
+          wikidata_id: string | null
           youtube_url: string | null
         }
         Insert: {
+          academic_title?: string | null
           approved?: boolean
+          citations_count?: number | null
           created_at?: string
           display_order?: number | null
           full_name: string
           id?: string
           instagram_url?: string | null
+          institution?: string | null
           lattes_url?: string | null
+          linkedin_url?: string | null
           mini_cv?: string | null
+          orcid_url?: string | null
           photo_url?: string | null
+          regulatory_ids?: Json | null
           specialty?: string | null
           updated_at?: string
           website_url?: string | null
+          wikidata_id?: string | null
           youtube_url?: string | null
         }
         Update: {
+          academic_title?: string | null
           approved?: boolean
+          citations_count?: number | null
           created_at?: string
           display_order?: number | null
           full_name?: string
           id?: string
           instagram_url?: string | null
+          institution?: string | null
           lattes_url?: string | null
+          linkedin_url?: string | null
           mini_cv?: string | null
+          orcid_url?: string | null
           photo_url?: string | null
+          regulatory_ids?: Json | null
           specialty?: string | null
           updated_at?: string
           website_url?: string | null
+          wikidata_id?: string | null
           youtube_url?: string | null
         }
         Relationships: []
@@ -3568,6 +3969,158 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      systemb_articles: {
+        Row: {
+          ai_context: Json | null
+          ai_context_en: Json | null
+          ai_context_es: Json | null
+          answer_block: string | null
+          answer_block_en: string | null
+          answer_block_es: string | null
+          author: Json | null
+          category_letter: string | null
+          category_name: string | null
+          created_at: string | null
+          enriched_at: string | null
+          enriched_json: Json | null
+          excerpt: string | null
+          excerpt_en: string | null
+          excerpt_es: string | null
+          faqs: Json | null
+          faqs_en: Json | null
+          faqs_es: Json | null
+          geo: Json | null
+          id: string
+          image_alt: string | null
+          image_url: string | null
+          is_medical_device: boolean | null
+          is_scholarly: boolean | null
+          keywords: string[] | null
+          meta_description: string | null
+          norm_references: Json | null
+          publish_status: string | null
+          published_at: string | null
+          published_at_source: string | null
+          published_url: string | null
+          recommended_products: Json | null
+          recommended_resins: Json | null
+          slug: string
+          source_url: string | null
+          synced_at: string | null
+          systemb_id: string
+          target_domain: string | null
+          technical_properties: Json | null
+          title: string
+          title_en: string | null
+          title_es: string | null
+          updated_at: string | null
+          updated_at_source: string | null
+          veredict_data: Json | null
+        }
+        Insert: {
+          ai_context?: Json | null
+          ai_context_en?: Json | null
+          ai_context_es?: Json | null
+          answer_block?: string | null
+          answer_block_en?: string | null
+          answer_block_es?: string | null
+          author?: Json | null
+          category_letter?: string | null
+          category_name?: string | null
+          created_at?: string | null
+          enriched_at?: string | null
+          enriched_json?: Json | null
+          excerpt?: string | null
+          excerpt_en?: string | null
+          excerpt_es?: string | null
+          faqs?: Json | null
+          faqs_en?: Json | null
+          faqs_es?: Json | null
+          geo?: Json | null
+          id?: string
+          image_alt?: string | null
+          image_url?: string | null
+          is_medical_device?: boolean | null
+          is_scholarly?: boolean | null
+          keywords?: string[] | null
+          meta_description?: string | null
+          norm_references?: Json | null
+          publish_status?: string | null
+          published_at?: string | null
+          published_at_source?: string | null
+          published_url?: string | null
+          recommended_products?: Json | null
+          recommended_resins?: Json | null
+          slug: string
+          source_url?: string | null
+          synced_at?: string | null
+          systemb_id: string
+          target_domain?: string | null
+          technical_properties?: Json | null
+          title: string
+          title_en?: string | null
+          title_es?: string | null
+          updated_at?: string | null
+          updated_at_source?: string | null
+          veredict_data?: Json | null
+        }
+        Update: {
+          ai_context?: Json | null
+          ai_context_en?: Json | null
+          ai_context_es?: Json | null
+          answer_block?: string | null
+          answer_block_en?: string | null
+          answer_block_es?: string | null
+          author?: Json | null
+          category_letter?: string | null
+          category_name?: string | null
+          created_at?: string | null
+          enriched_at?: string | null
+          enriched_json?: Json | null
+          excerpt?: string | null
+          excerpt_en?: string | null
+          excerpt_es?: string | null
+          faqs?: Json | null
+          faqs_en?: Json | null
+          faqs_es?: Json | null
+          geo?: Json | null
+          id?: string
+          image_alt?: string | null
+          image_url?: string | null
+          is_medical_device?: boolean | null
+          is_scholarly?: boolean | null
+          keywords?: string[] | null
+          meta_description?: string | null
+          norm_references?: Json | null
+          publish_status?: string | null
+          published_at?: string | null
+          published_at_source?: string | null
+          published_url?: string | null
+          recommended_products?: Json | null
+          recommended_resins?: Json | null
+          slug?: string
+          source_url?: string | null
+          synced_at?: string | null
+          systemb_id?: string
+          target_domain?: string | null
+          technical_properties?: Json | null
+          title?: string
+          title_en?: string | null
+          title_es?: string | null
+          updated_at?: string | null
+          updated_at_source?: string | null
+          veredict_data?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "systemb_articles_target_domain_fkey"
+            columns: ["target_domain"]
+            isOneToOne: false
+            referencedRelation: "domain_config"
+            referencedColumns: ["domain"]
+          },
+        ]
       }
       ugc_intake: {
         Row: {
