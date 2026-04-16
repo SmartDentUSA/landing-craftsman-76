@@ -537,7 +537,7 @@ export const LPClonePanel = () => {
       return data;
     },
     onSuccess: (data) => {
-      toast.success(`Publicado em ${data.deployment.publishedUrl}`);
+      toast.success(`Publicado em ${data.deployment?.publishedUrl || data.publishedUrl || 'sucesso'}`);
       queryClient.invalidateQueries({ queryKey: ['cloned-landing-pages'] });
     },
     onError: (error) => {
