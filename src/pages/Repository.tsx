@@ -21,6 +21,7 @@ import { AfterSalesManager } from '@/components/AfterSalesManager';
 import { CSManager } from '@/components/CSManager';
 import { SpinSellingManager } from '@/components/SpinSellingManager';
 import { SystemBDocumentSync } from '@/components/SystemBDocumentSync';
+import { SystemBArticlesSync } from '@/components/SystemBArticlesSync';
 import { ExternalVideosGallery } from '@/components/ExternalVideosGallery';
 import { ImageMigrationManager } from '@/components/ImageMigrationManager';
 import { LPClonePanel } from '@/components/LPClonePanel';
@@ -200,6 +201,7 @@ const Repository = () => {
               <TabsContent value="repository">
                 <div className="space-y-6">
                   <SystemBDocumentSync />
+                  <SystemBArticlesSync />
                   <ProductSEOBatchEnhancer />
                   <RepositoryPanel 
                     landingPageId="repository"
