@@ -51,6 +51,9 @@ export interface GoogleAdsCampaignConfig {
   include_brand_policies: boolean;
   custom_institutional_links: { label: string; url: string }[];
   
+  // Callouts (Frases de Chamariz) — máx 25 chars cada, máx 20 por campanha
+  callouts: string[];
+  
   // Video extensions
   youtube_videos: { url: string; label?: string }[];
   
@@ -82,6 +85,8 @@ export interface AdCopy {
 export interface Sitelink {
   label: string;
   url: string;
+  description1?: string;
+  description2?: string;
 }
 
 export interface VideoExtension {

@@ -26,6 +26,7 @@ export class GoogleAdsCSVBuilder {
       this.buildKeywordsSection(campaignName, adGroups),
       this.buildNegativeKeywordsSection(campaignName, config.negatives),
       this.buildSitelinksSection(campaignName, sitelinks),
+      this.buildCalloutsSection(campaignName, config.callouts || []),
       this.buildVideoExtensionsSection(campaignName, videos)
     ].filter(section => section.trim().length > 0);
     
@@ -148,15 +149,42 @@ export class GoogleAdsCSVBuilder {
   private static buildSitelinksSection(campaignName: string, sitelinks: Sitelink[]): string {
     if (sitelinks.length === 0) return '';
     
-    const header = 'Campaign,Ad group,Ad extension type,Sitelink text,Sitelink final URL';
+    const header = 'Campaign,Ad group,Ad extension type,Sitelink text,Sitelink final URL,Sitelink description 1,Sitelink description 2';
     
     const rows = sitelinks.map(sitelink =>
       [
         this.csvEscape(campaignName),
         '', // Campaign-level sitelinks
         'Sitelink',
-        this.csvEscape(sitelink.label),
-        this.csvEscape(sitelink.url)
+        this.csvEscape(this.sanitizeForCSV(sitelink.label, 25)),
+        this.csvEscape(sitelink.url),
+        this.csvEscape(this.sanitizeForCSV(sitelink.description1 || '', 35)),
+        this.csvEscape(this.sanitizeForCSV(sitelink.description2 || '', 35))
+      ].join(',')
+    );
+    
+    return `${header}\n${rows.join('\n')}`;
+  }
+  
+  private static buildCalloutsSection(campaignName: string, callouts: string[]): string {
+    if (!callouts || callouts.length === 0) return '';
+    
+    const header = 'Campaign,Ad group,Ad extension type,Callout text';
+    
+    // Google Ads: máx 20 callouts por campanha, 25 caracteres cada
+    const validCallouts = callouts
+      .map(c => this.sanitizeForCSV(c, 25))
+      .filter(c => c.length > 0)
+      .slice(0, 20);
+    
+    if (validCallouts.length === 0) return '';
+    
+    const rows = validCallouts.map(callout =>
+      [
+        this.csvEscape(campaignName),
+        '', // Campaign-level callouts
+        'Callout',
+        this.csvEscape(callout)
       ].join(',')
     );
     
