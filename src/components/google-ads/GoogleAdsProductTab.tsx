@@ -69,6 +69,7 @@ export const GoogleAdsProductTab = ({ product, onUpdate }: GoogleAdsProductTabPr
     ecommerce_links: [],
     include_brand_policies: true,
     custom_institutional_links: [],
+    callouts: [],
     youtube_videos: [],
     utm: {
       source: 'google',

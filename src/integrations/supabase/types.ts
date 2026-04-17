@@ -1503,7 +1503,11 @@ export type Database = {
           brand_name: string
           cf_status: string | null
           cloudflare_project: string | null
+          content_intelligence: Json | null
           created_at: string | null
+          cross_domain_ctas: Json | null
+          cta_primary_text: string | null
+          cta_primary_url: string | null
           description: string | null
           domain: string
           ftp_profile: string | null
@@ -1514,11 +1518,14 @@ export type Database = {
           keyword_rules: string[] | null
           main_theme: string
           monthly_target: number | null
+          narrative_pillar: string | null
           priority: number | null
           product_categories: string[] | null
           publish_method: string | null
           schema_org_type: string | null
           sitemap_url: string | null
+          spin_headline: string | null
+          spin_pain: string | null
           updated_at: string | null
           url_structure: Json | null
         }
@@ -1531,7 +1538,11 @@ export type Database = {
           brand_name: string
           cf_status?: string | null
           cloudflare_project?: string | null
+          content_intelligence?: Json | null
           created_at?: string | null
+          cross_domain_ctas?: Json | null
+          cta_primary_text?: string | null
+          cta_primary_url?: string | null
           description?: string | null
           domain: string
           ftp_profile?: string | null
@@ -1542,11 +1553,14 @@ export type Database = {
           keyword_rules?: string[] | null
           main_theme: string
           monthly_target?: number | null
+          narrative_pillar?: string | null
           priority?: number | null
           product_categories?: string[] | null
           publish_method?: string | null
           schema_org_type?: string | null
           sitemap_url?: string | null
+          spin_headline?: string | null
+          spin_pain?: string | null
           updated_at?: string | null
           url_structure?: Json | null
         }
@@ -1559,7 +1573,11 @@ export type Database = {
           brand_name?: string
           cf_status?: string | null
           cloudflare_project?: string | null
+          content_intelligence?: Json | null
           created_at?: string | null
+          cross_domain_ctas?: Json | null
+          cta_primary_text?: string | null
+          cta_primary_url?: string | null
           description?: string | null
           domain?: string
           ftp_profile?: string | null
@@ -1570,11 +1588,14 @@ export type Database = {
           keyword_rules?: string[] | null
           main_theme?: string
           monthly_target?: number | null
+          narrative_pillar?: string | null
           priority?: number | null
           product_categories?: string[] | null
           publish_method?: string | null
           schema_org_type?: string | null
           sitemap_url?: string | null
+          spin_headline?: string | null
+          spin_pain?: string | null
           updated_at?: string | null
           url_structure?: Json | null
         }
@@ -1801,6 +1822,42 @@ export type Database = {
           started_at?: string | null
           status?: string
           total_reviews_found?: number | null
+        }
+        Relationships: []
+      }
+      flow_stages: {
+        Row: {
+          created_at: string | null
+          cta_rayshape: string | null
+          cta_smartdent: string | null
+          description: string | null
+          domains: string[] | null
+          id: number
+          name: string
+          name_en: string | null
+          products: string[] | null
+        }
+        Insert: {
+          created_at?: string | null
+          cta_rayshape?: string | null
+          cta_smartdent?: string | null
+          description?: string | null
+          domains?: string[] | null
+          id: number
+          name: string
+          name_en?: string | null
+          products?: string[] | null
+        }
+        Update: {
+          created_at?: string | null
+          cta_rayshape?: string | null
+          cta_smartdent?: string | null
+          description?: string | null
+          domains?: string[] | null
+          id?: number
+          name?: string
+          name_en?: string | null
+          products?: string[] | null
         }
         Relationships: []
       }
@@ -3981,6 +4038,7 @@ export type Database = {
           author: Json | null
           category_letter: string | null
           category_name: string | null
+          context_injected: boolean | null
           created_at: string | null
           enriched_at: string | null
           enriched_json: Json | null
@@ -3990,6 +4048,9 @@ export type Database = {
           faqs: Json | null
           faqs_en: Json | null
           faqs_es: Json | null
+          flow_stage: string | null
+          flow_stage_num: number | null
+          generation_error: string | null
           geo: Json | null
           id: string
           image_alt: string | null
@@ -4028,6 +4089,7 @@ export type Database = {
           author?: Json | null
           category_letter?: string | null
           category_name?: string | null
+          context_injected?: boolean | null
           created_at?: string | null
           enriched_at?: string | null
           enriched_json?: Json | null
@@ -4037,6 +4099,9 @@ export type Database = {
           faqs?: Json | null
           faqs_en?: Json | null
           faqs_es?: Json | null
+          flow_stage?: string | null
+          flow_stage_num?: number | null
+          generation_error?: string | null
           geo?: Json | null
           id?: string
           image_alt?: string | null
@@ -4075,6 +4140,7 @@ export type Database = {
           author?: Json | null
           category_letter?: string | null
           category_name?: string | null
+          context_injected?: boolean | null
           created_at?: string | null
           enriched_at?: string | null
           enriched_json?: Json | null
@@ -4084,6 +4150,9 @@ export type Database = {
           faqs?: Json | null
           faqs_en?: Json | null
           faqs_es?: Json | null
+          flow_stage?: string | null
+          flow_stage_num?: number | null
+          generation_error?: string | null
           geo?: Json | null
           id?: string
           image_alt?: string | null
@@ -4685,6 +4754,28 @@ export type Database = {
       }
     }
     Views: {
+      v_blog_pipeline: {
+        Row: {
+          category_name: string | null
+          com_erro: number | null
+          flow_stage: string | null
+          flow_stage_num: number | null
+          gerando: number | null
+          pronto_publicar: number | null
+          publicado: number | null
+          target_domain: string | null
+          total: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "systemb_articles_target_domain_fkey"
+            columns: ["target_domain"]
+            isOneToOne: false
+            referencedRelation: "domain_config"
+            referencedColumns: ["domain"]
+          },
+        ]
+      }
       v_content_pipeline_summary: {
         Row: {
           avg_asset_score: number | null

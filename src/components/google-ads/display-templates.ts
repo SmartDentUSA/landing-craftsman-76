@@ -33,6 +33,15 @@ export const DISPLAY_STYLES: { value: DisplayStyle; label: string; description: 
 
 type LayoutType = 'horizontal' | 'vertical' | 'square';
 
+function escapeAttr(value: string): string {
+  if (!value) return '';
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 function getLayoutType(w: number, h: number): LayoutType {
   const ratio = w / h;
   if (ratio > 1.5) return 'horizontal';
@@ -145,13 +154,13 @@ body { overflow:hidden; }
 </head>
 <body>
 <div class="banner" onclick="window.open('${finalUrl}','_blank')">
-  <img class="product-img" src="product.jpg" alt="Produto">
+  <img class="product-img" src="product.jpg" alt="${escapeAttr(`${headline} — ${ctaText}`)}" loading="lazy">
   <div class="text-wrap">
     <div class="headline">${headline}</div>
     ${fontSizeP > 0 ? `<div class="description">${description}</div>` : ''}
-    <button class="cta-btn">${ctaText}</button>
+    <button class="cta-btn" aria-label="${escapeAttr(ctaText)}">${ctaText}</button>
   </div>
-  ${logoUrl ? `<img class="logo" src="logo.png" alt="Logo">` : ''}
+  ${logoUrl ? `<img class="logo" src="logo.png" alt="${escapeAttr('Logo da marca')}" loading="lazy">` : ''}
 </div>
 </body>
 </html>`;
