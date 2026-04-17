@@ -1,70 +1,179 @@
 
 
-## Análise do pedido
+## Plano v3 — incorporando os 4 ajustes finais + benchmark
 
-O usuário pediu duas melhorias no gerador de Google Ads:
+### Mudanças vs v2
 
-1. **Acessibilidade nos banners HTML**: adicionar `alt` descritivo nas tags `<img>` dos banners de Display
-2. **Extensões de Anúncio no CSV**: incluir colunas para Sitelinks e Callouts (Frases de Chamariz) no export CSV
+**Ajuste 1: Query de diagnóstico cobre 3 colunas separadamente**
 
-## Investigação realizada
+```sql
+SELECT
+  COUNT(*) AS total,
+  COUNT(*) FILTER (WHERE keywords::text ~* 'palavras-chave|palavras chave|taxonomia|metadados|glossário|dicionário|repositório|vocabulário') AS lixo_keywords,
+  COUNT(*) FILTER (WHERE market_keywords::text ~* 'palavras-chave|palavras chave|taxonomia|metadados|glossário|dicionário|repositório|vocabulário') AS lixo_market,
+  COUNT(*) FILTER (WHERE search_intent_keywords::text ~* 'palavras-chave|palavras chave|taxonomia|metadados|glossário|dicionário|repositório|vocabulário') AS lixo_intent,
+  ROUND(100.0 * COUNT(*) FILTER (WHERE keywords::text ~* '...') / NULLIF(COUNT(*), 0), 1) AS pct_keywords,
+  ROUND(100.0 * COUNT(*) FILTER (WHERE market_keywords::text ~* '...') / NULLIF(COUNT(*), 0), 1) AS pct_market,
+  ROUND(100.0 * COUNT(*) FILTER (WHERE search_intent_keywords::text ~* '...') / NULLIF(COUNT(*), 0), 1) AS pct_intent
+FROM products_repository;
+-- Idem para landing_pages.data->'seo'->'ai_keywords'
+```
 
-**Banners HTML** (`src/components/google-ads/display-templates.ts`):
-- Linha ~155: `<img class="product-img" src="product.jpg" alt="Produto">` — alt genérico, não descritivo
-- Linha ~159: `<img class="logo" src="logo.png" alt="Logo">` — alt genérico
-- Função `generateBannerHTML` recebe `headline` e `productImageUrl` mas não usa para o alt
+Decisão de prosseguir/parar baseada no **maior** dos 3 percentuais, não na média.
 
-**CSV Builder** (`src/lib/google-ads/csv-builder.ts`):
-- Já existe `buildSitelinksSection()` — mas só gera 5 colunas básicas (`Sitelink text`, `Sitelink final URL`)
-- **NÃO existe** `buildCalloutsSection()` — precisa criar
-- Sitelinks atuais faltam colunas opcionais que aumentam CTR: `Sitelink description 1`, `Sitelink description 2`
-- Tipo `GoogleAdsCampaignConfig` não tem campo `callouts: string[]` — precisa adicionar
+**Ajuste 2: Floor + cap no penalty de truncate**
 
-## Plano de implementação
+```ts
+// No cálculo do quality_score
+const truncatePenalty = Math.min(headlinesTruncated.count, 5) * -5; // cap em -25
+// ...
+const finalScore = Math.max(0, totalScore); // floor em 0
 
-### 1. Acessibilidade dos banners (alt descritivo)
+// Se count > 5 → flag separada que dispara prompt mais específico, não só temperatura
+if (headlinesTruncated.count > 5) {
+  quality_report.requires_prompt_revision = true;
+  // Próxima regeneração usa prompt enriquecido com "ATENÇÃO: limite de 30 chars é RÍGIDO. Conte os caracteres antes de retornar cada headline."
+}
+```
 
-**Arquivo:** `src/components/google-ads/display-templates.ts`
+**Ajuste 3: Migration explícita por ID, sem DEFAULT global**
 
-Alterar a função `generateBannerHTML` para gerar alts descritivos:
-- `product-img` → `alt="${headline} — ${ctaText}"` (ex: "Resina Bio Vitality — Compre agora")
-- `logo` → `alt="Logo Smart Dent"` (ou nome da marca, fallback "Logo da empresa")
-- Sanitizar aspas no alt para não quebrar o HTML (`replace(/"/g, '&quot;')`)
+```sql
+-- ALTER sem default
+ALTER TABLE company_profile ADD COLUMN default_collector_strategy text;
 
-### 2. Extensões: Sitelinks com descrições + nova seção de Callouts
+-- UPDATE explícito apenas para SmartDent
+UPDATE company_profile
+SET default_collector_strategy = 'niche'
+WHERE company_name ILIKE '%smart%dent%' OR id IN (SELECT id FROM company_profile LIMIT 1);
+```
 
-**Arquivo 1:** `src/types/google-ads.ts`
-- Adicionar `callouts: string[]` em `GoogleAdsCampaignConfig`
-- Estender tipo `Sitelink` com `description1?: string` e `description2?: string` (opcionais)
+UI trata `null` como fallback `'mass'` (preserva comportamento atual para qualquer outro registro).
 
-**Arquivo 2:** `src/lib/google-ads/csv-builder.ts`
-- **Atualizar `buildSitelinksSection`**: adicionar colunas `Sitelink description 1` e `Sitelink description 2` ao header e às rows
-- **Criar `buildCalloutsSection`**: nova seção com header `Campaign,Ad extension type,Callout text` e 1 row por callout (limite 25 caracteres por callout, validar)
-- Adicionar `buildCalloutsSection(campaignName, config.callouts)` na lista de seções de `buildFullCSV`
+**Ajuste 4: `normalize()` em `_shared/text-utils.ts`**
 
-**Arquivo 3:** `src/lib/google-ads/ads-generator.ts` (se existir — verificar) ou onde Sitelinks são montados a partir de `ecommerce_links`/`custom_institutional_links`
-- Garantir que descriptions vazias sejam tratadas como string vazia (não `undefined`)
-- Se houver gerador automático de callouts (ex: a partir de benefits do produto), conectá-lo; senão deixar `config.callouts = []` como default e criar UI futuramente
+Criar `supabase/functions/_shared/text-utils.ts` com:
+```ts
+export function normalize(s: string | null | undefined): string {
+  return (s ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+}
+export function intelligentTruncate(text: string | null | undefined, maxLength: number): string { /* ... */ }
+export const LLM_META_PATTERN = /\b(palavras-chave|palavras chave|vocabulário|taxonomia|metadados|metadata|glossário|dicionário|repositório|índice|catálogo|banco|lista|gerador|ferramenta|otimização)\s+(d[aeo]s?\s+)?produtos?\b/i;
+export const STANDALONE_BLOCKLIST = ['ai_keywords', 'seo_keywords', 'keyword_list'];
+```
 
-### 3. UI (opcional, mínima nesta entrega)
+Importado em `generate-ad-copies`, `export-google-ads-csv`, `export-product-google-ads-csv` e `keyword-validators`.
 
-Se houver painel de configuração da campanha (`GoogleAdsConfigPanel.tsx` ou similar), adicionar:
-- Textarea "Frases de Chamariz (Callouts)" — uma por linha, máx 25 chars cada
-- Sub-campos opcionais nos sitelinks existentes para descrições
+### Novo: Benchmark antes/depois (peça que faltava)
 
-**Decisão:** vou inspecionar se o painel existe. Se sim, adiciono o input de callouts. Se for apenas backend/lógica, pulo a UI nesta rodada e expongo o campo no tipo para uso programático.
+**Migration: tabela `ads_generation_benchmark`**
+```sql
+CREATE TABLE ads_generation_benchmark (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  product_id uuid REFERENCES products_repository(id),
+  product_name text,
+  run_label text NOT NULL, -- 'pre-fix-v3' ou 'post-fix-v3'
+  run_timestamp timestamptz DEFAULT now(),
+  quality_score int,
+  truncated_count int,
+  duplicated_count int,
+  blocked_keywords_count int,
+  blocked_keywords_samples text[], -- amostras pra análise de falsos negativos
+  csv_hash text,
+  raw_quality_report jsonb
+);
+-- RLS: admin only (SELECT/INSERT)
+```
 
-## Arquivos afetados
+**Fluxo de execução:**
 
-- `src/types/google-ads.ts` — adicionar `callouts: string[]` e descriptions opcionais em `Sitelink`
-- `src/lib/google-ads/csv-builder.ts` — atualizar Sitelinks header/rows + nova seção Callouts
-- `src/components/google-ads/display-templates.ts` — alts descritivos
-- `src/components/google-ads/GoogleAdsConfigPanel.tsx` (se existir) — input de callouts
-- Eventuais defaults/mocks de `GoogleAdsCampaignConfig` — adicionar `callouts: []`
+```text
+FASE 0 — DIAGNÓSTICO (read-only, decisão go/no-go)
+  └─ Query 3-colunas em products_repository + landing_pages
+  └─ Reportar: tabela com pct por coluna
+  └─ Decisão do usuário:
+     ├─ pct_max ≤ 5%   → seguir direto
+     ├─ pct_max 5-30%  → seguir + criar tarefa de revisão de prompt
+     └─ pct_max > 30%  → STOP, focar em consertar gerador upstream
 
-## Riscos
+FASE 1 — BENCHMARK PRÉ-FIX
+  └─ Selecionar 5 produtos representativos (resina, scanner, curso, etc.)
+  └─ Rodar geração com código atual (sem fix)
+  └─ Insert em ads_generation_benchmark com run_label = 'pre-fix-v3'
 
-- Se já houver código que faz `Object.keys(config)` ou serializa o config, adicionar `callouts` é seguro (campo novo, opcional)
-- Limites do Google Ads: máx 20 callouts por campanha, 25 caracteres cada — vou validar e truncar no builder
-- Sitelinks: descrições têm máx 35 caracteres cada — sanitizar no builder
+FASE 2 — IMPLEMENTAÇÃO (na ordem do v2)
+  ├─ _shared/text-utils.ts (normalize, intelligentTruncate, patterns)
+  ├─ Migration: backup table + UPDATE limpeza + ALTER company_profile
+  ├─ generate-ad-copies: dedup, fix ReferenceError, penalty c/ floor+cap, temperatura invertida, quality_report estruturado, prompt enriquecido quando requires_prompt_revision
+  ├─ truncate.test.ts (incluir casos null, '', edge case "Super Resina...")
+  ├─ keyword-validators: importar de text-utils, remover duplicações
+  ├─ export-google-ads-csv + export-product-google-ads-csv: getMatchTypeRatio (300/1000), collector_strategy do company_profile, persistir quality_report
+  ├─ Frontend: QualityReportPanel, toggle niche/mass
+  └─ types/google-ads.ts atualizado
+
+FASE 3 — BENCHMARK PÓS-FIX
+  └─ Rodar mesmos 5 produtos
+  └─ Insert com run_label = 'post-fix-v3'
+  └─ Query comparativa lado-a-lado:
+     SELECT product_name, 
+            MAX(CASE WHEN run_label='pre-fix-v3' THEN quality_score END) as pre,
+            MAX(CASE WHEN run_label='post-fix-v3' THEN quality_score END) as post
+     FROM ads_generation_benchmark GROUP BY product_name;
+  └─ Critérios de aceite:
+     ├─ score médio sobe ≥ 15 pontos → SUCESSO
+     ├─ truncated_count cai pra ≤ 1 por geração → SUCESSO
+     ├─ blocked_keywords_count > 0 na primeira rodada pós-fix → prova que filtro pega algo real
+     └─ Se qualquer critério falhar → ROLLBACK via backup table + reverter edge functions
+```
+
+### Logging estruturado para falsos negativos
+
+Em `keyword-validators.ts`, toda vez que blocklist bloqueia uma keyword, logar:
+```ts
+console.warn('[KW_BLOCKED]', JSON.stringify({
+  keyword: kw,
+  source: src,
+  pattern_matched: matchedPattern,
+  product_id: productId,
+  timestamp: new Date().toISOString()
+}));
+```
+E inserir em `ads_generation_benchmark.blocked_keywords_samples` (até 10 amostras por run) para análise posterior de falsos negativos como "linhagem do produto".
+
+### Arquivos afetados (consolidado v3)
+
+**Database (migrations):**
+1. `_keywords_cleanup_backup_<data>` — CREATE TABLE backup (drop em 30 dias)
+2. UPDATE limpeza condicional ao diagnóstico (3 colunas em `products_repository`, ai_keywords em `landing_pages`)
+3. `ALTER TABLE company_profile ADD COLUMN default_collector_strategy text` (sem DEFAULT) + UPDATE explícito SmartDent
+4. `CREATE TABLE ads_generation_benchmark` + RLS admin
+
+**Edge Functions:**
+- `supabase/functions/_shared/text-utils.ts` — **criar** (normalize, intelligentTruncate, LLM_META_PATTERN, STANDALONE_BLOCKLIST)
+- `supabase/functions/_shared/keyword-validators.ts` — **criar ou atualizar** (importa text-utils, blocklist semântica, logging estruturado)
+- `supabase/functions/generate-ad-copies/index.ts` — fix truncate (importado), dedup com normalize, fix ReferenceError, penalty floor+cap, requires_prompt_revision, temperatura 0.5→0.3→0.1, quality_report estruturado, auditoria de try/catch
+- `supabase/functions/generate-ad-copies/truncate.test.ts` — **criar** (casos null, '', edge cases)
+- `supabase/functions/export-google-ads-csv/index.ts` — getMatchTypeRatio(300/1000), ler collector_strategy de company_profile, persistir quality_report
+- `supabase/functions/export-product-google-ads-csv/index.ts` — idem
+
+**Frontend:**
+- `src/components/google-ads/QualityReportPanel.tsx` — **criar** (badge clicável que expande breakdown)
+- `src/components/google-ads/GoogleAdsTab.tsx` — toggle niche/mass + QualityReportPanel
+- `src/components/google-ads/GoogleAdsProductTab.tsx` — idem
+- `src/types/google-ads.ts` — quality_report, collector_strategy
+
+### Riscos aceitos (documentados)
+
+- Deploy fora de horário de pico (sem branches Supabase) — mitigado por backup table
+- Threshold 300/1000 ainda agressivo para B2B nicho — revisita com dado real de CPC
+- Falso negativo em LLM_META_PATTERN — mitigado por logging estruturado em `blocked_keywords_samples`
+- Se benchmark pós-fix não atingir critérios → rollback imediato (backup table + revert edge functions via histórico)
+
+### Critério de "pronto"
+
+Plano só é considerado entregue quando:
+1. Benchmark pós-fix mostra score médio ≥ +15 vs pré
+2. Zero headlines truncados em ≥ 4 dos 5 produtos testados
+3. Pelo menos 1 keyword bloqueada por LLM_META_PATTERN (prova que filtro funciona)
+4. Nenhum erro em produção nas 24h seguintes
 
