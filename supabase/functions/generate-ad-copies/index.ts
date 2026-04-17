@@ -9,6 +9,7 @@ import {
 } from "../_shared/content-validators.ts";
 import { buildFullPrompt, mapProductToContext } from '../_shared/clinical-brain-guard.ts';
 import { PROMPTS } from '../_shared/prompt-templates.ts';
+import { intelligentTruncate, normalize } from '../_shared/text-utils.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -174,18 +175,20 @@ serve(async (req) => {
       };
     }
 
-    // 🛡️ VALIDAÇÃO PROGRAMÁTICA + REGENERAÇÃO AUTOMÁTICA
+    // 🛡️ VALIDAÇÃO PROGRAMÁTICA + REGENERAÇÃO AUTOMÁTICA (v3: passa context explicitamente)
     const validatedCopies = await validateAndEnhanceCopies(
       adCopies,
       deepseekApiKey,
-      prompt
+      prompt,
+      { seoTitle, primaryKeyword, targetAudience }
     );
 
     console.log('✅ Cópias validadas:', {
       headlines: validatedCopies.headlines.length,
       descriptions: validatedCopies.descriptions.length,
       paths: validatedCopies.paths.length,
-      qualityScore: validatedCopies.metadata.qualityScore
+      qualityScore: validatedCopies.quality_report.score,
+      requiresRevision: validatedCopies.quality_report.requires_prompt_revision
     });
 
     return new Response(JSON.stringify(validatedCopies), {
@@ -205,115 +208,183 @@ serve(async (req) => {
 });
 
 // 🛡️ VALIDAÇÃO PROGRAMÁTICA + REGENERAÇÃO (FASE 4)
+// 🛡️ VALIDAÇÃO PROGRAMÁTICA + REGENERAÇÃO (v3: floor+cap, temperatura invertida, quality_report)
+interface QualityBreakdown {
+  headlines_truncated: { count: number; penalty: number };
+  headlines_duplicated: { count: number; penalty: number };
+  descriptions_truncated: { count: number; penalty: number };
+  paths_invalid: { count: number; penalty: number };
+}
+
+interface QualityReport {
+  score: number;
+  breakdown: QualityBreakdown;
+  warnings: string[];
+  validation_errors: string[];
+  requires_prompt_revision: boolean;
+}
+
 async function validateAndEnhanceCopies(
   copies: AdCopies,
   apiKey: string,
-  prompt: string
-): Promise<AdCopies & { metadata: { qualityScore: number; validationErrors: string[] } }> {
+  prompt: string,
+  context: { seoTitle: string; primaryKeyword: string; targetAudience: string }
+): Promise<AdCopies & { quality_report: QualityReport }> {
   let attempts = 0;
   const maxAttempts = 3;
   const minQualityScore = 70;
-  
+  // v3: temperatura DECRESCENTE — regras rígidas precisam de menos criatividade após falha
+  const temperatures = [0.5, 0.3, 0.1];
+
   let currentCopies = copies;
   let validationErrors: string[] = [];
   let qualityScore = 0;
+  let breakdown: QualityBreakdown = {
+    headlines_truncated: { count: 0, penalty: 0 },
+    headlines_duplicated: { count: 0, penalty: 0 },
+    descriptions_truncated: { count: 0, penalty: 0 },
+    paths_invalid: { count: 0, penalty: 0 }
+  };
+  let requiresPromptRevision = false;
 
-  // ✅ FASE 2: Passar contexto real para ensureMinimumAssets
+  // ✅ v3: contexto explícito (não mais ReferenceError)
   currentCopies = ensureMinimumAssets(currentCopies, {
-    productName: seoTitle?.substring(0, 25) || primaryKeyword?.substring(0, 25) || 'Produto',
-    category: targetAudience?.split(' ')[0] || 'Profissional'
+    productName: context.seoTitle?.substring(0, 25) || context.primaryKeyword?.substring(0, 25) || 'Produto',
+    category: context.targetAudience?.split(' ')[0] || 'Profissional'
   });
 
   while (attempts < maxAttempts) {
     attempts++;
     validationErrors = [];
-    let totalScore = 0;
-    let validationCount = 0;
+    let totalScore = 100; // começa em 100, penalties subtraem
+    let headlinesTruncated = 0;
+    let headlinesDuplicated = 0;
+    let descriptionsTruncated = 0;
+    let pathsInvalid = 0;
 
-    // Validar Headlines
+    // Validar Headlines (com tracking de truncate)
     const validHeadlines = currentCopies.headlines.map((h, i) => {
       const validation = validateGoogleAdsHeadline(h);
-      totalScore += validation.score;
-      validationCount++;
-
       if (!validation.isValid) {
         validationErrors.push(`Headline ${i + 1}: ${validation.errors.join(', ')}`);
-        if (h.length > 30) {
-          const truncated = intelligentTruncate(h, 30);
-          console.warn(`[Validator] Headline ${i + 1} truncado: "${h}" → "${truncated}"`);
-          return truncated;
-        }
       }
-
-      validation.warnings.forEach(w => {
-        console.warn(`[Validator] Headline ${i + 1} warning: ${w}`);
-      });
-
+      if (h && h.length > 30) {
+        headlinesTruncated++;
+        const truncated = intelligentTruncate(h, 30);
+        console.warn(`[Validator] Headline ${i + 1} truncado: "${h}" → "${truncated}"`);
+        return truncated;
+      }
+      validation.warnings.forEach(w => console.warn(`[Validator] Headline ${i + 1} warning: ${w}`));
       return h;
     });
 
     // Validar Descriptions
     const validDescriptions = currentCopies.descriptions.map((d, i) => {
       const validation = validateGoogleAdsDescription(d);
-      totalScore += validation.score;
-      validationCount++;
-
       if (!validation.isValid) {
         validationErrors.push(`Description ${i + 1}: ${validation.errors.join(', ')}`);
-        if (d.length > 90) {
-          const truncated = intelligentTruncate(d, 90);
-          console.warn(`[Validator] Description ${i + 1} truncado: "${d}" → "${truncated}"`);
-          return truncated;
-        }
       }
-
-      validation.warnings.forEach(w => {
-        console.warn(`[Validator] Description ${i + 1} warning: ${w}`);
-      });
-
+      if (d && d.length > 90) {
+        descriptionsTruncated++;
+        const truncated = intelligentTruncate(d, 90);
+        console.warn(`[Validator] Description ${i + 1} truncado: "${d}" → "${truncated}"`);
+        return truncated;
+      }
+      validation.warnings.forEach(w => console.warn(`[Validator] Description ${i + 1} warning: ${w}`));
       return d;
     });
 
     // Validar Paths
     const validPaths = currentCopies.paths.map((p, i) => {
       const validation = validateGoogleAdsPath(p);
-      totalScore += validation.score;
-      validationCount++;
-
       if (!validation.isValid) {
+        pathsInvalid++;
         validationErrors.push(`Path ${i + 1}: ${validation.errors.join(', ')}`);
         return validation.metadata.cleaned.substring(0, 15);
       }
-
-      validation.warnings.forEach(w => {
-        console.warn(`[Validator] Path ${i + 1} warning: ${w}`);
-      });
-
       return validation.metadata.cleaned;
     });
 
-    qualityScore = Math.round(totalScore / validationCount);
+    // ✅ v3: dedup case + accent insensitive APÓS truncate
+    const seen = new Set<string>();
+    const dedupedHeadlines: string[] = [];
+    for (const h of validHeadlines) {
+      const key = normalize(h);
+      if (!key) continue;
+      if (seen.has(key)) {
+        headlinesDuplicated++;
+        continue;
+      }
+      seen.add(key);
+      dedupedHeadlines.push(h);
+    }
+
+    // ✅ v3: penalty floor + cap
+    const truncatePenalty = Math.min(headlinesTruncated, 5) * -5; // cap -25
+    const dupPenalty = Math.min(headlinesDuplicated, 5) * -5;     // cap -25
+    const descPenalty = Math.min(descriptionsTruncated, 4) * -5;  // cap -20
+    const pathPenalty = Math.min(pathsInvalid, 2) * -5;           // cap -10
+
+    qualityScore = Math.max(0, totalScore + truncatePenalty + dupPenalty + descPenalty + pathPenalty);
+
+    breakdown = {
+      headlines_truncated: { count: headlinesTruncated, penalty: truncatePenalty },
+      headlines_duplicated: { count: headlinesDuplicated, penalty: dupPenalty },
+      descriptions_truncated: { count: descriptionsTruncated, penalty: descPenalty },
+      paths_invalid: { count: pathsInvalid, penalty: pathPenalty }
+    };
+
+    // ✅ v3: count > 5 → flag para regeneração com prompt mais específico
+    requiresPromptRevision = headlinesTruncated > 5;
 
     console.log(`[Validator] Tentativa ${attempts}/${maxAttempts}:`, {
       qualityScore,
-      validationErrors: validationErrors.length,
-      minRequired: minQualityScore
+      breakdown,
+      requiresPromptRevision,
+      validationErrors: validationErrors.length
     });
 
-    // Se passou na validação, retornar
-    if (qualityScore >= minQualityScore && validationErrors.length === 0) {
+    // Recompletar headlines se dedup deixou abaixo de 15
+    let finalHeadlines = dedupedHeadlines;
+    if (finalHeadlines.length < 15) {
+      const padded = ensureMinimumAssets(
+        { headlines: finalHeadlines, descriptions: validDescriptions, paths: validPaths },
+        {
+          productName: context.seoTitle?.substring(0, 25) || context.primaryKeyword?.substring(0, 25) || 'Produto',
+          category: context.targetAudience?.split(' ')[0] || 'Profissional'
+        }
+      );
+      finalHeadlines = padded.headlines;
+    }
+
+    if (qualityScore >= minQualityScore && validationErrors.length === 0 && !requiresPromptRevision) {
+      const warnings: string[] = [];
+      if (headlinesTruncated > 0) warnings.push(`${headlinesTruncated} headlines truncados, considere revisar`);
+      if (headlinesDuplicated > 0) warnings.push(`${headlinesDuplicated} headlines duplicados removidos`);
       return {
-        headlines: validHeadlines,
+        headlines: finalHeadlines,
         descriptions: validDescriptions,
         paths: validPaths,
-        metadata: { qualityScore, validationErrors }
+        quality_report: {
+          score: qualityScore,
+          breakdown,
+          warnings,
+          validation_errors: validationErrors,
+          requires_prompt_revision: false
+        }
       };
     }
 
-    // Se ainda há tentativas, regenerar
+    // Regenerar com temperatura DECRESCENTE
     if (attempts < maxAttempts) {
-      console.log(`[Validator] Score ${qualityScore} < ${minQualityScore}. Regenerando...`);
+      const nextTemp = temperatures[attempts] ?? 0.1;
+      console.log(`[Validator] Score ${qualityScore} < ${minQualityScore} (revision=${requiresPromptRevision}). Regenerando com temp=${nextTemp}...`);
       try {
+        // ✅ v3: prompt enriquecido quando count > 5
+        const enrichedPrompt = requiresPromptRevision
+          ? `${prompt}\n\n⚠️ ATENÇÃO: o limite de 30 caracteres por headline é RÍGIDO. Conte os caracteres antes de retornar cada headline. NUNCA ultrapasse 30 chars. Descriptions: máximo 90 chars.`
+          : prompt;
+
         const retryResponse = await fetch('https://api.deepseek.com/chat/completions', {
           method: 'POST',
           headers: {
@@ -323,23 +394,15 @@ async function validateAndEnhanceCopies(
           body: JSON.stringify({
             model: 'deepseek-chat',
             messages: [
-              {
-                role: 'system',
-                content: 'Você é um copywriter especialista em Google Ads. Sempre retorne JSON válido e siga rigorosamente os limites de caracteres.'
-              },
-              {
-                role: 'user',
-                content: prompt
-              }
+              { role: 'system', content: 'Você é um copywriter especialista em Google Ads. Sempre retorne JSON válido e siga rigorosamente os limites de caracteres.' },
+              { role: 'user', content: enrichedPrompt }
             ],
-            temperature: 0.8,
+            temperature: nextTemp,
             max_tokens: 1000
           })
         });
 
-        if (!retryResponse.ok) {
-          throw new Error(`Retry failed: ${retryResponse.status}`);
-        }
+        if (!retryResponse.ok) throw new Error(`Retry failed: ${retryResponse.status}`);
 
         const retryData = await retryResponse.json();
         const retryText = retryData.choices[0].message.content;
@@ -348,38 +411,33 @@ async function validateAndEnhanceCopies(
           currentCopies = JSON.parse(jsonMatch[0]);
         }
       } catch (error) {
+        // ✅ v3: log explícito do erro (não engolir silenciosamente)
         console.error(`[Validator] Erro ao regenerar (tentativa ${attempts}):`, error);
         break;
       }
     }
   }
 
-  // Fallback: retornar último resultado truncado
-  console.warn(`[Validator] ⚠️ Usando resultado com score ${qualityScore} (abaixo de ${minQualityScore})`);
-  
+  // Fallback final
+  console.warn(`[Validator] ⚠️ Entregando resultado com score ${qualityScore} (abaixo de ${minQualityScore})`);
+  const warnings: string[] = [`Score abaixo do mínimo após ${maxAttempts} tentativas`];
+  if (requiresPromptRevision) warnings.push('Recomenda-se revisão do prompt gerador');
+
   return {
-    headlines: currentCopies.headlines.map(h => h.length > 30 ? intelligentTruncate(h, 30) : h),
-    descriptions: currentCopies.descriptions.map(d => d.length > 90 ? intelligentTruncate(d, 90) : d),
-    paths: currentCopies.paths.map(p => p.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 15)),
-    metadata: { qualityScore, validationErrors }
+    headlines: currentCopies.headlines.map(h => h && h.length > 30 ? intelligentTruncate(h, 30) : h),
+    descriptions: currentCopies.descriptions.map(d => d && d.length > 90 ? intelligentTruncate(d, 90) : d),
+    paths: currentCopies.paths.map(p => (p ?? '').toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 15)),
+    quality_report: {
+      score: qualityScore,
+      breakdown,
+      warnings,
+      validation_errors: validationErrors,
+      requires_prompt_revision: requiresPromptRevision
+    }
   };
 }
 
-// Truncamento inteligente
-function intelligentTruncate(text: string, maxLength: number): string {
-  if (text.length <= maxLength) return text;
-  
-  const truncated = text.substring(0, maxLength);
-  const lastSpace = truncated.lastIndexOf(' ');
-  
-  if (lastSpace > maxLength * 0.7) {
-    return truncated.substring(0, lastSpace).trim() + '...';
-  }
-  
-  return truncated.substring(0, maxLength - 3).trim() + '...';
-}
-
-// ✅ FASE 2: Função de padding com substituição de strings vazias
+// ✅ v3: Padding com substituição de strings vazias (mantido)
 function ensureMinimumAssets(adCopies: AdCopies, context: { productName: string; category: string }): AdCopies {
   const MIN_HEADLINES = 15;
   const MIN_DESCRIPTIONS = 4;
@@ -409,12 +467,11 @@ function ensureMinimumAssets(adCopies: AdCopies, context: { productName: string;
     `${context.category} profissional. Suporte técnico incluso.`.substring(0, 90)
   ];
   
-  // ✅ NOVO: Inicializar arrays se undefined
   if (!adCopies.headlines) adCopies.headlines = [];
   if (!adCopies.descriptions) adCopies.descriptions = [];
   if (!adCopies.paths) adCopies.paths = [];
   
-  // ✅ NOVO: Substituir strings vazias existentes por fallbacks
+  // Substituir strings vazias por fallbacks
   adCopies.headlines = adCopies.headlines.map((h, i) => 
     (h && h.trim().length > 0) ? h : (fallbackHeadlines[i] || `Headline ${i + 1}`)
   );
@@ -423,19 +480,28 @@ function ensureMinimumAssets(adCopies: AdCopies, context: { productName: string;
     (d && d.trim().length > 0) ? d : (fallbackDescriptions[i] || `Descrição profissional ${i + 1}.`)
   );
   
-  // Padding de headlines
+  // ✅ v3: Padding com checagem de duplicata via normalize()
+  const existingKeys = new Set(adCopies.headlines.map(h => normalize(h)));
+  let fallbackIdx = 0;
+  while (adCopies.headlines.length < MIN_HEADLINES && fallbackIdx < fallbackHeadlines.length * 2) {
+    const candidate = fallbackHeadlines[fallbackIdx % fallbackHeadlines.length] || `Headline ${adCopies.headlines.length + 1}`;
+    const key = normalize(candidate);
+    if (!existingKeys.has(key)) {
+      existingKeys.add(key);
+      adCopies.headlines.push(candidate);
+    }
+    fallbackIdx++;
+  }
+  // Se ainda faltarem, força com sufixo numérico
   while (adCopies.headlines.length < MIN_HEADLINES) {
-    const idx = adCopies.headlines.length;
-    adCopies.headlines.push(fallbackHeadlines[idx] || `Headline ${idx + 1}`);
+    adCopies.headlines.push(`Oferta ${adCopies.headlines.length + 1}`);
   }
   
-  // Padding de descriptions
   while (adCopies.descriptions.length < MIN_DESCRIPTIONS) {
     const idx = adCopies.descriptions.length;
     adCopies.descriptions.push(fallbackDescriptions[idx] || `Descrição ${idx + 1}.`.substring(0, 90));
   }
   
-  // ✅ NOVO: Garantir paths
   if (adCopies.paths.length < 2) {
     adCopies.paths = [
       context.productName.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 15) || 'produto',
