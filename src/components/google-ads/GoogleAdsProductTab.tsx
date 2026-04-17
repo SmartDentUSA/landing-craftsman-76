@@ -85,6 +85,8 @@ export const GoogleAdsProductTab = ({ product, onUpdate }: GoogleAdsProductTabPr
 
   const [adPreview, setAdPreview] = useState<AdPreview | null>(null);
   const [warnings, setWarnings] = useState<ValidationWarning[]>([]);
+  const [qualityReport, setQualityReport] = useState<QualityReport | null>(null);
+  const [collectorStrategy, setCollectorStrategy] = useState<CollectorStrategy>('niche');
 
   // Remove useDebounce - usar campaignConfig diretamente
 
