@@ -577,8 +577,8 @@ async function collectKeywords(supabase: any, landingPageData: any, config: any,
     }
   });
   
-  // ✅ NOVO: Balancear match types
-  result = balanceMatchTypes(result);
+  // ✅ v3: Balancear match types em função do budget
+  result = balanceMatchTypes(result, config?.daily_budget_brl ?? 50);
   
   // ✅ NOVO: Mesclar negativas padrão com negativas do usuário
   const userNegatives = config.negatives || [];
@@ -602,16 +602,8 @@ function sanitizeKeyword(text: string): string {
     .replace(/[,;.!?]+$/g, '');                            // Remove pontuação final
 }
 
-// ✅ FASE 1: Filtro de keywords válidas
-function isValidKeyword(text: string): boolean {
-  if (!text || typeof text !== 'string') return false;
-  if (text.length < 3 || text.length > 80) return false;
-  if (text.includes('://') || text.includes('[object')) return false;
-  if (text.startsWith('http') || text.startsWith('/')) return false;
-  if (text.includes('.com') || text.includes('.br') || text.includes('.net')) return false;
-  if (text.match(/^[\d\s\-\/]+$/)) return false; // Apenas números/símbolos
-  return true;
-}
+// ✅ v3: isValidKeyword agora vive em _shared/keyword-validators.ts
+// (mantida re-export local apenas para compatibilidade interna)
 
 function deduplicateKeywords(keywords: KeywordWithMatchType[]): KeywordWithMatchType[] {
   const seen = new Map<string, KeywordWithMatchType>();
