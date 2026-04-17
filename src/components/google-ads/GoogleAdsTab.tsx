@@ -507,7 +507,7 @@ export const GoogleAdsTab = ({ landingPageId, data, selectedProductIds, onUpdate
 
       {/* Preview - Always show regardless of enabled status */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <h3 className="text-lg font-semibold">Preview dos Anúncios</h3>
             {!campaignConfig.enabled && (
@@ -516,7 +516,8 @@ export const GoogleAdsTab = ({ landingPageId, data, selectedProductIds, onUpdate
               </p>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <QualityReportPanel report={qualityReport} />
             {lastGeneratedAt && (
               <span className="text-xs text-muted-foreground">
                 Gerado: {lastGeneratedAt.toLocaleTimeString()}
