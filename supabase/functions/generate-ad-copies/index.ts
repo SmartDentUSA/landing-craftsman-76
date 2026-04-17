@@ -9,6 +9,7 @@ import {
 } from "../_shared/content-validators.ts";
 import { buildFullPrompt, mapProductToContext } from '../_shared/clinical-brain-guard.ts';
 import { PROMPTS } from '../_shared/prompt-templates.ts';
+import { intelligentTruncate, normalize } from '../_shared/text-utils.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -174,18 +175,20 @@ serve(async (req) => {
       };
     }
 
-    // 🛡️ VALIDAÇÃO PROGRAMÁTICA + REGENERAÇÃO AUTOMÁTICA
+    // 🛡️ VALIDAÇÃO PROGRAMÁTICA + REGENERAÇÃO AUTOMÁTICA (v3: passa context explicitamente)
     const validatedCopies = await validateAndEnhanceCopies(
       adCopies,
       deepseekApiKey,
-      prompt
+      prompt,
+      { seoTitle, primaryKeyword, targetAudience }
     );
 
     console.log('✅ Cópias validadas:', {
       headlines: validatedCopies.headlines.length,
       descriptions: validatedCopies.descriptions.length,
       paths: validatedCopies.paths.length,
-      qualityScore: validatedCopies.metadata.qualityScore
+      qualityScore: validatedCopies.quality_report.score,
+      requiresRevision: validatedCopies.quality_report.requires_prompt_revision
     });
 
     return new Response(JSON.stringify(validatedCopies), {
