@@ -198,6 +198,9 @@ export const GoogleAdsTab = ({ landingPageId, data, selectedProductIds, onUpdate
       // Unwrap envelope and return content directly
       if (result && result.content) {
         console.log(`✅ Ad copies received - Headlines: ${result.content.headlines?.length || 0}, Descriptions: ${result.content.descriptions?.length || 0}, Paths: ${result.content.paths?.length || 0}`);
+        if (result.quality_report) {
+          setQualityReport(result.quality_report as QualityReport);
+        }
         return result.content; // Return the actual AdCopy object
       }
       
