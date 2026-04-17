@@ -14,6 +14,89 @@ export type Database = {
   }
   public: {
     Tables: {
+      _keywords_cleanup_backup_20260417: {
+        Row: {
+          backed_up_at: string | null
+          id: string | null
+          keywords: Json | null
+          market_keywords: Json | null
+          name: string | null
+          search_intent_keywords: Json | null
+        }
+        Insert: {
+          backed_up_at?: string | null
+          id?: string | null
+          keywords?: Json | null
+          market_keywords?: Json | null
+          name?: string | null
+          search_intent_keywords?: Json | null
+        }
+        Update: {
+          backed_up_at?: string | null
+          id?: string | null
+          keywords?: Json | null
+          market_keywords?: Json | null
+          name?: string | null
+          search_intent_keywords?: Json | null
+        }
+        Relationships: []
+      }
+      ads_generation_benchmark: {
+        Row: {
+          blocked_keywords_count: number | null
+          blocked_keywords_samples: string[] | null
+          created_at: string
+          csv_hash: string | null
+          duplicated_count: number | null
+          id: string
+          product_id: string | null
+          product_name: string | null
+          quality_score: number | null
+          raw_quality_report: Json | null
+          run_label: string
+          run_timestamp: string
+          truncated_count: number | null
+        }
+        Insert: {
+          blocked_keywords_count?: number | null
+          blocked_keywords_samples?: string[] | null
+          created_at?: string
+          csv_hash?: string | null
+          duplicated_count?: number | null
+          id?: string
+          product_id?: string | null
+          product_name?: string | null
+          quality_score?: number | null
+          raw_quality_report?: Json | null
+          run_label: string
+          run_timestamp?: string
+          truncated_count?: number | null
+        }
+        Update: {
+          blocked_keywords_count?: number | null
+          blocked_keywords_samples?: string[] | null
+          created_at?: string
+          csv_hash?: string | null
+          duplicated_count?: number | null
+          id?: string
+          product_id?: string | null
+          product_name?: string | null
+          quality_score?: number | null
+          raw_quality_report?: Json | null
+          run_label?: string
+          run_timestamp?: string
+          truncated_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ads_generation_benchmark_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_repository"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       aftersales_messages: {
         Row: {
           created_at: string
@@ -841,6 +924,7 @@ export type Database = {
           contact_phone: string | null
           country: string | null
           created_at: string
+          default_collector_strategy: string | null
           delivery_approach: string | null
           differentiators: string | null
           duns_number: string | null
@@ -913,6 +997,7 @@ export type Database = {
           contact_phone?: string | null
           country?: string | null
           created_at?: string
+          default_collector_strategy?: string | null
           delivery_approach?: string | null
           differentiators?: string | null
           duns_number?: string | null
@@ -985,6 +1070,7 @@ export type Database = {
           contact_phone?: string | null
           country?: string | null
           created_at?: string
+          default_collector_strategy?: string | null
           delivery_approach?: string | null
           differentiators?: string | null
           duns_number?: string | null
