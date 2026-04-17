@@ -17,6 +17,9 @@ import { VideoManager } from './VideoManager';
 import { AdPreviewCards } from './AdPreviewCards';
 import { UTMBuilder } from './UTMBuilder';
 import { WarningsPanel } from './WarningsPanel';
+import { QualityReportPanel } from './QualityReportPanel';
+import { CollectorStrategyToggle } from './CollectorStrategyToggle';
+import type { QualityReport } from '@/types/google-ads';
 import { VideoCollector } from '@/lib/google-ads/collectors/VideoCollector';
 import { SitelinksCollector } from '@/lib/google-ads/collectors/SitelinksCollector';
 import { useToast } from '@/hooks/use-toast';
@@ -65,6 +68,7 @@ export const GoogleAdsTab = ({ landingPageId, data, selectedProductIds, onUpdate
   
   const [previewData, setPreviewData] = useState<AdPreview | null>(null);
   const [warnings, setWarnings] = useState<ValidationWarning[]>([]);
+  const [qualityReport, setQualityReport] = useState<QualityReport | null>(null);
 
   const validateAndPreview = useCallback(async () => {
     const newWarnings: ValidationWarning[] = [];
