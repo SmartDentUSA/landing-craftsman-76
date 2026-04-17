@@ -1,6 +1,8 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+import { isValidKeyword as sharedIsValidKeyword, filterKeywordsWithSamples } from '../_shared/keyword-validators.ts';
+import { normalize } from '../_shared/text-utils.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -307,39 +309,46 @@ function createSmartAdGroups(keywords: KeywordWithMatchType[], productName: stri
   return adGroups;
 }
 
-// ✅ NOVO: Balancear match types automaticamente
-function balanceMatchTypes(keywords: KeywordWithMatchType[]): KeywordWithMatchType[] {
-  // Distribuição ideal: 30% EXACT, 50% PHRASE, 20% BROAD
+// ✅ v3: Match type adaptativo ao budget diário
+function getMatchTypeRatio(dailyBudgetBRL: number): { EXACT: number; PHRASE: number; BROAD: number } {
+  if (!dailyBudgetBRL || dailyBudgetBRL < 300) return { EXACT: 0.80, PHRASE: 0.20, BROAD: 0 };
+  if (dailyBudgetBRL < 1000) return { EXACT: 0.50, PHRASE: 0.40, BROAD: 0.10 };
+  return { EXACT: 0.30, PHRASE: 0.50, BROAD: 0.20 };
+}
+
+// ✅ v3: Balancear match types em função do budget
+function balanceMatchTypes(keywords: KeywordWithMatchType[], dailyBudgetBRL: number = 50): KeywordWithMatchType[] {
+  const ratio = getMatchTypeRatio(dailyBudgetBRL);
   const totalKeywords = keywords.length;
-  const targetExact = Math.ceil(totalKeywords * 0.3);
-  const targetBroad = Math.ceil(totalKeywords * 0.2);
-  
+  const targetExact = Math.ceil(totalKeywords * ratio.EXACT);
+  const targetBroad = Math.ceil(totalKeywords * ratio.BROAD);
+
+  if (ratio.BROAD === 0) {
+    console.warn(`[MatchType] Budget R$${dailyBudgetBRL}/dia: BROAD desabilitado (insuficiente para volume).`);
+  }
+
   let exactCount = 0;
   let broadCount = 0;
-  
+
   return keywords.map(k => {
-    // Manter EXACT para brand keywords e manual
-    if (k.source === 'manual' || k.keyword_type === 'brand') {
-      return k;
-    }
-    
-    // Manter original se for keyword muito específica (longtail)
+    if (k.source === 'manual' || k.keyword_type === 'brand') return k;
+
     if (k.keyword_type === 'longtail' || k.text.split(' ').length >= 4) {
       return { ...k, match_type: 'EXACT' };
     }
-    
-    // Balancear restante
+
     if (k.search_intent === 'commercial' && exactCount < targetExact) {
       exactCount++;
       return { ...k, match_type: 'EXACT' };
     }
-    
-    if (k.search_intent === 'informational' && broadCount < targetBroad) {
+
+    if (k.search_intent === 'informational' && ratio.BROAD > 0 && broadCount < targetBroad) {
       broadCount++;
       return { ...k, match_type: 'BROAD' };
     }
-    
-    return k; // Manter PHRASE como default
+
+    // Fallback PHRASE quando BROAD está bloqueado
+    return { ...k, match_type: ratio.BROAD === 0 ? 'PHRASE' : k.match_type };
   });
 }
 
