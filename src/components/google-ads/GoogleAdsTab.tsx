@@ -372,6 +372,7 @@ export const GoogleAdsTab = ({ landingPageId, data, selectedProductIds, onUpdate
           </TabsList>
 
           <TabsContent value="general" className="space-y-4">
+            <CollectorStrategyToggle persistGlobal />
             <Card>
               <CardHeader>
                 <CardTitle>Configuração Geral</CardTitle>
