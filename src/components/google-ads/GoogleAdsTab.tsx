@@ -17,6 +17,9 @@ import { VideoManager } from './VideoManager';
 import { AdPreviewCards } from './AdPreviewCards';
 import { UTMBuilder } from './UTMBuilder';
 import { WarningsPanel } from './WarningsPanel';
+import { QualityReportPanel } from './QualityReportPanel';
+import { CollectorStrategyToggle } from './CollectorStrategyToggle';
+import type { QualityReport } from '@/types/google-ads';
 import { VideoCollector } from '@/lib/google-ads/collectors/VideoCollector';
 import { SitelinksCollector } from '@/lib/google-ads/collectors/SitelinksCollector';
 import { useToast } from '@/hooks/use-toast';
@@ -65,6 +68,7 @@ export const GoogleAdsTab = ({ landingPageId, data, selectedProductIds, onUpdate
   
   const [previewData, setPreviewData] = useState<AdPreview | null>(null);
   const [warnings, setWarnings] = useState<ValidationWarning[]>([]);
+  const [qualityReport, setQualityReport] = useState<QualityReport | null>(null);
 
   const validateAndPreview = useCallback(async () => {
     const newWarnings: ValidationWarning[] = [];
@@ -194,6 +198,9 @@ export const GoogleAdsTab = ({ landingPageId, data, selectedProductIds, onUpdate
       // Unwrap envelope and return content directly
       if (result && result.content) {
         console.log(`✅ Ad copies received - Headlines: ${result.content.headlines?.length || 0}, Descriptions: ${result.content.descriptions?.length || 0}, Paths: ${result.content.paths?.length || 0}`);
+        if (result.quality_report) {
+          setQualityReport(result.quality_report as QualityReport);
+        }
         return result.content; // Return the actual AdCopy object
       }
       
@@ -365,6 +372,7 @@ export const GoogleAdsTab = ({ landingPageId, data, selectedProductIds, onUpdate
           </TabsList>
 
           <TabsContent value="general" className="space-y-4">
+            <CollectorStrategyToggle persistGlobal />
             <Card>
               <CardHeader>
                 <CardTitle>Configuração Geral</CardTitle>
@@ -500,7 +508,7 @@ export const GoogleAdsTab = ({ landingPageId, data, selectedProductIds, onUpdate
 
       {/* Preview - Always show regardless of enabled status */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <h3 className="text-lg font-semibold">Preview dos Anúncios</h3>
             {!campaignConfig.enabled && (
@@ -509,7 +517,8 @@ export const GoogleAdsTab = ({ landingPageId, data, selectedProductIds, onUpdate
               </p>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <QualityReportPanel report={qualityReport} />
             {lastGeneratedAt && (
               <span className="text-xs text-muted-foreground">
                 Gerado: {lastGeneratedAt.toLocaleTimeString()}

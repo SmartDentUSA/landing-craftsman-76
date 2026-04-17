@@ -17,6 +17,9 @@ import { VideoManager } from './VideoManager';
 import { AdPreviewCards } from './AdPreviewCards';
 import { UTMBuilder } from './UTMBuilder';
 import { WarningsPanel } from './WarningsPanel';
+import { QualityReportPanel } from './QualityReportPanel';
+import { CollectorStrategyToggle } from './CollectorStrategyToggle';
+import type { QualityReport, CollectorStrategy } from '@/types/google-ads';
 import { DisplayBannerGenerator } from './DisplayBannerGenerator';
 import { VideoCollector } from '@/lib/google-ads/collectors/VideoCollector';
 import { SitelinksCollector } from '@/lib/google-ads/collectors/SitelinksCollector';
@@ -82,6 +85,8 @@ export const GoogleAdsProductTab = ({ product, onUpdate }: GoogleAdsProductTabPr
 
   const [adPreview, setAdPreview] = useState<AdPreview | null>(null);
   const [warnings, setWarnings] = useState<ValidationWarning[]>([]);
+  const [qualityReport, setQualityReport] = useState<QualityReport | null>(null);
+  const [collectorStrategy, setCollectorStrategy] = useState<CollectorStrategy>('niche');
 
   // Remove useDebounce - usar campaignConfig diretamente
 
@@ -231,6 +236,9 @@ export const GoogleAdsProductTab = ({ product, onUpdate }: GoogleAdsProductTabPr
         };
         setAdPreview(updatedPreview);
         setLastGeneratedAt(new Date());
+        if (data.quality_report) {
+          setQualityReport(data.quality_report as QualityReport);
+        }
         
         toast({
           title: "Anúncios gerados com sucesso!",
@@ -387,6 +395,10 @@ export const GoogleAdsProductTab = ({ product, onUpdate }: GoogleAdsProductTabPr
             </TabsList>
 
             <TabsContent value="general" className="space-y-4">
+              <CollectorStrategyToggle
+                value={collectorStrategy}
+                onChange={setCollectorStrategy}
+              />
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">Configurações Gerais</CardTitle>
@@ -446,15 +458,16 @@ export const GoogleAdsProductTab = ({ product, onUpdate }: GoogleAdsProductTabPr
           {/* Preview Section */}
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <CardTitle className="text-base">Preview dos Anúncios</CardTitle>
-                {adPreview && (
-                  <div className="flex items-center gap-2">
-                    {lastGeneratedAt && (
-                      <span className="text-xs text-muted-foreground">
-                        Gerado: {lastGeneratedAt.toLocaleTimeString()}
-                      </span>
-                    )}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <QualityReportPanel report={qualityReport} />
+                  {adPreview && lastGeneratedAt && (
+                    <span className="text-xs text-muted-foreground">
+                      Gerado: {lastGeneratedAt.toLocaleTimeString()}
+                    </span>
+                  )}
+                  {adPreview && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -465,8 +478,8 @@ export const GoogleAdsProductTab = ({ product, onUpdate }: GoogleAdsProductTabPr
                       <RefreshCw className={`h-3 w-3 ${isGeneratingAds ? 'animate-spin' : ''}`} />
                       Regenerar IA
                     </Button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             </CardHeader>
             <CardContent>
