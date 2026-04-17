@@ -392,6 +392,10 @@ export const GoogleAdsProductTab = ({ product, onUpdate }: GoogleAdsProductTabPr
             </TabsList>
 
             <TabsContent value="general" className="space-y-4">
+              <CollectorStrategyToggle
+                value={collectorStrategy}
+                onChange={setCollectorStrategy}
+              />
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">Configurações Gerais</CardTitle>
