@@ -236,6 +236,9 @@ export const GoogleAdsProductTab = ({ product, onUpdate }: GoogleAdsProductTabPr
         };
         setAdPreview(updatedPreview);
         setLastGeneratedAt(new Date());
+        if (data.quality_report) {
+          setQualityReport(data.quality_report as QualityReport);
+        }
         
         toast({
           title: "Anúncios gerados com sucesso!",
