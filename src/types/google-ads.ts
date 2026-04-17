@@ -127,6 +127,27 @@ export interface GoogleAdsCampaign {
   updated_at: string;
 }
 
+// ===== Quality Report (v3) =====
+export interface QualityBreakdownItem {
+  count: number;
+  penalty: number;
+}
+
+export interface QualityReport {
+  score: number; // 0-100
+  breakdown: {
+    headlines_truncated: QualityBreakdownItem;
+    headlines_duplicated: QualityBreakdownItem;
+    descriptions_truncated: QualityBreakdownItem;
+    paths_invalid: QualityBreakdownItem;
+  };
+  warnings: string[];
+  validation_errors: string[];
+  requires_prompt_revision: boolean;
+}
+
+export type CollectorStrategy = 'niche' | 'mass';
+
 // Display Banner Types
 export type DisplayStyle = 'modern' | 'minimal' | 'bold' | 'clinical';
 

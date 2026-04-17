@@ -1,6 +1,8 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.56.0";
+import { isValidKeyword as sharedIsValidKeyword } from '../_shared/keyword-validators.ts';
+import { normalize } from '../_shared/text-utils.ts';
 
 // Import SitelinksCollector functionality (copied to avoid module import issues)
 class SitelinksCollector {
@@ -214,8 +216,10 @@ serve(async (req) => {
     // Collect videos specific to product
     const videos = collectProductVideos(product);
 
-    // Generate ad copies using AI
-    const adCopies = await generateProductAdCopies(productData, keywords);
+    // Generate ad copies using AI (v3: returns quality_report)
+    const adCopiesResponse: any = await generateProductAdCopies(productData, keywords);
+    const adCopies = adCopiesResponse?.headlines ? adCopiesResponse : { headlines: [], descriptions: [], paths: [] };
+    const qualityReport = adCopiesResponse?.quality_report ?? null;
 
     // Build CSV using the standardized GoogleAdsCSVBuilder
     const finalUrl = applyUTM(product.product_url || 'https://example.com', config.utm);
@@ -225,7 +229,7 @@ serve(async (req) => {
       name: `AG_${product.category || 'Product'}_${product.name}`.replace(/\s+/g, '_'),
       keywords: keywords.map(kw => ({
         text: kw.text,
-        match_type: kw.match_type,  // ✅ USA MATCH TYPE CALCULADO
+        match_type: kw.match_type,
         theme: product.category || 'product'
       })),
       theme: product.category || 'product'
@@ -241,22 +245,25 @@ serve(async (req) => {
       finalUrl
     });
 
-    // Save campaign configuration
+    // ✅ v3: persiste quality_report no config JSONB
+    const configWithReport = qualityReport ? { ...config, quality_report: qualityReport } : config;
+
     await supabase
       .from('google_ads_campaigns')
       .upsert({
         product_id: productId,
         campaign_type: 'product',
-        config,
+        config: configWithReport,
         last_exported: new Date().toISOString()
       });
 
-    console.log('✅ CSV gerado com sucesso para produto:', product.name);
+    console.log('✅ CSV gerado com sucesso para produto:', product.name, 'qualityScore:', qualityReport?.score);
 
     return new Response(
       JSON.stringify({ 
         csv,
-        warnings: []
+        quality_report: qualityReport,
+        warnings: qualityReport?.warnings ?? []
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
@@ -281,15 +288,9 @@ function sanitizeKeyword(text: string): string {
     .replace(/[,;.!?]+$/g, '');                            // Remove pontuação final
 }
 
-// ✅ FASE 1: Filtro de keywords válidas
+// ✅ v3: usa validador compartilhado
 function isValidKeyword(text: string): boolean {
-  if (!text || typeof text !== 'string') return false;
-  if (text.length < 3 || text.length > 80) return false;
-  if (text.includes('://') || text.includes('[object')) return false;
-  if (text.startsWith('http') || text.startsWith('/')) return false;
-  if (text.includes('.com') || text.includes('.br') || text.includes('.net')) return false;
-  if (text.match(/^[\d\s\-\/]+$/)) return false; // Apenas números/símbolos
-  return true;
+  return sharedIsValidKeyword(text);
 }
 
 function collectProductKeywords(product: any, productData: any): Array<{ text: string, match_type: 'BROAD' | 'PHRASE' | 'EXACT' }> {
