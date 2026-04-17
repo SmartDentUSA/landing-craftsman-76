@@ -458,15 +458,16 @@ export const GoogleAdsProductTab = ({ product, onUpdate }: GoogleAdsProductTabPr
           {/* Preview Section */}
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <CardTitle className="text-base">Preview dos Anúncios</CardTitle>
-                {adPreview && (
-                  <div className="flex items-center gap-2">
-                    {lastGeneratedAt && (
-                      <span className="text-xs text-muted-foreground">
-                        Gerado: {lastGeneratedAt.toLocaleTimeString()}
-                      </span>
-                    )}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <QualityReportPanel report={qualityReport} />
+                  {adPreview && lastGeneratedAt && (
+                    <span className="text-xs text-muted-foreground">
+                      Gerado: {lastGeneratedAt.toLocaleTimeString()}
+                    </span>
+                  )}
+                  {adPreview && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -477,8 +478,8 @@ export const GoogleAdsProductTab = ({ product, onUpdate }: GoogleAdsProductTabPr
                       <RefreshCw className={`h-3 w-3 ${isGeneratingAds ? 'animate-spin' : ''}`} />
                       Regenerar IA
                     </Button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             </CardHeader>
             <CardContent>
