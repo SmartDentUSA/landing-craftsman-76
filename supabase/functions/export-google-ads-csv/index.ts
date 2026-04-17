@@ -38,8 +38,10 @@ serve(async (req) => {
     const sitelinks = await collectSitelinks(finalLandingPageData, config, supabase);
     const videos = await collectVideos(supabase, landingPageId, config);
 
-    // Generate ad copies using AI
-    const adCopies = await generateAdCopies(finalLandingPageData, keywords.map(k => k.text));
+    // Generate ad copies using AI (returns quality_report v3)
+    const adCopiesResponse = await generateAdCopies(finalLandingPageData, keywords.map(k => k.text));
+    const adCopies = adCopiesResponse.headlines ? adCopiesResponse : { headlines: [], descriptions: [], paths: [] };
+    const qualityReport = adCopiesResponse.quality_report ?? null;
 
     // ✅ NOVO: Criar múltiplos Ad Groups por intenção
     const adGroups = createSmartAdGroups(keywords, finalLandingPageData.name);
@@ -48,21 +50,24 @@ serve(async (req) => {
     const csvData = buildGoogleAdsCSV({
       campaignName: `Campaign_${finalLandingPageData.name.replace(/\s+/g, '_')}`,
       config,
-      adGroups, // ✅ NOVO: Passar Ad Groups em vez de keywords
+      adGroups,
       adCopies,
       sitelinks,
       videos,
       finalUrl: finalLandingPageData.canonical_url
     });
 
-    // Save configuration to database
+    // ✅ v3: Persiste config + quality_report no JSONB
+    const configWithReport = qualityReport
+      ? { ...config, quality_report: qualityReport }
+      : config;
+
     await supabase.from('google_ads_campaigns').upsert({
       landing_page_id: landingPageId,
-      config,
+      config: configWithReport,
       last_exported: new Date().toISOString()
     });
 
-    // Gerar estatísticas do CSV
     const stats = {
       adGroupsCount: adGroups.length,
       totalKeywords: keywords.length,
@@ -70,7 +75,8 @@ serve(async (req) => {
         exact: keywords.filter(k => k.match_type === 'EXACT').length,
         phrase: keywords.filter(k => k.match_type === 'PHRASE').length,
         broad: keywords.filter(k => k.match_type === 'BROAD').length
-      }
+      },
+      qualityScore: qualityReport?.score ?? null
     };
     
     console.log('✅ CSV gerado com sucesso:', stats);
@@ -78,8 +84,11 @@ serve(async (req) => {
     return new Response(JSON.stringify({ 
       csv: csvData,
       stats,
-      warnings: []
+      quality_report: qualityReport,
+      warnings: qualityReport?.warnings ?? []
     }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
