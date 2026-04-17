@@ -1,56 +1,70 @@
 
 
-## Plano: Criar Edge Function `sync-system-b-articles` no Smart Dent (Sistema A)
+## Análise do pedido
 
-### Contexto
-O usuário forneceu o código completo da Edge Function que precisa ser criada no projeto Supabase **pgfgripuanuwwolmtknn** (Sistema A — Smart Dent). Ela:
-- Busca artigos do Sistema B (`okeogjgqijbfkudfjadz`) via `knowledge-feed`
-- Faz roteamento por domínio com base em `keyword_rules` da tabela `domain_config`
-- Persiste em `systemb_articles` com upsert por `systemb_id`
-- Modo `enrich` cruza com `products_repository` para gerar `answer_block` e `ai_context`
+O usuário pediu duas melhorias no gerador de Google Ads:
 
-O botão de UI que dispara essa função (`SystemBArticlesSync`) já está implementado e aponta para `sync-system-b-articles?mode=full&max_pages=7`. Falta apenas a função no backend.
+1. **Acessibilidade nos banners HTML**: adicionar `alt` descritivo nas tags `<img>` dos banners de Display
+2. **Extensões de Anúncio no CSV**: incluir colunas para Sitelinks e Callouts (Frases de Chamariz) no export CSV
 
-### Verificações pendentes (durante implementação)
-1. Conferir se as tabelas `domain_config` e `systemb_articles` já existem no Sistema A com o schema esperado pelo código (colunas: `systemb_id`, `target_domain`, `publish_status`, `synced_at`, `enriched_json`, `enriched_at`, etc.).
-2. Se faltarem colunas/tabelas, criar via migration antes de deployar a função.
-3. `products_repository` já existe (referenciada em memória).
+## Investigação realizada
 
-### O que será feito
+**Banners HTML** (`src/components/google-ads/display-templates.ts`):
+- Linha ~155: `<img class="product-img" src="product.jpg" alt="Produto">` — alt genérico, não descritivo
+- Linha ~159: `<img class="logo" src="logo.png" alt="Logo">` — alt genérico
+- Função `generateBannerHTML` recebe `headline` e `productImageUrl` mas não usa para o alt
 
-**1. Criar a Edge Function**
-- Arquivo: `supabase/functions/sync-system-b-articles/index.ts`
-- Código exatamente como o usuário forneceu (já está pronto, validado por ele)
-- A função usa `verify_jwt = false` implicitamente (não valida JWT no código) — compatível com o padrão Lovable atual
-- Usa `SUPABASE_SERVICE_ROLE_KEY` (já disponível como env nativo nas Edge Functions, não precisa adicionar secret)
-- Chave anon do Sistema B está hardcoded no código (é pública, sem risco)
+**CSV Builder** (`src/lib/google-ads/csv-builder.ts`):
+- Já existe `buildSitelinksSection()` — mas só gera 5 colunas básicas (`Sitelink text`, `Sitelink final URL`)
+- **NÃO existe** `buildCalloutsSection()` — precisa criar
+- Sitelinks atuais faltam colunas opcionais que aumentam CTR: `Sitelink description 1`, `Sitelink description 2`
+- Tipo `GoogleAdsCampaignConfig` não tem campo `callouts: string[]` — precisa adicionar
 
-**2. Verificar/criar schema do banco**
-- Inspecionar `domain_config` e `systemb_articles` no Sistema A
-- Se ausentes ou incompletas → criar migration com:
-  - `domain_config(domain, keyword_rules text[], product_categories text[], is_hub bool, active bool, priority int)`
-  - `systemb_articles(id uuid pk, systemb_id text unique, title, slug, target_domain, publish_status, synced_at, enriched_json jsonb, enriched_at, + todos campos do FeedItem)`
-  - RLS apropriado (somente service role escreve; leitura autenticada)
-  - Seed inicial de `domain_config` com hub `eodonto.com` e domínios não-hub
+## Plano de implementação
 
-**3. Não mexer no frontend**
-O componente `SystemBArticlesSync.tsx` já está correto e funcional. Apenas a função estava faltando.
+### 1. Acessibilidade dos banners (alt descritivo)
 
-### Resultado esperado após deploy
-Ao clicar "Sincronizar Artigos Sistema B", o botão chama a função que:
-- Busca até 7 páginas × 100 artigos do Sistema B
-- Roteia cada artigo para o domínio com maior score de keywords
-- Faz upsert em `systemb_articles`
-- Roda enrich cruzando com `products_repository`
-- Retorna JSON com `stats.articles_upserted` e `stats.domain_distribution`
+**Arquivo:** `src/components/google-ads/display-templates.ts`
 
-### Riscos / observações
-- Schema de `systemb_articles` precisa bater 100% com o que o `buildArticleRecord` insere — qualquer coluna faltante fará o upsert quebrar
-- Tabela `domain_config` precisa ter pelo menos um registro com `is_hub=true`, senão o fallback hub vira string literal "eodonto.com"
-- Se a função demorar > 60s, será cortada pelo limite default de Edge Function (mitigação: já tem `max_pages=7` × 100 = 700 artigos, deve caber)
+Alterar a função `generateBannerHTML` para gerar alts descritivos:
+- `product-img` → `alt="${headline} — ${ctaText}"` (ex: "Resina Bio Vitality — Compre agora")
+- `logo` → `alt="Logo Smart Dent"` (ou nome da marca, fallback "Logo da empresa")
+- Sanitizar aspas no alt para não quebrar o HTML (`replace(/"/g, '&quot;')`)
 
-### Arquivos afetados
-- **Criar:** `supabase/functions/sync-system-b-articles/index.ts` (~250 linhas)
-- **Possível migration:** `domain_config` + `systemb_articles` (apenas se não existirem com schema correto)
-- **Não editar:** `SystemBArticlesSync.tsx`, `Repository.tsx` (já prontos)
+### 2. Extensões: Sitelinks com descrições + nova seção de Callouts
+
+**Arquivo 1:** `src/types/google-ads.ts`
+- Adicionar `callouts: string[]` em `GoogleAdsCampaignConfig`
+- Estender tipo `Sitelink` com `description1?: string` e `description2?: string` (opcionais)
+
+**Arquivo 2:** `src/lib/google-ads/csv-builder.ts`
+- **Atualizar `buildSitelinksSection`**: adicionar colunas `Sitelink description 1` e `Sitelink description 2` ao header e às rows
+- **Criar `buildCalloutsSection`**: nova seção com header `Campaign,Ad extension type,Callout text` e 1 row por callout (limite 25 caracteres por callout, validar)
+- Adicionar `buildCalloutsSection(campaignName, config.callouts)` na lista de seções de `buildFullCSV`
+
+**Arquivo 3:** `src/lib/google-ads/ads-generator.ts` (se existir — verificar) ou onde Sitelinks são montados a partir de `ecommerce_links`/`custom_institutional_links`
+- Garantir que descriptions vazias sejam tratadas como string vazia (não `undefined`)
+- Se houver gerador automático de callouts (ex: a partir de benefits do produto), conectá-lo; senão deixar `config.callouts = []` como default e criar UI futuramente
+
+### 3. UI (opcional, mínima nesta entrega)
+
+Se houver painel de configuração da campanha (`GoogleAdsConfigPanel.tsx` ou similar), adicionar:
+- Textarea "Frases de Chamariz (Callouts)" — uma por linha, máx 25 chars cada
+- Sub-campos opcionais nos sitelinks existentes para descrições
+
+**Decisão:** vou inspecionar se o painel existe. Se sim, adiciono o input de callouts. Se for apenas backend/lógica, pulo a UI nesta rodada e expongo o campo no tipo para uso programático.
+
+## Arquivos afetados
+
+- `src/types/google-ads.ts` — adicionar `callouts: string[]` e descriptions opcionais em `Sitelink`
+- `src/lib/google-ads/csv-builder.ts` — atualizar Sitelinks header/rows + nova seção Callouts
+- `src/components/google-ads/display-templates.ts` — alts descritivos
+- `src/components/google-ads/GoogleAdsConfigPanel.tsx` (se existir) — input de callouts
+- Eventuais defaults/mocks de `GoogleAdsCampaignConfig` — adicionar `callouts: []`
+
+## Riscos
+
+- Se já houver código que faz `Object.keys(config)` ou serializa o config, adicionar `callouts` é seguro (campo novo, opcional)
+- Limites do Google Ads: máx 20 callouts por campanha, 25 caracteres cada — vou validar e truncar no builder
+- Sitelinks: descrições têm máx 35 caracteres cada — sanitizar no builder
 
