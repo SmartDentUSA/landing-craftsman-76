@@ -31,6 +31,12 @@ window.__NAV_DATA__ = [
     "brand": null
   },
   {
+    "name": "Quais produtos Smart Dent usar para caracterização gengival em próteses?",
+    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-caracterizacao-gengival-em-proteses",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Quais produtos Smart Dent usar para coroa sobre implante unitária?",
     "url": "https://smartdent.com.br/blog/uais-produtos-mart-ent-usar-para-coroa-sobre-implante-unitaria",
     "isHome": false,
