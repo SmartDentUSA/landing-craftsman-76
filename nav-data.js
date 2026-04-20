@@ -13,6 +13,12 @@ window.__NAV_DATA__ = [
     "brand": null
   },
   {
+    "name": "Do Escaneamento à Cimentação com Vitality em 2 Horas — Caso Clínico Dr. Weber Ricci",
+    "url": "https://smartdent.com.br/blog/caso-clinico-dr-weber-ricci-coroa-posterior-vitality-2-horas-chairside",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Imersão 3 Dias Chairside Print",
     "url": "https://smartdent.com.br/blog/onbording",
     "isHome": false,
@@ -20,7 +26,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "QRCode",
-    "url": "https://smartdent.com.br/suport-resurces ",
+    "url": "https://smartdent.com.br/support-resources",
     "isHome": false,
     "brand": null
   },
