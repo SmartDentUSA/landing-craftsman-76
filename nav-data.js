@@ -1,14 +1,14 @@
 /* Smart Dent Navigation Data - Auto-generated */
 window.__NAV_DATA__ = [
   {
-    "name": "Comparativo Scanners intraorais ",
-    "url": "https://smartdent.com.br/comparativo-scanners-intraorais",
-    "isHome": false,
+    "name": "Home",
+    "url": "https://smartdent.com.br/",
+    "isHome": true,
     "brand": null
   },
   {
-    "name": "Home",
-    "url": "https://smartdent.com.br/manuais",
+    "name": "Comparativo Scanners intraorais ",
+    "url": "https://smartdent.com.br/produtos/comparativo-scanners-intraorais",
     "isHome": false,
     "brand": null
   },
@@ -20,7 +20,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "QRCode",
-    "url": "https://smartdent.com.br/support-resources",
+    "url": "https://smartdent.com.br/suport-resurces ",
     "isHome": false,
     "brand": null
   },
