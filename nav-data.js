@@ -25,6 +25,12 @@ window.__NAV_DATA__ = [
     "brand": null
   },
   {
+    "name": "Quais produtos Smart Dent usar para coroa sobre implante unitária?",
+    "url": "https://smartdent.com.br/blog/uais-produtos-mart-ent-usar-para-coroa-sobre-implante-unitaria",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Rayshape Edge Mini a Impressora 3D para Odontologia",
     "url": "https://smartdent.com.br/linknabio",
     "isHome": false,
