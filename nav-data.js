@@ -37,6 +37,12 @@ window.__NAV_DATA__ = [
     "brand": "Smart Dent"
   },
   {
+    "name": "Quais produtos Smart Dent usar para cimentação de facetas e laminados cerâmicos?",
+    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-cimentacao-de-facetas-e-laminados-cermicos",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Quais produtos Smart Dent usar para coroa sobre implante unitária?",
     "url": "https://smartdent.com.br/blog/uais-produtos-mart-ent-usar-para-coroa-sobre-implante-unitaria",
     "isHome": false,
