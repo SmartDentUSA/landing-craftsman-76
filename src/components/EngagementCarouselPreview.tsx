@@ -1466,36 +1466,89 @@ export async function generateEngagementSlideVideo(
 ): Promise<Blob> {
   const W = SLIDE_W;
   const H = SLIDE_H;
+  const urlPreview = videoUrl.substring(0, 80);
 
-  // Load video
+  // STEP 1 — Pre-fetch the video as a Blob to bypass CORS / canvas tainting.
+  // Blob URLs are always treated as same-origin, so MediaRecorder won't throw SecurityError.
+  let blobUrl: string | null = null;
+  let usingBlobUrl = false;
+  try {
+    if (/^https?:\/\//i.test(videoUrl)) {
+      const resp = await Promise.race([
+        fetch(videoUrl, { mode: 'cors', credentials: 'omit' }),
+        new Promise<Response>((_, reject) =>
+          setTimeout(() => reject(new Error('Video fetch timeout (20s)')), 20_000),
+        ),
+      ]);
+      if (!resp.ok) throw new Error(`Video fetch HTTP ${resp.status}`);
+      const blob = await resp.blob();
+      blobUrl = URL.createObjectURL(blob);
+      usingBlobUrl = true;
+    }
+  } catch (fetchErr) {
+    console.warn('[VIDEO_RENDER_FAIL]', { phase: 'prefetch', slideNum, urlPreview, error: (fetchErr as Error)?.message });
+    // Continue with raw URL as fallback — may still work if CORS headers are present.
+    blobUrl = null;
+  }
+
+  // STEP 2 — Load the video element
   const videoEl = document.createElement('video');
-  videoEl.crossOrigin = 'anonymous';
+  if (!usingBlobUrl) {
+    // Only set crossOrigin when using a remote URL; blob URLs are same-origin.
+    videoEl.crossOrigin = 'anonymous';
+  }
   videoEl.muted = true;
   videoEl.playsInline = true;
   videoEl.preload = 'auto';
-  videoEl.src = videoUrl;
+  videoEl.src = blobUrl ?? videoUrl;
 
-  await Promise.race([
-    new Promise<void>((resolve, reject) => {
-      videoEl.onloadeddata = () => resolve();
-      videoEl.onerror = () => reject(new Error('Failed to load video for export'));
-      videoEl.load();
-    }),
-    new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Video load timeout (15s)')), 15_000)),
-  ]);
+  const cleanup = () => {
+    if (blobUrl) {
+      try { URL.revokeObjectURL(blobUrl); } catch { /* noop */ }
+    }
+  };
 
-  // Create offscreen canvas
+  try {
+    await Promise.race([
+      new Promise<void>((resolve, reject) => {
+        videoEl.onloadeddata = () => resolve();
+        videoEl.onerror = () => reject(new Error('Failed to load video for export'));
+        videoEl.load();
+      }),
+      new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Video load timeout (15s)')), 15_000)),
+    ]);
+  } catch (loadErr) {
+    console.error('[VIDEO_RENDER_FAIL]', { phase: 'load', slideNum, urlPreview, usingBlobUrl, error: (loadErr as Error)?.message });
+    cleanup();
+    throw loadErr;
+  }
+
+  // STEP 3 — Validate duration (Infinity / NaN / 0 → fallback to 10s)
+  let duration = videoEl.duration;
+  if (!isFinite(duration) || isNaN(duration) || duration <= 0) {
+    console.warn('[VIDEO_RENDER_FAIL]', { phase: 'duration_invalid', slideNum, raw: videoEl.duration });
+    duration = 10;
+  }
+  duration = Math.min(duration, 60); // cap at 60s
+
+  // STEP 4 — Setup canvas + recorder
   const canvas = document.createElement('canvas');
   canvas.width = W;
   canvas.height = H;
   const ctx = canvas.getContext('2d')!;
 
-  // Setup recording
   const stream = canvas.captureStream(30); // 30fps
   const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
     ? 'video/webm;codecs=vp9'
     : 'video/webm';
-  const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 });
+  let recorder: MediaRecorder;
+  try {
+    recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 });
+  } catch (recErr) {
+    console.error('[VIDEO_RENDER_FAIL]', { phase: 'recorder_init', slideNum, error: (recErr as Error)?.message });
+    cleanup();
+    throw recErr;
+  }
   const chunks: Blob[] = [];
   recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
 
@@ -1504,34 +1557,62 @@ export async function generateEngagementSlideVideo(
       const blob = new Blob(chunks, { type: mimeType });
       resolve(blob);
     };
-    recorder.onerror = (e) => reject(e);
+    recorder.onerror = (e) => {
+      console.error('[VIDEO_RENDER_FAIL]', { phase: 'recorder_error', slideNum, error: e });
+      reject(new Error('MediaRecorder failed (likely SecurityError from tainted canvas)'));
+    };
   });
 
-  // Play and record
-  recorder.start();
-  videoEl.currentTime = 0;
-  await videoEl.play();
+  // STEP 5 — Test draw to detect canvas tainting BEFORE recorder.start()
+  try {
+    ctx.drawImage(videoEl, 0, 0, W, H);
+    // Touching pixel data triggers SecurityError if tainted
+    ctx.getImageData(0, 0, 1, 1);
+  } catch (taintErr) {
+    console.error('[VIDEO_RENDER_FAIL]', { phase: 'canvas_tainted', slideNum, urlPreview, usingBlobUrl, error: (taintErr as Error)?.message });
+    cleanup();
+    throw new Error('Canvas tainted (CORS): ' + ((taintErr as Error)?.message ?? 'unknown'));
+  }
+
+  // STEP 6 — Play and record
+  try {
+    recorder.start();
+    videoEl.currentTime = 0;
+    await videoEl.play();
+  } catch (playErr) {
+    console.error('[VIDEO_RENDER_FAIL]', { phase: 'play', slideNum, error: (playErr as Error)?.message });
+    cleanup();
+    throw playErr;
+  }
 
   const fps = 30;
-  const duration = Math.min(videoEl.duration || 10, 60); // cap at 60s
   const totalFrames = Math.ceil(duration * fps);
   let frame = 0;
 
   await new Promise<void>((resolve) => {
     const drawFrame = () => {
       if (videoEl.ended || videoEl.paused || frame >= totalFrames) {
-        recorder.stop();
+        try { recorder.stop(); } catch { /* noop */ }
         resolve();
         return;
       }
-      drawSlideFrameWithVideo(ctx, slideNum, videoEl, texts, primaryColor, accentColor);
+      try {
+        drawSlideFrameWithVideo(ctx, slideNum, videoEl, texts, primaryColor, accentColor);
+      } catch (drawErr) {
+        console.error('[VIDEO_RENDER_FAIL]', { phase: 'draw_frame', slideNum, frame, error: (drawErr as Error)?.message });
+        try { recorder.stop(); } catch { /* noop */ }
+        resolve();
+        return;
+      }
       frame++;
       requestAnimationFrame(drawFrame);
     };
     requestAnimationFrame(drawFrame);
   });
 
-  return recordingDone;
+  const result = await recordingDone;
+  cleanup();
+  return result;
 }
 
 // Reuse fetchAsDataUrl from Strategic
