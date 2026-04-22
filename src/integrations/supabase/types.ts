@@ -95,6 +95,13 @@ export type Database = {
             referencedRelation: "products_repository"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "ads_generation_benchmark_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_completeness"
+            referencedColumns: ["id"]
+          },
         ]
       }
       aftersales_messages: {
@@ -131,6 +138,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products_repository"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aftersales_messages_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_completeness"
             referencedColumns: ["id"]
           },
         ]
@@ -754,8 +768,11 @@ export type Database = {
           created_at: string | null
           cta_url: string
           deployment_history: Json | null
+          google_indexed: boolean | null
+          google_indexed_at: string | null
           id: string
           is_homepage: boolean | null
+          lang: string | null
           name: string
           original_html: string
           page_path: string | null
@@ -780,8 +797,11 @@ export type Database = {
           created_at?: string | null
           cta_url: string
           deployment_history?: Json | null
+          google_indexed?: boolean | null
+          google_indexed_at?: string | null
           id?: string
           is_homepage?: boolean | null
+          lang?: string | null
           name: string
           original_html: string
           page_path?: string | null
@@ -806,8 +826,11 @@ export type Database = {
           created_at?: string | null
           cta_url?: string
           deployment_history?: Json | null
+          google_indexed?: boolean | null
+          google_indexed_at?: string | null
           id?: string
           is_homepage?: boolean | null
+          lang?: string | null
           name?: string
           original_html?: string
           page_path?: string | null
@@ -1577,6 +1600,13 @@ export type Database = {
             referencedRelation: "products_repository"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "cs_messages_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_completeness"
+            referencedColumns: ["id"]
+          },
         ]
       }
       domain_config: {
@@ -2129,6 +2159,13 @@ export type Database = {
             referencedRelation: "products_repository"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "google_ads_campaigns_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_completeness"
+            referencedColumns: ["id"]
+          },
         ]
       }
       google_oauth_tokens: {
@@ -2161,6 +2198,30 @@ export type Database = {
           scopes?: string[] | null
           updated_at?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      indexing_debug_log: {
+        Row: {
+          created_at: string | null
+          http_status: number | null
+          id: number
+          response_body: string | null
+          url: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          http_status?: number | null
+          id?: number
+          response_body?: string | null
+          url?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          http_status?: number | null
+          id?: number
+          response_body?: string | null
+          url?: string | null
         }
         Relationships: []
       }
@@ -3065,6 +3126,13 @@ export type Database = {
             referencedRelation: "products_repository"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "product_blog_publications_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_completeness"
+            referencedColumns: ["id"]
+          },
         ]
       }
       product_coupons: {
@@ -3101,6 +3169,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: true
             referencedRelation: "products_repository"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_coupons_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "v_product_completeness"
             referencedColumns: ["id"]
           },
         ]
@@ -3833,9 +3908,12 @@ export type Database = {
           author_name: string
           author_url: string | null
           created_at: string
+          domain: string | null
           extracted_at: string
+          google_review_id: string | null
           id: string
           is_local_guide: boolean | null
+          is_verified: boolean | null
           place_id: string
           profile_photo_url: string | null
           rating: number
@@ -3850,9 +3928,12 @@ export type Database = {
           author_name: string
           author_url?: string | null
           created_at?: string
+          domain?: string | null
           extracted_at?: string
+          google_review_id?: string | null
           id?: string
           is_local_guide?: boolean | null
+          is_verified?: boolean | null
           place_id: string
           profile_photo_url?: string | null
           rating: number
@@ -3867,9 +3948,12 @@ export type Database = {
           author_name?: string
           author_url?: string | null
           created_at?: string
+          domain?: string | null
           extracted_at?: string
+          google_review_id?: string | null
           id?: string
           is_local_guide?: boolean | null
+          is_verified?: boolean | null
           place_id?: string
           profile_photo_url?: string | null
           rating?: number
@@ -3947,6 +4031,135 @@ export type Database = {
             referencedColumns: ["review_id"]
           },
         ]
+      }
+      smartdent_answer_blocks: {
+        Row: {
+          artigo_slug: string | null
+          categoria: string
+          created_at: string | null
+          fontes_verificadas: string[] | null
+          id: string
+          keywords: string[] | null
+          pergunta: string
+          prioridade: number | null
+          publicado: boolean | null
+          resposta_completa: string
+          resposta_curta: string
+          subcategoria: string | null
+        }
+        Insert: {
+          artigo_slug?: string | null
+          categoria: string
+          created_at?: string | null
+          fontes_verificadas?: string[] | null
+          id?: string
+          keywords?: string[] | null
+          pergunta: string
+          prioridade?: number | null
+          publicado?: boolean | null
+          resposta_completa: string
+          resposta_curta: string
+          subcategoria?: string | null
+        }
+        Update: {
+          artigo_slug?: string | null
+          categoria?: string
+          created_at?: string | null
+          fontes_verificadas?: string[] | null
+          id?: string
+          keywords?: string[] | null
+          pergunta?: string
+          prioridade?: number | null
+          publicado?: boolean | null
+          resposta_completa?: string
+          resposta_curta?: string
+          subcategoria?: string | null
+        }
+        Relationships: []
+      }
+      smartdent_reviews: {
+        Row: {
+          author_city: string | null
+          author_cro: string | null
+          author_lattes: string | null
+          author_name: string
+          author_orcid: string | null
+          author_specialty: string | null
+          author_title: string | null
+          created_at: string | null
+          domain: string | null
+          id: string
+          is_featured: boolean | null
+          is_verified: boolean | null
+          procedure_performed: string | null
+          product_reviewed: string | null
+          publish_status: string | null
+          rating_value: number | null
+          review_body: string
+          review_date: string | null
+          review_heading: string | null
+          source_type: string
+          source_url: string | null
+          updated_at: string | null
+          video_duration_seconds: number | null
+          video_embed_url: string | null
+          video_thumbnail_url: string | null
+        }
+        Insert: {
+          author_city?: string | null
+          author_cro?: string | null
+          author_lattes?: string | null
+          author_name: string
+          author_orcid?: string | null
+          author_specialty?: string | null
+          author_title?: string | null
+          created_at?: string | null
+          domain?: string | null
+          id?: string
+          is_featured?: boolean | null
+          is_verified?: boolean | null
+          procedure_performed?: string | null
+          product_reviewed?: string | null
+          publish_status?: string | null
+          rating_value?: number | null
+          review_body: string
+          review_date?: string | null
+          review_heading?: string | null
+          source_type: string
+          source_url?: string | null
+          updated_at?: string | null
+          video_duration_seconds?: number | null
+          video_embed_url?: string | null
+          video_thumbnail_url?: string | null
+        }
+        Update: {
+          author_city?: string | null
+          author_cro?: string | null
+          author_lattes?: string | null
+          author_name?: string
+          author_orcid?: string | null
+          author_specialty?: string | null
+          author_title?: string | null
+          created_at?: string | null
+          domain?: string | null
+          id?: string
+          is_featured?: boolean | null
+          is_verified?: boolean | null
+          procedure_performed?: string | null
+          product_reviewed?: string | null
+          publish_status?: string | null
+          rating_value?: number | null
+          review_body?: string
+          review_date?: string | null
+          review_heading?: string | null
+          source_type?: string
+          source_url?: string | null
+          updated_at?: string | null
+          video_duration_seconds?: number | null
+          video_embed_url?: string | null
+          video_thumbnail_url?: string | null
+        }
+        Relationships: []
       }
       spin_selling_solutions: {
         Row: {
@@ -4153,6 +4366,8 @@ export type Database = {
           recommended_products: Json | null
           recommended_resins: Json | null
           slug: string
+          slug_en: string | null
+          slug_es: string | null
           source_url: string | null
           synced_at: string | null
           systemb_id: string
@@ -4161,6 +4376,9 @@ export type Database = {
           title: string
           title_en: string | null
           title_es: string | null
+          translated_at: string | null
+          translated_en: boolean | null
+          translated_es: boolean | null
           updated_at: string | null
           updated_at_source: string | null
           veredict_data: Json | null
@@ -4204,6 +4422,8 @@ export type Database = {
           recommended_products?: Json | null
           recommended_resins?: Json | null
           slug: string
+          slug_en?: string | null
+          slug_es?: string | null
           source_url?: string | null
           synced_at?: string | null
           systemb_id: string
@@ -4212,6 +4432,9 @@ export type Database = {
           title: string
           title_en?: string | null
           title_es?: string | null
+          translated_at?: string | null
+          translated_en?: boolean | null
+          translated_es?: boolean | null
           updated_at?: string | null
           updated_at_source?: string | null
           veredict_data?: Json | null
@@ -4255,6 +4478,8 @@ export type Database = {
           recommended_products?: Json | null
           recommended_resins?: Json | null
           slug?: string
+          slug_en?: string | null
+          slug_es?: string | null
           source_url?: string | null
           synced_at?: string | null
           systemb_id?: string
@@ -4263,6 +4488,9 @@ export type Database = {
           title?: string
           title_en?: string | null
           title_es?: string | null
+          translated_at?: string | null
+          translated_en?: boolean | null
+          translated_es?: boolean | null
           updated_at?: string | null
           updated_at_source?: string | null
           veredict_data?: Json | null
@@ -5027,6 +5255,48 @@ export type Database = {
         }
         Relationships: []
       }
+      v_product_completeness: {
+        Row: {
+          approved: boolean | null
+          brand: string | null
+          campos_ok: number | null
+          category: string | null
+          id: string | null
+          image_url: string | null
+          individual_blog_content: Json | null
+          name: string | null
+          pct_preenchimento: number | null
+          product_url: string | null
+          slug: string | null
+        }
+        Insert: {
+          approved?: boolean | null
+          brand?: string | null
+          campos_ok?: never
+          category?: string | null
+          id?: string | null
+          image_url?: string | null
+          individual_blog_content?: Json | null
+          name?: string | null
+          pct_preenchimento?: never
+          product_url?: string | null
+          slug?: string | null
+        }
+        Update: {
+          approved?: boolean | null
+          brand?: string | null
+          campos_ok?: never
+          category?: string | null
+          id?: string | null
+          image_url?: string | null
+          individual_blog_content?: Json | null
+          name?: string | null
+          pct_preenchimento?: never
+          product_url?: string | null
+          slug?: string | null
+        }
+        Relationships: []
+      }
       v_reviews_with_responses: {
         Row: {
           action_needed: string | null
@@ -5282,6 +5552,7 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["app_role"]
       }
+      get_vault_secret: { Args: { secret_name: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
