@@ -180,20 +180,74 @@ export function EngagementCarouselSection({
   };
 
   const handleImageFileUpload = async (slideNum: number, file: File) => {
-    if (file.type.startsWith('video/')) {
-      // Video upload — store in Storage and save URL in slideTexts
-      const blobUrl = URL.createObjectURL(file);
-      // Show immediate preview via slideTexts (videoSrc is set by child)
+    const MAX_BYTES = 100 * 1024 * 1024; // 100 MB (alinhado ao bucket)
+    const ALLOWED_VIDEO_MIME = ['video/mp4', 'video/quicktime', 'video/webm', 'video/x-m4v'];
+    const ALLOWED_IMAGE_MIME = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
 
+    const fileSizeMB = (file.size / 1024 / 1024).toFixed(1);
+
+    // Validação client-side de tamanho
+    if (file.size > MAX_BYTES) {
+      console.error('[CAROUSEL_VIDEO_UPLOAD_FAIL]', {
+        reason: 'file_too_large',
+        slideNum,
+        fileSize: file.size,
+        fileSizeMB,
+        fileType: file.type,
+      });
+      toast({
+        title: "Arquivo muito grande",
+        description: `O arquivo tem ${fileSizeMB} MB. O limite é 100 MB. Comprima o vídeo e tente novamente.`,
+        variant: "destructive",
+        duration: 8000,
+      });
+      return;
+    }
+
+    if (file.type.startsWith('video/')) {
+      // Validação de tipo MIME para vídeo
+      if (!ALLOWED_VIDEO_MIME.includes(file.type)) {
+        console.error('[CAROUSEL_VIDEO_UPLOAD_FAIL]', {
+          reason: 'mime_not_allowed',
+          slideNum,
+          fileType: file.type,
+        });
+        toast({
+          title: "Formato de vídeo não suportado",
+          description: `Formato "${file.type}" não é aceito. Use MP4, MOV, WebM ou M4V.`,
+          variant: "destructive",
+          duration: 8000,
+        });
+        return;
+      }
+
+      // Video upload — store in Storage and save URL in slideTexts
       const ext = file.name.split('.').pop() || 'mp4';
       const path = `engagement-carousel/${productId}/slide_${slideNum}_video_${Date.now()}.${ext}`;
+
+      console.log('[CAROUSEL_VIDEO_UPLOAD_START]', { slideNum, fileSize: file.size, fileSizeMB, fileType: file.type, path });
+
       const { error: uploadError } = await supabase.storage
         .from('product-images')
-        .upload(path, file, { upsert: true });
+        .upload(path, file, { upsert: true, contentType: file.type });
 
       if (uploadError) {
-        console.error('Video upload error:', uploadError);
-        toast({ title: "Erro no upload do vídeo", description: uploadError.message, variant: "destructive" });
+        console.error('[CAROUSEL_VIDEO_UPLOAD_FAIL]', {
+          reason: 'storage_error',
+          slideNum,
+          fileSize: file.size,
+          fileSizeMB,
+          fileType: file.type,
+          path,
+          error: uploadError,
+          message: uploadError.message,
+        });
+        toast({
+          title: "Erro no upload do vídeo",
+          description: `${uploadError.message} (arquivo: ${fileSizeMB} MB)`,
+          variant: "destructive",
+          duration: 8000,
+        });
         return;
       }
 
@@ -202,8 +256,25 @@ export function EngagementCarouselSection({
         .getPublicUrl(path);
 
       if (urlData?.publicUrl) {
+        console.log('[CAROUSEL_VIDEO_UPLOAD_SUCCESS]', { slideNum, publicUrl: urlData.publicUrl });
         handleSlideTextChange(slideNum, 'videoStorageUrl', urlData.publicUrl);
+        toast({
+          title: "✅ Vídeo enviado",
+          description: `Slide ${slideNum} atualizado (${fileSizeMB} MB).`,
+          duration: 4000,
+        });
       }
+      return;
+    }
+
+    // Validação de tipo para imagem
+    if (file.type.startsWith('image/') && !ALLOWED_IMAGE_MIME.includes(file.type)) {
+      toast({
+        title: "Formato de imagem não suportado",
+        description: `Formato "${file.type}" não é aceito. Use PNG, JPEG, WEBP ou GIF.`,
+        variant: "destructive",
+        duration: 8000,
+      });
       return;
     }
 
