@@ -339,6 +339,7 @@ export function EngagementCarouselSection({
       const zip = new JSZip();
       let hasVideos = false;
       const skippedSlides: number[] = [];
+      const skipReasons: Record<number, string> = {};
 
       for (let i = 1; i <= 6; i++) {
         toast({ title: `📦 Exportando slide ${i}/6...` });
@@ -352,11 +353,11 @@ export function EngagementCarouselSection({
               if (videoUrl) {
                 // Try video export — attempt both sources before falling back
                 const sources = [videoUrl];
-                // Add alternate source if available
                 if (texts.videoSrc && texts.videoSrc !== videoUrl) sources.push(texts.videoSrc);
                 if (texts.videoStorageUrl && texts.videoStorageUrl !== videoUrl) sources.push(texts.videoStorageUrl);
 
                 let videoRendered = false;
+                let lastVideoErr: string = '';
                 for (const src of sources) {
                   try {
                     const videoBlob = await generateEngagementSlideVideo(i, src, texts, primaryColor, accentColor, brandName, handleName);
@@ -365,16 +366,34 @@ export function EngagementCarouselSection({
                     videoRendered = true;
                     break;
                   } catch (err) {
-                    console.warn(`Video render failed for slide ${i} with source ${src.substring(0, 60)}:`, err);
+                    lastVideoErr = (err as Error)?.message ?? String(err);
+                    console.error('[CAROUSEL_ZIP_EXPORT_FAIL]', {
+                      phase: 'video_render',
+                      slideNum: i,
+                      sourcePreview: src.substring(0, 80),
+                      error: lastVideoErr,
+                    });
                   }
                 }
 
                 if (!videoRendered) {
-                  console.warn(`All video sources failed for slide ${i}, falling back to PNG`);
-                  toast({ title: `⚠️ Slide ${i}: vídeo falhou, exportando como imagem` });
+                  console.warn(`All video sources failed for slide ${i}, falling back to PNG (${lastVideoErr})`);
+                  toast({
+                    title: `⚠️ Slide ${i}: vídeo falhou, exportando como imagem`,
+                    description: lastVideoErr,
+                    duration: 6000,
+                  });
                   let imgUrl = slideImageMap[i] || '';
                   if (imgUrl && !imgUrl.startsWith('data:')) {
-                    try { imgUrl = await fetchAsDataUrl(imgUrl); } catch (e) { console.warn(`fetchAsDataUrl failed slide ${i}:`, e); }
+                    try {
+                      imgUrl = await fetchAsDataUrl(imgUrl);
+                    } catch (e) {
+                      console.error('[CAROUSEL_ZIP_EXPORT_FAIL]', {
+                        phase: 'img_fetch',
+                        slideNum: i,
+                        error: (e as Error)?.message,
+                      });
+                    }
                   }
                   const blob = await generateEngagementSlidePNG(i, imgUrl, texts, primaryColor, accentColor, brandName, handleName);
                   zip.file(`slide_${i}.png`, blob);
@@ -382,7 +401,15 @@ export function EngagementCarouselSection({
               } else {
                 let imgUrl = slideImageMap[i] || '';
                 if (imgUrl && !imgUrl.startsWith('data:')) {
-                  try { imgUrl = await fetchAsDataUrl(imgUrl); } catch (e) { console.warn(`fetchAsDataUrl failed slide ${i}:`, e); }
+                  try {
+                    imgUrl = await fetchAsDataUrl(imgUrl);
+                  } catch (e) {
+                    console.error('[CAROUSEL_ZIP_EXPORT_FAIL]', {
+                      phase: 'img_fetch',
+                      slideNum: i,
+                      error: (e as Error)?.message,
+                    });
+                  }
                 }
                 const blob = await generateEngagementSlidePNG(i, imgUrl, texts, primaryColor, accentColor, brandName, handleName);
                 zip.file(`slide_${i}.png`, blob);
@@ -391,13 +418,23 @@ export function EngagementCarouselSection({
             new Promise<never>((_, reject) => setTimeout(() => reject(new Error(`Slide ${i} timeout (30s)`)), 30_000)),
           ]);
         } catch (err) {
-          console.error(`Slide ${i} export failed/timeout:`, err);
+          const msg = (err as Error)?.message ?? String(err);
+          console.error('[CAROUSEL_ZIP_EXPORT_FAIL]', { phase: 'slide_outer', slideNum: i, error: msg });
           skippedSlides.push(i);
+          skipReasons[i] = msg;
         }
       }
 
       if (Object.keys(zip.files).length === 0) {
-        toast({ title: "Erro", description: "Nenhum slide pôde ser exportado.", variant: "destructive" });
+        const reasonSummary = Object.entries(skipReasons)
+          .map(([n, r]) => `Slide ${n}: ${r}`)
+          .join(' | ') || 'Erro desconhecido — verifique o console.';
+        toast({
+          title: "Erro ao exportar .zip",
+          description: `Nenhum slide pôde ser exportado. ${reasonSummary}`,
+          variant: "destructive",
+          duration: 12000,
+        });
         return;
       }
 
@@ -410,13 +447,26 @@ export function EngagementCarouselSection({
       URL.revokeObjectURL(url);
 
       if (skippedSlides.length > 0) {
-        toast({ title: "⚠️ Download com avisos", description: `Slides ${skippedSlides.join(', ')} foram pulados por erro/timeout.` });
+        const reasonSummary = skippedSlides
+          .map((n) => `${n}: ${skipReasons[n] ?? 'desconhecido'}`)
+          .join(' | ');
+        toast({
+          title: "⚠️ Download com avisos",
+          description: `Slides pulados → ${reasonSummary}`,
+          duration: 10000,
+        });
       } else {
         toast({ title: "✅ Download iniciado!", description: hasVideos ? "PNGs + Vídeos com template em ZIP." : "6 PNGs 1080x1350 em ZIP." });
       }
     } catch (err) {
-      console.error('Erro no export:', err);
-      toast({ title: "Erro", description: "Falha ao exportar. Verifique o console para detalhes.", variant: "destructive" });
+      const msg = (err as Error)?.message ?? String(err);
+      console.error('[CAROUSEL_ZIP_EXPORT_FAIL]', { phase: 'outer', error: msg, stack: (err as Error)?.stack });
+      toast({
+        title: "Erro ao exportar .zip",
+        description: msg,
+        variant: "destructive",
+        duration: 12000,
+      });
     } finally {
       setExporting(false);
     }
