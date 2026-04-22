@@ -21,10 +21,14 @@ export interface EngagementSlideTexts {
 
 export type EngagementSlideTextsMap = Record<number, EngagementSlideTexts>;
 
-/** Unified video source resolver — use everywhere instead of ad-hoc checks */
+/** Unified video source resolver — use everywhere instead of ad-hoc checks.
+ * Prioriza a URL persistida (videoStorageUrl HTTPS) sobre o blob local efêmero (videoSrc),
+ * para que o vídeo não "suma" após reload quando o blob URL morre. */
 export function resolveVideoSource(texts: EngagementSlideTexts): string | null {
   if (texts.mediaType !== 'video') return null;
-  return texts.videoSrc || texts.videoStorageUrl || null;
+  const persisted = texts.videoStorageUrl;
+  if (persisted && /^https?:\/\//i.test(persisted)) return persisted;
+  return texts.videoSrc || persisted || null;
 }
 
 interface EngagementCarouselPreviewProps {
