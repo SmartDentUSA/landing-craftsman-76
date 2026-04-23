@@ -842,6 +842,11 @@ export function EngagementCarouselPreview({
 }
 
 // ========================= PNG Export =========================
+/**
+ * PNG export — renders the SAME JSX used in the preview (EngagementSlideRender)
+ * into an off-screen container and snapshots it via html2canvas.
+ * Guarantees pixel parity between editor preview and exported file.
+ */
 export async function generateEngagementSlidePNG(
   slideNum: number,
   imageUrl: string,
@@ -851,337 +856,100 @@ export async function generateEngagementSlidePNG(
   brandName: string,
   handleName: string,
 ): Promise<Blob> {
-  const W = SLIDE_W;
-  const H = SLIDE_H;
-  const canvas = document.createElement('canvas');
-  canvas.width = W;
-  canvas.height = H;
-  const ctx = canvas.getContext('2d')!;
-
-  const bg = texts.bgColor || DEFAULT_BG[slideNum] || '#1a1a1a';
-  const accent = texts.accentColor || accentColor || '#FF6B35';
-  const isDark = getLuminance(bg) < 0.5;
-  const textColor = isDark ? '#ffffff' : '#111111';
-  const subTextColor = isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)';
-  const imageScale = Number(texts.imageScale) || 100;
-
-  // Background
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, W, H);
-
-  // No header drawn (removed per design)
-
-  // Load image
-  let img: HTMLImageElement | null = null;
+  // 1. Pre-fetch image as data URL to avoid CORS tainting in html2canvas
+  let imgDataUrl = '';
   if (imageUrl) {
     try {
-      img = await new Promise<HTMLImageElement>((resolve, reject) => {
-        const i = new Image();
-        i.crossOrigin = 'anonymous';
-        i.onload = () => resolve(i);
-        i.onerror = reject;
-        i.src = imageUrl;
-      });
-    } catch { img = null; }
+      imgDataUrl = await fetchAsDataUrl(imageUrl);
+    } catch (err) {
+      console.warn('[ENGAGEMENT_PNG] Failed to prefetch image, using original URL:', err);
+      imgDataUrl = imageUrl;
+    }
   }
 
-  // Slide 1: Full-bleed cover with gradient
-  if (slideNum === 1) {
-    if (img) {
-      ctx.save();
-      const scaleF = imageScale / 100;
-      ctx.translate(W / 2, H / 2);
-      ctx.scale(scaleF, scaleF);
-      ctx.translate(-W / 2, -H / 2);
-      drawImageCover(ctx, img, 0, 0, W, H);
-      ctx.restore();
-    }
+  // 2. Build off-screen container at exact slide dimensions
+  const container = document.createElement('div');
+  container.style.cssText = [
+    'position:fixed',
+    'left:-99999px',
+    'top:0',
+    `width:${SLIDE_W}px`,
+    `height:${SLIDE_H}px`,
+    'pointer-events:none',
+    'z-index:-1',
+    'overflow:hidden',
+  ].join(';');
+  document.body.appendChild(container);
 
-    // Gradient overlay
-    const grad = ctx.createLinearGradient(0, H * 0.4, 0, H);
-    grad.addColorStop(0, 'rgba(0,0,0,0)');
-    grad.addColorStop(0.5, 'rgba(0,0,0,0.5)');
-    grad.addColorStop(1, 'rgba(0,0,0,0.85)');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, W, H);
+  // 3. Render React component into the container — strip video so html2canvas can snapshot a static frame
+  const exportTexts: EngagementSlideTexts = {
+    ...texts,
+    mediaType: 'image', // Force image rendering (videos can't be captured by html2canvas)
+    videoSrc: undefined,
+    videoStorageUrl: undefined,
+  };
 
-    // Title (max 3 lines)
-    const titleFont = '900 52px system-ui, -apple-system, sans-serif';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-    let titleEndY = drawRichText(ctx, (texts.title || '').slice(0, 150), 60, H - 260, W - 120, 62, titleFont, titleFont, '#ffffff', accent, 'left');
-
-    // Subtitle (max 2 lines)
-    if (texts.text) {
-      const bodyFont = '400 24px system-ui, -apple-system, sans-serif';
-      const bodyFontBold = '700 24px system-ui, -apple-system, sans-serif';
-      drawRichText(ctx, (texts.text).slice(0, 200), 60, titleEndY + 16, W - 120, 36, bodyFont, bodyFontBold, 'rgba(255,255,255,0.8)', accent, 'left');
-    }
-
-    // Slide number badge
-    ctx.beginPath();
-    ctx.arc(W - 78, H - 70, 30, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255,255,255,0.15)';
-    ctx.fill();
-    ctx.font = '900 28px system-ui, -apple-system, sans-serif';
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('1', W - 78, H - 70);
-
-    return new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob((blob) => {
-        if (blob) resolve(blob);
-        else reject(new Error('Canvas toBlob failed'));
-      }, 'image/png');
-    });
-  }
-
-  // ===== Slide 6 PNG: dedicated CTA layout (vertically centered) =====
-  if (slideNum === 6) {
-    const pad = 60;
-    const contentW = W - pad * 2;
-    const centerX = W / 2;
-    const displayTitle = (texts.title || '').slice(0, 120);
-    const displayBody = (texts.text || '').slice(0, 160);
-
-    // --- Pre-measure all blocks to center vertically ---
-    const titleFontSize = 40;
-    const titleFont = `900 ${titleFontSize}px system-ui, -apple-system, sans-serif`;
-    const titleLineH = titleFontSize * 1.25;
-    ctx.font = titleFont;
-    const titleLines = Math.min(measureWrappedLines(ctx, displayTitle, contentW), 4);
-    const titleH = titleLines * titleLineH;
-
-    const imgH = 320;
-
-    const bodyFontSize = 28;
-    const bodyFont = `400 ${bodyFontSize}px system-ui, -apple-system, sans-serif`;
-    const bodyFontBold = `700 ${bodyFontSize}px system-ui, -apple-system, sans-serif`;
-    const bodyLineH = bodyFontSize * 1.5;
-    ctx.font = bodyFont;
-    const bodyLines = displayBody ? Math.min(measureWrappedLines(ctx, displayBody, contentW), 3) : 0;
-    const bodyH = bodyLines * bodyLineH;
-
-    const ctaFontSize = 32;
-    const ctaFont = `900 ${ctaFontSize}px system-ui, -apple-system, sans-serif`;
-    ctx.font = ctaFont;
-    const btnPadX = 40;
-    const maxCtaTextW = contentW - btnPadX * 2;
-    const ctaWords = (texts.cta_label || '').split(' ');
-    const ctaLinesArr: string[] = [];
-    let ctaLine = '';
-    for (const word of ctaWords) {
-      const test = ctaLine + word + ' ';
-      if (ctx.measureText(test).width > maxCtaTextW && ctaLine) {
-        ctaLinesArr.push(ctaLine.trim());
-        ctaLine = word + ' ';
-      } else {
-        ctaLine = test;
+  const root = createRoot(container);
+  await new Promise<void>((resolve) => {
+    root.render(
+      React.createElement(EngagementSlideRender, {
+        slideNum,
+        texts: exportTexts,
+        imageUrl: imgDataUrl,
+        primaryColor,
+        accentColor,
+        brandName,
+        handleName,
+      })
+    );
+    // Wait for React to commit + image to decode
+    requestAnimationFrame(() => {
+      const imgs = container.querySelectorAll('img');
+      if (imgs.length === 0) {
+        setTimeout(resolve, 50);
+        return;
       }
-    }
-    if (ctaLine.trim()) ctaLinesArr.push(ctaLine.trim());
-    const ctaLineH = ctaFontSize * 1.3;
-    const btnPadY = 20;
-    const btnH = texts.cta_label ? ctaLinesArr.length * ctaLineH + btnPadY * 2 : 0;
-
-    const gap = 24;
-    const totalH = titleH + gap + imgH + gap + (bodyH > 0 ? bodyH + gap : 0) + btnH;
-    let curY = Math.max(pad, (H - totalH) / 2);
-
-    // --- Draw title ---
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-    curY = drawRichText(ctx, displayTitle, W / 2, curY, contentW, titleLineH, titleFont, titleFont, textColor, accent, 'center');
-    curY += gap;
-
-    // --- Draw image ---
-    if (img) {
-      ctx.save();
-      const scaleF = imageScale / 100;
-      const cx = W / 2;
-      const cy = curY + imgH / 2;
-      ctx.translate(cx, cy);
-      ctx.scale(scaleF, scaleF);
-      ctx.translate(-cx, -cy);
-      ctx.beginPath();
-      const rr = 16;
-      ctx.moveTo(pad + rr, curY);
-      ctx.lineTo(W - pad - rr, curY);
-      ctx.arcTo(W - pad, curY, W - pad, curY + rr, rr);
-      ctx.lineTo(W - pad, curY + imgH - rr);
-      ctx.arcTo(W - pad, curY + imgH, W - pad - rr, curY + imgH, rr);
-      ctx.lineTo(pad + rr, curY + imgH);
-      ctx.arcTo(pad, curY + imgH, pad, curY + imgH - rr, rr);
-      ctx.lineTo(pad, curY + rr);
-      ctx.arcTo(pad, curY, pad + rr, curY, rr);
-      ctx.closePath();
-      ctx.clip();
-      drawImageCover(ctx, img, pad, curY, contentW, imgH);
-      ctx.restore();
-    } else {
-      ctx.fillStyle = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
-      ctx.fillRect(pad, curY, contentW, imgH);
-    }
-    curY += imgH + gap;
-
-    // --- Draw body ---
-    if (displayBody) {
-      drawRichText(ctx, displayBody, W / 2, curY, contentW, bodyLineH, bodyFont, bodyFontBold, subTextColor, accent, 'center');
-      curY += bodyH + gap;
-    }
-
-    // --- Draw CTA button ---
-    if (texts.cta_label && ctaLinesArr.length > 0) {
-      const btnX = pad;
-      const btnW = contentW;
-      const btnY = curY;
-
-      ctx.fillStyle = accent;
-      ctx.beginPath();
-      const br = 20;
-      ctx.moveTo(btnX + br, btnY);
-      ctx.lineTo(btnX + btnW - br, btnY);
-      ctx.arcTo(btnX + btnW, btnY, btnX + btnW, btnY + br, br);
-      ctx.lineTo(btnX + btnW, btnY + btnH - br);
-      ctx.arcTo(btnX + btnW, btnY + btnH, btnX + btnW - br, btnY + btnH, br);
-      ctx.lineTo(btnX + br, btnY + btnH);
-      ctx.arcTo(btnX, btnY + btnH, btnX, btnY + btnH - br, br);
-      ctx.lineTo(btnX, btnY + br);
-      ctx.arcTo(btnX, btnY, btnX + br, btnY, br);
-      ctx.closePath();
-      ctx.fill();
-
-      ctx.fillStyle = getLuminance(accent) > 0.5 ? '#000' : '#fff';
-      ctx.font = ctaFont;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      const textStartY = btnY + btnPadY + ctaLineH / 2;
-      for (let li = 0; li < ctaLinesArr.length; li++) {
-        ctx.fillText(ctaLinesArr[li], centerX, textStartY + li * ctaLineH);
-      }
-    }
-
-    // Badge
-    ctx.beginPath();
-    ctx.arc(W - 78, H - 70, 30, 0, Math.PI * 2);
-    ctx.fillStyle = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)';
-    ctx.fill();
-    ctx.font = '900 28px system-ui, -apple-system, sans-serif';
-    ctx.fillStyle = isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('6', W - 78, H - 70);
-
-    return new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob((blob) => {
-        if (blob) resolve(blob);
-        else reject(new Error('Canvas toBlob failed'));
-      }, 'image/png');
+      Promise.all(
+        Array.from(imgs).map(
+          (i) =>
+            new Promise<void>((res) => {
+              if (i.complete && i.naturalWidth > 0) return res();
+              i.onload = () => res();
+              i.onerror = () => res();
+              setTimeout(res, 3000); // hard timeout per image
+            })
+        )
+      ).then(() => setTimeout(resolve, 80));
     });
-  }
-
-  // ===== Slides 2–5 PNG (centered layout) =====
-  const titleFontSize = 56;
-  const titleFont = `900 ${titleFontSize}px system-ui, -apple-system, sans-serif`;
-  const titleFontBold = titleFont;
-  const bodyFontSize = 36;
-  const bodyFont = `400 ${bodyFontSize}px system-ui, -apple-system, sans-serif`;
-  const bodyFontBoldF = `700 ${bodyFontSize}px system-ui, -apple-system, sans-serif`;
-  const titleLineH = titleFontSize * 1.2;
-  const bodyLineH = bodyFontSize * 1.5;
-  const contentW = W - 120;
-  const pad = 60;
-  const gap = 28;
-  const imgH = 440;
-
-  // Measure title height (clamped to max 4 lines)
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'top';
-  const titleMeasureEnd = drawRichText(ctx, texts.title || '', -9999, -9999, contentW, titleLineH, titleFont, titleFont, 'transparent', 'transparent', 'left');
-  const titleHRaw = titleMeasureEnd - (-9999);
-  const maxTitleH = 4 * titleLineH;
-  const titleH = Math.min(titleHRaw, maxTitleH);
-
-  // Measure body height (clamped to max 3 lines)
-  let bodyH = 0;
-  if (texts.text) {
-    const bodyMeasureEnd = drawRichText(ctx, texts.text, -9999, -9999, contentW, bodyLineH, bodyFont, bodyFontBoldF, 'transparent', 'transparent', 'left');
-    const bodyHRaw = bodyMeasureEnd - (-9999);
-    const maxBodyH = 3 * bodyLineH;
-    bodyH = Math.min(bodyHRaw, maxBodyH);
-  }
-
-  // Center vertically
-  const totalH = titleH + gap + imgH + (bodyH > 0 ? gap + bodyH : 0);
-  let curY = Math.max((H - totalH) / 2, 40);
-
-  // Draw title (clipped to titleH)
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(pad, curY, contentW, titleH);
-  ctx.clip();
-  drawRichText(ctx, texts.title || '', pad, curY, contentW, titleLineH, titleFont, titleFont, textColor, accent, 'left');
-  ctx.restore();
-  curY += titleH + gap;
-
-  // Draw image
-  if (img) {
-    ctx.save();
-    const scaleF = imageScale / 100;
-    const cx = W / 2;
-    const cy = curY + imgH / 2;
-    ctx.translate(cx, cy);
-    ctx.scale(scaleF, scaleF);
-    ctx.translate(-cx, -cy);
-    ctx.beginPath();
-    const rr = 16;
-    ctx.moveTo(pad + rr, curY);
-    ctx.lineTo(W - pad - rr, curY);
-    ctx.arcTo(W - pad, curY, W - pad, curY + rr, rr);
-    ctx.lineTo(W - pad, curY + imgH - rr);
-    ctx.arcTo(W - pad, curY + imgH, W - pad - rr, curY + imgH, rr);
-    ctx.lineTo(pad + rr, curY + imgH);
-    ctx.arcTo(pad, curY + imgH, pad, curY + imgH - rr, rr);
-    ctx.lineTo(pad, curY + rr);
-    ctx.arcTo(pad, curY, pad + rr, curY, rr);
-    ctx.closePath();
-    ctx.clip();
-    drawImageCover(ctx, img, pad, curY, contentW, imgH);
-    ctx.restore();
-  } else {
-    ctx.fillStyle = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
-    ctx.fillRect(pad, curY, contentW, imgH);
-  }
-  curY += imgH + gap;
-
-  // Draw body (clipped to bodyH)
-  if (texts.text && bodyH > 0) {
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(pad, curY, contentW, bodyH);
-    ctx.clip();
-    drawRichText(ctx, texts.text, pad, curY, contentW, bodyLineH, bodyFont, bodyFontBoldF, subTextColor, accent, 'left');
-    ctx.restore();
-  }
-
-  // Slide number badge
-  ctx.beginPath();
-  ctx.arc(W - 78, H - 70, 30, 0, Math.PI * 2);
-  ctx.fillStyle = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)';
-  ctx.fill();
-  ctx.font = '900 28px system-ui, -apple-system, sans-serif';
-  ctx.fillStyle = isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(String(slideNum), W - 78, H - 70);
-
-  return new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob((blob) => {
-      if (blob) resolve(blob);
-      else reject(new Error('Canvas toBlob failed'));
-    }, 'image/png');
   });
+
+  let blob: Blob | null = null;
+  try {
+    // 4. Snapshot via html2canvas at native resolution
+    const snapshot = await html2canvas(container, {
+      width: SLIDE_W,
+      height: SLIDE_H,
+      windowWidth: SLIDE_W,
+      windowHeight: SLIDE_H,
+      scale: 1,
+      useCORS: true,
+      allowTaint: false,
+      backgroundColor: null,
+      logging: false,
+      imageTimeout: 4000,
+    });
+
+    blob = await new Promise<Blob | null>((resolve) => {
+      snapshot.toBlob((b) => resolve(b), 'image/png');
+    });
+  } finally {
+    // 5. Cleanup
+    try { root.unmount(); } catch {}
+    try { container.remove(); } catch {}
+  }
+
+  if (!blob) throw new Error('html2canvas snapshot failed (toBlob returned null)');
+  return blob;
 }
 
 // ========================= Video Export with Overlay =========================
