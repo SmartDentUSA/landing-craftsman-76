@@ -1,120 +1,63 @@
 
 
-## Plano: paridade Preview ↔ PNG no Carrossel Visual (6 Layouts)
+## Plano: corrigir bugs de layout dos slides do Carrossel Visual
 
-### Diagnóstico
+### Diagnóstico revisado
 
-Os PNGs anexados (`slide-1-hook-7.png`, `slide-2-solucao-9.png`, etc.) **não vêm do Carrossel Engajamento** que corrigimos no turno anterior. Vêm de um **segundo gerador**: `🎨 Carrossel Visual — 6 Layouts de Alta Conversão`, em `src/components/StrategicCarouselPreview.tsx`.
+A paridade Preview ↔ PNG **já está 100% correta** depois do fix anterior — ambos renderizam o mesmo `StrategicSlideRender` (mesmo JSX, mesmas props). Confirmei isso lendo o código: linha 1066 (preview) e linha 1199 (export PNG) instanciam exatamente os mesmos componentes (`Slide1Hook`, `Slide2Solution`, etc.).
 
-Esse arquivo (1882 linhas) ainda usa o pipeline antigo:
-- **Preview JSX**: 6 componentes `Slide1Hook`, `Slide2Solution`, `Slide3Technical`, `Slide4Experience`, `Slide5Security`, `Slide6CTA` — cada um com layout próprio (split, full-bleed, cards, etc.)
-- **Export PNG**: `generateSlidePNG` (linha 1251 até ~1880, ~630 linhas de Canvas 2D manual) que reconstrói tudo com `measureText`, `roundRect`, `drawImageCover`
+**O problema real**: os bugs de layout existem **dentro dos próprios componentes** e ficam visíveis no PNG (1080×1350px nativo) mas **escondidos no preview** porque ele renderiza em escala 22% (`SLIDE_SCALE = 0.22 → 237×297px`). Em miniatura você não percebe que o texto colide ou estoura.
 
-Os dois pipelines divergiram. Sintomas visíveis nos PNGs:
+Os PNGs mostram 4 bugs reais nos componentes:
 
-| Slide | Sintoma no PNG | Causa no canvas |
+| Slide | Bug visível | Causa no JSX |
 |---|---|---|
-| 1 | Texto centralizado em vez do gancho posicionado pelo JSX, faixa colorida ausente | Canvas ignora `faixaVisible`/`faixaColor` |
-| 2 | Imagem do screenshot FDA cobre tela inteira, texto "Entendemos a sua dúvida..." preto sobrescrevendo a imagem | Canvas usa imagem full-bleed mas o JSX usa layout duas-colunas com card de texto |
-| 3 | Layout split funcionando porém ícones aparecem como `⚡ 🛡 ⭐` em quadrados pretos (canvas não renderiza emoji direito) | `ctx.fillText('⚡')` em algumas fontes vira tofu |
-| 4 | "OVEREDÍTO FINAL" cortado pela esquerda, kicker "16 ANOS DE PESQUISA…5 AN" truncado no meio da palavra | Canvas não respeita padding-left e trunca sem ellipsis |
-| 5 | Título "SEGURA E DEFINITIVA" sobrepondo os 3 cards de bullets do meio | Canvas desenha título e cards em coordenadas fixas que colidem quando o título tem 4 linhas |
-| 6 | OK | Layout simples bate |
+| 1 | Texto do gancho com **fundo sem contraste** (texto branco com sombra fraca sobre área clara da imagem) | Overlay opacity baixo + ausência de backdrop sólido atrás do texto |
+| 2 | Texto preto "Entendemos a sua dúvida…" **colado/encostando** na imagem screenshot FDA gigante | Imagem com `maxHeight: 85%` ocupa quase tudo + zero gap garantido entre imagem e bloco de texto inferior |
+| 4 | Kicker truncado "16 ANOS DE PESQUISA…5 AN" + título com palavra cortada "OVEREDÍTO" | Falta `wordBreak`/`overflowWrap` + container sem largura máxima respeitando padding |
+| 5 | Título de 4 linhas (86px) **sobreposto** aos 3 cards de bullets (120px cada) | `flex column + justify-content: center` sem `overflow` controlado: total = ~1300px > 1350-160 padding = 1190px disponível → cards sobem por cima do título |
 
-Mesmo problema estrutural que o Engagement antes do fix anterior — manter dois pipelines é insustentável e a divergência é intrínseca.
+Slide 3 e 6 estão OK.
 
-### Solução: aplicar Abordagem A (a mesma que já funcionou no Engagement)
+### Correções por slide (todas no mesmo arquivo)
 
-Trocar a função `generateSlidePNG` (canvas manual) por uma renderização real do JSX via `html2canvas`. Os componentes JSX viram a fonte única de verdade.
+**`src/components/StrategicCarouselPreview.tsx`**
 
-### O que muda em código
+**Slide 1 (Hook)** — adicionar backdrop sólido translúcido atrás do texto do gancho:
+- Wrap do `<h1>` em `<div>` com `background: rgba(0,0,0,0.55)`, `padding: 32px 48px`, `borderRadius: 16` para garantir leitura sobre qualquer imagem
+- Manter texto branco e drop-shadow já existentes
 
-**1. `src/components/StrategicCarouselPreview.tsx`**
+**Slide 2 (Apresentação)** — garantir respiro entre imagem e texto:
+- Trocar `maxHeight: '85%'` da imagem para `'65%'`, garantindo zona inferior protegida
+- Adicionar `gap` mínimo de 60px entre o flex container da imagem e o bloco de intro+nome
+- Adicionar `marginTop: 40` no bloco de texto inferior
 
-- **Adicionar componente exportado `StrategicSlideRender`** (irmão do `EngagementSlideRender`):
-  ```ts
-  export function StrategicSlideRender({ slideNum, image, primaryColor, accentColor, productData, texts }) {
-    if (slideNum === 1) return <Slide1Hook image={image} primaryColor={primaryColor} productData={productData} texts={texts} />;
-    if (slideNum === 2) return <Slide2Solution ... />;
-    if (slideNum === 3) return <Slide3Technical ... />;
-    if (slideNum === 4) return <Slide4Experience ... />;
-    if (slideNum === 5) return <Slide5Security ... />;
-    if (slideNum === 6) return <Slide6CTA ... />;
-    return null;
-  }
-  ```
-- **Reescrever `generateSlidePNG`** (substituir as ~630 linhas de canvas por ~60 linhas de orquestração html2canvas):
-  ```ts
-  export async function generateSlidePNG(slideNum, imageUrl, primaryColor, accentColor, productData, texts): Promise<Blob> {
-    // 1. Pre-fetch imagem como dataUrl (CORS-safe)
-    const imgDataUrl = imageUrl ? await fetchAsDataUrl(imageUrl).catch(() => imageUrl) : '';
-    
-    // 2. Container off-screen 1080x1350
-    const container = document.createElement('div');
-    container.style.cssText = 'position:fixed;left:-99999px;top:0;width:1080px;height:1350px;overflow:hidden;pointer-events:none;z-index:-1;';
-    document.body.appendChild(container);
-    
-    // 3. Render React no container
-    const root = createRoot(container);
-    await new Promise<void>(resolve => {
-      root.render(React.createElement(StrategicSlideRender, {
-        slideNum, image: imgDataUrl, primaryColor, accentColor, productData, texts
-      }));
-      requestAnimationFrame(() => {
-        // wait images decode (mesmo padrão do Engagement fix)
-        const imgs = container.querySelectorAll('img');
-        Promise.all(Array.from(imgs).map(i => 
-          i.complete && i.naturalWidth > 0 
-            ? Promise.resolve() 
-            : new Promise<void>(r => { i.onload = i.onerror = () => r(); setTimeout(r, 3000); })
-        )).then(() => setTimeout(resolve, 80));
-      });
-    });
-    
-    let blob: Blob | null = null;
-    try {
-      const snapshot = await html2canvas(container, {
-        width: 1080, height: 1350, windowWidth: 1080, windowHeight: 1350,
-        scale: 1, useCORS: true, allowTaint: false, backgroundColor: null, logging: false, imageTimeout: 4000,
-      });
-      blob = await new Promise<Blob | null>(resolve => snapshot.toBlob(resolve, 'image/png'));
-    } finally {
-      try { root.unmount(); } catch {}
-      try { container.remove(); } catch {}
-    }
-    if (!blob) throw new Error('html2canvas snapshot failed');
-    return blob;
-  }
-  ```
-- **Manter** as funções helper de canvas usadas SÓ pelo `generateSlidePNG` antigo (`roundRect`, `drawBadge`, `drawImageCover`, `loadImage`, etc.) — apagar para reduzir os 1882 linhas para ~1250 linhas.
-- **Imports novos** no topo: `import { createRoot } from 'react-dom/client';` e `import html2canvas from 'html2canvas';` (já instalados, usados no Engagement).
+**Slide 4 (Experiência)** — corrigir truncamento de palavras:
+- Kicker e título: trocar `WebkitLineClamp` por `wordBreak: 'break-word', overflowWrap: 'anywhere'` quando texto é longo
+- Garantir `maxWidth: '100%'` no container de texto da coluna direita (40% width)
+- Reduzir font-size do título de 86px → 72px quando o texto tem mais de 60 chars
 
-**2. `src/components/InstagramCopyGenerator.tsx`**
+**Slide 5 (Segurança)** — resolver colisão título vs cards:
+- Trocar layout `flex column + justify-content: center` por `flex column + justify-content: flex-start + paddingTop: 120`
+- Adicionar `flexShrink: 0` em todos os cards para não comprimirem
+- Reduzir font-size do título de 86px → 64px (quebra natural em 2-3 linhas em vez de 4)
+- Reduzir altura mínima dos cards de `minHeight: 120` → `minHeight: 96`
+- Garantir `gap: 32` entre título e bloco de cards
 
-- **Sem mudanças na assinatura**: `handleExportZip` (linha 794) já chama `generateSlidePNG(i, safeDataUrl, primaryColor, accentColor, productData, textsForSlide)` — interface mantida igual, só a implementação interna muda.
+### Fora de escopo
+
+- Não vou mexer no `StrategicSlideRender` nem no `generateSlidePNG` — eles estão corretos.
+- Não vou mexer no Carrossel de Engajamento (já corrigido turno anterior).
 
 ### Validação esperada
 
-Após o fix, ao clicar "📦 Baixar ZIP" no Carrossel Visual, os 6 PNGs sairão **idênticos** ao preview na tela:
-- Slide 1: gancho posicionado e faixa colorida visível
-- Slide 2: layout duas-colunas com card de texto preservado (não imagem full-bleed)
-- Slide 3: ícones renderizados via Lucide (SVG, sem tofu de emoji)
-- Slide 4: kicker, título e bullets nas posições corretas, sem truncar palavras
-- Slide 5: título acima dos cards, cards renderizados como blocos com background
-- Slide 6: já estava OK, continua OK
-
-### Risco
-
-- Mesmo risco do fix anterior do Engagement: cada PNG passa de ~50ms (canvas) para ~500ms (html2canvas). 6 slides → +3s no ZIP. Aceitável.
-- O preview do Slide 4 ("Experience") usa `buildImpactNarrative` que lê `productData` — preciso garantir que o componente recebe o mesmo `productData` quando renderizado off-screen para export. Vou passar exatamente as mesmas props que o preview já usa.
+Após o fix, os 6 PNGs e o preview vão **ambos** ficar visualmente corretos (eles continuam idênticos entre si, mas agora os layouts em si não quebram em 1080×1350). O preview pequeno (22%) também vai se beneficiar — texto não colide mais.
 
 ### Arquivos modificados
 
-- `src/components/StrategicCarouselPreview.tsx` — adicionar `StrategicSlideRender`, reescrever `generateSlidePNG`, remover ~600 linhas de canvas obsoleto
-- (sem mudanças em `InstagramCopyGenerator.tsx`)
+- `src/components/StrategicCarouselPreview.tsx` — ajustes pontuais nos componentes `Slide1Hook` (~5 linhas), `Slide2Solution` (~5 linhas), `Slide4Experience` (~10 linhas), `Slide5Security` (~10 linhas). Total ~30 linhas alteradas.
 
-### Não escopo (fora deste plano)
+### Risco
 
-- Vídeos no Carrossel Visual: este gerador hoje só exporta PNG estático, não tem `mediaType: 'video'` como o Engagement. Mantém igual.
-- Mudanças visuais nos layouts JSX: se você quer ajustar **como** o preview é desenhado (por ex., mudar a posição do título do slide 5 para não colidir com cards), é um plano separado de redesign — este aqui só garante que o PNG = preview.
+Mudar font-size do título do Slide 5 de 86 → 64px é uma decisão visual — vai ficar menos impactante mas mais legível. Se preferir manter 86px e em vez disso truncar com `WebkitLineClamp: 2` + ellipsis, é só dizer.
 
