@@ -456,11 +456,11 @@ function Slide1Hook({ image, primaryColor, productData, texts }: { image: string
             const r = parseInt(clean.slice(0, 2), 16);
             const g = parseInt(clean.slice(2, 4), 16);
             const b = parseInt(clean.slice(4, 6), 16);
-            return `rgba(${r},${g},${b},0.58)`;
+            return `rgba(${r},${g},${b},0.78)`;
           })(),
           textAlign: 'center',
         }}>
-          <p style={{ color: '#ffffff', fontWeight: 400, fontSize: 52, lineHeight: 1.3, margin: 0 }}>{hook}</p>
+          <p style={{ color: '#ffffff', fontWeight: 500, fontSize: 52, lineHeight: 1.3, margin: 0, textShadow: '0 2px 8px rgba(0,0,0,0.6)' }}>{hook}</p>
         </div>
       )}
 
@@ -495,14 +495,14 @@ function Slide2Solution({ image, primaryColor, accentColor, productData, texts }
           {category}
         </div>
       )}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px 0', minHeight: 0 }}>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px 0', minHeight: 0, width: '100%' }}>
         {image ? (
           <img
             src={image}
             alt="produto"
             style={{
               maxWidth: '88%',
-              maxHeight: '85%',
+              maxHeight: '65%',
               height: 'auto',
               width: 'auto',
               objectFit: 'contain',
@@ -516,7 +516,7 @@ function Slide2Solution({ image, primaryColor, accentColor, productData, texts }
           <div style={{ width: 500, height: 500, background: '#e0e0e0', borderRadius: 20 }} />
         )}
       </div>
-      <div style={{ textAlign: 'center' }}>
+      <div style={{ textAlign: 'center', marginTop: 40 }}>
         {introLabel && (
           <div style={{ marginBottom: 12 }}>
             <span style={{ fontSize: 32, fontWeight: 400, color: subTextColor, letterSpacing: 3, textTransform: 'uppercase' as const }}>
@@ -928,21 +928,22 @@ function Slide4Experience({ image, primaryColor, productData, texts }: { image: 
 
       {/* Painel direito — textos (58%) */}
       <div style={{
-        flex: 1,
+        flex: 1, minWidth: 0, maxWidth: '58%',
         display: 'flex', flexDirection: 'column', justifyContent: 'center',
         padding: '80px 60px 80px 48px', gap: 18, background: '#0f0f14',
+        overflow: 'hidden',
       }}>
         {/* Label contextual */}
-        <p style={{ color: '#fff', opacity: 0.65, fontSize: labelFontSize, fontWeight: 700, margin: 0, textTransform: 'uppercase' as const, letterSpacing: 3, wordBreak: 'break-word' as const }}>{finalLabel}</p>
+        <p style={{ color: '#fff', opacity: 0.65, fontSize: labelFontSize, fontWeight: 700, margin: 0, textTransform: 'uppercase' as const, letterSpacing: 3, wordBreak: 'break-word' as const, overflowWrap: 'anywhere' as const, maxWidth: '100%' }}>{finalLabel}</p>
 
         {/* Divider accent */}
         <div style={{ width: 56, height: 3, background: primaryColor, borderRadius: 2, flexShrink: 0 }} />
 
         {/* Headline — benefício principal */}
-        <h2 style={{ color: '#ffffff', fontSize: kwFontSize, fontWeight: 900, margin: 0, lineHeight: 1.05, wordBreak: 'break-word' as const }}>{finalKeyword}</h2>
+        <h2 style={{ color: '#ffffff', fontSize: kwFontSize, fontWeight: 900, margin: 0, lineHeight: 1.05, wordBreak: 'break-word' as const, overflowWrap: 'anywhere' as const, maxWidth: '100%', hyphens: 'auto' as const }}>{finalKeyword}</h2>
 
         {/* Texto de impacto — síntese dor → resolução */}
-        <p style={{ color: '#d8d8d8', fontSize: impactFontSize, lineHeight: 1.55, margin: 0, fontWeight: 400, wordBreak: 'break-word' as const }}>{finalImpact}</p>
+        <p style={{ color: '#d8d8d8', fontSize: impactFontSize, lineHeight: 1.55, margin: 0, fontWeight: 400, wordBreak: 'break-word' as const, overflowWrap: 'anywhere' as const, maxWidth: '100%' }}>{finalImpact}</p>
 
         {/* Bullets de prova técnica */}
         {finalBullets.length > 0 && (
@@ -986,19 +987,19 @@ function Slide5Security({ image, primaryColor, productData, texts }: { image: st
       <div style={{ position: 'absolute', top: 60, left: 60, width: 70, height: 70, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
         <span style={{ color: '#fff', fontWeight: 900, fontSize: 30 }}>5</span>
       </div>
-      <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px', gap: 50, zIndex: 2 }}>
-        <h2 style={{ color: '#ffffff', fontSize: 86, fontWeight: 900, margin: 0, textAlign: 'center', lineHeight: 1.1 }}>{title}</h2>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 28, width: '100%' }}>
+      <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', padding: '120px 80px 80px', gap: 32, zIndex: 2 }}>
+        <h2 style={{ color: '#ffffff', fontSize: 64, fontWeight: 900, margin: 0, textAlign: 'center', lineHeight: 1.1, wordBreak: 'break-word' as const, overflowWrap: 'anywhere' as const, maxWidth: '100%', flexShrink: 0 }}>{title}</h2>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 24, width: '100%' }}>
           {badges.map((badge, idx) => (
-            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 36, background: 'rgba(255,255,255,0.12)', borderRadius: 20, padding: '20px 44px', minHeight: 120, backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.2)' }}>
-              <div style={{ width: 72, height: 72, borderRadius: '50%', background: primaryColor, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" width="36" height="36">
+            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 32, background: 'rgba(255,255,255,0.12)', borderRadius: 20, padding: '18px 36px', minHeight: 96, backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.2)', flexShrink: 0 }}>
+              <div style={{ width: 64, height: 64, borderRadius: '50%', background: primaryColor, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" width="32" height="32">
                   {badge.icon === 'shield' && <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>}
                   {badge.icon === 'award' && <><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></>}
                   {badge.icon === 'check' && <><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>}
                 </svg>
               </div>
-              <span style={{ color: '#ffffff', fontSize: 40, fontWeight: 700, display: 'block', wordBreak: 'break-word' as const, lineHeight: 1.3 }}>{badge.label}</span>
+              <span style={{ color: '#ffffff', fontSize: 34, fontWeight: 700, display: 'block', wordBreak: 'break-word' as const, overflowWrap: 'anywhere' as const, lineHeight: 1.3, flex: 1, minWidth: 0 }}>{badge.label}</span>
             </div>
           ))}
         </div>
