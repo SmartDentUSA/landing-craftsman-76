@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import html2canvas from 'html2canvas';
+import { fetchAsDataUrl } from './StrategicCarouselPreview';
 import { Upload, Pencil, ChevronDown, ChevronUp, Video, ImageIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -1401,5 +1402,5 @@ export async function generateEngagementSlideVideo(
   return result;
 }
 
-// Reuse fetchAsDataUrl from Strategic
-export { fetchAsDataUrl } from './StrategicCarouselPreview';
+// Reuse fetchAsDataUrl from Strategic (imported above for internal use too)
+export { fetchAsDataUrl };
