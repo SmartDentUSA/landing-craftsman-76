@@ -1,4 +1,6 @@
 import React, { useState, useRef } from 'react';
+import { createRoot } from 'react-dom/client';
+import html2canvas from 'html2canvas';
 import { Upload, Pencil, ChevronDown, ChevronUp, Video, ImageIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
