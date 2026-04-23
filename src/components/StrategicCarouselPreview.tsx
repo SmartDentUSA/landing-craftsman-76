@@ -1181,75 +1181,38 @@ export async function fetchAsDataUrl(url: string): Promise<string> {
   return url;
 }
 
-function loadImage(url: string): Promise<HTMLImageElement | null> {
-  return new Promise((resolve) => {
-    if (!url) return resolve(null);
-    const img = new Image();
-    // data: URLs never need crossOrigin
-    if (!url.startsWith('data:')) img.crossOrigin = 'anonymous';
-    img.onload = () => resolve(img);
-    img.onerror = () => {
-      // retry without crossOrigin as final fallback
-      if (!url.startsWith('data:')) {
-        const img2 = new Image();
-        img2.onload = () => resolve(img2);
-        img2.onerror = () => resolve(null);
-        img2.src = url;
-      } else {
-        resolve(null);
-      }
-    };
-    img.src = url;
-  });
+// ==================== StrategicSlideRender — single source of truth ====================
+// Renders the same JSX as the editor preview, used both for the in-app preview wrappers
+// and for the off-screen html2canvas snapshot during PNG export.
+export interface StrategicSlideRenderProps {
+  slideNum: number;
+  image: string;
+  primaryColor: string;
+  accentColor: string;
+  productData: ProductData;
+  texts?: Partial<SlideTextsType>;
 }
 
-function wrapText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number, align?: CanvasTextAlign): number {
-  const savedAlign = ctx.textAlign;
-  if (align) ctx.textAlign = align;
-  const words = text.split(' ');
-  let line = '';
-  let curY = y;
-  for (const word of words) {
-    const testLine = line + word + ' ';
-    if (ctx.measureText(testLine).width > maxWidth && line !== '') {
-      ctx.fillText(line.trim(), x, curY);
-      line = word + ' ';
-      curY += lineHeight;
-    } else {
-      line = testLine;
-    }
-  }
-  if (line.trim()) {
-    ctx.fillText(line.trim(), x, curY);
-    curY += lineHeight;
-  }
-  if (align) ctx.textAlign = savedAlign;
-  return curY;
+export function StrategicSlideRender({ slideNum, image, primaryColor, accentColor, productData, texts }: StrategicSlideRenderProps) {
+  const t: any = texts || {};
+  if (slideNum === 1) return <Slide1Hook image={image} primaryColor={primaryColor} productData={productData} texts={t[1]} />;
+  if (slideNum === 2) return <Slide2Solution image={image} primaryColor={primaryColor} accentColor={accentColor} productData={productData} texts={t[2]} />;
+  if (slideNum === 3) return <Slide3Technical image={image} primaryColor={primaryColor} accentColor={accentColor} productData={productData} texts={t[3]} />;
+  if (slideNum === 4) return <Slide4Experience image={image} primaryColor={primaryColor} productData={productData} texts={t[4]} />;
+  if (slideNum === 5) return <Slide5Security image={image} primaryColor={primaryColor} productData={productData} texts={t[5]} />;
+  if (slideNum === 6) return <Slide6CTA image={image} primaryColor={primaryColor} accentColor={accentColor} productData={productData} texts={t[6]} />;
+  return null;
 }
 
-function truncateToWidth(ctx: CanvasRenderingContext2D, text: string, maxW: number): string {
-  if (ctx.measureText(text).width <= maxW) return text;
-  let t = text;
-  while (ctx.measureText(t + '…').width > maxW && t.length > 1) t = t.slice(0, -1);
-  return t + '…';
-}
-
-function drawImageCover(
-  ctx: CanvasRenderingContext2D,
-  img: HTMLImageElement,
-  x: number, y: number, w: number, h: number
-) {
-  const iw = img.naturalWidth || img.width;
-  const ih = img.naturalHeight || img.height;
-  if (!iw || !ih) { ctx.drawImage(img, x, y, w, h); return; }
-  const scale = Math.max(w / iw, h / ih);
-  const sw = w / scale;
-  const sh = h / scale;
-  const sx = (iw - sw) / 2;
-  const sy = (ih - sh) / 2;
-  ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
-}
-
+/**
+ * PNG export — renders the SAME JSX used in the preview (StrategicSlideRender)
+ * into an off-screen container and snapshots it via html2canvas.
+ * Guarantees pixel parity between editor preview and exported file.
+ *
+ * The `texts` argument keeps the legacy flat shape (Record<string,string>) used
+ * by InstagramCopyGenerator, where each call already passes the texts for the
+ * specific slide being exported. We forward it under the proper slide key.
+ */
 export async function generateSlidePNG(
   slideNum: number,
   imageUrl: string,
@@ -1258,580 +1221,96 @@ export async function generateSlidePNG(
   productData: ProductData,
   texts?: Record<string, string>
 ): Promise<Blob> {
-  const W = 1080;
-  const H = 1350;
-  const canvas = document.createElement('canvas');
-  canvas.width = W;
-  canvas.height = H;
-  const ctx = canvas.getContext('2d')!;
-
-  const textOnPrimary = getLuminance(primaryColor) > 0.5 ? '#000000' : '#ffffff';
-  const textOnAccent = getLuminance(accentColor) > 0.5 ? '#000000' : '#ffffff';
-
-  const img = await loadImage(imageUrl);
-
-  const benefits = productData.benefits || [];
-  const features = productData.features || [];
-  const specs = productData.technicalSpecs || [];
-
-  function roundRect(x: number, y: number, w: number, h: number, r: number) {
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.lineTo(x + w - r, y);
-    ctx.arcTo(x + w, y, x + w, y + r, r);
-    ctx.lineTo(x + w, y + h - r);
-    ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
-    ctx.lineTo(x + r, y + h);
-    ctx.arcTo(x, y + h, x, y + h - r, r);
-    ctx.lineTo(x, y + r);
-    ctx.arcTo(x, y, x + r, y, r);
-    ctx.closePath();
+  // 1. Pre-fetch image as data URL to avoid CORS tainting in html2canvas
+  let imgDataUrl = '';
+  if (imageUrl) {
+    try {
+      imgDataUrl = await fetchAsDataUrl(imageUrl);
+    } catch (err) {
+      console.warn('[STRATEGIC_PNG] Failed to prefetch image, using original URL:', err);
+      imgDataUrl = imageUrl;
+    }
   }
 
-  function drawBadge(num: number, x: number, y: number, bg: string, fg: string) {
-    ctx.beginPath();
-    ctx.arc(x + 40, y + 40, 40, 0, Math.PI * 2);
-    ctx.fillStyle = bg;
-    ctx.fill();
-    ctx.font = '900 36px system-ui, -apple-system, sans-serif';
-    ctx.fillStyle = fg;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(String(num), x + 40, y + 40);
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'alphabetic';
-  }
+  // 2. Wrap flat texts under the proper slide key expected by StrategicSlideRender
+  const slideTexts: Partial<SlideTextsType> = texts
+    ? ({ [slideNum]: texts } as any)
+    : {};
 
-  const ICONS_CANVAS = ['⚡', '🛡', '⭐', '✅', '🔬'];
+  // 3. Build off-screen container at exact slide dimensions
+  const container = document.createElement('div');
+  container.style.cssText = [
+    'position:fixed',
+    'left:-99999px',
+    'top:0',
+    `width:${SLIDE_W}px`,
+    `height:${SLIDE_H}px`,
+    'pointer-events:none',
+    'z-index:-1',
+    'overflow:hidden',
+  ].join(';');
+  document.body.appendChild(container);
 
-  if (slideNum === 1) {
-    const hookText = texts?.hook || (() => {
-      // Prioridade 1: extrair do sales_pitch
-      if (productData.salesPitch) {
-        const sentences = productData.salesPitch.split(/[.!]/);
-        const first = sentences[0]?.trim();
-        if (first && first.length >= 15 && first.length <= 80) return first;
-        const clause = first?.split(',')[0]?.trim();
-        if (clause && clause.length >= 20 && clause.length <= 80) return clause;
-        const truncated = (first || '').slice(0, 80).split(' ').slice(0, -1).join(' ');
-        if (truncated.length >= 20) return truncated;
+  // 4. Render React component into the container
+  const root = createRoot(container);
+  await new Promise<void>((resolve) => {
+    root.render(
+      React.createElement(StrategicSlideRender, {
+        slideNum,
+        image: imgDataUrl,
+        primaryColor,
+        accentColor,
+        productData,
+        texts: slideTexts,
+      })
+    );
+    // Wait for React commit + image decode
+    requestAnimationFrame(() => {
+      const imgs = container.querySelectorAll('img');
+      if (imgs.length === 0) {
+        setTimeout(resolve, 50);
+        return;
       }
-      const shortFeature = (productData.features || []).find(f => f && f.length <= 35);
-      if (shortFeature) return `Você já ouviu falar em ${shortFeature}?`;
-      const shortBenefit = (benefits || []).find(b => b && b.length <= 45);
-      if (shortBenefit) return shortBenefit.charAt(0).toUpperCase() + shortBenefit.slice(1);
-      return `${productData.name}: a escolha que muda tudo`;
-    })();
-    const productName = texts?.productName || productData.name;
-    const imageScale1 = Number(texts?.imageScale) || 100;
-    const bgColor1 = texts?.bgColor || '';
-    const hasCustomBg1 = bgColor1 && bgColor1 !== '#333333';
-
-    // Background: custom color or image
-    if (hasCustomBg1) {
-      ctx.fillStyle = bgColor1;
-      ctx.fillRect(0, 0, W, H);
-    }
-    // Imagem full-bleed cobrindo todo o canvas
-    if (img) {
-      ctx.save();
-      const scaleF1 = imageScale1 / 100;
-      ctx.translate(W / 2, H / 2);
-      ctx.scale(scaleF1, scaleF1);
-      ctx.translate(-W / 2, -H / 2);
-      drawImageCover(ctx, img, 0, 0, W, H);
-      ctx.restore();
-    } else if (!hasCustomBg1) {
-      ctx.fillStyle = '#333333';
-      ctx.fillRect(0, 0, W, H);
-    }
-    // Overlay escuro geral sutil
-    const s1OverlayOp = Number(texts?.overlayOpacity) || (hasCustomBg1 ? 10 : 28);
-    ctx.fillStyle = `rgba(0,0,0,${s1OverlayOp / 100})`;
-    ctx.fillRect(0, 0, W, H);
-    // Número do slide
-    drawBadge(1, 60, 60, 'rgba(255,255,255,0.2)', '#ffffff');
-    // Faixa central opaca com a frase
-    const s1FaixaVisible = (texts?.faixaVisible ?? 'true') !== 'false';
-    if (s1FaixaVisible) {
-      const faixaH = 340;
-      const faixaY = H / 2 - faixaH / 2;
-      const fc = texts?.faixaColor || '#000000';
-      const fcClean = fc.replace('#', '');
-      const fcR = parseInt(fcClean.slice(0, 2), 16);
-      const fcG = parseInt(fcClean.slice(2, 4), 16);
-      const fcB = parseInt(fcClean.slice(4, 6), 16);
-      ctx.fillStyle = `rgba(${fcR},${fcG},${fcB},0.58)`;
-      ctx.fillRect(0, faixaY, W, faixaH);
-      ctx.font = '400 52px system-ui, -apple-system, sans-serif';
-      ctx.fillStyle = '#ffffff';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'top';
-      wrapText(ctx, hookText, W / 2, faixaY + 60, W - 160, 70, 'center');
-    }
-    // Gradiente rodapé
-    const grad2 = ctx.createLinearGradient(0, H - 300, 0, H);
-    grad2.addColorStop(0, 'rgba(0,0,0,0)');
-    grad2.addColorStop(1, 'rgba(0,0,0,0.75)');
-    ctx.fillStyle = grad2;
-    ctx.fillRect(0, H - 300, W, 300);
-    // Nome do produto no rodapé
-    ctx.font = '600 44px system-ui, -apple-system, sans-serif';
-    ctx.fillStyle = '#ffffff';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'bottom';
-    ctx.fillText(productName, W / 2, H - 60);
-
-  } else if (slideNum === 2) {
-    const productName = texts?.productName || productData.name;
-    const category = texts?.category !== undefined ? texts.category : (productData.category || '');
-    const introLabel = texts?.introLabel || 'Apresentando';
-    const bgColor2 = texts?.bgColor || '#f8f8f8';
-    const bg2Luminance = getLuminance(bgColor2.replace('#', '').length === 6 ? bgColor2 : '#f8f8f8');
-    const textColor2 = bg2Luminance > 0.5 ? '#111111' : '#ffffff';
-    const subTextColor2 = bg2Luminance > 0.5 ? '#888888' : 'rgba(255,255,255,0.7)';
-
-    ctx.fillStyle = bgColor2;
-    ctx.fillRect(0, 0, W, H);
-    drawBadge(2, 80, 80, primaryColor, textOnPrimary);
-    let yOffset = 200;
-    if (category) {
-      ctx.font = '700 36px system-ui, -apple-system, sans-serif';
-      const catW = ctx.measureText(category.toUpperCase()).width + 96;
-      roundRect((W - catW) / 2, yOffset, catW, 80, 40);
-      ctx.fillStyle = primaryColor;
-      ctx.fill();
-      ctx.fillStyle = textOnPrimary;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(category.toUpperCase(), W / 2, yOffset + 40);
-      yOffset += 120;
-    }
-    if (img) {
-      const imageScale2 = Number(texts?.imageScale) || 100;
-      const maxW = W * 0.88;
-      const maxH = 800;
-      let dw = img.naturalWidth || img.width;
-      let dh = img.naturalHeight || img.height;
-      const scale = Math.min(maxW / dw, maxH / dh, 1) * (imageScale2 / 100);
-      dw *= scale;
-      dh *= scale;
-      const ix = (W - dw) / 2;
-      const iy = yOffset + (H - yOffset - 300 - dh) / 2;
-      ctx.shadowColor = 'rgba(0,0,0,0.2)';
-      ctx.shadowBlur = 60;
-      ctx.shadowOffsetY = 30;
-      ctx.drawImage(img, ix, iy, dw, dh);
-      ctx.shadowBlur = 0;
-      ctx.shadowOffsetY = 0;
-    } else {
-      ctx.fillStyle = '#e0e0e0';
-      roundRect((W - 500) / 2, yOffset + 40, 500, 500, 20);
-      ctx.fill();
-    }
-    // introLabel ("Apresentando") above product name
-    if (introLabel) {
-      ctx.font = '400 32px system-ui, -apple-system, sans-serif';
-      ctx.fillStyle = subTextColor2;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'top';
-      ctx.fillText(introLabel.toUpperCase(), W / 2, H - 310);
-    }
-    // Product name with wrapText to avoid clipping
-    ctx.font = '900 68px system-ui, -apple-system, sans-serif';
-    ctx.fillStyle = textColor2;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    wrapText(ctx, productName, W / 2, H - 260, W - 160, 80, 'center');
-
-  } else if (slideNum === 3) {
-    const title = texts?.title || 'Por que confiar?';
-    const imageScale3c = Number(texts?.imageScale) || 100;
-    const bgColor3c = texts?.bgColor || '#0f0f14';
-
-    ctx.fillStyle = bgColor3c;
-    ctx.fillRect(0, 0, W, H);
-    const imgW = W * 0.42;
-    if (img) {
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(0, 0, imgW, H);
-      ctx.clip();
-      ctx.save();
-      const scaleF3 = imageScale3c / 100;
-      ctx.translate(imgW / 2, H / 2);
-      ctx.scale(scaleF3, scaleF3);
-      ctx.translate(-imgW / 2, -H / 2);
-      drawImageCover(ctx, img, 0, 0, imgW, H);
-      ctx.restore();
-      ctx.restore();
-      const grad = ctx.createLinearGradient(imgW - 120, 0, imgW, 0);
-      grad.addColorStop(0, 'rgba(15,15,20,0)');
-      grad.addColorStop(1, bgColor3c);
-      ctx.fillStyle = grad;
-      ctx.fillRect(imgW - 120, 0, 120, H);
-    }
-    drawBadge(3, 60, 60, primaryColor, textOnPrimary);
-    const rx = imgW + 40;
-    const TEXT_FONT_S3 = '700 34px system-ui, -apple-system, sans-serif';
-    const GAP_S3 = 44;
-    const ICON_SIZE_S3 = 56;
-    const LINE_H_S3 = 44;
-    const TITLE_MAX_W_S3 = W - rx - 60;       // título começa em rx
-    const TEXT_MAX_W_S3 = W - rx - 76 - 60;   // bullets começam em rx+76 (após ícone)
-
-    // PRIORIDADE: texts?.bullet1-4 da IA/edição; depois benefits do produto; fallback para specs/features
-    const aiCanvasBullets = [texts?.bullet1, texts?.bullet2, texts?.bullet3, texts?.bullet4].filter(Boolean) as string[];
-    const productBenefitsCanvas = aiCanvasBullets.length === 0 && productData.benefits && (productData.benefits as string[]).length > 0
-      ? (productData.benefits as string[])
-      : null;
-    const items = aiCanvasBullets.length > 0
-      ? aiCanvasBullets
-      : productBenefitsCanvas
-        ? productBenefitsCanvas.slice(0, 5)
-        : specs.length > 0
-          ? specs.slice(0, 5).map(s => s.label + (s.value ? ': ' + s.value : ''))
-          : features.slice(0, 5);
-
-    // Pre-calculate line count for each item to determine true height
-    const measureLinesS3 = (text: string): number => {
-      ctx.font = TEXT_FONT_S3;
-      const words = text.split(' ');
-      let line = '';
-      let lines = 1;
-      for (const word of words) {
-        const test = line + word + ' ';
-        if (ctx.measureText(test).width > TEXT_MAX_W_S3 && line !== '') {
-          lines++;
-          line = word + ' ';
-        } else {
-          line = test;
-        }
-      }
-      return lines;
-    };
-
-    // Medir quantas linhas o título ocupa com wrapText
-    ctx.font = '900 52px system-ui, -apple-system, sans-serif';
-    const titleLineH_S3 = 52 * 1.2;
-    const titleWords = title.split(' ');
-    let titleLine = '';
-    let titleLinesCount = 1;
-    for (const word of titleWords) {
-      const test = titleLine + word + ' ';
-      if (ctx.measureText(test).width > TITLE_MAX_W_S3 && titleLine !== '') {
-        titleLinesCount++;
-        titleLine = word + ' ';
-      } else {
-        titleLine = test;
-      }
-    }
-    const TITLE_H_S3 = titleLinesCount * titleLineH_S3 + 28 + 32; // linhas + gap após título + padding
-    const itemHeightsS3 = items.map(item => Math.max(ICON_SIZE_S3, measureLinesS3(item) * LINE_H_S3));
-    const totalContentH_S3 = TITLE_H_S3 + itemHeightsS3.reduce((a, b) => a + b, 0) + GAP_S3 * (items.length - 1);
-
-    // Vertically center content like JSX justifyContent:'center'
-    let ry = Math.max(80, (H - totalContentH_S3) / 2);
-
-    ctx.font = '900 52px system-ui, -apple-system, sans-serif';
-    ctx.fillStyle = '#ffffff';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-    const titleEndY = wrapText(ctx, title, rx, ry, TITLE_MAX_W_S3, titleLineH_S3);
-    ry = titleEndY + 28;
-
-    for (let i = 0; i < items.length; i++) {
-      const itemH = itemHeightsS3[i];
-      const itemY = ry;
-
-      // Icon box
-      ctx.fillStyle = primaryColor;
-      roundRect(rx, itemY, ICON_SIZE_S3, ICON_SIZE_S3, 12);
-      ctx.fill();
-      ctx.font = '32px Arial, sans-serif';
-      ctx.fillStyle = '#ffffff';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(ICONS_CANVAS[i % ICONS_CANVAS.length], rx + 28, itemY + 28);
-
-      // Item text — starts at same Y as icon
-      ctx.font = TEXT_FONT_S3;
-      ctx.fillStyle = '#e0e0e0';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
-      wrapText(ctx, items[i], rx + 76, itemY + 10, TEXT_MAX_W_S3, LINE_H_S3);
-
-      ry += itemH + GAP_S3;
-    }
-
-    if (items.length === 0) {
-      ctx.font = '400 36px system-ui, -apple-system, sans-serif';
-      ctx.fillStyle = '#aaaaaa';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
-      ctx.fillText('Adicione especificações ao produto.', rx, ry);
-    }
-
-  } else if (slideNum === 4) {
-    const { headline: narHeadline, impactText: narImpact, proofBullets: narBullets, label: narLabel } = buildImpactNarrative(productData);
-    const keyword = texts?.keyword || narHeadline;
-    const mainText = texts?.benefit || narImpact;
-    const rawLabel4 = texts?.label || narLabel;
-    const label4 = isVisualDescriptionLine(rawLabel4) ? 'Experiência / Fluxo' : rawLabel4;
-    const bulletPool4 = narBullets;
-
-    const kwFontSizeCanvas = keyword.length > 30 ? 52 : keyword.length > 20 ? 62 : keyword.length > 15 ? 70 : 78;
-
-    // ---- Layout split 42/58 (igual ao Slide 3) ----
-    const bgColor4c = texts?.bgColor || '#0f0f14';
-    const imageScale4c = Number(texts?.imageScale) || 100;
-    ctx.fillStyle = bgColor4c;
-    ctx.fillRect(0, 0, W, H);
-
-    // Imagem à esquerda (42%) com clip
-    const imgW4 = Math.round(W * 0.42);
-    if (img) {
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(0, 0, imgW4, H);
-      ctx.clip();
-      ctx.save();
-      ctx.translate(imgW4 / 2, H / 2);
-      ctx.scale(imageScale4c / 100, imageScale4c / 100);
-      ctx.translate(-imgW4 / 2, -H / 2);
-      drawImageCover(ctx, img, 0, 0, imgW4, H);
-      ctx.restore();
-      ctx.restore();
-      const grad4 = ctx.createLinearGradient(imgW4 - 140, 0, imgW4, 0);
-      grad4.addColorStop(0, 'rgba(15,15,20,0)');
-      grad4.addColorStop(1, bgColor4c);
-      ctx.fillStyle = grad4;
-      ctx.fillRect(imgW4 - 140, 0, 140, H);
-    }
-
-    drawBadge(4, 60, 60, 'rgba(255,255,255,0.15)', '#ffffff');
-
-    // Painel de texto à direita
-    const rx4 = imgW4 + 48;
-    const textW4 = W - rx4 - 60;
-
-    // Font sizes dinâmicos
-    const benFontSizeCanvas = mainText.length > 240 ? 26 : mainText.length > 150 ? 30 : mainText.length > 80 ? 33 : 36;
-    const benLineH4 = benFontSizeCanvas * 1.5;
-    const bulletFontSize4 = benFontSizeCanvas * 0.85;
-
-    // Medir alturas para centramento vertical
-    ctx.font = `900 ${kwFontSizeCanvas}px system-ui, -apple-system, sans-serif`;
-    const kwLineH4 = kwFontSizeCanvas * 1.1;
-    let kwLine4 = '', kwLines4 = 1;
-    for (const w of keyword.split(' ')) {
-      const test = kwLine4 + w + ' ';
-      if (ctx.measureText(test).width > textW4 && kwLine4 !== '') { kwLines4++; kwLine4 = w + ' '; } else { kwLine4 = test; }
-    }
-    ctx.font = `400 ${benFontSizeCanvas}px system-ui, -apple-system, sans-serif`;
-    let benLine4 = '', benLines4 = 1;
-    for (const w of mainText.split(' ')) {
-      const test = benLine4 + w + ' ';
-      if (ctx.measureText(test).width > textW4 && benLine4 !== '') { benLines4++; benLine4 = w + ' '; } else { benLine4 = test; }
-    }
-
-    const labelBlockH4 = 28 + 32; // label + divider
-    const kwBlockH4 = kwLines4 * kwLineH4 + 28;
-    const benBlockH4 = benLines4 * benLineH4 + 20;
-    const bulletsBlockH4 = bulletPool4.length > 0 ? bulletPool4.length * (bulletFontSize4 * 1.6) + 16 : 0;
-    const totalH4 = labelBlockH4 + kwBlockH4 + benBlockH4 + bulletsBlockH4;
-    let ry4 = Math.max(80, (H - totalH4) / 2);
-
-    // Label
-    ctx.font = '700 24px system-ui, -apple-system, sans-serif';
-    ctx.fillStyle = 'rgba(255,255,255,0.65)';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-    ctx.fillText(label4.slice(0, 40).toUpperCase(), rx4, ry4);
-    ry4 += 28;
-
-    // Divider accent
-    ctx.fillStyle = primaryColor;
-    ctx.fillRect(rx4, ry4, 56, 3);
-    ry4 += 32;
-
-    // Keyword
-    ctx.font = `900 ${kwFontSizeCanvas}px system-ui, -apple-system, sans-serif`;
-    ctx.fillStyle = '#ffffff';
-    ctx.textBaseline = 'top';
-    ry4 = wrapText(ctx, keyword, rx4, ry4, textW4, kwLineH4) + 28;
-
-    // Main text (salesPitch / description)
-    ctx.font = `400 ${benFontSizeCanvas}px system-ui, -apple-system, sans-serif`;
-    ctx.fillStyle = '#d8d8d8';
-    ctx.globalAlpha = 1;
-    ry4 = wrapText(ctx, mainText, rx4, ry4, textW4, benLineH4) + 20;
-
-    // Bullets complementares
-    if (bulletPool4.length > 0) {
-      ctx.font = `500 ${bulletFontSize4}px system-ui, -apple-system, sans-serif`;
-      ctx.fillStyle = '#c8c8c8';
-      const bulletLineH = bulletFontSize4 * 1.6;
-      for (const item of bulletPool4) {
-        // Dot
-        ctx.beginPath();
-        ctx.arc(rx4 + 8, ry4 + bulletFontSize4 * 0.5, 6, 0, Math.PI * 2);
-        ctx.fillStyle = primaryColor;
-        ctx.fill();
-        // Text
-        ctx.fillStyle = '#c8c8c8';
-        wrapText(ctx, item, rx4 + 24, ry4, textW4 - 24, bulletLineH);
-        ry4 += bulletLineH;
-      }
-    }
-
-    ctx.globalAlpha = 1;
-
-  } else if (slideNum === 5) {
-    const title5 = texts?.title || 'Você pode confiar';
-    const badge1 = texts?.badge1 || features[0] || 'Biocompatível';
-    const badge2 = texts?.badge2 || features[1] || benefits[0] || '5 Anos de Casos';
-    const badge3 = texts?.badge3 || features[2] || benefits[1] || 'Qualidade Premium';
-    const badges5 = [badge1, badge2, badge3];
-    const imageScale5c = Number(texts?.imageScale) || 100;
-    const bgColor5c = texts?.bgColor || '';
-
-    if (img) {
-      const offCanvas = document.createElement('canvas');
-      offCanvas.width = W;
-      offCanvas.height = H;
-      const offCtx = offCanvas.getContext('2d')!;
-      offCtx.filter = 'blur(12px)';
-      const scale5 = (imageScale5c / 100) * 1.1;
-      offCtx.drawImage(img, -20 * scale5, -20 * scale5, (W + 40) * scale5, (H + 40) * scale5);
-      ctx.drawImage(offCanvas, 0, 0);
-    } else if (bgColor5c) {
-      ctx.fillStyle = bgColor5c;
-      ctx.fillRect(0, 0, W, H);
-    } else {
-      ctx.fillStyle = '#222222';
-      ctx.fillRect(0, 0, W, H);
-    }
-    ctx.fillStyle = 'rgba(0,0,0,0.65)';
-    ctx.fillRect(0, 0, W, H);
-    drawBadge(5, 60, 60, 'rgba(255,255,255,0.2)', '#ffffff');
-    ctx.font = '900 86px system-ui, -apple-system, sans-serif';
-    ctx.fillStyle = '#ffffff';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    wrapText(ctx, title5, W / 2, 200, W - 160, 96, 'center');
-    const maxBadgeTextW = W - 160 - 130 - 60;
-    const BADGE_LINE_H = 52;
-    const BADGE_FONT = '700 40px system-ui, -apple-system, sans-serif';
-    let by = 520;
-    for (const badge of badges5) {
-      // Medir linhas reais via word-wrap manual (igual ao wrapText)
-      ctx.font = BADGE_FONT;
-      const badgeWords = badge.split(' ');
-      let bLine = '';
-      let badgeLines = 1;
-      for (const bw of badgeWords) {
-        const test = bLine + bw + ' ';
-        if (ctx.measureText(test).width > maxBadgeTextW && bLine !== '') {
-          badgeLines++;
-          bLine = bw + ' ';
-        } else {
-          bLine = test;
-        }
-      }
-      const badgeBoxH = Math.max(130, 40 + badgeLines * BADGE_LINE_H);
-      ctx.fillStyle = 'rgba(255,255,255,0.12)';
-      roundRect(80, by, W - 160, badgeBoxH, 20);
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(80 + 72, by + badgeBoxH / 2, 36, 0, Math.PI * 2);
-      ctx.fillStyle = primaryColor;
-      ctx.fill();
-      ctx.font = BADGE_FONT;
-      ctx.fillStyle = '#ffffff';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
-      // Centralizar verticalmente o bloco de texto dentro da caixa
-      const textBlockH = badgeLines * BADGE_LINE_H;
-      const textStartY = by + (badgeBoxH - textBlockH) / 2;
-      wrapText(ctx, badge, 80 + 130, textStartY, maxBadgeTextW, BADGE_LINE_H);
-      by += badgeBoxH + 25;
-    }
-
-  } else if (slideNum === 6) {
-    const name6 = texts?.productName || productData.name;
-    const rawCtaBtn = texts?.ctaButton || '';
-    const ctaBtn = (rawCtaBtn && rawCtaBtn.length <= 60) ? rawCtaBtn : '💡 Saiba Mais';
-    const linkLbl = texts?.linkLabel || '🔗 Saiba Mais';
-    const ftr = texts?.footer || 'Direct para mais informações';
-    const imageScale6c = Number(texts?.imageScale) || 100;
-    const bgColor6c = texts?.bgColor || primaryColor;
-
-    ctx.fillStyle = bgColor6c;
-    ctx.fillRect(0, 0, W, H);
-    drawBadge(6, 60, 60, 'rgba(255,255,255,0.2)', textOnPrimary);
-    if (img) {
-      const cx = W / 2;
-      const cy = 320;
-      const r = 120;
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, Math.PI * 2);
-      ctx.clip();
-      drawImageCover(ctx, img, cx - r, cy - r, r * 2, r * 2);
-      ctx.restore();
-      ctx.beginPath();
-      ctx.arc(cx, cy, r + 4, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(255,255,255,0.8)';
-      ctx.lineWidth = 8;
-      ctx.stroke();
-    }
-    ctx.font = '900 68px system-ui, -apple-system, sans-serif';
-    ctx.fillStyle = textOnPrimary;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    wrapText(ctx, name6, W / 2, 480, W - 160, 80, 'center');
-    const btnY = 700;
-    const btnH = 136;
-    const btnW = W - 200;
-    ctx.shadowColor = 'rgba(0,0,0,0.3)';
-    ctx.shadowBlur = 32;
-    roundRect((W - btnW) / 2, btnY, btnW, btnH, 24);
-    ctx.fillStyle = accentColor;
-    ctx.fill();
-    ctx.shadowBlur = 0;
-    const ctaBtnFontSize = ctaBtn.length > 30 ? 36 : ctaBtn.length > 20 ? 44 : 52;
-    ctx.font = `900 ${ctaBtnFontSize}px system-ui, -apple-system, sans-serif`;
-    ctx.fillStyle = textOnAccent;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    const ctaBtnLineH = ctaBtnFontSize * 1.2;
-    const ctaBtnLines = Math.max(1, Math.ceil(ctx.measureText(ctaBtn).width / (btnW - 80)));
-    const ctaBtnBlockH = ctaBtnLines * ctaBtnLineH;
-    wrapText(ctx, ctaBtn, W / 2, btnY + (btnH - ctaBtnBlockH) / 2, btnW - 80, ctaBtnLineH, 'center');
-    ctx.font = '400 44px system-ui, -apple-system, sans-serif';
-    ctx.fillStyle = textOnPrimary;
-    ctx.globalAlpha = 0.85;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    ctx.fillText(linkLbl, W / 2, 880);
-    ctx.globalAlpha = 1;
-    ctx.font = '400 34px system-ui, -apple-system, sans-serif';
-    ctx.fillStyle = textOnPrimary;
-    ctx.globalAlpha = 0.6;
-    ctx.fillText(ftr, W / 2, 960);
-    ctx.globalAlpha = 1;
-  }
-
-  return new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob((blob) => {
-      if (blob) resolve(blob);
-      else reject(new Error('Canvas toBlob falhou'));
-    }, 'image/png');
+      Promise.all(
+        Array.from(imgs).map(
+          (i) =>
+            new Promise<void>((res) => {
+              if (i.complete && i.naturalWidth > 0) return res();
+              i.onload = () => res();
+              i.onerror = () => res();
+              setTimeout(res, 3000); // hard timeout per image
+            })
+        )
+      ).then(() => setTimeout(resolve, 80));
+    });
   });
+
+  let blob: Blob | null = null;
+  try {
+    // 5. Snapshot via html2canvas at native resolution
+    const snapshot = await html2canvas(container, {
+      width: SLIDE_W,
+      height: SLIDE_H,
+      windowWidth: SLIDE_W,
+      windowHeight: SLIDE_H,
+      scale: 1,
+      useCORS: true,
+      allowTaint: false,
+      backgroundColor: null,
+      logging: false,
+      imageTimeout: 4000,
+    });
+
+    blob = await new Promise<Blob | null>((resolve) => {
+      snapshot.toBlob((b) => resolve(b), 'image/png');
+    });
+  } finally {
+    try { root.unmount(); } catch {}
+    try { container.remove(); } catch {}
+  }
+
+  if (!blob) throw new Error('html2canvas snapshot failed (toBlob returned null)');
+  return blob;
 }
 
 // ==================== HTML EXPORT HELPERS (legado) ====================
