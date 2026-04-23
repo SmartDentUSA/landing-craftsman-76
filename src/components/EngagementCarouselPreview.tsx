@@ -497,6 +497,22 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
 }
 
 // ========================= Slide Renderers (JSX preview) =========================
+// Exported component used by both preview and PNG export (single source of truth)
+export interface EngagementSlideRenderProps {
+  slideNum: number;
+  texts: EngagementSlideTexts;
+  imageUrl: string;
+  primaryColor: string;
+  accentColor: string;
+  brandName: string;
+  handleName: string;
+}
+
+export function EngagementSlideRender(props: EngagementSlideRenderProps) {
+  const { slideNum, texts, imageUrl, primaryColor, accentColor, brandName, handleName } = props;
+  return renderSlideContent(slideNum, texts, imageUrl, primaryColor, accentColor, brandName, handleName);
+}
+
 function renderSlideContent(
   slideNum: number,
   texts: EngagementSlideTexts,
