@@ -619,7 +619,7 @@ function deduplicateKeywords(keywords: KeywordWithMatchType[]): KeywordWithMatch
     const key = keyword.text.toLowerCase().trim();
     
     // ✅ FILTRO CRÍTICO: Validar keyword
-    if (!isValidKeyword(key)) {
+    if (!sharedIsValidKeyword(key)) {
       console.warn(`⚠️ Keyword inválida filtrada: "${key}" (fonte: ${keyword.source || 'desconhecida'})`);
       continue;
     }
