@@ -1622,6 +1622,11 @@ interface InjectSEOOptions {
   productWorkflow?: any;
   authorityData?: AuthorityData | null;
   videoTestimonials?: VideoTestimonial[];
+  name?: string;
+  businessSector?: string;
+  city?: string;
+  state?: string;
+  mainProductsServices?: string;
 }
 
 function injectSEO(
