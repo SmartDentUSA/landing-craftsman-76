@@ -748,27 +748,67 @@ export const LPClonePanel = () => {
   // Bulk republish: republish all LPs and Blogs except those on www.smartdent.com.br
   const EXCLUDED_DOMAIN = 'www.smartdent.com.br';
   const handleBulkRepublish = async () => {
+    // Helper: detect a "broken" domain config that would 100% fail at the publisher.
+    // Today this catches domains like printsafebr.com.br whose Cloudflare project is missing
+    // (cloudflare_status === 'error') — the manual button works on a one-off basis but the
+    // bulk run was hitting this and surfacing only "Edge Function returned a non-2xx".
+    const getBrokenDomainReason = (domain: string): string | null => {
+      const cfg = seoDomains.find(x => x.domain === domain);
+      if (!cfg) return 'Domínio não está configurado em company_profile.seo_domains';
+      const method = cfg.publish_method || 'cloudflare';
+      if (method === 'cloudflare') {
+        if (!cfg.cloudflare_enabled) return 'Cloudflare desabilitado para este domínio';
+        if (!cfg.cloudflare_project_name) return 'cloudflare_project_name vazio';
+        if (cfg.cloudflare_status === 'error') {
+          return `Cloudflare reportou erro neste domínio (projeto "${cfg.cloudflare_project_name}" inválido?)`;
+        }
+      }
+      return null;
+    };
+
     // Filter candidates
-    const lpCandidates = (savedLPs || []).filter(lp =>
+    const allLpCandidates = (savedLPs || []).filter(lp =>
       lp.target_domain &&
       lp.target_domain !== EXCLUDED_DOMAIN &&
       lp.transformed_html
     );
-    const blogCandidates = productBlogs.filter(blog =>
+    const allBlogCandidates = productBlogs.filter(blog =>
       blog.targetDomain &&
       blog.targetDomain !== EXCLUDED_DOMAIN &&
       blog.content
     );
-    
+
+    // Pre-flight: split into "will-publish" vs "will-skip-due-to-broken-domain"
+    const lpCandidates: typeof allLpCandidates = [];
+    const blogCandidates: typeof allBlogCandidates = [];
+    const preSkipped: { name: string; domain: string; reason: string }[] = [];
+
+    for (const lp of allLpCandidates) {
+      const reason = getBrokenDomainReason(lp.target_domain!);
+      if (reason) {
+        preSkipped.push({ name: `LP: ${lp.name}`, domain: lp.target_domain!, reason });
+      } else {
+        lpCandidates.push(lp);
+      }
+    }
+    for (const blog of allBlogCandidates) {
+      const reason = getBrokenDomainReason(blog.targetDomain!);
+      if (reason) {
+        preSkipped.push({ name: `Blog: ${blog.productName} (${blog.blogType})`, domain: blog.targetDomain!, reason });
+      } else {
+        blogCandidates.push(blog);
+      }
+    }
+
     const total = lpCandidates.length + blogCandidates.length;
     const skipped = libraryItems.filter(i => i.targetDomain === EXCLUDED_DOMAIN).length;
-    
-    if (total === 0) {
+
+    if (total === 0 && preSkipped.length === 0) {
       toast.warning('Nenhum item elegível para republicação (excluindo www.smartdent.com.br).');
       return;
     }
-    
-    // Build domain summary
+
+    // Build domain summary (only for items that will actually be published)
     const domainCounts: Record<string, { lps: number; blogs: number; method: string }> = {};
     lpCandidates.forEach(lp => {
       const d = lp.target_domain!;
@@ -786,29 +826,42 @@ export const LPClonePanel = () => {
       }
       domainCounts[d].blogs++;
     });
-    
+
     const summaryLines = Object.entries(domainCounts).map(([d, c]) => {
       const parts = [];
       if (c.lps) parts.push(`${c.lps} LP${c.lps > 1 ? 's' : ''}`);
       if (c.blogs) parts.push(`${c.blogs} Blog${c.blogs > 1 ? 's' : ''}`);
       const methodLabel = c.method === 'ftp' ? 'FTP' : c.method === 'git' ? 'Git' : 'Cloudflare';
       return `• ${parts.join(' + ')} em ${d} (${methodLabel})`;
-    }).join('\n');
-    
-    const estimatedMinutes = Math.ceil((total * 6.5) / 60);
-    const message = `Republicar em massa?\n\n${summaryLines}\n\n⚠️ Domínio EXCLUÍDO: ${EXCLUDED_DOMAIN} (${skipped} item${skipped !== 1 ? 's' : ''} não ${skipped !== 1 ? 'serão tocados' : 'será tocado'})\n\nTotal: ${total} item${total > 1 ? 's' : ''}\nTempo estimado: ~${estimatedMinutes} minuto${estimatedMinutes > 1 ? 's' : ''}\n\nContinuar?`;
-    
+    }).join('\n') || '(nenhum item válido)';
+
+    // Build pre-skip summary so the user sees BEFORE confirming what will be ignored
+    const preSkipByDomain: Record<string, { count: number; reason: string }> = {};
+    preSkipped.forEach(s => {
+      if (!preSkipByDomain[s.domain]) preSkipByDomain[s.domain] = { count: 0, reason: s.reason };
+      preSkipByDomain[s.domain].count++;
+    });
+    const preSkipLines = Object.entries(preSkipByDomain).map(([d, info]) =>
+      `• ${d}: ${info.count} item(s) ignorado(s) — ${info.reason}`
+    ).join('\n');
+
+    const estimatedMinutes = Math.max(1, Math.ceil((total * 6.5) / 60));
+    const message = `Republicar em massa?\n\n${summaryLines}` +
+      (preSkipLines ? `\n\n⛔ DOMÍNIOS COM PROBLEMA (serão pulados):\n${preSkipLines}` : '') +
+      `\n\n⚠️ Domínio EXCLUÍDO: ${EXCLUDED_DOMAIN} (${skipped} item${skipped !== 1 ? 's' : ''} intocado${skipped !== 1 ? 's' : ''})` +
+      `\n\nTotal a publicar: ${total} item${total !== 1 ? 's' : ''}\nTempo estimado: ~${estimatedMinutes} min\n\nContinuar?`;
+
     if (!window.confirm(message)) return;
-    
+
     setBulkRepublishing(true);
     setBulkProgress({ current: 0, total });
-    
+
     const successes: string[] = [];
     const failures: { name: string; error: string }[] = [];
     let current = 0;
-    
+
     const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
-    
+
     // LPs first
     for (const lp of lpCandidates) {
       current++;
@@ -819,12 +872,12 @@ export const LPClonePanel = () => {
         successes.push(`LP: ${lp.name}`);
       } catch (e) {
         const err = (e as Error).message;
-        failures.push({ name: `LP: ${lp.name}`, error: err });
-        console.error(`[BulkRepublish] LP failed: ${lp.name}`, err);
+        failures.push({ name: `LP: ${lp.name} [${lp.target_domain}]`, error: err });
+        console.error(`[BulkRepublish] LP failed: ${lp.name} (${lp.target_domain})`, err);
       }
       await sleep(1500);
     }
-    
+
     // Then Blogs
     for (const blog of blogCandidates) {
       current++;
@@ -836,26 +889,39 @@ export const LPClonePanel = () => {
         successes.push(`Blog: ${blogName}`);
       } catch (e) {
         const err = (e as Error).message;
-        failures.push({ name: `Blog: ${blogName}`, error: err });
-        console.error(`[BulkRepublish] Blog failed: ${blogName}`, err);
+        failures.push({ name: `Blog: ${blogName} [${blog.targetDomain}]`, error: err });
+        console.error(`[BulkRepublish] Blog failed: ${blogName} (${blog.targetDomain})`, err);
       }
       await sleep(1500);
     }
-    
+
     setBulkRepublishing(false);
     setBulkProgress({ current: 0, total: 0 });
-    
+
     console.log('[BulkRepublish] Successes:', successes);
     console.log('[BulkRepublish] Failures:', failures);
-    
+    console.log('[BulkRepublish] Pre-skipped (broken domains):', preSkipped);
+
     queryClient.invalidateQueries({ queryKey: ['cloned-landing-pages'] });
     queryClient.invalidateQueries({ queryKey: ['blog-publications'] });
     queryClient.invalidateQueries({ queryKey: ['products-with-blogs'] });
-    
-    if (failures.length === 0) {
-      toast.success(`✅ Republicação concluída! ${successes.length} item${successes.length > 1 ? 's' : ''} publicado${successes.length > 1 ? 's' : ''}.`);
+
+    const parts: string[] = [];
+    if (successes.length) parts.push(`✅ ${successes.length} publicado${successes.length !== 1 ? 's' : ''}`);
+    if (failures.length) parts.push(`❌ ${failures.length} falha${failures.length !== 1 ? 's' : ''}`);
+    if (preSkipped.length) parts.push(`⛔ ${preSkipped.length} pulado${preSkipped.length !== 1 ? 's' : ''} (domínio quebrado)`);
+    const summary = parts.join(' | ');
+
+    if (failures.length === 0 && preSkipped.length === 0) {
+      toast.success(`✅ Republicação concluída! ${successes.length} item${successes.length !== 1 ? 's' : ''}.`);
+    } else if (failures.length === 0) {
+      toast.warning(`Republicação OK com avisos: ${summary}. Veja console para os domínios pulados.`);
     } else {
-      toast.warning(`Republicação finalizada: ✅ ${successes.length} sucesso${successes.length !== 1 ? 's' : ''} | ❌ ${failures.length} falha${failures.length !== 1 ? 's' : ''}. Veja o console para detalhes.`);
+      const firstError = failures[0]?.error || '';
+      toast.error(
+        `Republicação finalizada com falhas: ${summary}.\nPrimeiro erro: ${firstError.slice(0, 180)}\nVeja o console para a lista completa.`,
+        { duration: 12000 }
+      );
     }
   };
   
