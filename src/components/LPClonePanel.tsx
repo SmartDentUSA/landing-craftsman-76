@@ -522,11 +522,11 @@ export const LPClonePanel = () => {
       const lp = savedLPs?.find(l => l.id === lpId);
       if (!lp) throw new Error('LP não encontrada');
       if (!lp.target_domain) throw new Error('Domínio não definido');
-      
+
       const domainConfig = seoDomains.find(d => d.domain === lp.target_domain);
       const method = domainConfig?.publish_method ?? 'cloudflare';
       const functionName = method === 'ftp' ? 'publish-ftp-pages' : method === 'git' ? 'publish-git-kinghost' : 'publish-cloudflare-pages';
-      
+
       const { data, error } = await supabase.functions.invoke(functionName, {
         body: {
           lpId,
@@ -535,9 +535,26 @@ export const LPClonePanel = () => {
           isHomepage: lp.is_homepage || false
         }
       });
-      
-      if (error) throw error;
-      if (!data.success) throw new Error(data.error);
+
+      // FunctionsHttpError esconde o corpo da resposta. Recuperar a mensagem real
+      // do edge function — caso contrário o bulk só vê "non-2xx status code".
+      if (error) {
+        let detail = (error as any).message || String(error);
+        try {
+          const ctx: any = (error as any).context;
+          if (ctx && typeof ctx.json === 'function') {
+            const body = await ctx.json();
+            if (body?.error) detail = body.error;
+          } else if (ctx && typeof ctx.text === 'function') {
+            const txt = await ctx.text();
+            if (txt) detail = txt;
+          }
+        } catch (_) { /* ignore */ }
+        throw new Error(`[${functionName}] ${detail}`);
+      }
+      if (!data?.success) {
+        throw new Error(`[${functionName}] ${data?.error || 'erro desconhecido'}`);
+      }
       return data;
     },
     onSuccess: (data) => {
