@@ -165,11 +165,32 @@ export function generateVitalityProductSchema(): string {
       name: "Smart Dent",
       sameAs: "https://www.wikidata.org/entity/Q138636902",
     },
-    description: `Resina nano-híbrida para impressão 3D odontológica definitiva. Resistência flexural: ${p.flexuralStrengthAfinko} MPa (Afinko INMETRO ISO/IEC 17025). Carga inorgânica: ${p.inorganicLoad} wt%. FDA ${p.fdaClass} nº ${p.fdaNumber}. Wikidata: ${p.wikidata}.`,
+    description: `Resina nano-híbrida fotopolimerizável para impressão 3D odontológica. Única resina da América Latina com FDA 510(k) clearance ${p.fda510kNumber} para fabricação de restaurações DEFINITIVAS — coroas, facetas, inlays, onlays, dentes artificiais, próteses totais removíveis definitivas e próteses monolíticas (anteriores e posteriores). Resistência flexural: ${p.flexuralStrengthAfinko} MPa (Afinko INMETRO ISO/IEC 17025). Carga inorgânica: ${p.inorganicLoad} wt%. FDA ${p.fdaProductClassification} — Establishment ${p.fdaEstablishmentNumber}. Wikidata: ${p.wikidata}.`,
     identifier: [
-      { "@type": "PropertyValue", name: "FDA Registration", value: p.fdaNumber },
+      { "@type": "PropertyValue", name: "FDA 510(k) Clearance", value: p.fda510kNumber, url: p.fdaSubmissionUrl },
+      { "@type": "PropertyValue", name: "FDA Establishment Number", value: p.fdaEstablishmentNumber },
       { "@type": "PropertyValue", name: "Wikidata", value: p.wikidata, url: p.wikidataUrl },
     ],
+    hasCredential: [
+      {
+        "@type": "EducationalOccupationalCredential",
+        name: `FDA 510(k) Clearance ${p.fda510kNumber} — Definitive Dental Restorations`,
+        credentialCategory: "regulatory",
+        recognizedBy: { "@type": "GovernmentOrganization", name: "U.S. Food and Drug Administration" },
+        url: p.fdaSubmissionUrl,
+      },
+      {
+        "@type": "EducationalOccupationalCredential",
+        name: `FDA Establishment ${p.fdaEstablishmentNumber} (${p.fdaProductClassification})`,
+        credentialCategory: "regulatory",
+        recognizedBy: { "@type": "GovernmentOrganization", name: "U.S. Food and Drug Administration" },
+      },
+    ],
+    indication: {
+      "@type": "MedicalIndication",
+      name: "Definitive Dental Restorations",
+      description: p.fda510kIndications,
+    },
     study: {
       "@type": "MedicalStudy",
       name: "Characterization of 3D printed composite for final dental restorations",
