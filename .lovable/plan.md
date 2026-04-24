@@ -1,179 +1,216 @@
-## Plano: Propagar a aprovação FDA 510(k) K260152 da Smart Print Bio Vitality em todos os geradores de HTML
+## Plano: criar página `/blog` central (índice estilo portal de notícias) para cada domínio
 
 ### Diagnóstico
 
-A aprovação **FDA 510(k) clearance K260152** (data efetiva conforme documento submetido) é o **maior marco regulatório** já obtido pela Smart Dent: a Bio Vitality é a **única resina 3D da América Latina** aprovada pelo FDA para fabricação de **restaurações dentárias DEFINITIVAS** (coroas, facetas, inlays, onlays, dentes artificiais para próteses, próteses totais removíveis definitivas e próteses parciais/totais monolíticas).
+Hoje os links no rodapé global apontam para URLs do tipo:
 
-Hoje o ecossistema tem **três representações conflitantes** desse fato, todas incompletas:
+```
+https://blzdental.com.br/blog
+https://dentala.com.br/blog
+https://eodonto.com/blog
+https://mediti700.com.br/blog
+... (10 domínios no total)
+```
 
-| Local | Estado atual | Problema |
+Mas **nenhum desses paths existe** — a query `cloned_landing_pages WHERE page_path IN ('/blog','/blog/')` retorna **0 registros**. Os blogs individuais existem (`/blog/<slug>`), mas a página-índice nunca foi gerada. Resultado: todos os links `→ Blog X` no footer dão 404.
+
+Distribuição atual de blogs publicados por domínio:
+
+| Domínio | Blogs publicados | Idiomas |
 |---|---|---|
-| `src/data/authors.ts` → `VITALITY_PRODUCT` | `fdaClass: "Classe II"`, `fdaNumber: "3027526455"` | Tem só o **Establishment Number** (registro da fábrica), **não tem o 510(k) K260152** (clearance do produto) |
-| `supabase/functions/_shared/seo-fine-tuning.ts` linhas 561-566, 604-609 | `"FDA Classe II nº 3027526455"` no schema Organization e MedicalDevice | Mesmo problema — confunde Establishment com 510(k) |
-| `products_repository` (linha do produto, id `bf091211...`) → coluna `description` | Fala em "longa duração", "casos clínicos", "147 MPa" | **Não menciona FDA, K260152 nem "definitivo"** explicitamente como diferencial regulatório |
-| Master prompt (`master-system-prompt.ts` linha 62) e SPIN (`spin-system-prompt.ts` linha 41) | Regra: *"NUNCA usar 'provisórios' para Vitality — SEMPRE usar 'longa duração'"* | Precisa **upgrade**: agora pode (e deve) usar **"definitivo / definitivas"** porque é o termo regulatório que o FDA aprovou |
+| dentala.com.br | 59 | pt + ES/EN existentes |
+| eodonto.com | 34 | pt |
+| mediti600.com.br | 8 | pt |
+| blzdental.com.br | 3 | pt |
+| labtechdent.com.br | 3 | pt |
+| truioconnect.com.br | 1 | pt |
+| mediti700/900, rayshape3d | 0 | — (LPs sem blogs ainda) |
 
-Resultado prático: nenhum HTML gerado hoje (LP, Blog, Product Blog, Ecommerce, SPIN, Clone) cita o **K260152** nem afirma "definitivo" como claim regulatório validado.
+### Solução: gerador automático de índice de blog por domínio
 
-### Fonte de verdade (do documento FDA enviado)
+Criar uma **nova edge function** `generate-blog-index` que, dado um `target_domain`, monta dinamicamente um HTML estático com:
 
-```
-Submission Number:  K260152
-Device Trade Name:  SMART PRINT BIO VITALITY
-Indications for Use: light-curable resin for the fabrication of definitive
-                     dental restorations — single crowns, veneers, inlays,
-                     onlays, artificial teeth for dental prostheses,
-                     removable definitive full dentures, individual and
-                     removable monolithic full and partial dentures.
-                     Anterior and posterior. Prescription Use (21 CFR 801 D).
-Establishment Nº:   3027526455 (já registrado, mantém)
-```
+- **Hero/header** — nome do site, descrição vinda de `seo_domains[].description`, breadcrumb, contagem de posts
+- **Grid de cards "estilo portal de notícias"** — cada card mostra:
+  - Imagem destacada (extraída do `og:image` do post via regex no `transformed_html`)
+  - Categoria/brand badge
+  - Título (do campo `name`)
+  - Excerpt (extraído do `meta description` do post)
+  - Data de publicação + slug do autor
+  - Link para o `published_url`
+- **Filtros por idioma** (PT/EN/ES) quando o domínio tiver posts traduzidos (caso do `dentala.com.br`)
+- **Paginação** — 12 posts por página, com `/blog`, `/blog/page/2`, etc. (server-rendered estático)
+- **Sidebar** com:
+  - Navegação cruzada para blogs irmãos (`Blog BLZ`, `Blog Medit i700`, etc., usando `seo_domains`)
+  - Link de volta para a homepage do domínio
+- **JSON-LD `Blog` + `ItemList`** schema completo para SEO/Rich Results
+- **Footer global** já usado nos demais HTMLs (mesma navegação multi-site)
+- **Tracking pixels** injetados via `injectTrackingIntoHTML` (igual aos blogs individuais)
 
-### Mudanças propostas
+### Arquitetura de publicação (reusa o que já funciona)
 
-#### 1. `src/data/authors.ts` — `VITALITY_PRODUCT` (linhas 335-367)
+A função grava os HTMLs gerados em `cloned_landing_pages` com:
+- `target_domain` = domínio
+- `page_path` = `/blog` (e `/blog/page/2`, `/blog/page/3` se houver mais de 12 posts)
+- `is_homepage` = `false`
+- `name` = `"Blog — <SiteName>"`
+- `original_html` + `transformed_html` = HTML gerado
+- `publish_status` = `'pending'`
 
-Adicionar campos do clearance e a lista oficial de indicações aprovadas:
+A partir daí, a publicação real reusa o pipeline existente (`publish-cloudflare-pages`, `publish-git-kinghost` ou `publish-ftp-pages` conforme `seo_domains[].publish_method`). Como o sistema já trata `cloned_landing_pages` como source-of-truth para HTMLs estáticos, **nenhuma mudança no pipeline de publicação é necessária**.
 
-```ts
-export const VITALITY_PRODUCT = {
-  name: "Smart Print Bio Vitality",
-  wikidata: "Q138790136",
-  wikidataUrl: "https://www.wikidata.org/entity/Q138790136",
+### Plano técnico detalhado
 
-  // 🆕 FDA 510(k) Clearance — produto aprovado para definitivos
-  fda510kNumber: "K260152",
-  fda510kStatus: "Cleared",
-  fda510kIndications: "Definitive dental restorations: single crowns, veneers, inlays, onlays, artificial teeth, removable definitive full dentures, monolithic full/partial dentures. Anterior and posterior. Prescription Use.",
-  fdaProductClassification: "Classe II",
-  fdaEstablishmentNumber: "3027526455",     // renomeado de fdaNumber para clareza
-  fdaSubmissionUrl: "https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfpmn/pmn.cfm?ID=K260152",
-  isFirstLATAMDefinitiveResin: true,
-
-  anvisaClass: "Dispositivo Médico Classe II",
-  // ... resto inalterado
-};
-```
-
-Também ajustar o array `credentials` do `MARCELO_DEL_GUERRA` (linha 321) para incluir o K260152:
-```ts
-{ name: "FDA 510(k)", value: "K260152 (Bio Vitality — definitivos)", url: "https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfpmn/pmn.cfm?ID=K260152" },
-{ name: "FDA Establishment", value: "3027526455", url: "https://www.accessdata.fda.gov" },
-```
-
-#### 2. `src/lib/authorSchemas.ts` — `generateVitalityProductSchema()` (linhas 156-182)
-
-Atualizar o schema MedicalDevice JSON-LD para refletir o clearance:
+#### 1. Nova edge function `supabase/functions/generate-blog-index/index.ts`
 
 ```ts
-description: `Resina nano-híbrida fotopolimerizável para impressão 3D odontológica.
-  Única resina da América Latina com FDA 510(k) clearance K260152 para fabricação
-  de restaurações DEFINITIVAS (coroas, facetas, inlays, onlays, dentes artificiais,
-  próteses totais removíveis definitivas e próteses monolíticas).
-  Resistência flexural ${p.flexuralStrengthAfinko} MPa (Afinko INMETRO ISO/IEC 17025).
-  FDA Classe II — Establishment ${p.fdaEstablishmentNumber}.`,
-identifier: [
-  { "@type": "PropertyValue", name: "FDA 510(k) Clearance", value: p.fda510kNumber, url: p.fdaSubmissionUrl },
-  { "@type": "PropertyValue", name: "FDA Establishment Number", value: p.fdaEstablishmentNumber },
-  { "@type": "PropertyValue", name: "Wikidata", value: p.wikidata, url: p.wikidataUrl },
-],
-hasCredential: [
-  {
-    "@type": "EducationalOccupationalCredential",
-    name: `FDA 510(k) Clearance ${p.fda510kNumber} — Definitive Dental Restorations`,
-    credentialCategory: "regulatory",
-    recognizedBy: { "@type": "GovernmentOrganization", name: "U.S. Food and Drug Administration" },
-  },
-],
+serve(async (req) => {
+  const { domain, lang = 'pt', regenerateAll = false } = await req.json();
+  
+  // 1. Carrega seo_domains[] e identifica config do domínio
+  const domainConfig = company.seo_domains.find(d => d.domain === domain);
+  
+  // 2. Busca todos os blogs daquele domínio nesse idioma:
+  const posts = await db.from('cloned_landing_pages')
+    .select('name, page_path, published_url, transformed_html, brand, product, created_at, lang')
+    .eq('target_domain', domain)
+    .eq('publish_status', 'success')
+    .like('page_path', '/blog/%')   // só posts, exclui o próprio /blog
+    .eq('lang', lang)
+    .order('created_at', { ascending: false });
+  
+  // 3. Para cada post, extrai do transformed_html:
+  //    - og:image  → imagem do card
+  //    - meta description → excerpt
+  //    - article:published_time → data formatada
+  //    - article:author → autor
+  
+  // 4. Renderiza HTML server-side com cards + paginação
+  const html = renderBlogIndex({ domainConfig, posts, lang, page: 1 });
+  
+  // 5. Upsert em cloned_landing_pages (page_path='/blog', is_homepage=false)
+  //    Para idiomas adicionais: page_path='/es/blog', '/en/blog'
+  
+  // 6. Marca publish_status='pending' para o pipeline normal pegar
+});
 ```
 
-#### 3. `supabase/functions/_shared/seo-fine-tuning.ts` (linhas 561-609)
+#### 2. Template visual `_shared/blog-index-template.ts`
 
-Mesma atualização do shared schema usado pelos geradores Edge:
-
-- **`hasCredential` da Organization** (linhas 561-566): adicionar **antes** dos credentials existentes uma entrada para `FDA 510(k) Clearance K260152` linkando ao FDA, mantendo o Establishment 3027526455 como credencial separada.
-- **`itemOffered` MedicalDevice** (linhas 604-609): atualizar o `description` para citar K260152 + "definitive dental restorations" + lista resumida de indicações aprovadas.
-
-#### 4. Master Prompt — `supabase/functions/_shared/master-system-prompt.ts` (linha 62) e `spin-system-prompt.ts` (linha 41)
-
-Atualizar a regra global de Vitality para refletir a nova realidade regulatória:
-
-**Antes:**
-> Vitality ❌ NUNCA usar o termo "provisórios" — SEMPRE usar "longa duração"
-
-**Depois:**
-> Vitality ✅ É APROVADA PELO FDA 510(k) **K260152** para restaurações **DEFINITIVAS** — única da América Latina. Usar livremente "definitivas", "definitivos", "longa duração". ❌ NUNCA chamar de "provisórios" ou "temporários". Quando relevante, citar o clearance K260152 e as indicações: coroas, facetas, inlays, onlays, dentes artificiais, próteses totais removíveis definitivas, próteses monolíticas (anteriores e posteriores).
-
-Isso vai permitir que **todos os geradores de IA** (blog, SPIN, ecommerce, clone, ad copies, carousel, instagram, copilot) citem o FDA 510(k) corretamente sem cair no guard anti-alucinação.
-
-#### 5. `clinical-brain-guard.ts` (linha 146)
-
-Atualizar a regra 8 do guard:
-
-**Antes:** `8. CERTIFICAÇÕES VÁLIDAS: ISO 4049, ANVISA, FDA — apenas se no contexto.`
-**Depois:** `8. CERTIFICAÇÕES VÁLIDAS: ISO 4049, ANVISA, FDA Establishment 3027526455, FDA 510(k) K260152 (Vitality — definitivos) — sempre permitidas para Vitality; outras certificações apenas se no contexto.`
-
-#### 6. Banco — atualizar a linha do produto Vitality em `products_repository`
-
-**Migration SQL** que faz dois updates seguros e idempotentes na linha `bf091211-09ad-4057-9cb8-d4adf78a442b`:
-
-a) Anexar ao **início** do campo `description` um parágrafo curto destacando o clearance (sem apagar o conteúdo atual). Exemplo:
-> **🇺🇸 Aprovada pelo FDA — clearance 510(k) K260152.** A Smart Print Bio Vitality é a **única resina 3D da América Latina** aprovada pela Food and Drug Administration para fabricação de **restaurações dentárias definitivas** — coroas, facetas, inlays, onlays, dentes artificiais para próteses, próteses totais removíveis definitivas e próteses monolíticas, em região anterior e posterior. *(prosseguir com texto atual...)*
-
-b) Adicionar `{label: "FDA 510(k) Clearance", value: "K260152 — Restaurações Definitivas"}` ao array `technical_specifications` se ainda não existir.
-
-Como a propagação aos HTMLs já existentes depende de republicação, **após o migration aplicar** o usuário pode rodar o já-existente botão **"🚀 Republicar Tudo (exceto www.smartdent.com.br)"** para que todos os blogs/LPs reprocessem o template com o novo campo.
-
-#### 7. Templates Mustache (`mustache-template-engine.ts` + `product-blog-html-v2.ts`)
-
-Os templates já iteram `{{#technical_specifications}}` então o item novo aparece automático. **Adicionar** um pequeno bloco condicional no header dos templates (acima do título do produto) que renderiza um **badge FDA** quando o produto tem `fda_510k_clearance` (campo derivado das technical_specifications):
+Inspiração: layout do arquivo `Modelo_para_Blog.txt` (portal estilo Mention/WordPress) — mas **não copiamos** o HTML do WordPress. Geramos HTML semântico limpo com:
 
 ```html
-{{#fda_clearance_badge}}
-<div class="fda-badge" itemprop="hasCredential">
-  🇺🇸 FDA 510(k) Clearance <strong>{{fda_clearance_badge}}</strong> — Restaurações Definitivas
-</div>
-{{/fda_clearance_badge}}
+<main class="blog-index">
+  <header class="blog-hero">
+    <nav class="breadcrumb">Home / Blog</nav>
+    <h1>{SiteName} — Insights, Guias e Tutoriais</h1>
+    <p class="lead">{seo_domains[].description}</p>
+    <div class="meta-bar">
+      <span>📰 {totalPosts} artigos publicados</span>
+      <div class="lang-switcher">PT | EN | ES</div>
+    </div>
+  </header>
+
+  <section class="posts-grid">
+    {#each posts}
+      <article class="post-card">
+        <a href="{published_url}">
+          <div class="post-thumb" style="background-image:url({og_image})">
+            <span class="post-category">{brand || category}</span>
+          </div>
+          <div class="post-body">
+            <time datetime="{created_at}">{formattedDate}</time>
+            <h2>{name}</h2>
+            <p class="excerpt">{description}</p>
+            <span class="read-more">Ler artigo →</span>
+          </div>
+        </a>
+      </article>
+    {/each}
+  </section>
+
+  <nav class="pagination">
+    <a href="/blog/page/1">1</a> <a href="/blog/page/2">2</a> ...
+  </nav>
+
+  <aside class="sister-blogs">
+    <h3>Outros blogs do ecossistema Smart Dent</h3>
+    {#each seo_domains}<a href="https://{d.domain}/blog">📚 {d.name}</a>{/each}
+  </aside>
+</main>
 ```
 
-Pré-processador Mustache extrai o número K260152 do array de specs e popula `fda_clearance_badge` no contexto.
+CSS responsivo embutido (mobile-first, grid 1 col → 2 col tablet → 3 col desktop). Tema visual coerente com o footer existente (escuro, accent dourado/azul conforme o domínio).
 
-### Arquivos modificados (resumo)
+#### 3. JSON-LD Blog + ItemList
 
-| Arquivo | O que muda |
-|---|---|
-| `src/data/authors.ts` | +6 campos no `VITALITY_PRODUCT`, +1 credencial em `MARCELO_DEL_GUERRA` |
-| `src/lib/authorSchemas.ts` | `generateVitalityProductSchema()` ganha `hasCredential` + `identifier` com K260152 |
-| `supabase/functions/_shared/seo-fine-tuning.ts` | `hasCredential` da Organization + `itemOffered.description` citando K260152 |
-| `supabase/functions/_shared/master-system-prompt.ts` | Regra Vitality atualizada (linha 62) |
-| `supabase/functions/_shared/spin-system-prompt.ts` | Regra Vitality atualizada (linha 41) |
-| `supabase/functions/_shared/clinical-brain-guard.ts` | Regra 8 do guard inclui K260152 como sempre-válido para Vitality |
-| `supabase/functions/_shared/mustache-template-engine.ts` | Pré-processador extrai `fda_clearance_badge` das specs |
-| `supabase/functions/_shared/product-blog-html-v2.ts` | Bloco do badge FDA acima do título |
-| **Migration SQL** | UPDATE em `products_repository` linha Vitality (description + technical_specifications) |
+```json
+{
+  "@context": "https://schema.org",
+  "@type": "Blog",
+  "name": "Blog Dentala",
+  "url": "https://dentala.com.br/blog",
+  "description": "...",
+  "publisher": { "@type": "Organization", "name": "Smart Dent", ... },
+  "blogPost": [ /* 12 BlogPosting objects da página atual */ ]
+}
+```
 
-### Pós-implementação
+#### 4. Botão "Gerar páginas /blog para todos os domínios" no painel `LPClonePanel`
 
-1. Eu aplico o migration → o produto no banco passa a ter o claim FDA visível em qualquer geração nova.
-2. Você clica em **"🚀 Republicar Tudo (exceto www.smartdent.com.br)"** → todos os blogs e LPs já publicados nas demais 30+ páginas (dentala.com.br, parametros.smartdent.com.br, landing.eodonto.com.br etc.) ganham o badge FDA + JSON-LD atualizado + texto atualizado da descrição.
-3. Próximas gerações de blog/SPIN/ad copy/carousel já saem com o claim K260152 corretamente, sem alucinar.
+Adicionar bloco UI:
+
+```
+┌─────────────────────────────────────────────┐
+│ 📰 Índices de Blog                          │
+│                                             │
+│ 9 domínios elegíveis (≥1 blog publicado)    │
+│ Status: 0/9 com /blog gerado                │
+│                                             │
+│ [🚀 Gerar /blog para todos os domínios]     │
+│ [↻ Regenerar índices existentes]            │
+└─────────────────────────────────────────────┘
+```
+
+Loop sequencial chama `generate-blog-index` para cada domínio com >0 posts publicados. Após geração, dispara o pipeline de publicação (mesmo botão "Republicar Tudo" que você já usa) para subir os HTMLs.
+
+#### 5. Auto-regeneração ao publicar novo blog
+
+Adicionar hook no fim de `clone-landing-page` (ou wherever a publicação de blog termina): se `target_domain` tem `/blog` index existente, agenda uma regeneração automática para incluir o novo post na lista. Isso mantém o índice sempre sincronizado sem ação manual.
+
+#### 6. Suporte a múltiplos idiomas (caso `dentala.com.br`)
+
+Para domínios com posts EN/ES, a função gera **3 índices independentes**:
+- `/blog` (PT)
+- `/en/blog` (EN, se houver posts EN)
+- `/es/blog` (ES, se houver posts ES)
+
+Cada um com seu próprio listing + lang switcher cruzando entre as três versões.
+
+### Arquivos criados/modificados
+
+| Arquivo | Tipo | O que faz |
+|---|---|---|
+| `supabase/functions/generate-blog-index/index.ts` | NOVO | Edge function que gera o HTML do índice e faz upsert em `cloned_landing_pages` |
+| `supabase/functions/_shared/blog-index-template.ts` | NOVO | Template HTML+CSS+JSON-LD do índice |
+| `supabase/functions/_shared/blog-index-extractors.ts` | NOVO | Helpers para extrair og:image / description / data dos `transformed_html` dos posts |
+| `src/components/LPClonePanel.tsx` | edit | Adiciona o bloco "📰 Índices de Blog" com botões de geração/regeneração |
+| `supabase/functions/clone-landing-page/index.ts` | edit | Hook ao final: se publicou blog em domínio com `/blog` index, agendar regeneração |
+
+### Pós-implementação (fluxo do usuário)
+
+1. Você clica em **"🚀 Gerar /blog para todos os domínios"** → 9 chamadas em paralelo geram os HTMLs e fazem upsert em `cloned_landing_pages`.
+2. Você clica em **"🚀 Republicar Tudo (exceto www.smartdent.com.br)"** (botão que já existe) → o pipeline normal sobe os HTMLs para Cloudflare/Git/FTP.
+3. Os 9 links `→ Blog X` no footer agora abrem páginas reais com cards de todos os posts daquele domínio.
 
 ### Fora de escopo
 
-- Não toco em `www.smartdent.com.br` (mantemos o veto da regra anterior).
-- Não crio nova Edge Function — só edito shared utilities e o template existente.
-- Não regero conteúdos automaticamente; a propagação é via republicação dos HTMLs já existentes (template é re-renderizado com os dados novos do banco).
-- Não incluo o badge FDA no SmartDent.com.br (estático, não passa pelo template Mustache do sistema).
+- Não toco em `www.smartdent.com.br` (mantém o veto de sempre).
+- Não cria comentários, busca, ou tagging — é puramente um índice estático.
+- Não reusa o HTML literal do `Modelo_para_Blog.txt` (é WordPress + Elementor, ~880 linhas de framework). Usa **só como referência visual** de "portal de notícias".
+- Não cria rota `/blog/category/X` — só `/blog` paginado. (Adição futura possível.)
 
 ### Risco
 
-- A regra do master prompt está em arquivos que afetam **todas as gerações futuras de IA**. Se houver algum produto que mencione Vitality como peça secundária (ex: blog sobre +Flex citando Vitality como alternativa), a IA agora pode citar "definitivo" mesmo nesse contexto — o que é factualmente correto e desejável.
-- O badge FDA no header do blog é **só para Vitality** (renderização condicional por presença do campo). Outros produtos não ganham nada.
-
-### Confirmação visual esperada após republicar
-
-Os blogs do Vitality (ex: o HTML que você anexou, `smart-print-bio-vitality-resina-3d-definitvo-sim.html`) vão ganhar:
-- Badge `🇺🇸 FDA 510(k) Clearance K260152` no topo
-- Linha `FDA 510(k) Clearance: K260152 — Restaurações Definitivas` na tabela de specs
-- JSON-LD MedicalDevice com `hasCredential` + `identifier` apontando para o clearance
-- Schema Organization com nova credencial regulatória do K260152
+- Se um post não tiver `og:image` extraível do `transformed_html`, o card cai em uma cor sólida + ícone genérico (graceful degradation, não quebra o layout).
+- Para domínios com **0 posts publicados** (mediti700, mediti900, rayshape3d), a função pula a geração e deixa o link `→ Blog X` ainda apontando para 404 — recomendação visual: esconder o link no footer enquanto não houver conteúdo, ou mostrar uma página "Em breve" estática (escolha sua preferência abaixo).
