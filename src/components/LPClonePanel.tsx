@@ -183,6 +183,10 @@ export const LPClonePanel = () => {
   const [editingLPId, setEditingLPId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('transform');
   
+  // Bulk republish state
+  const [bulkRepublishing, setBulkRepublishing] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState({ current: 0, total: 0 });
+  
   // Product selector state
   const [selectedProduct, setSelectedProduct] = useState<ProductWithSEO | null>(null);
   const [productSelectorOpen, setProductSelectorOpen] = useState(false);
@@ -741,6 +745,120 @@ export const LPClonePanel = () => {
     }
   });
   
+  // Bulk republish: republish all LPs and Blogs except those on www.smartdent.com.br
+  const EXCLUDED_DOMAIN = 'www.smartdent.com.br';
+  const handleBulkRepublish = async () => {
+    // Filter candidates
+    const lpCandidates = (savedLPs || []).filter(lp =>
+      lp.target_domain &&
+      lp.target_domain !== EXCLUDED_DOMAIN &&
+      lp.transformed_html
+    );
+    const blogCandidates = productBlogs.filter(blog =>
+      blog.targetDomain &&
+      blog.targetDomain !== EXCLUDED_DOMAIN &&
+      blog.content
+    );
+    
+    const total = lpCandidates.length + blogCandidates.length;
+    const skipped = libraryItems.filter(i => i.targetDomain === EXCLUDED_DOMAIN).length;
+    
+    if (total === 0) {
+      toast.warning('Nenhum item elegível para republicação (excluindo www.smartdent.com.br).');
+      return;
+    }
+    
+    // Build domain summary
+    const domainCounts: Record<string, { lps: number; blogs: number; method: string }> = {};
+    lpCandidates.forEach(lp => {
+      const d = lp.target_domain!;
+      if (!domainCounts[d]) {
+        const cfg = seoDomains.find(x => x.domain === d);
+        domainCounts[d] = { lps: 0, blogs: 0, method: cfg?.publish_method || 'cloudflare' };
+      }
+      domainCounts[d].lps++;
+    });
+    blogCandidates.forEach(blog => {
+      const d = blog.targetDomain!;
+      if (!domainCounts[d]) {
+        const cfg = seoDomains.find(x => x.domain === d);
+        domainCounts[d] = { lps: 0, blogs: 0, method: cfg?.publish_method || 'cloudflare' };
+      }
+      domainCounts[d].blogs++;
+    });
+    
+    const summaryLines = Object.entries(domainCounts).map(([d, c]) => {
+      const parts = [];
+      if (c.lps) parts.push(`${c.lps} LP${c.lps > 1 ? 's' : ''}`);
+      if (c.blogs) parts.push(`${c.blogs} Blog${c.blogs > 1 ? 's' : ''}`);
+      const methodLabel = c.method === 'ftp' ? 'FTP' : c.method === 'git' ? 'Git' : 'Cloudflare';
+      return `• ${parts.join(' + ')} em ${d} (${methodLabel})`;
+    }).join('\n');
+    
+    const estimatedMinutes = Math.ceil((total * 6.5) / 60);
+    const message = `Republicar em massa?\n\n${summaryLines}\n\n⚠️ Domínio EXCLUÍDO: ${EXCLUDED_DOMAIN} (${skipped} item${skipped !== 1 ? 's' : ''} não ${skipped !== 1 ? 'serão tocados' : 'será tocado'})\n\nTotal: ${total} item${total > 1 ? 's' : ''}\nTempo estimado: ~${estimatedMinutes} minuto${estimatedMinutes > 1 ? 's' : ''}\n\nContinuar?`;
+    
+    if (!window.confirm(message)) return;
+    
+    setBulkRepublishing(true);
+    setBulkProgress({ current: 0, total });
+    
+    const successes: string[] = [];
+    const failures: { name: string; error: string }[] = [];
+    let current = 0;
+    
+    const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+    
+    // LPs first
+    for (const lp of lpCandidates) {
+      current++;
+      setBulkProgress({ current, total });
+      toast.info(`(${current}/${total}) Republicando LP: ${lp.name}`);
+      try {
+        await publishMutation.mutateAsync(lp.id);
+        successes.push(`LP: ${lp.name}`);
+      } catch (e) {
+        const err = (e as Error).message;
+        failures.push({ name: `LP: ${lp.name}`, error: err });
+        console.error(`[BulkRepublish] LP failed: ${lp.name}`, err);
+      }
+      await sleep(1500);
+    }
+    
+    // Then Blogs
+    for (const blog of blogCandidates) {
+      current++;
+      setBulkProgress({ current, total });
+      const blogName = `${blog.productName} (${blog.blogType})`;
+      toast.info(`(${current}/${total}) Republicando Blog: ${blogName}`);
+      try {
+        await publishBlogMutation.mutateAsync({ blog, domain: blog.targetDomain! });
+        successes.push(`Blog: ${blogName}`);
+      } catch (e) {
+        const err = (e as Error).message;
+        failures.push({ name: `Blog: ${blogName}`, error: err });
+        console.error(`[BulkRepublish] Blog failed: ${blogName}`, err);
+      }
+      await sleep(1500);
+    }
+    
+    setBulkRepublishing(false);
+    setBulkProgress({ current: 0, total: 0 });
+    
+    console.log('[BulkRepublish] Successes:', successes);
+    console.log('[BulkRepublish] Failures:', failures);
+    
+    queryClient.invalidateQueries({ queryKey: ['cloned-landing-pages'] });
+    queryClient.invalidateQueries({ queryKey: ['blog-publications'] });
+    queryClient.invalidateQueries({ queryKey: ['products-with-blogs'] });
+    
+    if (failures.length === 0) {
+      toast.success(`✅ Republicação concluída! ${successes.length} item${successes.length > 1 ? 's' : ''} publicado${successes.length > 1 ? 's' : ''}.`);
+    } else {
+      toast.warning(`Republicação finalizada: ✅ ${successes.length} sucesso${successes.length !== 1 ? 's' : ''} | ❌ ${failures.length} falha${failures.length !== 1 ? 's' : ''}. Veja o console para detalhes.`);
+    }
+  };
+  
   const handleEditLP = (lp: ClonedLP) => {
     setName(lp.name || '');
     setBrand(lp.brand || '');
@@ -1177,20 +1295,42 @@ export const LPClonePanel = () => {
             Biblioteca ({libraryItems.length})
           </TabsTrigger>
           {activeTab === 'library' && (
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => {
-                refetchBlogs();
-                queryClient.invalidateQueries({ queryKey: ['cloned-landing-pages'] });
-                queryClient.invalidateQueries({ queryKey: ['blog-publications'] });
-                toast.info('Atualizando biblioteca...');
-              }}
-              disabled={loadingBlogs || loadingLPs}
-              className="ml-2"
-            >
-              <RefreshCw className={`h-4 w-4 ${loadingBlogs || loadingLPs ? 'animate-spin' : ''}`} />
-            </Button>
+            <>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => {
+                  refetchBlogs();
+                  queryClient.invalidateQueries({ queryKey: ['cloned-landing-pages'] });
+                  queryClient.invalidateQueries({ queryKey: ['blog-publications'] });
+                  toast.info('Atualizando biblioteca...');
+                }}
+                disabled={loadingBlogs || loadingLPs || bulkRepublishing}
+                className="ml-2"
+              >
+                <RefreshCw className={`h-4 w-4 ${loadingBlogs || loadingLPs ? 'animate-spin' : ''}`} />
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleBulkRepublish}
+                disabled={bulkRepublishing || loadingBlogs || loadingLPs}
+                className="ml-2 gap-2"
+                title={`Republica todas as LPs e Blogs vinculados a domínios, exceto ${EXCLUDED_DOMAIN}`}
+              >
+                {bulkRepublishing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Republicando ({bulkProgress.current}/{bulkProgress.total})
+                  </>
+                ) : (
+                  <>
+                    <Rocket className="h-4 w-4" />
+                    🚀 Republicar Tudo (exceto www.smartdent.com.br)
+                  </>
+                )}
+              </Button>
+            </>
           )}
         </TabsList>
         
