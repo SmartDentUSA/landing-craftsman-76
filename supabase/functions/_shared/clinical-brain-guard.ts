@@ -143,7 +143,7 @@ export function injectClinicalBrainGuard(
 5. OMISSÃO: Dado ausente no contexto = omitir. NUNCA estimar.
 6. PRODUTOS PROIBIDOS JUNTOS: ${formatForbiddenProducts(product)}
 7. PRODUTOS OBRIGATÓRIOS (se relevante): ${formatRequiredProducts(product)}
-8. CERTIFICAÇÕES VÁLIDAS: ISO 4049, ANVISA, FDA — apenas se no contexto.
+8. CERTIFICAÇÕES VÁLIDAS: ISO 4049, ANVISA, FDA Establishment 3027526455, FDA 510(k) Clearance K260152 (Smart Print Bio Vitality — restaurações definitivas) sempre permitidos quando o produto for Vitality. Outras certificações apenas se presentes no contexto.
 ${customRules.map((r, i) => `${i + 9}. ${r}`).join('\n')}
 
 AUTOVALIDAÇÃO antes de retornar:

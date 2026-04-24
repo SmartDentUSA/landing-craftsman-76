@@ -560,9 +560,16 @@ export function generateSmartDentOrganizationSchema(): Record<string, unknown> {
     hasCredential: [
       {
         "@type": "EducationalOccupationalCredential",
-        name: "FDA Classe II nº 3027526455",
+        name: "FDA 510(k) Clearance K260152 — Smart Print Bio Vitality (Definitive Dental Restorations)",
         credentialCategory: "regulatory",
-        recognizedBy: { "@type": "GovernmentOrganization", name: "FDA" },
+        recognizedBy: { "@type": "GovernmentOrganization", name: "U.S. Food and Drug Administration" },
+        url: "https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfpmn/pmn.cfm?ID=K260152",
+      },
+      {
+        "@type": "EducationalOccupationalCredential",
+        name: "FDA Establishment 3027526455 (Classe II)",
+        credentialCategory: "regulatory",
+        recognizedBy: { "@type": "GovernmentOrganization", name: "U.S. Food and Drug Administration" },
       },
       {
         "@type": "EducationalOccupationalCredential",
@@ -605,7 +612,21 @@ export function generateSmartDentOrganizationSchema(): Record<string, unknown> {
         "@type": "MedicalDevice",
         name: "Smart Print Bio Vitality",
         sameAs: "https://www.wikidata.org/entity/Q138790136",
-        description: "Resina nano-híbrida para impressão 3D odontológica definitiva. FDA Classe II nº 3027526455.",
+        description:
+          "Única resina 3D da América Latina com FDA 510(k) clearance K260152 para fabricação de restaurações DEFINITIVAS — coroas, facetas, inlays, onlays, dentes artificiais, próteses totais removíveis definitivas e próteses monolíticas (anteriores e posteriores). Resina nano-híbrida fotopolimerizável. FDA Classe II — Establishment 3027526455. Prescription Use (21 CFR 801 Subpart D).",
+        identifier: [
+          {
+            "@type": "PropertyValue",
+            name: "FDA 510(k) Clearance",
+            value: "K260152",
+            url: "https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfpmn/pmn.cfm?ID=K260152",
+          },
+          {
+            "@type": "PropertyValue",
+            name: "FDA Establishment Number",
+            value: "3027526455",
+          },
+        ],
       },
     },
   };

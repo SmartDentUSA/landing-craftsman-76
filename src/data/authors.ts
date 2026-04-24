@@ -318,7 +318,8 @@ export const SMART_DENT_TEAM: Author = {
 
   identifiers: [
     { name: "Wikidata", value: "Q138636902", url: "https://www.wikidata.org/entity/Q138636902" },
-    { name: "FDA", value: "Classe II nº 3027526455", url: "https://www.accessdata.fda.gov" },
+    { name: "FDA 510(k) Clearance", value: "K260152 — Smart Print Bio Vitality (Restaurações Definitivas)", url: "https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfpmn/pmn.cfm?ID=K260152" },
+    { name: "FDA Establishment", value: "3027526455 (Classe II)", url: "https://www.accessdata.fda.gov" },
     { name: "FAPESP PIPE", value: "ID 1694", url: "https://bv.fapesp.br/pt/pesquisador/1694/marcelo-del-guerra/" },
   ],
 
@@ -336,8 +337,22 @@ export const VITALITY_PRODUCT = {
   name: "Smart Print Bio Vitality",
   wikidata: "Q138790136",
   wikidataUrl: "https://www.wikidata.org/entity/Q138790136",
+
+  // 🇺🇸 FDA 510(k) Clearance — produto aprovado para restaurações DEFINITIVAS
+  // Única resina 3D da América Latina com este clearance.
+  fda510kNumber: "K260152",
+  fda510kStatus: "Cleared",
+  fda510kIndications:
+    "Definitive dental restorations: single crowns, veneers, inlays, onlays, artificial teeth for dental prostheses, removable definitive full dentures, individual and removable monolithic full and partial dentures. Anterior and posterior. Prescription Use (21 CFR 801 Subpart D).",
+  fdaProductClassification: "Classe II",
+  fdaEstablishmentNumber: "3027526455",
+  fdaSubmissionUrl: "https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfpmn/pmn.cfm?ID=K260152",
+  isFirstLATAMDefinitiveResin: true,
+
+  // Compat — campos legados mantidos para não quebrar consumidores antigos
   fdaClass: "Classe II",
   fdaNumber: "3027526455",
+
   anvisaClass: "Dispositivo Médico Classe II",
   flexuralStrengthAfinko: 147,
   flexuralStrengthUNESP: 88.69,

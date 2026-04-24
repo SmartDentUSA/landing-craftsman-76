@@ -59,7 +59,13 @@ As seguintes regras são ABSOLUTAS:
 
 Exemplos aplicados:
 - Vitality ❌ NÃO usa GlazeON (exclusivo para +Flex)
-- Vitality ❌ NUNCA usar o termo "provisórios" — SEMPRE usar "longa duração"
+- Vitality ✅ APROVADA pelo FDA 510(k) clearance K260152 para restaurações DEFINITIVAS
+  (única resina 3D da América Latina com este clearance). Usar livremente os termos
+  "definitiva", "definitivas", "definitivos", "longa duração". Quando relevante,
+  citar K260152 e as indicações aprovadas pelo FDA: coroas, facetas, inlays, onlays,
+  dentes artificiais para próteses, próteses totais removíveis definitivas e próteses
+  monolíticas (anteriores e posteriores). FDA Establishment Number: 3027526455.
+- Vitality ❌ NUNCA chamar de "provisórios" ou "temporários" — é DEFINITIVA pelo FDA.
 - +Flex ❌ NUNCA pode ser usado em restaurações rígidas
 - SmartMake só pode aparecer em FINISH
 - NanoClean só pode aparecer em PROCESS
