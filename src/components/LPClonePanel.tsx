@@ -859,6 +859,7 @@ export const LPClonePanel = () => {
     }
   };
   
+  const handleEditLP = (lp: ClonedLP) => {
     setName(lp.name || '');
     setBrand(lp.brand || '');
     setProduct(lp.product || '');
