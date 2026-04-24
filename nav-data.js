@@ -13,6 +13,12 @@ window.__NAV_DATA__ = [
     "brand": "Smart Dent"
   },
   {
+    "name": "QRCode",
+    "url": "https://smartdent.com.br/support-resources",
+    "isHome": false,
+    "brand": null
+  },
+  {
     "name": "Rayshape Edge Mini a Impressora 3D para Odontologia",
     "url": "https://smartdent.com.br/linknabio",
     "isHome": false,
