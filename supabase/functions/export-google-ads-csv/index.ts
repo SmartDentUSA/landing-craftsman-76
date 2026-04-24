@@ -89,8 +89,6 @@ serve(async (req) => {
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
 
   } catch (error) {
     console.error('❌ Erro na função export-google-ads-csv:', error);
@@ -621,7 +619,7 @@ function deduplicateKeywords(keywords: KeywordWithMatchType[]): KeywordWithMatch
     const key = keyword.text.toLowerCase().trim();
     
     // ✅ FILTRO CRÍTICO: Validar keyword
-    if (!isValidKeyword(key)) {
+    if (!sharedIsValidKeyword(key)) {
       console.warn(`⚠️ Keyword inválida filtrada: "${key}" (fonte: ${keyword.source || 'desconhecida'})`);
       continue;
     }
