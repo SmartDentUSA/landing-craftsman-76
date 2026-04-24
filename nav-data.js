@@ -1,56 +1,8 @@
 /* Smart Dent Navigation Data - Auto-generated */
 window.__NAV_DATA__ = [
   {
-    "name": "Home",
-    "url": "https://smartdent.com.br/",
-    "isHome": true,
-    "brand": null
-  },
-  {
-    "name": "Comparativo Scanners intraorais ",
-    "url": "https://smartdent.com.br/produtos/comparativo-scanners-intraorais",
-    "isHome": false,
-    "brand": null
-  },
-  {
-    "name": "Do Escaneamento à Cimentação com Vitality em 2 Horas — Caso Clínico Dr. Weber Ricci",
-    "url": "https://smartdent.com.br/blog/caso-clinico-dr-weber-ricci-coroa-posterior-vitality-2-horas-chairside",
-    "isHome": false,
-    "brand": "Smart Dent"
-  },
-  {
-    "name": "Imersão 3 Dias Chairside Print",
-    "url": "https://smartdent.com.br/blog/onbording",
-    "isHome": false,
-    "brand": "Imersão 3 Dias"
-  },
-  {
-    "name": "QRCode",
-    "url": "https://smartdent.com.br/support-resources",
-    "isHome": false,
-    "brand": null
-  },
-  {
-    "name": "Quais produtos Smart Dent usar para caracterização gengival em próteses?",
-    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-caracterizacao-gengival-em-proteses",
-    "isHome": false,
-    "brand": "Smart Dent"
-  },
-  {
-    "name": "Quais produtos Smart Dent usar para cimentação de facetas e laminados cerâmicos?",
-    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-cimentacao-de-facetas-e-laminados-cermicos",
-    "isHome": false,
-    "brand": "Smart Dent"
-  },
-  {
-    "name": "Quais produtos Smart Dent usar para coroa sobre implante unitária?",
-    "url": "https://smartdent.com.br/blog/uais-produtos-mart-ent-usar-para-coroa-sobre-implante-unitaria",
-    "isHome": false,
-    "brand": "Smart Dent"
-  },
-  {
-    "name": "Rayshape Edge Mini a Impressora 3D para Odontologia",
-    "url": "https://smartdent.com.br/linknabio",
+    "name": "Atos: Natural Layers in Anterior Composite Resin",
+    "url": "https://smartdent.com.br/en/blog/tos-atural-ayers-in-nterior-omposite-esin",
     "isHome": false,
     "brand": "Smart Dent"
   }
