@@ -13,6 +13,12 @@ window.__NAV_DATA__ = [
     "brand": "Smart Dent"
   },
   {
+    "name": "Atos: Natural Layers in Anterior Composite Resin",
+    "url": "https://smartdent.com.br/en/blog/atos-natural-layers-in-anterior-composite-resin",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Comparativo Scanners Intraorais — Smart Dent",
     "url": "https://smartdent.com.br/produtos/comparativo-scanners-intraorais",
     "isHome": false,
