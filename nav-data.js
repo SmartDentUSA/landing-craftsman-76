@@ -17,6 +17,12 @@ window.__NAV_DATA__ = [
     "url": "https://smartdent.com.br/linknabio",
     "isHome": false,
     "brand": "Smart Dent"
+  },
+  {
+    "name": "Smart Dent — Odontologia Digital, Resinas 3D e Scanners Intraorais",
+    "url": "https://smartdent.com.br/manuais",
+    "isHome": false,
+    "brand": null
   }
 ];
 (function() {
