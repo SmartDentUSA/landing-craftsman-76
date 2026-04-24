@@ -1,6 +1,12 @@
 /* Smart Dent Navigation Data - Auto-generated */
 window.__NAV_DATA__ = [
   {
+    "name": "Atos: Camadas Naturais em Resina Composta Anterior",
+    "url": "https://smartdent.com.br/blog/atos-camadas-naturais-em-resina-composta-anterior-1",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Atos: Natural Layers in Anterior Composite Resin",
     "url": "https://smartdent.com.br/en/blog/tos-atural-ayers-in-nterior-omposite-esin",
     "isHome": false,
