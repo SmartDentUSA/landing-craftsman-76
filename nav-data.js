@@ -11,6 +11,12 @@ window.__NAV_DATA__ = [
     "url": "https://smartdent.com.br/en/blog/tos-atural-ayers-in-nterior-omposite-esin",
     "isHome": false,
     "brand": "Smart Dent"
+  },
+  {
+    "name": "Rayshape Edge Mini a Impressora 3D para Odontologia",
+    "url": "https://smartdent.com.br/linknabio",
+    "isHome": false,
+    "brand": "Smart Dent"
   }
 ];
 (function() {
