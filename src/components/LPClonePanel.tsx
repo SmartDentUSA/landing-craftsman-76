@@ -183,6 +183,10 @@ export const LPClonePanel = () => {
   const [editingLPId, setEditingLPId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('transform');
   
+  // Bulk republish state
+  const [bulkRepublishing, setBulkRepublishing] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState({ current: 0, total: 0 });
+  
   // Product selector state
   const [selectedProduct, setSelectedProduct] = useState<ProductWithSEO | null>(null);
   const [productSelectorOpen, setProductSelectorOpen] = useState(false);
