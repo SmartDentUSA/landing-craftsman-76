@@ -32,7 +32,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "QRCode",
-    "url": "https://smartdent.com.br/suport-resurces ",
+    "url": "https://smartdent.com.br/support-resources",
     "isHome": false,
     "brand": null
   },
