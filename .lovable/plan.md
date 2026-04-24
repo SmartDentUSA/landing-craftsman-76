@@ -1,50 +1,80 @@
+## Diagnóstico
+O mais provável é que o botão `Republicar Tudo` não tenha apagado os registros do banco, mas tenha sobrescrito o deployment ativo do Cloudflare com snapshots incompletos.
+
+Hoje o fluxo de Cloudflare publica **uma página por deployment**:
+- `LPClonePanel.tsx` chama `publish-cloudflare-pages` item a item
+- `publish-cloudflare-pages/index.ts` cria um `manifest` com **apenas 1 arquivo**
+- `publish-product-blog-cloudflare/index.ts` faz o mesmo para blogs
+- em Cloudflare Pages, o deployment ativo passa a refletir esse snapshot parcial
+
+Resultado prático: a última página publicada continua no ar e as anteriores somem, parecendo que “tudo foi despublicado”.
+
+Também encontrei um segundo problema: o sistema mistura `publish_status = 'success'` e `publish_status = 'published'`, então várias consultas enxergam conjuntos diferentes de páginas “online”, o que atrapalha recuperação, navegação, sitemap e painel.
+
 ## Plano
+1. Implementar recuperação dos domínios afetados
+- Criar um fluxo de restauração por domínio Cloudflare que reconstrói o site a partir do banco.
+- Incluir LPs, blogs e arquivos especiais já armazenados com HTML/publicação associada.
+- Considerar tanto registros com status `success` quanto `published`, além de `published_url` existente, para não deixar conteúdo válido de fora.
 
-1. Confirmar a causa no fluxo de republicação em massa
-- Manter o botão `Republicar Tudo` usando o mesmo pipeline de publicação individual, mas identificar e tratar explicitamente os itens que hoje derrubam o lote.
-- Basear a correção no comportamento já encontrado: o bulk está disparando publicações, porém alguns itens específicos falham e fazem parecer que “nada foi ao ar”.
+2. Corrigir a arquitetura de publicação Cloudflare
+- Parar de fazer deployment Cloudflare “uma página por vez” para bulk/manual em domínios multi-página.
+- Trocar para um deployment **por domínio**, com manifest completo contendo todas as rotas que devem permanecer online.
+- Reaproveitar o padrão já existente em `publish-static-cloudflare/index.ts`, que monta manifest com vários arquivos.
 
-2. Adicionar validação prévia por domínio antes do bulk
-- Validar a configuração do domínio antes de iniciar cada publicação em massa.
-- Para domínios Cloudflare, bloquear ou pular domínios com configuração inconsistente e registrar motivo legível.
-- No caso atual, `printsafebr.com.br` já aparece com `cloudflare_status = error`, então o lote deve sinalizar isso antes de tentar publicar os itens desse domínio.
+3. Corrigir o botão `Republicar Tudo`
+- Agrupar itens por domínio e método de publicação.
+- Para Cloudflare, o botão deve disparar uma republicação por domínio, não por item.
+- Manter a UI mostrando progresso por item/domínio, mas sem executar deployments destrutivos em sequência.
 
-3. Melhorar o tratamento de erros no botão `Republicar Tudo`
-- Ajustar `handleBulkRepublish` em `LPClonePanel.tsx` para separar claramente:
-  - itens publicados com sucesso
-  - itens pulados por configuração inválida
-  - itens que falharam no Edge Function
-- Mostrar no resumo final quais domínios/itens falharam e por quê, em vez de só dizer que houve erro genérico.
-- Preservar o processamento dos demais itens válidos mesmo quando um domínio estiver com problema.
+4. Normalizar status de publicação
+- Padronizar LPs Cloudflare para usar o mesmo status final do restante do sistema.
+- Atualizar consultas e filtros que hoje dependem só de `published` ou só de `success`.
+- Revisar especialmente:
+  - `republish-domain-pages/index.ts`
+  - `Dashboard.tsx`
+  - `clone-landing-page/index.ts`
+  - geradores de sitemap/blog index
+  - checks de despublicação e badges do painel
 
-4. Endurecer a publicação backend para retornar motivo útil
-- Revisar os Edge Functions envolvidos para garantir mensagens de erro mais diagnósticas no bulk, especialmente para Cloudflare.
-- Validar melhor o domínio/projeto de destino antes de tentar deployment.
-- Garantir que o erro devolvido ao frontend identifique domínio, path e causa, para que o lote não pareça silenciosamente quebrado.
-
-5. Validar paridade entre manual e em massa
-- Testar os mesmos registros publicados manualmente e via `Republicar Tudo`.
+5. Validar manual vs em massa
+- Testar em um domínio Cloudflare com várias páginas e em um domínio com blog.
 - Confirmar que:
-  - itens válidos continuam indo ao ar no bulk
-  - itens de domínios quebrados são marcados como falha explícita
-  - o usuário recebe um resumo final confiável
+  - republicar uma página não derruba as demais
+  - `Republicar Tudo` preserva todas as URLs já vivas
+  - status e painel continuam coerentes
+  - URLs antigas voltam ao ar após a restauração
 
-## Achado principal
-- O problema não parece ser o clique do botão em si.
-- O bulk já está executando a mutation de publicação, mas os erros vistos no console apontam falhas em itens específicos.
-- Os registros que encontrei com falha estão concentrados em `printsafebr.com.br`, incluindo:
-  - `Sitemap — PrintSafe BR`
-  - `RSS Feed — PrintSafe BR`
-  - `Depoimentos — Smart Dent`
-- A configuração desse domínio está marcada com `cloudflare_status: error`, o que é compatível com o comportamento observado.
+## Recuperação esperada
+A boa notícia é que isso parece ser **problema de snapshot/deployment**, não perda definitiva de conteúdo.
+Se o HTML continua salvo nas tabelas de publicação, dá para restaurar os domínios afetados republicando o conjunto completo de arquivos.
 
 ## Detalhes técnicos
-- Arquivos principais a ajustar:
-  - `src/components/LPClonePanel.tsx`
-  - `supabase/functions/publish-cloudflare-pages/index.ts`
-  - possivelmente `supabase/functions/republish-domain-pages/index.ts` se o resumo/retorno do backend precisar ser enriquecido
-- Estratégia de correção:
-  - pré-checagem de domínio antes do bulk
-  - resumo estruturado por domínio/item
-  - mensagens de erro retornadas pelo backend com contexto suficiente
-  - não deixar um domínio quebrado mascarar os sucessos do restante do lote
+Arquivos principais a ajustar:
+- `src/components/LPClonePanel.tsx`
+- `supabase/functions/publish-cloudflare-pages/index.ts`
+- `supabase/functions/publish-product-blog-cloudflare/index.ts`
+- `supabase/functions/republish-domain-pages/index.ts`
+- `src/pages/Dashboard.tsx`
+- `supabase/functions/clone-landing-page/index.ts`
+- `supabase/functions/generate-sitemap/index.ts`
+
+Fluxo atual problemático:
+```text
+Republicar Tudo
+  -> publica LP/blog individualmente
+  -> cada publish Cloudflare cria manifest com 1 rota
+  -> novo deployment substitui o snapshot anterior
+  -> rotas antigas somem do domínio
+```
+
+Fluxo corrigido:
+```text
+Republicar Tudo
+  -> agrupa por domínio
+  -> monta manifest completo com todas as rotas do domínio
+  -> cria 1 deployment por domínio
+  -> todas as rotas permanecem online
+```
+
+Se você aprovar, eu sigo com a correção e priorizo primeiro a restauração segura dos domínios afetados.
