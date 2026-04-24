@@ -763,12 +763,22 @@ export const LPClonePanel = () => {
   });
   
   // Bulk republish: republish all LPs and Blogs except those on www.smartdent.com.br
+  //
+  // CRITICAL FIX (24/04/2026): Cloudflare Pages uses each deployment as a FULL
+  // snapshot of the site. Previously, the bulk button called the per-page
+  // publisher once per LP/blog, which deployed a manifest containing only ONE
+  // file. Each new deployment overwrote the previous live snapshot, so the
+  // last page deployed was the only one that survived — making it look like
+  // every other page had been "despublicado".
+  //
+  // The new flow groups items by domain and:
+  //  - For Cloudflare domains, it triggers ONE deployment per domain via
+  //    `republish-domain-cloudflare-bulk`, which builds the full manifest
+  //    from every page that should remain online.
+  //  - For FTP/Git domains, it keeps the per-item flow (those backends do not
+  //    suffer from the snapshot-replace problem).
   const EXCLUDED_DOMAIN = 'www.smartdent.com.br';
   const handleBulkRepublish = async () => {
-    // Helper: detect a "broken" domain config that would 100% fail at the publisher.
-    // Today this catches domains like printsafebr.com.br whose Cloudflare project is missing
-    // (cloudflare_status === 'error') — the manual button works on a one-off basis but the
-    // bulk run was hitting this and surfacing only "Edge Function returned a non-2xx".
     const getBrokenDomainReason = (domain: string): string | null => {
       const cfg = seoDomains.find(x => x.domain === domain);
       if (!cfg) return 'Domínio não está configurado em company_profile.seo_domains';
