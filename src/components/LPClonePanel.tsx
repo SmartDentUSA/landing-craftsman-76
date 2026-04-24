@@ -1311,6 +1311,32 @@ export const LPClonePanel = () => {
                 <RefreshCw className={`h-4 w-4 ${loadingBlogs || loadingLPs ? 'animate-spin' : ''}`} />
               </Button>
               <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  if (!window.confirm('Gerar páginas /blog (índice estilo portal de notícias) para todos os domínios com posts publicados? Os HTMLs serão criados/atualizados na biblioteca como "pending". Em seguida use "Republicar Tudo" para subir aos domínios.')) return;
+                  toast.info('Gerando índices /blog para todos os domínios...');
+                  try {
+                    const { data, error } = await supabase.functions.invoke('generate-blog-index', {
+                      body: { allDomains: true },
+                    });
+                    if (error) throw error;
+                    const results = (data as any)?.results || [];
+                    const ok = results.filter((r: any) => !r.error).length;
+                    toast.success(`✅ ${ok} índice(s) /blog gerados. Agora clique em "Republicar Tudo" para publicar.`);
+                    queryClient.invalidateQueries({ queryKey: ['cloned-landing-pages'] });
+                  } catch (e) {
+                    toast.error(`Falha ao gerar índices: ${(e as Error).message}`);
+                  }
+                }}
+                disabled={bulkRepublishing || loadingBlogs || loadingLPs}
+                className="ml-2 gap-2"
+                title="Gera páginas /blog (índice de artigos) para todos os domínios elegíveis"
+              >
+                <FileCode className="h-4 w-4" />
+                📰 Gerar /blog (todos domínios)
+              </Button>
+              <Button
                 variant="default"
                 size="sm"
                 onClick={handleBulkRepublish}
