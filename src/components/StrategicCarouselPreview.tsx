@@ -646,13 +646,13 @@ function Slide3Technical({ image, primaryColor, productData, texts }: { image: s
       <div style={{ position: 'absolute', top: 60, left: 60, width: 70, height: 70, borderRadius: '50%', background: primaryColor, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
         <span style={{ color: textOnPrimary, fontWeight: 900, fontSize: 30 }}>3</span>
       </div>
-      <div style={{ width: '42%', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ width: '42%', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.03)' }}>
         {image ? (
-          <img src={image} alt="produto" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', transform: `scale(${imageScale3 / 100})`, transformOrigin: 'center center' }} />
+          <img src={image} alt="produto" style={{ maxWidth: '100%', maxHeight: '70%', width: 'auto', height: 'auto', objectFit: 'contain', transform: `scale(${imageScale3 / 100})`, transformOrigin: 'center center' }} />
         ) : (
           <div style={{ width: '100%', height: '100%', background: '#1a1a2e' }} />
         )}
-        <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: 120, background: `linear-gradient(to right, transparent, ${bgColor3})` }} />
+        <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: 120, background: `linear-gradient(to right, transparent, ${bgColor3})`, pointerEvents: 'none' }} />
       </div>
       <div style={{ flex: 1, padding: '100px 60px 80px 40px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
         <h2 style={{ color: '#ffffff', fontSize: 52, fontWeight: 900, margin: '0 0 40px 0', lineHeight: 1.2 }}>{title}</h2>
@@ -910,14 +910,14 @@ function Slide4Experience({ image, primaryColor, productData, texts }: { image: 
   return (
     <div style={{ width: SLIDE_W, height: SLIDE_H, fontFamily: 'system-ui, -apple-system, sans-serif', position: 'relative', overflow: 'hidden', background: bgColor4, display: 'flex' }}>
       {/* Imagem à esquerda — 42% */}
-      <div style={{ width: '42%', flexShrink: 0, position: 'relative', overflow: 'hidden' }}>
+      <div style={{ width: '42%', flexShrink: 0, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.03)' }}>
         {image ? (
-          <img src={image} alt="produto em uso" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', transform: `scale(${imageScale4 / 100})`, transformOrigin: 'center center' }} />
+          <img src={image} alt="produto em uso" style={{ maxWidth: '100%', maxHeight: '70%', width: 'auto', height: 'auto', objectFit: 'contain', transform: `scale(${imageScale4 / 100})`, transformOrigin: 'center center' }} />
         ) : (
           <div style={{ width: '100%', height: '100%', background: '#1a1a2e' }} />
         )}
         {/* Feather borda direita */}
-        <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: 140, background: `linear-gradient(to right, transparent, ${bgColor4})` }} />
+        <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: 140, background: `linear-gradient(to right, transparent, ${bgColor4})`, pointerEvents: 'none' }} />
       </div>
 
 
