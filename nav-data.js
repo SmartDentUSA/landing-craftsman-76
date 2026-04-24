@@ -13,6 +13,12 @@ window.__NAV_DATA__ = [
     "brand": "Smart Dent"
   },
   {
+    "name": "Comparativo Scanners Intraorais — Smart Dent",
+    "url": "https://smartdent.com.br/produtos/comparativo-scanners-intraorais",
+    "isHome": false,
+    "brand": null
+  },
+  {
     "name": "Imersão 3 Dias Chairside Print",
     "url": "https://smartdent.com.br/blog/onbording",
     "isHome": false,
@@ -20,7 +26,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "QRCode",
-    "url": "https://smartdent.com.br/support-resources",
+    "url": "https://smartdent.com.br/suport-resurces ",
     "isHome": false,
     "brand": null
   },
