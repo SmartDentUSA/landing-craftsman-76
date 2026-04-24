@@ -835,34 +835,27 @@ export const LPClonePanel = () => {
       return;
     }
 
-    // Build domain summary (only for items that will actually be published)
-    const domainCounts: Record<string, { lps: number; blogs: number; method: string }> = {};
-    lpCandidates.forEach(lp => {
-      const d = lp.target_domain!;
-      if (!domainCounts[d]) {
+    // Group by (domain, method) so we can do one Cloudflare deployment per domain.
+    type DomainBucket = { lps: typeof lpCandidates; blogs: typeof blogCandidates; method: string };
+    const buckets: Record<string, DomainBucket> = {};
+    const ensureBucket = (d: string) => {
+      if (!buckets[d]) {
         const cfg = seoDomains.find(x => x.domain === d);
-        domainCounts[d] = { lps: 0, blogs: 0, method: cfg?.publish_method || 'cloudflare' };
+        buckets[d] = { lps: [], blogs: [], method: cfg?.publish_method || 'cloudflare' };
       }
-      domainCounts[d].lps++;
-    });
-    blogCandidates.forEach(blog => {
-      const d = blog.targetDomain!;
-      if (!domainCounts[d]) {
-        const cfg = seoDomains.find(x => x.domain === d);
-        domainCounts[d] = { lps: 0, blogs: 0, method: cfg?.publish_method || 'cloudflare' };
-      }
-      domainCounts[d].blogs++;
-    });
+      return buckets[d];
+    };
+    lpCandidates.forEach(lp => ensureBucket(lp.target_domain!).lps.push(lp));
+    blogCandidates.forEach(b => ensureBucket(b.targetDomain!).blogs.push(b));
 
-    const summaryLines = Object.entries(domainCounts).map(([d, c]) => {
+    const summaryLines = Object.entries(buckets).map(([d, c]) => {
       const parts = [];
-      if (c.lps) parts.push(`${c.lps} LP${c.lps > 1 ? 's' : ''}`);
-      if (c.blogs) parts.push(`${c.blogs} Blog${c.blogs > 1 ? 's' : ''}`);
-      const methodLabel = c.method === 'ftp' ? 'FTP' : c.method === 'git' ? 'Git' : 'Cloudflare';
+      if (c.lps.length) parts.push(`${c.lps.length} LP${c.lps.length > 1 ? 's' : ''}`);
+      if (c.blogs.length) parts.push(`${c.blogs.length} Blog${c.blogs.length > 1 ? 's' : ''}`);
+      const methodLabel = c.method === 'ftp' ? 'FTP' : c.method === 'git' ? 'Git' : 'Cloudflare (deploy único)';
       return `• ${parts.join(' + ')} em ${d} (${methodLabel})`;
     }).join('\n') || '(nenhum item válido)';
 
-    // Build pre-skip summary so the user sees BEFORE confirming what will be ignored
     const preSkipByDomain: Record<string, { count: number; reason: string }> = {};
     preSkipped.forEach(s => {
       if (!preSkipByDomain[s.domain]) preSkipByDomain[s.domain] = { count: 0, reason: s.reason };
@@ -872,16 +865,25 @@ export const LPClonePanel = () => {
       `• ${d}: ${info.count} item(s) ignorado(s) — ${info.reason}`
     ).join('\n');
 
-    const estimatedMinutes = Math.max(1, Math.ceil((total * 6.5) / 60));
+    const cfDomainsCount = Object.values(buckets).filter(b => b.method === 'cloudflare').length;
+    const perItemCount = Object.values(buckets)
+      .filter(b => b.method !== 'cloudflare')
+      .reduce((acc, b) => acc + b.lps.length + b.blogs.length, 0);
+    const estimatedMinutes = Math.max(1, Math.ceil((cfDomainsCount * 30 + perItemCount * 6.5) / 60));
+
     const message = `Republicar em massa?\n\n${summaryLines}` +
       (preSkipLines ? `\n\n⛔ DOMÍNIOS COM PROBLEMA (serão pulados):\n${preSkipLines}` : '') +
       `\n\n⚠️ Domínio EXCLUÍDO: ${EXCLUDED_DOMAIN} (${skipped} item${skipped !== 1 ? 's' : ''} intocado${skipped !== 1 ? 's' : ''})` +
-      `\n\nTotal a publicar: ${total} item${total !== 1 ? 's' : ''}\nTempo estimado: ~${estimatedMinutes} min\n\nContinuar?`;
+      `\n\nℹ️ Cloudflare agora republica TODAS as páginas do domínio em um único deploy ` +
+      `(corrige o bug que derrubava páginas no deploy anterior).` +
+      `\n\nTotal: ${total} item${total !== 1 ? 's' : ''} em ${Object.keys(buckets).length} domínio(s)` +
+      `\nTempo estimado: ~${estimatedMinutes} min\n\nContinuar?`;
 
     if (!window.confirm(message)) return;
 
     setBulkRepublishing(true);
-    setBulkProgress({ current: 0, total });
+    const totalUnits = Object.keys(buckets).length;
+    setBulkProgress({ current: 0, total: totalUnits });
 
     const successes: string[] = [];
     const failures: { name: string; error: string }[] = [];
@@ -889,37 +891,65 @@ export const LPClonePanel = () => {
 
     const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
-    // LPs first
-    for (const lp of lpCandidates) {
+    for (const [domain, bucket] of Object.entries(buckets)) {
       current++;
-      setBulkProgress({ current, total });
-      toast.info(`(${current}/${total}) Republicando LP: ${lp.name}`);
-      try {
-        await publishMutation.mutateAsync(lp.id);
-        successes.push(`LP: ${lp.name}`);
-      } catch (e) {
-        const err = (e as Error).message;
-        failures.push({ name: `LP: ${lp.name} [${lp.target_domain}]`, error: err });
-        console.error(`[BulkRepublish] LP failed: ${lp.name} (${lp.target_domain})`, err);
-      }
-      await sleep(1500);
-    }
+      setBulkProgress({ current, total: totalUnits });
 
-    // Then Blogs
-    for (const blog of blogCandidates) {
-      current++;
-      setBulkProgress({ current, total });
-      const blogName = `${blog.productName} (${blog.blogType})`;
-      toast.info(`(${current}/${total}) Republicando Blog: ${blogName}`);
-      try {
-        await publishBlogMutation.mutateAsync({ blog, domain: blog.targetDomain! });
-        successes.push(`Blog: ${blogName}`);
-      } catch (e) {
-        const err = (e as Error).message;
-        failures.push({ name: `Blog: ${blogName} [${blog.targetDomain}]`, error: err });
-        console.error(`[BulkRepublish] Blog failed: ${blogName} (${blog.targetDomain})`, err);
+      if (bucket.method === 'cloudflare') {
+        toast.info(`(${current}/${totalUnits}) Republicando ${domain} (deploy único Cloudflare)...`);
+        try {
+          const { data, error } = await supabase.functions.invoke('republish-domain-cloudflare-bulk', {
+            body: { domain }
+          });
+          if (error) {
+            // Recover real error body if available
+            let detail = (error as any).message || String(error);
+            try {
+              const ctx: any = (error as any).context;
+              if (ctx && typeof ctx.json === 'function') {
+                const body = await ctx.json();
+                if (body?.error) detail = body.error;
+              }
+            } catch (_) { /* ignore */ }
+            throw new Error(detail);
+          }
+          if (!data?.success) throw new Error(data?.error || 'erro desconhecido');
+          successes.push(`${domain}: ${data.filesDeployed} arquivos (${data.lps} LPs + ${data.blogs} blogs)`);
+          toast.success(`✅ ${domain}: ${data.filesDeployed} páginas em 1 deploy`);
+        } catch (e) {
+          const err = (e as Error).message;
+          failures.push({ name: `Domínio: ${domain}`, error: err });
+          console.error(`[BulkRepublish] CF domain failed: ${domain}`, err);
+        }
+        await sleep(2000);
+      } else {
+        // FTP / Git: per-item flow is safe (no snapshot replace issue)
+        for (const lp of bucket.lps) {
+          toast.info(`(${current}/${totalUnits}) ${domain} — LP: ${lp.name}`);
+          try {
+            await publishMutation.mutateAsync(lp.id);
+            successes.push(`LP: ${lp.name}`);
+          } catch (e) {
+            const err = (e as Error).message;
+            failures.push({ name: `LP: ${lp.name} [${domain}]`, error: err });
+            console.error(`[BulkRepublish] LP failed: ${lp.name} (${domain})`, err);
+          }
+          await sleep(1500);
+        }
+        for (const blog of bucket.blogs) {
+          const blogName = `${blog.productName} (${blog.blogType})`;
+          toast.info(`(${current}/${totalUnits}) ${domain} — Blog: ${blogName}`);
+          try {
+            await publishBlogMutation.mutateAsync({ blog, domain: blog.targetDomain! });
+            successes.push(`Blog: ${blogName}`);
+          } catch (e) {
+            const err = (e as Error).message;
+            failures.push({ name: `Blog: ${blogName} [${domain}]`, error: err });
+            console.error(`[BulkRepublish] Blog failed: ${blogName} (${domain})`, err);
+          }
+          await sleep(1500);
+        }
       }
-      await sleep(1500);
     }
 
     setBulkRepublishing(false);
@@ -934,13 +964,13 @@ export const LPClonePanel = () => {
     queryClient.invalidateQueries({ queryKey: ['products-with-blogs'] });
 
     const parts: string[] = [];
-    if (successes.length) parts.push(`✅ ${successes.length} publicado${successes.length !== 1 ? 's' : ''}`);
+    if (successes.length) parts.push(`✅ ${successes.length} sucesso${successes.length !== 1 ? 's' : ''}`);
     if (failures.length) parts.push(`❌ ${failures.length} falha${failures.length !== 1 ? 's' : ''}`);
     if (preSkipped.length) parts.push(`⛔ ${preSkipped.length} pulado${preSkipped.length !== 1 ? 's' : ''} (domínio quebrado)`);
     const summary = parts.join(' | ');
 
     if (failures.length === 0 && preSkipped.length === 0) {
-      toast.success(`✅ Republicação concluída! ${successes.length} item${successes.length !== 1 ? 's' : ''}.`);
+      toast.success(`✅ Republicação concluída! ${summary}`);
     } else if (failures.length === 0) {
       toast.warning(`Republicação OK com avisos: ${summary}. Veja console para os domínios pulados.`);
     } else {
