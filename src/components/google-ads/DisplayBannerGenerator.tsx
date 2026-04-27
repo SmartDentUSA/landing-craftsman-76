@@ -220,7 +220,7 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
     } finally {
       setIsGenerating(false);
     }
-  }, [product, selectedImage, selectedFormats, style, primaryColor, secondaryColor, accentColor, ctaText, headline, subheadline, finalUrl, showFdaBadge, campaignSlug, accentContrastOk, accentContrast, toast]);
+  }, [product, selectedImage, selectedFormats, style, primaryColor, secondaryColor, accentColor, ctaText, headline, subheadline, finalUrl, showFdaBadge, campaignSlug, allContrastsPass, toast]);
 
   function buildManifest(banner: DisplayBanner): string {
     const bucket = getLayoutBucket(banner.format.width, banner.format.height);
@@ -305,7 +305,7 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
     return [
       { id: 'image', label: 'Foto do produto selecionada', passed: !!selectedImage, critical: true },
       { id: 'url', label: 'URL final definida (clickTag/UTM)', passed: !!finalUrl, critical: true },
-      { id: 'contrast', label: `Contraste CTA WCAG AA (${accentContrast.toFixed(2)}:1 ≥ 4.5)`, passed: accentContrastOk, critical: true },
+      { id: 'contrast', label: `Contrastes WCAG AA: H ${contrastChecks.headline.ratio.toFixed(2)} / CTA ${contrastChecks.cta.ratio.toFixed(2)} / FDA ${contrastChecks.fda.ratio.toFixed(2)}`, passed: allContrastsPass, critical: true },
       { id: 'cta', label: 'Texto do CTA definido', passed: !!ctaText.trim(), critical: true },
       { id: 'campaign', label: 'Slug de campanha definido (UTM)', passed: !!campaignSlug.trim(), critical: false },
       { id: 'formats', label: `${selectedFormats.length} formato(s) selecionado(s)`, passed: selectedFormats.length > 0, critical: true },
@@ -314,7 +314,7 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
       { id: 'fda', label: showFdaBadge ? 'Badge FDA K260152 ativo' : 'Badge FDA opcional desativado', passed: true, critical: false },
       { id: 'tracking', label: 'IAB clickTag + GA4/GTM injetados', passed: banners.length > 0, critical: banners.length > 0 },
     ];
-  }, [banners, selectedImage, finalUrl, accentContrast, accentContrastOk, ctaText, campaignSlug, selectedFormats.length, showFdaBadge]);
+  }, [banners, selectedImage, finalUrl, contrastChecks, allContrastsPass, ctaText, campaignSlug, selectedFormats.length, showFdaBadge]);
 
   const categories = ['popular', 'horizontal', 'mobile', 'vertical', 'square'] as const;
   const categoryLabels: Record<string, string> = {
