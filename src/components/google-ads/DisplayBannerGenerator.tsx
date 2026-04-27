@@ -417,6 +417,16 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
             </div>
           </div>
 
+          <div>
+            <button
+              type="button"
+              onClick={() => handleStylePresetChange(DEFAULT_STYLE)}
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground underline"
+            >
+              <RotateCcw className="h-3 w-3" /> Resetar para padrão SmartDent
+            </button>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <Label className="text-xs">URL Final (clickTag IAB)</Label>
