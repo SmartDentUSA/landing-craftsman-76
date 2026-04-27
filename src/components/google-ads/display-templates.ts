@@ -68,33 +68,8 @@ export function smartTruncate(text: string, maxChars: number): string {
   return base.replace(/[.,;:\-]+$/, '') + '…';
 }
 
-// ===== WCAG contrast =====
-function hexToRgb(hex: string): [number, number, number] {
-  const h = hex.replace('#', '');
-  const v = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
-  return [
-    parseInt(v.substring(0, 2), 16),
-    parseInt(v.substring(2, 4), 16),
-    parseInt(v.substring(4, 6), 16),
-  ];
-}
-function relLuminance([r, g, b]: [number, number, number]): number {
-  const conv = (c: number) => {
-    const s = c / 255;
-    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
-  };
-  return 0.2126 * conv(r) + 0.7152 * conv(g) + 0.0722 * conv(b);
-}
-export function contrastRatio(hex1: string, hex2: string): number {
-  try {
-    const l1 = relLuminance(hexToRgb(hex1));
-    const l2 = relLuminance(hexToRgb(hex2));
-    const [a, b] = l1 > l2 ? [l1, l2] : [l2, l1];
-    return (a + 0.05) / (b + 0.05);
-  } catch {
-    return 0;
-  }
-}
+// ===== WCAG contrast — fonte única em smartdent-constants =====
+export { contrastRatio, relativeLuminance } from './smartdent-constants';
 
 // ===== Layout buckets =====
 export function getLayoutBucket(w: number, h: number): LayoutBucket {

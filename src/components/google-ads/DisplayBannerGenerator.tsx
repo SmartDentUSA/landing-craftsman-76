@@ -99,8 +99,19 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
     ...(product.images_gallery || []),
   ].filter((img, i, arr) => arr.findIndex(x => x.url === img.url) === i);
 
-  const accentContrast = useMemo(() => contrastRatio(accentColor, '#ffffff'), [accentColor]);
-  const accentContrastOk = accentContrast >= 4.5;
+  // WCAG AA — 3 contrastes derivados do preset selecionado
+  const contrastChecks = useMemo(() => {
+    const p = STYLE_PRESETS[style];
+    const h = contrastRatio(p.textOnBg, p.bgDominant);
+    const c = contrastRatio(p.ctaText, p.ctaBg);
+    const f = contrastRatio(p.fdaBadgeText, p.fdaBadgeBg);
+    return {
+      headline: { label: 'Headline (texto vs fundo)', ratio: h, pass: h >= 4.5 },
+      cta:      { label: 'CTA (texto vs botão)',     ratio: c, pass: c >= 4.5 },
+      fda:      { label: 'FDA Badge',                 ratio: f, pass: f >= 4.5 },
+    };
+  }, [style]);
+  const allContrastsPass = contrastChecks.headline.pass && contrastChecks.cta.pass && contrastChecks.fda.pass;
 
   const toggleFormat = (format: DisplayFormat) => {
     setSelectedFormats(prev => {
@@ -139,8 +150,8 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
       toast({ title: 'URL Final é obrigatória para tracking IAB/UTM', variant: 'destructive' });
       return;
     }
-    if (!accentContrastOk) {
-      toast({ title: `Contraste do CTA insuficiente (${accentContrast.toFixed(2)}:1). Ajuste a cor de destaque (mín 4.5:1).`, variant: 'destructive' });
+    if (!allContrastsPass) {
+      toast({ title: 'Ajuste as cores do preset — algum contraste WCAG AA está abaixo de 4.5:1.', variant: 'destructive' });
       return;
     }
 
@@ -209,7 +220,7 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
     } finally {
       setIsGenerating(false);
     }
-  }, [product, selectedImage, selectedFormats, style, primaryColor, secondaryColor, accentColor, ctaText, headline, subheadline, finalUrl, showFdaBadge, campaignSlug, accentContrastOk, accentContrast, toast]);
+  }, [product, selectedImage, selectedFormats, style, primaryColor, secondaryColor, accentColor, ctaText, headline, subheadline, finalUrl, showFdaBadge, campaignSlug, allContrastsPass, toast]);
 
   function buildManifest(banner: DisplayBanner): string {
     const bucket = getLayoutBucket(banner.format.width, banner.format.height);
@@ -294,7 +305,7 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
     return [
       { id: 'image', label: 'Foto do produto selecionada', passed: !!selectedImage, critical: true },
       { id: 'url', label: 'URL final definida (clickTag/UTM)', passed: !!finalUrl, critical: true },
-      { id: 'contrast', label: `Contraste CTA WCAG AA (${accentContrast.toFixed(2)}:1 ≥ 4.5)`, passed: accentContrastOk, critical: true },
+      { id: 'contrast', label: `Contrastes WCAG AA: H ${contrastChecks.headline.ratio.toFixed(2)} / CTA ${contrastChecks.cta.ratio.toFixed(2)} / FDA ${contrastChecks.fda.ratio.toFixed(2)}`, passed: allContrastsPass, critical: true },
       { id: 'cta', label: 'Texto do CTA definido', passed: !!ctaText.trim(), critical: true },
       { id: 'campaign', label: 'Slug de campanha definido (UTM)', passed: !!campaignSlug.trim(), critical: false },
       { id: 'formats', label: `${selectedFormats.length} formato(s) selecionado(s)`, passed: selectedFormats.length > 0, critical: true },
@@ -303,7 +314,7 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
       { id: 'fda', label: showFdaBadge ? 'Badge FDA K260152 ativo' : 'Badge FDA opcional desativado', passed: true, critical: false },
       { id: 'tracking', label: 'IAB clickTag + GA4/GTM injetados', passed: banners.length > 0, critical: banners.length > 0 },
     ];
-  }, [banners, selectedImage, finalUrl, accentContrast, accentContrastOk, ctaText, campaignSlug, selectedFormats.length, showFdaBadge]);
+  }, [banners, selectedImage, finalUrl, contrastChecks, allContrastsPass, ctaText, campaignSlug, selectedFormats.length, showFdaBadge]);
 
   const categories = ['popular', 'horizontal', 'mobile', 'vertical', 'square'] as const;
   const categoryLabels: Record<string, string> = {
@@ -397,19 +408,11 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
               </div>
             </div>
             <div>
-              <Label className="text-xs flex items-center gap-1">
-                Destaque (CTA)
-                {accentContrastOk
-                  ? <CheckCircle2 className="h-3 w-3 text-green-600" />
-                  : <AlertTriangle className="h-3 w-3 text-destructive" />}
-              </Label>
+              <Label className="text-xs">Destaque (CTA)</Label>
               <div className="flex items-center gap-2 mt-1">
                 <input type="color" value={accentColor} onChange={e => setAccentColor(e.target.value)} className="w-8 h-8 rounded cursor-pointer" />
                 <Input value={accentColor} onChange={e => setAccentColor(e.target.value)} className="h-8 text-xs" />
               </div>
-              <p className={`text-[10px] mt-1 ${accentContrastOk ? 'text-muted-foreground' : 'text-destructive'}`}>
-                Contraste vs branco: {accentContrast.toFixed(2)}:1 {accentContrastOk ? '✓' : '(mín 4.5:1)'}
-              </p>
             </div>
             <div>
               <Label className="text-xs">Texto CTA</Label>
@@ -417,7 +420,7 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
             </div>
           </div>
 
-          <div>
+          <div className="flex items-center justify-between gap-2">
             <button
               type="button"
               onClick={() => handleStylePresetChange(DEFAULT_STYLE)}
@@ -425,6 +428,26 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
             >
               <RotateCcw className="h-3 w-3" /> Resetar para padrão SmartDent
             </button>
+          </div>
+
+          {/* WCAG AA — 3 contrastes derivados do preset */}
+          <div className="rounded-md border bg-muted/30 p-2 space-y-1">
+            <div className="text-[11px] font-semibold text-muted-foreground mb-1">
+              Contrastes WCAG AA (mín 4.5:1)
+            </div>
+            {(['headline', 'cta', 'fda'] as const).map(k => {
+              const c = contrastChecks[k];
+              return (
+                <div key={k} className="flex items-center gap-2 text-xs">
+                  <span className={c.pass ? 'text-green-600' : 'text-destructive'}>{c.pass ? '✓' : '✗'}</span>
+                  <span className="text-muted-foreground">{c.label}:</span>
+                  <span className={c.pass ? 'text-green-700 font-medium' : 'text-destructive font-bold'}>
+                    {c.ratio.toFixed(2)}:1
+                  </span>
+                  {!c.pass && <span className="text-destructive text-[10px]">(mín 4.5:1)</span>}
+                </div>
+              );
+            })}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -493,11 +516,21 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
       </Card>
 
       {/* Generate Button */}
-      <div className="flex justify-center">
-        <Button onClick={handleGenerate} disabled={isGenerating || !selectedImage || selectedFormats.length === 0} size="lg" className="gap-2">
+      <div className="flex flex-col items-center gap-1">
+        <Button
+          onClick={handleGenerate}
+          disabled={isGenerating || !selectedImage || selectedFormats.length === 0 || !allContrastsPass}
+          size="lg"
+          className="gap-2"
+        >
           {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}
           Gerar {selectedFormats.length} Banners HTML5
         </Button>
+        {!allContrastsPass && (
+          <p className="text-xs text-destructive">
+            Ajuste o preset até todos os contrastes passarem (≥ 4.5:1).
+          </p>
+        )}
       </div>
 
       {/* Campaign Readiness Checklist */}
