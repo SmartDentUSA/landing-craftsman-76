@@ -74,17 +74,25 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
   const [selectedFormats, setSelectedFormats] = useState<DisplayFormat[]>(
     DISPLAY_FORMATS.filter(f => ['popular', 'mobile'].includes(f.category))
   );
-  const [style, setStyle] = useState<DisplayStyle>('modern');
-  const [primaryColor, setPrimaryColor] = useState('#2563eb');
-  const [secondaryColor, setSecondaryColor] = useState('#7c3aed');
-  const [accentColor, setAccentColor] = useState('#dc2626'); // CTA bg, white text → contrast check
+  const [style, setStyle] = useState<DisplayStyle>(DEFAULT_STYLE);
+  const [primaryColor, setPrimaryColor] = useState(STYLE_PRESETS[DEFAULT_STYLE].primary);
+  const [secondaryColor, setSecondaryColor] = useState(STYLE_PRESETS[DEFAULT_STYLE].secondary);
+  const [accentColor, setAccentColor] = useState(STYLE_PRESETS[DEFAULT_STYLE].accent);
   const [ctaText, setCtaText] = useState('Saiba Mais');
   const [headline, setHeadline] = useState('');
   const [subheadline, setSubheadline] = useState('');
-  const [showFdaBadge, setShowFdaBadge] = useState(false);
+  const [showFdaBadge, setShowFdaBadge] = useState(true);
   const [campaignSlug, setCampaignSlug] = useState('');
   const [finalUrl, setFinalUrl] = useState(product.product_url || '');
   const [selectedImage, setSelectedImage] = useState(product.image_url || '');
+
+  const handleStylePresetChange = useCallback((preset: StylePreset) => {
+    const cfg = STYLE_PRESETS[preset];
+    setStyle(preset);
+    setPrimaryColor(cfg.primary);
+    setSecondaryColor(cfg.secondary);
+    setAccentColor(cfg.accent);
+  }, []);
 
   const allImages = [
     ...(product.image_url ? [{ url: product.image_url, alt: 'Principal' }] : []),
