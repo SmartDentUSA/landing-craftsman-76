@@ -374,48 +374,49 @@ serve(async (req) => {
       });
 
     } else if (publishMethod === 'cloudflare' || !publishMethod) {
-      // Cloudflare: invoke publish-cloudflare-pages for each updated page
-      console.log(`☁️ Cloudflare republish: deploying ${updatedPages.length} pages...`);
+      // Cloudflare: delegate to the bulk deployer so the domain is rebuilt
+      // with a SINGLE deployment containing every page. Using the per-page
+      // publisher in a loop creates one Cloudflare deployment per page, and
+      // each of those overwrites the previous snapshot — pages disappear
+      // ~5 minutes after publish. The bulk function ignores `excludeLpId`
+      // because the goal is exactly to keep every page online.
+      console.log(`☁️ Cloudflare republish: delegating to bulk deployer for ${domain}`);
 
-      // Mark all pages as pending so the publisher picks them up with fresh HTML
-      await db
-        .from('cloned_landing_pages')
-        .update({ publish_status: 'pending' })
-        .in('id', updatedPages.map((p) => p.id));
-
-      let deployed = 0;
-      const failures: { id: string; error: string }[] = [];
-
-      // Sequential to avoid Cloudflare rate-limits
-      for (const page of updatedPages) {
-        try {
-          const resp = await fetch(`${supabaseUrl}/functions/v1/publish-cloudflare-pages`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${supabaseKey}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ lpId: page.id }),
-          });
-          if (!resp.ok) {
-            const t = await resp.text();
-            failures.push({ id: page.id, error: `HTTP ${resp.status}: ${t.slice(0, 200)}` });
-          } else {
-            deployed++;
-          }
-        } catch (e: any) {
-          failures.push({ id: page.id, error: e.message });
+      const bulkResp = await fetch(
+        `${supabaseUrl}/functions/v1/republish-domain-cloudflare-bulk`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${supabaseKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ domain }),
         }
+      );
+      const bulkData = await bulkResp.json().catch(() => ({}));
+
+      if (!bulkResp.ok || !bulkData?.success) {
+        const errMsg = bulkData?.error || `Bulk deploy HTTP ${bulkResp.status}`;
+        console.error(`❌ Cloudflare bulk deploy failed: ${errMsg}`);
+        return new Response(JSON.stringify({
+          success: false,
+          method: 'cloudflare',
+          updated: updatedPages.length,
+          error: errMsg,
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
-      console.log(`✅ Cloudflare: ${deployed}/${updatedPages.length} deployed (${failures.length} failed)`);
-
+      console.log(`✅ Cloudflare bulk: ${bulkData.filesDeployed} files deployed in 1 snapshot`);
       return new Response(JSON.stringify({
         success: true,
         method: 'cloudflare',
+        mode: 'bulk-domain-snapshot',
         updated: updatedPages.length,
-        deployed,
-        failures,
+        deployed: bulkData.filesDeployed,
+        deploymentId: bulkData.deploymentId,
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
