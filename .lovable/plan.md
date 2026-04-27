@@ -1,246 +1,123 @@
-# Refatoração do Gerador de Display Banners (Google Ads) — v2
+# PR Final — Paleta SmartDent + Fixes Críticos
 
-## Objetivo
+Consolida correções pendentes e configura paleta oficial SmartDent. Ao final do merge, o gerador está pronto para produção.
 
-Refatorar o gerador para produzir banners HTML5 prontos para campanha no Google Display Network: 4 buckets de layout dedicados, clickTag IAB, tracking UTM/GA4, smart truncate, validação de peso/contraste, animação compliant e acessibilidade.
+## O que NÃO muda
 
-Foco no produto **Resina Smart Print Bio Vitality** (FDA K260152, Classe II). Reutilizável para qualquer produto.
+- Sistema de 3 color pickers e validação WCAG em tempo real
+- 4 estilos pré-definidos (Moderno/Minimalista/Bold/Clínico)
+- 16 formatos / 5 categorias
+- ClickTag IAB, animação CTA limitada a 6 ciclos
+- UTMs + gtag/dataLayer via `window.parent`
+- Toggle FDA, galeria de imagens, slug de campanha, "Baixar Todos (ZIP WebP)"
 
-## Bugs colaterais corrigidos junto
-
-1. `supabase/functions/generate-display-banners/index.ts` — `const toolCall` declarado 2x (linhas 114-115) → `SyntaxError`. Removido na refatoração da edge function.
-2. `display-templates.ts` — extração de CSS por `split('\n')` frágil → reescrito com objeto estruturado por bucket.
-
-## O que NÃO será tocado
-
-Schema do banco, upload de imagem para Supabase Storage, sistema de auth, Sistema A da SmartDent.
-
-## Arquitetura — Separação de responsabilidades (revisada)
-
-**Front (`src/components/google-ads/`) é dono de TUDO que gera HTML.** Edge function só faz uma coisa: gerar copy via AI quando o usuário deixa headline vazia. Sem duplicação de renderers.
-
-```text
-DisplayBannerGenerator.tsx
-  ├─ (opcional) chama edge fn → recebe { headline, subheadline } por bucket
-  ├─ chama renderSmall/Medium/Large/Interstitial (display-templates.ts)
-  ├─ valida peso, contraste, checklist
-  └─ empacota ZIP
-
-generate-display-banners/index.ts
-  └─ APENAS: AI copy generator → retorna { copies: [{ bucket, headline, subheadline }] }
-```
+Apenas valores e bugs — nenhuma refatoração estrutural.
 
 ## Mudanças por arquivo
 
-### 1. `src/types/google-ads.ts`
+### 1. `src/components/google-ads/smartdent-constants.ts` (NOVO)
 
-- `DisplayBucket = 'small' | 'medium' | 'large' | 'interstitial'`
-- `DisplayFormat` ganha `bucket: DisplayBucket`
-- `DisplayBannerConfig`: `headline`, `subheadline`, `ctaText`, `accentColor`, `fdaBadge`, `campaignSlug`, `baseUrl`, `bgGradient?`, `imagesByBucket?: Partial<Record<DisplayBucket, string>>`
-- `DisplayBanner`: `bucket`, `weightTotalKB`, `accessibility`, `manifest`, `checklist`
+Define `BRAND` (paleta oficial: navy `#2C3E5F`, navyDark `#1a2942`, navyMid `#4A6585`, orange `#E97935`, white, offWhite) e `STYLE_PRESETS` com os 4 estilos como arranjos das cores oficiais. Cada preset expõe: `primary`, `secondary`, `accent`, `bgGradient`, `textOnBg`, `ctaBg`, `ctaText`, `fdaBadgeBg`, `fdaBadgeText`, `logoVariant` (`'lockupDark' | 'lockupLight'`). Default `'moderno'`.
 
-### 2. `src/components/google-ads/display-templates.ts` — reescrita completa
+### 2. `src/components/google-ads/display-templates.ts` (atualizar)
 
-**Catálogo (13 tamanhos) por bucket:**
-
-```text
-SMALL          MEDIUM         LARGE           INTERSTITIAL
-320x50         300x250        728x90          320x480
-300x50         336x280        970x250         480x320
-320x100        250x250        300x600
-                              160x600
-                              200x200
-```
-
-**Helpers compartilhados (exports nomeados):**
-
-```ts
-export function escapeHtml(s: string): string  // & < > " ' → entidades
-export function smartTruncate(text: string, maxChars: number): string
-export function pickBgGradient(accentColor: string, custom?: string): string
-export function buildClickHandler(o: { campaignSlug, size, headline }): string  // JS inline
-export function buildAriaLabel(headline: string, ctaText: string): string
-export function buildAltText(productName: string, headline: string): string
-export function getContrastRatio(fg: string, bg: string): number  // WCAG 2.1 relative luminance
-export function smartDentLogoSVG(color?: string): string  // SVG inline (~1KB) para SMALL
-```
-
-`escapeHtml` é aplicado **obrigatoriamente** em `headline`, `subheadline`, `ctaText`, `productName`, `altText`, `ariaLabel` antes de interpolar nos templates de cada bucket.
-
-**4 funções de template (sem escala decimal):**
-
-- `renderSmall(p)` — horizontal: faixa colorida + headline grande truncado + selo "FDA" + CTA. **Sem foto**: usa `smartDentLogoSVG()` inline (~1KB, sem requisição). Para 320x50/300x50 a subheadline é omitida.
-- `renderMedium(p)` — vertical: foto + headline + subheadline + CTA pulsante.
-- `renderLarge(p)` — premium horizontal/vertical: hero image, headline destacada, subheadline, FDA badge top-right, CTA grande pulsante.
-- `renderInterstitial(p)` — fullscreen mobile: hero full-bleed + gradient overlay + headline grande + CTA fixo no rodapé.
-
-**clickTag IAB padrão (em TODOS os templates):**
-
-```html
-<script>
-  var clickTag = "{{BASE_URL_ESCAPED}}";
-</script>
-```
-
-Handler de click usa `clickTag` se definido pelo Google Ads, senão `BASE_URL`:
-
-```js
-function handleBannerClick(e){
-  e.preventDefault();
-  var base = (typeof clickTag !== 'undefined' && clickTag) ? clickTag : "{{BASE_URL}}";
-  var u = base + (base.indexOf('?')>-1?'&':'?')
-    + 'utm_source=display&utm_medium=banner'
-    + '&utm_campaign=' + encodeURIComponent("{{SLUG}}")
-    + '&utm_content={{SIZE}}'
-    + '&utm_term=' + encodeURIComponent("{{HEADLINE_TRUNC}}");
-  if (typeof gtag !== 'undefined') gtag('event','banner_click',{banner_size:"{{SIZE}}",campaign:"{{SLUG}}",headline:"{{HEADLINE_ESC}}"});
-  if (window.dataLayer) window.dataLayer.push({event:'banner_click',banner_size:"{{SIZE}}",campaign:"{{SLUG}}"});
-  window.open(u,'_blank','noopener');
-}
-```
-
-Substitui o `onclick="window.open(...)"` antigo. `.banner` recebe `role="link"`, `tabindex="0"`, `aria-label` completo.
-
-**Animação CTA (limitada — Google Ads rejeita infinitas):**
-
-```css
-@keyframes ctaPulse {
-  0%,100% { transform: scale(1); box-shadow: 0 2px 8px rgba(0,0,0,.2); }
-  50%     { transform: scale(1.04); box-shadow: 0 4px 16px var(--accent-glow); }
-}
-.cta-btn {
-  animation: ctaPulse 2.5s ease-in-out 6;   /* iteration-count: 6 (~15s total) */
-  animation-delay: 1s;
-  animation-fill-mode: both;
-}
-```
-
-Mantém `fadeIn` inicial. Total de animação ≤ 16s, dentro do limite Google Ads (30s).
-
-**FDA Badge** quando `fdaBadge: true` — `<div class="fda-badge">FDA K260152</div>` absoluto top-right, com `escapeHtml` na classe se houver custom text futuro. Some no SMALL com altura ≤ 50.
-
-**Imagens:**
-- SMALL: SVG inline via `smartDentLogoSVG()`, sem `<img>`.
-- MEDIUM/LARGE/INTERSTITIAL: **apenas WebP** (sem fallback JPG):
-  ```html
-  <img src="product.webp" alt="{altText}" loading="lazy">
+- Importar `BRAND`, `STYLE_PRESETS`, `StylePreset` do novo constants.
+- Adicionar `SMARTDENT_LOGO` com 4 variantes SVG inline (`markLight`, `markDark`, `lockupLight`, `lockupDark`) — 2 paths separados (curva navy/branco + curva laranja), `text` opcional para os lockups.
+- Adicionar `pickLogo({ preset, withWordmark })` que retorna o SVG correto: lockup quando `withWordmark` (largura ≥ 300), mark caso contrário.
+- Manter `escapeHtml` e `smartTruncate` existentes (já corretos — `lastSpace > 8`).
+- Adicionar tabela `BUCKET_LIMITS` com `headline` e `subheadline` por bucket (SMALL 25/0, MEDIUM 35/60, LARGE 45/80, INTERSTITIAL 50/90).
+- Refatorar `getPalette` (ou substituir por leitura direta de `STYLE_PRESETS[stylePreset]`) — eliminar todo hex hardcoded (`#2563eb`, `#dc2626`, `#7c3aed`, `#1e3a8a`, `#f0f7ff`, etc).
+- `bgGradient`, `ctaBg`, `ctaFg`, `textOnBg`, `fdaBg`, `fdaText` saem do preset. `logoSvg = pickLogo({ preset, withWordmark: width >= 300 })` injetado nos 4 renderers no lugar do `smartDentLogoSVG` global.
+- Aplicar `BUCKET_LIMITS` em `smartTruncate` por renderer (substituir os `28/32/42/55/65/60` ad-hoc).
+- CSS de `.h` (headline) em MEDIUM/LARGE/INTERSTITIAL trocar `overflow:hidden` puro por:
+  ```css
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:normal;hyphens:none;
   ```
-  Reduz peso ~60%. Todos browsers suportados pelo Google Ads aceitam WebP desde 2020.
+  SMALL mantém 1 linha (`white-space:nowrap`).
+- FDA badge usa `fdaBadgeBg` / `fdaBadgeText` do preset (não mais `#dc2626` fixo).
 
-### 3. `src/components/google-ads/DisplayBannerGenerator.tsx`
+### 3. `renderINTERSTITIAL` — fix CTA cortado em 480×320
 
-**Novos campos no formulário:**
-
-- **Headline** (Input + dropdown sugestões: "Restaurações DEFINITIVAS — FDA K260152", "A 1ª Resina 3D Classe II do Brasil", "Coroas e facetas em horas, não em dias", "Sem provisório. Definitivo de verdade.")
-- **Subheadline** (Input opcional, max 60)
-- **CTA Text** (dropdown: "Comprar agora", "Ver registro FDA", "Pedir amostra", "Falar com vendas")
-- **Accent Color** (color picker, default `#00d4ff`)
-- **FDA Badge** (Checkbox, default `true`)
-- **Campaign Slug** (Input slugificado, default `vitality_fda_q2_2026`)
-- **Base URL** (Input — antigo `finalUrl`)
-- **Imagens por bucket** (UI colapsada, override opcional)
-
-**Validações no submit (bloqueiam geração):**
-
-- `campaignSlug` obrigatório
-- `baseUrl` URL parseável
-- `headline` ≤ 40 (medium) / ≤ 25 (small)
-- **Contraste WCAG**: `getContrastRatio(accentColor, '#FFFFFF') ≥ 4.5` — se falhar, mensagem: *"Cor de destaque tem contraste insuficiente com o texto branco do CTA (X:1, mínimo 4.5:1). Escolha uma cor mais escura."* + sugestão de cor escurecida automaticamente.
-
-**Conversão de imagem para WebP** (Canvas client-side):
-
-```ts
-async function imageToWebP(srcUrl, maxDim): Promise<Blob>
+Layout flex column com altura mínima reservada pro CTA:
+```css
+.b{padding:12px;display:flex;flex-direction:column;height:100%;box-sizing:border-box;}
+.img-wrap{flex:1 1 auto;min-height:0;overflow:hidden;display:flex;align-items:center;justify-content:center;}
+.tw{flex:0 0 auto;padding:6px 0;}
+.c{flex:0 0 auto;min-height:36px;margin-top:8px;}
 ```
+Imagem absorve sobra (`flex:1`), CTA nunca é comprimido (`flex:0 0 auto`).
 
-Uma chamada por bucket usado, max-dim = maior dimensão do bucket × 2 (retina). Resultado cacheado.
+### 4. `src/components/google-ads/DisplayBannerGenerator.tsx`
 
-**Geração:**
+- Importar `STYLE_PRESETS`, `DEFAULT_STYLE`, `StylePreset` do constants.
+- Estado inicial: `style = DEFAULT_STYLE`, `primaryColor = STYLE_PRESETS.moderno.primary` (`#2C3E5F`), `secondaryColor = #1a2942`, `accentColor = #E97935`.
+- Adicionar `handleStylePresetChange(preset)`: atualiza `style` + os 3 color pickers para os valores do preset.
+- Trocar o `onClick={() => setStyle(s.value)}` no grid de 4 estilos por `handleStylePresetChange(s.value)`.
+- Adicionar botão abaixo dos 3 color pickers:
+  ```tsx
+  <button type="button" onClick={() => handleStylePresetChange(DEFAULT_STYLE)}
+    className="text-xs text-muted-foreground hover:text-foreground underline">
+    ↻ Resetar para padrão SmartDent
+  </button>
+  ```
+- Passar `style` (preset) dentro de `generateBannerHTML` — o templates já lê do preset.
 
-1. Se `headline` vazia → chama edge fn para gerar copy AI por bucket
-2. Para cada formato selecionado: aplica `renderXXX()` do `display-templates.ts`
-3. Calcula peso total (HTML + WebP)
-4. Roda checklist (10 itens)
-5. Renderiza preview
+### 5. Empacotamento ZIP — remover base64 e omitir WebP em SMALL
 
-### 4. `src/components/google-ads/DisplayBannerPreview.tsx`
+Bug atual: `productImageUrl` recebe `webpDataUrl` (base64), inflando cada banner para ~103KB.
 
-- Painel "Checklist" colapsável com 10 critérios (cada um chip verde/vermelho).
-- Badge de peso colorido: verde <100KB, amarelo 100-150KB, vermelho >150KB.
-- Botão Download desabilitado se peso >150KB (tooltip explicativo).
-- Selo "✅ Pronto para campanha" quando todos os 10 critérios passam.
+- `handleGenerate`: passar `productImageUrl: 'product.webp'` (caminho relativo) em vez de `webpDataUrl`. Guardar `webpBlob` em estado/ref para reuso no ZIP.
+- `handleDownload(banner)`:
+  - Se `getLayoutBucket(w,h) === 'SMALL'`: ZIP só com `index.html` + `manifest.json` (sem `product.webp`).
+  - Caso contrário: `index.html` + `product.webp` + `manifest.json`.
+- `handleDownloadAll`: idem, por subpasta.
+- Adicionar `manifest.json` simples por banner (size, bucket, headline, ctaText, campaignSlug, weightKB, generatedAt).
+- Renderers SMALL já não usam `<img class="pi">` — confirmado no código atual; nada a mudar lá além do logo via `pickLogo`.
 
-### 5. `supabase/functions/generate-display-banners/index.ts` — simplificada drasticamente
+Resultado esperado: `300x250.zip ~80KB`, `320x50.zip ~3KB`.
 
-**Responsabilidade única: gerar copy via AI.** Sem renderers, sem HTML.
+### 6. `src/components/google-ads/DisplayBannerPreview.tsx` — checklist
 
-- Corrige bug `const toolCall` duplicado.
-- Aceita: `productName`, `productDescription`, `ctaText`, `buckets: DisplayBucket[]`, `tone?`.
-- Retorna: `{ copies: [{ bucket, headline, subheadline }] }`.
-- Prompt instrui limites por bucket: small ≤ 25 chars / medium ≤ 40 / large ≤ 60.
-- Tool call único `generate_banner_copy_per_bucket`.
-- Reduz arquivo de 234 → ~110 linhas.
+Atualizar labels do checklist para refletir a paleta SmartDent (sem mudanças funcionais grandes — apenas texto e o item de bucket SMALL com peso esperado < 5KB).
 
-### 6. `manifest.json` por banner (no ZIP)
+## Critérios de aceite
 
-```json
-{
-  "size": "300x250",
-  "bucket": "medium",
-  "headline": "...",
-  "ctaText": "...",
-  "campaignSlug": "vitality_fda_q2_2026",
-  "weightTotalKB": 67.4,
-  "generatedAt": "2026-04-27T...",
-  "fdaBadge": true,
-  "clickTag": "https://...",
-  "checklist": { "weight": true, "truncate": true, "clickTag": true, ... }
-}
-```
+Banner 300×250 estilo Moderno:
+- `index.html` < 5KB; `<img src="product.webp">` (não data URI)
+- background `linear-gradient(135deg,#2C3E5F 0%,#1a2942 100%)`
+- CTA `#E97935` / texto `#FFFFFF`
+- FDA badge `#E97935` / `#FFFFFF`
+- Logo SmartDent contém path `M18 60Q65-5 115 50`
+- Headline com `-webkit-line-clamp:2`, sem cortar palavra
+- `var clickTag` presente, `animation: ctaPulse ... 6`, UTMs no link
 
-### 7. ZIP por banner / "Exportar todos"
+Estilos Minimalista/Bold/Clínico: cores conforme preset (validadas no checklist do PR).
 
-Cada ZIP por tamanho:
+ZIP:
+- SMALL (320×50, 300×50, 320×100, 468×60): só `index.html` + `manifest.json`
+- MEDIUM/LARGE/INTERSTITIAL: incluem `product.webp`
+- Cada banner < 100KB
 
-```text
-banner-300x250.zip
-├── index.html
-├── product.webp        (omitido no SMALL bucket)
-└── manifest.json
-```
+Formulário:
+- Clicar em estilo atualiza os 3 pickers
+- Botão "Resetar para padrão SmartDent" volta ao Moderno
+- Validação WCAG continua funcionando
+- Default ao abrir: Moderno, accent `#E97935`
 
-`Exportar todos` → `display-banners-all.zip` com 13 subpastas.
+Interstitial 480×320: CTA não cortado, imagem absorve sobra.
 
-## Ordem de implementação (1 PR único)
+## Não fazer
 
-1. Tipos (`google-ads.ts`)
-2. Templates (`display-templates.ts`): helpers (`escapeHtml`, `smartTruncate`, `getContrastRatio`, `pickBgGradient`, `buildClickHandler`, `smartDentLogoSVG`) + 4 renderers + clickTag + animação 6 ciclos
-3. Edge function: simplifica para AI-copy-only + corrige bug duplo `toolCall`
-4. UI (`DisplayBannerGenerator.tsx`): novos campos, validação contraste WCAG, conversão WebP, dropdowns, checklist
-5. Preview (`DisplayBannerPreview.tsx`): checklist + gating de download
-6. ZIP com `manifest.json` + `product.webp` apenas
+- Sem libs novas (sem framer-motion, react-color)
+- Sem persistência em localStorage
+- Sem grid no lugar de flex onde já funciona
+- Não consolidar os 2 paths do logo em path único
 
-## Aguardando do usuário
+## Ordem de implementação (1 PR)
 
-**Logo SmartDent SVG simplificado**: o usuário enviará o arquivo. Implementação inicial usa um placeholder SVG (frasco minimalista + texto "SmartDent") e troca por `smartDentLogoSVG()` quando o arquivo chegar — não bloqueia o PR.
-
-## Critérios de aceite (10 itens — chip por banner)
-
-| # | Critério | Como validamos |
-|---|---|---|
-| 1 | Peso < 150KB | Soma HTML+WebP, badge no preview, bloqueia download se falhar |
-| 2 | Headline ≤ limite do bucket | Validado no submit + `smartTruncate` |
-| 3 | Description não corta no meio da palavra | `smartTruncate` adiciona `…` no último espaço |
-| 4 | UTMs no link | `handleBannerClick` injetado |
-| 5 | gtag/dataLayer event | Presente no JS inline |
-| 6 | clickTag IAB definido | `<script>var clickTag=...</script>` presente |
-| 7 | Background ≠ cor da imagem (sem #000→#000) | `pickBgGradient` valida |
-| 8 | Contraste WCAG do CTA ≥ 4.5:1 | `getContrastRatio` no submit |
-| 9 | Animação CTA com `iteration-count: 6` (não infinita) | Regex no CSS gerado |
-| 10 | FDA badge presente (se ativo) + alt/aria-label preenchidos | DOM contém `.fda-badge`, `<img alt>`, `.banner[aria-label]` |
-
-Cada item exibido como chip verde/vermelho. Selo "✅ Pronto para campanha" só se todos passarem.
-
-## Sem mudanças de banco
-
-Nenhuma migration. Tudo no front + edge function existente simplificada.
+1. `smartdent-constants.ts` (novo)
+2. `display-templates.ts`: SMARTDENT_LOGO + pickLogo + BUCKET_LIMITS + refatorar `getPalette` e renderers
+3. Fix layout interstitial 480×320
+4. `DisplayBannerGenerator.tsx`: defaults, `handleStylePresetChange`, botão de reset, `productImageUrl: 'product.webp'`
+5. ZIP: omitir WebP em SMALL + manifest.json
+6. Atualizar checklist em `DisplayBannerPreview.tsx`
