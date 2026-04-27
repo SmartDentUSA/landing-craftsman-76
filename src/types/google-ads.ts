@@ -164,12 +164,27 @@ export interface DisplayBanner {
   sizeKB: number;
 }
 
+export type LayoutBucket = 'SMALL' | 'MEDIUM' | 'LARGE' | 'INTERSTITIAL';
+
 export interface DisplayBannerConfig {
   formats: DisplayFormat[];
   style: DisplayStyle;
   primaryColor: string;
   secondaryColor: string;
+  accentColor: string;
   ctaText: string;
+  headline?: string;
+  subheadline?: string;
   productImageUrl: string;
   logoUrl?: string;
+  showFdaBadge?: boolean;
+  campaignSlug?: string;
+  utm?: UTMParams;
+}
+
+export interface BannerChecklistItem {
+  id: string;
+  label: string;
+  passed: boolean;
+  critical: boolean;
 }
