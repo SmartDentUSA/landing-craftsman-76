@@ -408,19 +408,11 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
               </div>
             </div>
             <div>
-              <Label className="text-xs flex items-center gap-1">
-                Destaque (CTA)
-                {accentContrastOk
-                  ? <CheckCircle2 className="h-3 w-3 text-green-600" />
-                  : <AlertTriangle className="h-3 w-3 text-destructive" />}
-              </Label>
+              <Label className="text-xs">Destaque (CTA)</Label>
               <div className="flex items-center gap-2 mt-1">
                 <input type="color" value={accentColor} onChange={e => setAccentColor(e.target.value)} className="w-8 h-8 rounded cursor-pointer" />
                 <Input value={accentColor} onChange={e => setAccentColor(e.target.value)} className="h-8 text-xs" />
               </div>
-              <p className={`text-[10px] mt-1 ${accentContrastOk ? 'text-muted-foreground' : 'text-destructive'}`}>
-                Contraste vs branco: {accentContrast.toFixed(2)}:1 {accentContrastOk ? '✓' : '(mín 4.5:1)'}
-              </p>
             </div>
             <div>
               <Label className="text-xs">Texto CTA</Label>
