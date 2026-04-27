@@ -146,10 +146,10 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
 
     setIsGenerating(true);
     try {
-      // 1. Convert image to WebP once
-      const { dataUrl: webpDataUrl } = await convertImageToWebP(selectedImage);
+      // Validate WebP conversion is feasible (used at download time)
+      await convertImageToWebP(selectedImage);
 
-      // 2. Fetch AI copy (one call, not per format)
+      // Fetch AI copy (one call, not per format)
       let copies: Record<string, { headline: string; subheadline: string }> = {};
       try {
         const { data, error } = await supabase.functions.invoke('generate-display-banners', {
@@ -166,7 +166,8 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
         console.warn('AI copy fetch failed, using manual/product fallback:', e);
       }
 
-      // 3. Render HTML in frontend (single source of truth)
+      // Render HTML in frontend (single source of truth). Reference product.webp
+      // as a relative asset — the WebP file is added to the ZIP at download time.
       const localBanners: DisplayBanner[] = selectedFormats.map(format => {
         const key = `${format.width}x${format.height}`;
         const aiCopy = copies[key];
@@ -183,7 +184,7 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
           headline: finalHeadline,
           subheadline: finalSub,
           ctaText,
-          productImageUrl: webpDataUrl,
+          productImageUrl: 'product.webp',
           finalUrl,
           showFdaBadge,
           campaignSlug: campaignSlug || product.id,
@@ -210,14 +211,33 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
     }
   }, [product, selectedImage, selectedFormats, style, primaryColor, secondaryColor, accentColor, ctaText, headline, subheadline, finalUrl, showFdaBadge, campaignSlug, accentContrastOk, accentContrast, toast]);
 
+  function buildManifest(banner: DisplayBanner): string {
+    const bucket = getLayoutBucket(banner.format.width, banner.format.height);
+    return JSON.stringify({
+      size: `${banner.format.width}x${banner.format.height}`,
+      bucket,
+      headline: headline.trim() || product.name,
+      ctaText,
+      campaignSlug: campaignSlug || product.id,
+      weightKB: Number(banner.sizeKB.toFixed(2)),
+      stylePreset: style,
+      fdaBadge: showFdaBadge,
+      generatedAt: new Date().toISOString(),
+    }, null, 2);
+  }
+
   const handleDownload = async (banner: DisplayBanner) => {
     try {
       setIsDownloading(true);
       setDownloadProgress(`Preparando ${banner.format.width}x${banner.format.height}...`);
-      const { blob: webpBlob } = await convertImageToWebP(selectedImage);
+      const bucket = getLayoutBucket(banner.format.width, banner.format.height);
       const zip = new JSZip();
       zip.file('index.html', banner.html);
-      zip.file('product.webp', webpBlob);
+      zip.file('manifest.json', buildManifest(banner));
+      if (bucket !== 'SMALL') {
+        const { blob: webpBlob } = await convertImageToWebP(selectedImage);
+        zip.file('product.webp', webpBlob);
+      }
       const zipBlob = await zip.generateAsync({ type: 'blob' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(zipBlob);
@@ -242,10 +262,12 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
       for (let i = 0; i < banners.length; i++) {
         const b = banners[i];
         setDownloadProgress(`Empacotando ${i + 1}/${banners.length}...`);
+        const bucket = getLayoutBucket(b.format.width, b.format.height);
         const folder = zip.folder(`${b.format.width}x${b.format.height}`);
         if (folder) {
           folder.file('index.html', b.html);
-          folder.file('product.webp', webpBlob);
+          folder.file('manifest.json', buildManifest(b));
+          if (bucket !== 'SMALL') folder.file('product.webp', webpBlob);
         }
       }
       setDownloadProgress('Gerando ZIP final...');
