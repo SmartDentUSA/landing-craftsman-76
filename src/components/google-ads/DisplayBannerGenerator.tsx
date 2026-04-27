@@ -370,7 +370,7 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
             {DISPLAY_STYLES.map(s => (
               <button
                 key={s.value}
-                onClick={() => setStyle(s.value)}
+                onClick={() => handleStylePresetChange(s.value as StylePreset)}
                 className={`p-3 rounded-lg border text-left transition-all ${
                   style === s.value ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border hover:border-primary/50'
                 }`}
