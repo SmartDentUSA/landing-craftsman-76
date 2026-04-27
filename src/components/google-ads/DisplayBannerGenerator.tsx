@@ -150,8 +150,8 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
       toast({ title: 'URL Final é obrigatória para tracking IAB/UTM', variant: 'destructive' });
       return;
     }
-    if (!accentContrastOk) {
-      toast({ title: `Contraste do CTA insuficiente (${accentContrast.toFixed(2)}:1). Ajuste a cor de destaque (mín 4.5:1).`, variant: 'destructive' });
+    if (!allContrastsPass) {
+      toast({ title: 'Ajuste as cores do preset — algum contraste WCAG AA está abaixo de 4.5:1.', variant: 'destructive' });
       return;
     }
 
