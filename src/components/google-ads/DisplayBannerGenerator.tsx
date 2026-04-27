@@ -420,7 +420,7 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
             </div>
           </div>
 
-          <div>
+          <div className="flex items-center justify-between gap-2">
             <button
               type="button"
               onClick={() => handleStylePresetChange(DEFAULT_STYLE)}
@@ -428,6 +428,26 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
             >
               <RotateCcw className="h-3 w-3" /> Resetar para padrão SmartDent
             </button>
+          </div>
+
+          {/* WCAG AA — 3 contrastes derivados do preset */}
+          <div className="rounded-md border bg-muted/30 p-2 space-y-1">
+            <div className="text-[11px] font-semibold text-muted-foreground mb-1">
+              Contrastes WCAG AA (mín 4.5:1)
+            </div>
+            {(['headline', 'cta', 'fda'] as const).map(k => {
+              const c = contrastChecks[k];
+              return (
+                <div key={k} className="flex items-center gap-2 text-xs">
+                  <span className={c.pass ? 'text-green-600' : 'text-destructive'}>{c.pass ? '✓' : '✗'}</span>
+                  <span className="text-muted-foreground">{c.label}:</span>
+                  <span className={c.pass ? 'text-green-700 font-medium' : 'text-destructive font-bold'}>
+                    {c.ratio.toFixed(2)}:1
+                  </span>
+                  {!c.pass && <span className="text-destructive text-[10px]">(mín 4.5:1)</span>}
+                </div>
+              );
+            })}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -496,11 +516,21 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
       </Card>
 
       {/* Generate Button */}
-      <div className="flex justify-center">
-        <Button onClick={handleGenerate} disabled={isGenerating || !selectedImage || selectedFormats.length === 0} size="lg" className="gap-2">
+      <div className="flex flex-col items-center gap-1">
+        <Button
+          onClick={handleGenerate}
+          disabled={isGenerating || !selectedImage || selectedFormats.length === 0 || !allContrastsPass}
+          size="lg"
+          className="gap-2"
+        >
           {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}
           Gerar {selectedFormats.length} Banners HTML5
         </Button>
+        {!allContrastsPass && (
+          <p className="text-xs text-destructive">
+            Ajuste o preset até todos os contrastes passarem (≥ 4.5:1).
+          </p>
+        )}
       </div>
 
       {/* Campaign Readiness Checklist */}
