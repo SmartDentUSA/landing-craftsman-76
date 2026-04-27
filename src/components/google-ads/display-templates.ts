@@ -1,4 +1,5 @@
 import { DisplayFormat, DisplayStyle, LayoutBucket } from '@/types/google-ads';
+import { STYLE_PRESETS, type StylePreset } from './smartdent-constants';
 
 export const DISPLAY_FORMATS: DisplayFormat[] = [
   // Popular
@@ -24,15 +25,28 @@ export const DISPLAY_FORMATS: DisplayFormat[] = [
   { width: 200, height: 200, name: 'Small Square', category: 'square' },
 ];
 
-export const DISPLAY_STYLES: { value: DisplayStyle; label: string; description: string }[] = [
-  { value: 'modern', label: 'Moderno', description: 'Gradiente sutil, overlay elegante' },
-  { value: 'minimal', label: 'Minimalista', description: 'Fundo limpo, foco no produto' },
-  { value: 'bold', label: 'Bold', description: 'Cores vibrantes, CTA chamativo' },
-  { value: 'clinical', label: 'Clínico', description: 'Profissional, tons de azul' },
-];
+export const DISPLAY_STYLES: { value: DisplayStyle; label: string; description: string }[] = (
+  Object.entries(STYLE_PRESETS) as [DisplayStyle, typeof STYLE_PRESETS[StylePreset]][]
+).map(([value, cfg]) => ({ value, label: cfg.label, description: cfg.description }));
 
-// SmartDent simplified inline SVG logo (mono — uses currentColor)
-export const smartDentLogoSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 24" fill="currentColor" aria-label="SmartDent"><text x="0" y="18" font-family="Segoe UI,Arial,sans-serif" font-size="18" font-weight="800" letter-spacing="-0.5">Smart<tspan font-weight="400">Dent</tspan></text></svg>`;
+// ===== SmartDent official logo (2 paths: navy/white curve + orange curve) =====
+export const SMARTDENT_LOGO = {
+  markLight: '<svg viewBox="0 0 130 100" xmlns="http://www.w3.org/2000/svg" fill="none" aria-label="SmartDent"><path d="M18 60Q65-5 115 50" stroke="#2C3E5F" stroke-width="14" stroke-linecap="round"/><path d="M32 85Q22 65 38 45" stroke="#E97935" stroke-width="13" stroke-linecap="round"/></svg>',
+  markDark: '<svg viewBox="0 0 130 100" xmlns="http://www.w3.org/2000/svg" fill="none" aria-label="SmartDent"><path d="M18 60Q65-5 115 50" stroke="#FFFFFF" stroke-width="14" stroke-linecap="round"/><path d="M32 85Q22 65 38 45" stroke="#E97935" stroke-width="13" stroke-linecap="round"/></svg>',
+  lockupLight: '<svg viewBox="0 0 480 100" xmlns="http://www.w3.org/2000/svg" fill="none" aria-label="SmartDent"><path d="M18 60Q65-5 115 50" stroke="#2C3E5F" stroke-width="14" stroke-linecap="round"/><path d="M32 85Q22 65 38 45" stroke="#E97935" stroke-width="13" stroke-linecap="round"/><text x="150" y="68" font-family="Segoe UI,Arial,sans-serif" font-size="44" font-weight="700" fill="#2C3E5F" letter-spacing="2">SMART DENT</text></svg>',
+  lockupDark: '<svg viewBox="0 0 480 100" xmlns="http://www.w3.org/2000/svg" fill="none" aria-label="SmartDent"><path d="M18 60Q65-5 115 50" stroke="#FFFFFF" stroke-width="14" stroke-linecap="round"/><path d="M32 85Q22 65 38 45" stroke="#E97935" stroke-width="13" stroke-linecap="round"/><text x="150" y="68" font-family="Segoe UI,Arial,sans-serif" font-size="44" font-weight="700" fill="#FFFFFF" letter-spacing="2">SMART DENT</text></svg>',
+} as const;
+
+export function pickLogo(opts: { preset: StylePreset; withWordmark: boolean }): string {
+  const variant = STYLE_PRESETS[opts.preset].logoVariant;
+  if (opts.withWordmark) {
+    return variant === 'lockupDark' ? SMARTDENT_LOGO.lockupDark : SMARTDENT_LOGO.lockupLight;
+  }
+  return variant === 'lockupDark' ? SMARTDENT_LOGO.markDark : SMARTDENT_LOGO.markLight;
+}
+
+// Back-compat re-export (legacy usages)
+export const smartDentLogoSVG = SMARTDENT_LOGO.markDark;
 
 // ===== Helpers =====
 export function escapeHtml(value: string): string {
@@ -54,12 +68,10 @@ export function smartTruncate(text: string, maxChars: number): string {
   return base.replace(/[.,;:\-]+$/, '') + '…';
 }
 
-// WCAG 2.1 contrast ratio (against white CTA text)
+// ===== WCAG contrast =====
 function hexToRgb(hex: string): [number, number, number] {
   const h = hex.replace('#', '');
-  const v = h.length === 3
-    ? h.split('').map(c => c + c).join('')
-    : h;
+  const v = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
   return [
     parseInt(v.substring(0, 2), 16),
     parseInt(v.substring(2, 4), 16),
@@ -84,47 +96,21 @@ export function contrastRatio(hex1: string, hex2: string): number {
   }
 }
 
-// ===== Layout Buckets =====
+// ===== Layout buckets =====
 export function getLayoutBucket(w: number, h: number): LayoutBucket {
   const area = w * h;
-  if (h >= w && area >= 100000) return 'INTERSTITIAL'; // 320x480, 300x600
-  if (area < 25000) return 'SMALL';                     // 320x50, 300x50, 468x60
-  if (area >= 100000) return 'LARGE';                   // 728x90 (borderline), 970x250, 970x90
-  return 'MEDIUM';                                      // 300x250, 336x280, 250x250, 320x100
+  if (h >= w && area >= 100000) return 'INTERSTITIAL';
+  if (area < 25000) return 'SMALL';
+  if (area >= 100000) return 'LARGE';
+  return 'MEDIUM';
 }
 
-// ===== Style palette =====
-function getPalette(style: DisplayStyle, primary: string, secondary: string, accent: string) {
-  const palettes: Record<DisplayStyle, {
-    bg: string; headline: string; desc: string; ctaBg: string; ctaFg: string; border: string; logoColor: string;
-  }> = {
-    modern: {
-      bg: `background:linear-gradient(135deg,${primary} 0%,${secondary} 100%);`,
-      headline: '#ffffff', desc: 'rgba(255,255,255,0.92)',
-      ctaBg: accent, ctaFg: '#ffffff',
-      border: '', logoColor: '#ffffff',
-    },
-    minimal: {
-      bg: `background:#ffffff;`,
-      headline: '#0f172a', desc: '#475569',
-      ctaBg: accent, ctaFg: '#ffffff',
-      border: 'border:1px solid #e2e8f0;', logoColor: primary,
-    },
-    bold: {
-      bg: `background:${primary};`,
-      headline: '#ffffff', desc: 'rgba(255,255,255,0.95)',
-      ctaBg: accent, ctaFg: '#ffffff',
-      border: '', logoColor: '#ffffff',
-    },
-    clinical: {
-      bg: `background:linear-gradient(180deg,#f0f7ff 0%,#ffffff 100%);`,
-      headline: '#1e3a8a', desc: '#1e40af',
-      ctaBg: accent, ctaFg: '#ffffff',
-      border: 'border:1px solid #bfdbfe;', logoColor: '#1e3a8a',
-    },
-  };
-  return palettes[style];
-}
+const BUCKET_LIMITS: Record<LayoutBucket, { headline: number; subheadline: number }> = {
+  SMALL:        { headline: 25, subheadline: 0  },
+  MEDIUM:       { headline: 35, subheadline: 60 },
+  LARGE:        { headline: 45, subheadline: 80 },
+  INTERSTITIAL: { headline: 50, subheadline: 90 },
+};
 
 interface BannerParams {
   width: number;
@@ -144,50 +130,53 @@ interface BannerParams {
   utm?: { source?: string; medium?: string; campaign?: string; content?: string; term?: string };
 }
 
-// ===== Renderers per bucket =====
+// ===== Renderers =====
 function renderSMALL(p: BannerParams): { body: string; css: string } {
-  // 320x50, 300x50, 468x60 → SVG logo + headline + tiny CTA, no image
-  const headline = smartTruncate(p.headline, 28);
+  const limits = BUCKET_LIMITS.SMALL;
+  const headline = smartTruncate(p.headline, limits.headline);
   const cta = smartTruncate(p.ctaText, 14);
-  const pal = getPalette(p.style, p.primaryColor, p.secondaryColor, p.accentColor);
+  const preset = STYLE_PRESETS[p.style as StylePreset];
+  const logoSvg = pickLogo({ preset: p.style as StylePreset, withWordmark: false });
   const css = `
-.b{${pal.bg}${pal.border}padding:0 10px;display:flex;align-items:center;gap:8px;}
-.lg{flex-shrink:0;height:18px;color:${pal.logoColor};display:flex;align-items:center;}
-.lg svg{height:18px;width:auto;}
-.h{flex:1;min-width:0;font-size:12px;font-weight:700;color:${pal.headline};line-height:1.15;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.c{flex-shrink:0;background:${pal.ctaBg};color:${pal.ctaFg};font-size:11px;font-weight:700;padding:5px 10px;border-radius:4px;border:none;cursor:pointer;white-space:nowrap;}
+.b{background:${preset.bgGradient};padding:0 10px;display:flex;align-items:center;gap:8px;}
+.lg{flex-shrink:0;height:22px;display:flex;align-items:center;}
+.lg svg{height:22px;width:auto;}
+.h{flex:1;min-width:0;font-size:12px;font-weight:700;color:${preset.textOnBg};line-height:1.15;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.c{flex-shrink:0;background:${preset.ctaBg};color:${preset.ctaText};font-size:11px;font-weight:700;padding:5px 10px;border-radius:4px;border:none;cursor:pointer;white-space:nowrap;}
 @keyframes ctaPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.06);}}
 .c{animation:ctaPulse 2s ease-in-out 6;}
 `;
   const body = `
-<div class="lg">${smartDentLogoSVG}</div>
+<div class="lg">${logoSvg}</div>
 <div class="h">${escapeHtml(headline)}</div>
 <button class="c" aria-label="${escapeHtml(cta)}">${escapeHtml(cta)}</button>`;
   return { body, css };
 }
 
 function renderMEDIUM(p: BannerParams): { body: string; css: string } {
-  const isHorizontal = p.width / p.height > 1.5; // e.g. 320x100
-  const headline = smartTruncate(p.headline, isHorizontal ? 32 : 42);
-  const sub = p.subheadline ? smartTruncate(p.subheadline, isHorizontal ? 0 : 60) : '';
+  const limits = BUCKET_LIMITS.MEDIUM;
+  const isHorizontal = p.width / p.height > 1.5;
+  const headline = smartTruncate(p.headline, isHorizontal ? Math.min(limits.headline, 32) : limits.headline);
+  const sub = p.subheadline && !isHorizontal ? smartTruncate(p.subheadline, limits.subheadline) : '';
   const cta = smartTruncate(p.ctaText, 18);
-  const pal = getPalette(p.style, p.primaryColor, p.secondaryColor, p.accentColor);
+  const preset = STYLE_PRESETS[p.style as StylePreset];
+  const logoSvg = pickLogo({ preset: p.style as StylePreset, withWordmark: p.width >= 300 });
   const flexDir = isHorizontal ? 'row' : 'column';
   const imgDim = isHorizontal
     ? `width:${Math.min(p.height - 16, 80)}px;height:${Math.min(p.height - 16, 80)}px;`
     : `width:${Math.min(p.width * 0.55, 140)}px;height:${Math.min(p.width * 0.55, 140)}px;`;
   const css = `
-.b{${pal.bg}${pal.border}padding:10px;display:flex;flex-direction:${flexDir};align-items:center;gap:10px;${isHorizontal ? '' : 'justify-content:space-between;'}}
+.b{background:${preset.bgGradient};padding:10px;display:flex;flex-direction:${flexDir};align-items:center;gap:10px;${isHorizontal ? '' : 'justify-content:space-between;'}}
 .pi{${imgDim}object-fit:contain;flex-shrink:0;border-radius:6px;}
 .tw{display:flex;flex-direction:column;${isHorizontal ? 'flex:1;min-width:0;' : 'align-items:center;text-align:center;'}gap:4px;}
-.h{font-size:${isHorizontal ? 14 : 17}px;font-weight:800;color:${pal.headline};line-height:1.2;overflow:hidden;}
-.s{font-size:11px;color:${pal.desc};line-height:1.3;overflow:hidden;${sub ? '' : 'display:none;'}}
-.fda{display:inline-block;background:#dc2626;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;letter-spacing:0.3px;align-self:flex-start;}
-.c{background:${pal.ctaBg};color:${pal.ctaFg};font-size:12px;font-weight:700;padding:7px 14px;border-radius:5px;border:none;cursor:pointer;white-space:nowrap;align-self:${isHorizontal ? 'center' : 'center'};}
+.h{font-size:${isHorizontal ? 14 : 17}px;font-weight:800;color:${preset.textOnBg};line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:normal;hyphens:none;}
+.s{font-size:11px;color:${preset.textOnBg};opacity:0.88;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:normal;${sub ? '' : 'display:none;'}}
+.fda{display:inline-block;background:${preset.fdaBadgeBg};color:${preset.fdaBadgeText};font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;letter-spacing:0.3px;align-self:flex-start;}
+.c{background:${preset.ctaBg};color:${preset.ctaText};font-size:12px;font-weight:700;padding:7px 14px;border-radius:5px;border:none;cursor:pointer;white-space:nowrap;align-self:center;}
 @keyframes ctaPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.06);}}
 .c{animation:ctaPulse 2s ease-in-out 6;}
-.lg{position:absolute;bottom:4px;right:6px;height:10px;color:${pal.logoColor};opacity:0.65;}
-.lg svg{height:10px;width:auto;}
+.lg{position:absolute;bottom:4px;right:6px;height:14px;opacity:0.85;}
+.lg svg{height:14px;width:auto;}
 `;
   const body = `
 <img class="pi" src="${escapeHtml(p.productImageUrl)}" alt="${escapeHtml(p.headline)}" loading="lazy">
@@ -197,32 +186,34 @@ function renderMEDIUM(p: BannerParams): { body: string; css: string } {
   ${sub ? `<div class="s">${escapeHtml(sub)}</div>` : ''}
   <button class="c" aria-label="${escapeHtml(cta)}">${escapeHtml(cta)}</button>
 </div>
-<div class="lg">${smartDentLogoSVG}</div>`;
+<div class="lg">${logoSvg}</div>`;
   return { body, css };
 }
 
 function renderLARGE(p: BannerParams): { body: string; css: string } {
-  const isHorizontal = p.width / p.height > 1.8; // 728x90, 970x90, 970x250 borderline
+  const limits = BUCKET_LIMITS.LARGE;
+  const isHorizontal = p.width / p.height > 1.8;
   const isBillboard = p.width >= 900 && p.height >= 200;
-  const headline = smartTruncate(p.headline, isBillboard ? 65 : isHorizontal ? 55 : 70);
-  const sub = p.subheadline ? smartTruncate(p.subheadline, isBillboard ? 100 : 0) : '';
+  const headline = smartTruncate(p.headline, limits.headline);
+  const sub = p.subheadline && isBillboard ? smartTruncate(p.subheadline, limits.subheadline) : '';
   const cta = smartTruncate(p.ctaText, 20);
-  const pal = getPalette(p.style, p.primaryColor, p.secondaryColor, p.accentColor);
+  const preset = STYLE_PRESETS[p.style as StylePreset];
+  const logoSvg = pickLogo({ preset: p.style as StylePreset, withWordmark: p.width >= 300 });
   const imgDim = isHorizontal
     ? `width:${Math.min(p.height - 16, 200)}px;height:${Math.min(p.height - 16, 200)}px;`
     : `width:${Math.min(p.width * 0.5, 220)}px;height:${Math.min(p.width * 0.5, 220)}px;`;
   const css = `
-.b{${pal.bg}${pal.border}padding:14px 18px;display:flex;flex-direction:${isHorizontal ? 'row' : 'column'};align-items:center;gap:16px;}
+.b{background:${preset.bgGradient};padding:14px 18px;display:flex;flex-direction:${isHorizontal ? 'row' : 'column'};align-items:center;gap:16px;}
 .pi{${imgDim}object-fit:contain;flex-shrink:0;border-radius:8px;}
 .tw{display:flex;flex-direction:column;${isHorizontal ? 'flex:1;min-width:0;' : 'align-items:center;text-align:center;'}gap:6px;}
-.h{font-size:${isBillboard ? 28 : isHorizontal ? 18 : 22}px;font-weight:800;color:${pal.headline};line-height:1.15;overflow:hidden;}
-.s{font-size:13px;color:${pal.desc};line-height:1.35;overflow:hidden;${sub ? '' : 'display:none;'}}
-.fda{display:inline-block;background:#dc2626;color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;letter-spacing:0.3px;align-self:flex-start;}
-.c{background:${pal.ctaBg};color:${pal.ctaFg};font-size:14px;font-weight:800;padding:10px 22px;border-radius:6px;border:none;cursor:pointer;white-space:nowrap;align-self:${isHorizontal ? 'center' : 'center'};text-transform:uppercase;letter-spacing:0.4px;}
+.h{font-size:${isBillboard ? 28 : isHorizontal ? 18 : 22}px;font-weight:800;color:${preset.textOnBg};line-height:1.15;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:normal;hyphens:none;}
+.s{font-size:13px;color:${preset.textOnBg};opacity:0.9;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;${sub ? '' : 'display:none;'}}
+.fda{display:inline-block;background:${preset.fdaBadgeBg};color:${preset.fdaBadgeText};font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;letter-spacing:0.3px;align-self:flex-start;}
+.c{background:${preset.ctaBg};color:${preset.ctaText};font-size:14px;font-weight:800;padding:10px 22px;border-radius:6px;border:none;cursor:pointer;white-space:nowrap;align-self:center;text-transform:uppercase;letter-spacing:0.4px;}
 @keyframes ctaPulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(0,0,0,0.15);}50%{transform:scale(1.06);box-shadow:0 4px 14px 0 rgba(0,0,0,0.18);}}
 .c{animation:ctaPulse 2.2s ease-in-out 6;}
-.lg{position:absolute;bottom:6px;right:10px;height:14px;color:${pal.logoColor};opacity:0.7;}
-.lg svg{height:14px;width:auto;}
+.lg{position:absolute;bottom:6px;right:10px;height:18px;opacity:0.9;}
+.lg svg{height:18px;width:auto;}
 `;
   const body = `
 <img class="pi" src="${escapeHtml(p.productImageUrl)}" alt="${escapeHtml(p.headline)}" loading="lazy">
@@ -232,37 +223,40 @@ function renderLARGE(p: BannerParams): { body: string; css: string } {
   ${sub ? `<div class="s">${escapeHtml(sub)}</div>` : ''}
   <button class="c" aria-label="${escapeHtml(cta)}">${escapeHtml(cta)}</button>
 </div>
-<div class="lg">${smartDentLogoSVG}</div>`;
+<div class="lg">${logoSvg}</div>`;
   return { body, css };
 }
 
 function renderINTERSTITIAL(p: BannerParams): { body: string; css: string } {
-  const headline = smartTruncate(p.headline, 60);
-  const sub = p.subheadline ? smartTruncate(p.subheadline, 120) : '';
+  const limits = BUCKET_LIMITS.INTERSTITIAL;
+  const headline = smartTruncate(p.headline, limits.headline);
+  const sub = p.subheadline ? smartTruncate(p.subheadline, limits.subheadline) : '';
   const cta = smartTruncate(p.ctaText, 22);
-  const pal = getPalette(p.style, p.primaryColor, p.secondaryColor, p.accentColor);
+  const preset = STYLE_PRESETS[p.style as StylePreset];
+  const logoSvg = pickLogo({ preset: p.style as StylePreset, withWordmark: true });
   const css = `
-.b{${pal.bg}${pal.border}padding:24px 20px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;text-align:center;gap:14px;}
-.pi{width:${Math.min(p.width * 0.7, 240)}px;height:${Math.min(p.width * 0.7, 240)}px;object-fit:contain;border-radius:10px;flex-shrink:0;}
-.tw{display:flex;flex-direction:column;align-items:center;gap:8px;}
-.h{font-size:22px;font-weight:800;color:${pal.headline};line-height:1.18;}
-.s{font-size:13px;color:${pal.desc};line-height:1.4;${sub ? '' : 'display:none;'}}
-.fda{display:inline-block;background:#dc2626;color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;letter-spacing:0.3px;}
-.c{background:${pal.ctaBg};color:${pal.ctaFg};font-size:15px;font-weight:800;padding:12px 28px;border-radius:6px;border:none;cursor:pointer;text-transform:uppercase;letter-spacing:0.4px;}
+.b{background:${preset.bgGradient};padding:12px;display:flex;flex-direction:column;align-items:center;text-align:center;box-sizing:border-box;}
+.img-wrap{flex:1 1 auto;min-height:0;width:100%;overflow:hidden;display:flex;align-items:center;justify-content:center;}
+.pi{max-width:100%;max-height:100%;object-fit:contain;border-radius:10px;}
+.tw{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:6px;padding:6px 0;width:100%;}
+.h{font-size:20px;font-weight:800;color:${preset.textOnBg};line-height:1.18;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:normal;hyphens:none;}
+.s{font-size:12px;color:${preset.textOnBg};opacity:0.9;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;${sub ? '' : 'display:none;'}}
+.fda{display:inline-block;background:${preset.fdaBadgeBg};color:${preset.fdaBadgeText};font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;letter-spacing:0.3px;}
+.c{flex:0 0 auto;min-height:36px;margin-top:8px;background:${preset.ctaBg};color:${preset.ctaText};font-size:14px;font-weight:800;padding:10px 24px;border-radius:6px;border:none;cursor:pointer;text-transform:uppercase;letter-spacing:0.4px;}
 @keyframes ctaPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.06);}}
 .c{animation:ctaPulse 2.2s ease-in-out 6;}
-.lg{height:16px;color:${pal.logoColor};opacity:0.75;}
+.lg{flex:0 0 auto;height:16px;margin-top:6px;opacity:0.85;}
 .lg svg{height:16px;width:auto;}
 `;
   const body = `
-<img class="pi" src="${escapeHtml(p.productImageUrl)}" alt="${escapeHtml(p.headline)}" loading="lazy">
+<div class="img-wrap"><img class="pi" src="${escapeHtml(p.productImageUrl)}" alt="${escapeHtml(p.headline)}" loading="lazy"></div>
 <div class="tw">
   ${p.showFdaBadge ? '<span class="fda">FDA K260152 · Classe II</span>' : ''}
   <div class="h">${escapeHtml(headline)}</div>
   ${sub ? `<div class="s">${escapeHtml(sub)}</div>` : ''}
 </div>
 <button class="c" aria-label="${escapeHtml(cta)}">${escapeHtml(cta)}</button>
-<div class="lg">${smartDentLogoSVG}</div>`;
+<div class="lg">${logoSvg}</div>`;
   return { body, css };
 }
 
@@ -303,10 +297,9 @@ function handleBannerClick(e){
 </script>`;
 }
 
-// ===== Public API =====
 export function generateBannerHTML(params: BannerParams | (Omit<BannerParams, 'accentColor'> & { accentColor?: string })): string {
   const p: BannerParams = {
-    accentColor: params.primaryColor,
+    accentColor: (params as BannerParams).accentColor || params.primaryColor,
     showFdaBadge: false,
     ...(params as BannerParams),
   };

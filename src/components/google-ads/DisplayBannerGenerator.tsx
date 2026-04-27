@@ -7,11 +7,12 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Download, Image as ImageIcon, Palette, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Loader2, Download, Image as ImageIcon, Palette, AlertTriangle, CheckCircle2, RotateCcw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { DisplayBanner, DisplayFormat, DisplayStyle } from '@/types/google-ads';
-import { DISPLAY_FORMATS, DISPLAY_STYLES, generateBannerHTML, contrastRatio } from './display-templates';
+import { DISPLAY_FORMATS, DISPLAY_STYLES, generateBannerHTML, contrastRatio, getLayoutBucket } from './display-templates';
+import { STYLE_PRESETS, DEFAULT_STYLE, type StylePreset } from './smartdent-constants';
 import { DisplayBannerPreview } from './DisplayBannerPreview';
 import JSZip from 'jszip';
 
@@ -73,17 +74,25 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
   const [selectedFormats, setSelectedFormats] = useState<DisplayFormat[]>(
     DISPLAY_FORMATS.filter(f => ['popular', 'mobile'].includes(f.category))
   );
-  const [style, setStyle] = useState<DisplayStyle>('modern');
-  const [primaryColor, setPrimaryColor] = useState('#2563eb');
-  const [secondaryColor, setSecondaryColor] = useState('#7c3aed');
-  const [accentColor, setAccentColor] = useState('#dc2626'); // CTA bg, white text → contrast check
+  const [style, setStyle] = useState<DisplayStyle>(DEFAULT_STYLE);
+  const [primaryColor, setPrimaryColor] = useState(STYLE_PRESETS[DEFAULT_STYLE].primary);
+  const [secondaryColor, setSecondaryColor] = useState(STYLE_PRESETS[DEFAULT_STYLE].secondary);
+  const [accentColor, setAccentColor] = useState(STYLE_PRESETS[DEFAULT_STYLE].accent);
   const [ctaText, setCtaText] = useState('Saiba Mais');
   const [headline, setHeadline] = useState('');
   const [subheadline, setSubheadline] = useState('');
-  const [showFdaBadge, setShowFdaBadge] = useState(false);
+  const [showFdaBadge, setShowFdaBadge] = useState(true);
   const [campaignSlug, setCampaignSlug] = useState('');
   const [finalUrl, setFinalUrl] = useState(product.product_url || '');
   const [selectedImage, setSelectedImage] = useState(product.image_url || '');
+
+  const handleStylePresetChange = useCallback((preset: StylePreset) => {
+    const cfg = STYLE_PRESETS[preset];
+    setStyle(preset);
+    setPrimaryColor(cfg.primary);
+    setSecondaryColor(cfg.secondary);
+    setAccentColor(cfg.accent);
+  }, []);
 
   const allImages = [
     ...(product.image_url ? [{ url: product.image_url, alt: 'Principal' }] : []),
@@ -137,10 +146,10 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
 
     setIsGenerating(true);
     try {
-      // 1. Convert image to WebP once
-      const { dataUrl: webpDataUrl } = await convertImageToWebP(selectedImage);
+      // Validate WebP conversion is feasible (used at download time)
+      await convertImageToWebP(selectedImage);
 
-      // 2. Fetch AI copy (one call, not per format)
+      // Fetch AI copy (one call, not per format)
       let copies: Record<string, { headline: string; subheadline: string }> = {};
       try {
         const { data, error } = await supabase.functions.invoke('generate-display-banners', {
@@ -157,7 +166,8 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
         console.warn('AI copy fetch failed, using manual/product fallback:', e);
       }
 
-      // 3. Render HTML in frontend (single source of truth)
+      // Render HTML in frontend (single source of truth). Reference product.webp
+      // as a relative asset — the WebP file is added to the ZIP at download time.
       const localBanners: DisplayBanner[] = selectedFormats.map(format => {
         const key = `${format.width}x${format.height}`;
         const aiCopy = copies[key];
@@ -174,7 +184,7 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
           headline: finalHeadline,
           subheadline: finalSub,
           ctaText,
-          productImageUrl: webpDataUrl,
+          productImageUrl: 'product.webp',
           finalUrl,
           showFdaBadge,
           campaignSlug: campaignSlug || product.id,
@@ -201,14 +211,33 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
     }
   }, [product, selectedImage, selectedFormats, style, primaryColor, secondaryColor, accentColor, ctaText, headline, subheadline, finalUrl, showFdaBadge, campaignSlug, accentContrastOk, accentContrast, toast]);
 
+  function buildManifest(banner: DisplayBanner): string {
+    const bucket = getLayoutBucket(banner.format.width, banner.format.height);
+    return JSON.stringify({
+      size: `${banner.format.width}x${banner.format.height}`,
+      bucket,
+      headline: headline.trim() || product.name,
+      ctaText,
+      campaignSlug: campaignSlug || product.id,
+      weightKB: Number(banner.sizeKB.toFixed(2)),
+      stylePreset: style,
+      fdaBadge: showFdaBadge,
+      generatedAt: new Date().toISOString(),
+    }, null, 2);
+  }
+
   const handleDownload = async (banner: DisplayBanner) => {
     try {
       setIsDownloading(true);
       setDownloadProgress(`Preparando ${banner.format.width}x${banner.format.height}...`);
-      const { blob: webpBlob } = await convertImageToWebP(selectedImage);
+      const bucket = getLayoutBucket(banner.format.width, banner.format.height);
       const zip = new JSZip();
       zip.file('index.html', banner.html);
-      zip.file('product.webp', webpBlob);
+      zip.file('manifest.json', buildManifest(banner));
+      if (bucket !== 'SMALL') {
+        const { blob: webpBlob } = await convertImageToWebP(selectedImage);
+        zip.file('product.webp', webpBlob);
+      }
       const zipBlob = await zip.generateAsync({ type: 'blob' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(zipBlob);
@@ -233,10 +262,12 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
       for (let i = 0; i < banners.length; i++) {
         const b = banners[i];
         setDownloadProgress(`Empacotando ${i + 1}/${banners.length}...`);
+        const bucket = getLayoutBucket(b.format.width, b.format.height);
         const folder = zip.folder(`${b.format.width}x${b.format.height}`);
         if (folder) {
           folder.file('index.html', b.html);
-          folder.file('product.webp', webpBlob);
+          folder.file('manifest.json', buildManifest(b));
+          if (bucket !== 'SMALL') folder.file('product.webp', webpBlob);
         }
       }
       setDownloadProgress('Gerando ZIP final...');
@@ -339,7 +370,7 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
             {DISPLAY_STYLES.map(s => (
               <button
                 key={s.value}
-                onClick={() => setStyle(s.value)}
+                onClick={() => handleStylePresetChange(s.value as StylePreset)}
                 className={`p-3 rounded-lg border text-left transition-all ${
                   style === s.value ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border hover:border-primary/50'
                 }`}
@@ -384,6 +415,16 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
               <Label className="text-xs">Texto CTA</Label>
               <Input value={ctaText} onChange={e => setCtaText(e.target.value)} className="h-8 text-xs mt-1" placeholder="Saiba Mais" />
             </div>
+          </div>
+
+          <div>
+            <button
+              type="button"
+              onClick={() => handleStylePresetChange(DEFAULT_STYLE)}
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground underline"
+            >
+              <RotateCcw className="h-3 w-3" /> Resetar para padrão SmartDent
+            </button>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
