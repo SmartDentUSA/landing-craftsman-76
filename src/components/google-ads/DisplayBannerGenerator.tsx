@@ -1,15 +1,17 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Loader2, Download, Image as ImageIcon, Palette } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Loader2, Download, Image as ImageIcon, Palette, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { DisplayBanner, DisplayFormat, DisplayStyle } from '@/types/google-ads';
-import { DISPLAY_FORMATS, DISPLAY_STYLES, generateBannerHTML } from './display-templates';
+import { DISPLAY_FORMATS, DISPLAY_STYLES, generateBannerHTML, contrastRatio } from './display-templates';
 import { DisplayBannerPreview } from './DisplayBannerPreview';
 import JSZip from 'jszip';
 
@@ -27,6 +29,41 @@ interface DisplayBannerGeneratorProps {
   product: Product;
 }
 
+// Convert image URL to WebP via canvas (returns dataURL + Blob)
+async function convertImageToWebP(url: string, quality = 0.85): Promise<{ dataUrl: string; blob: Blob }> {
+  const res = await fetch(url, { mode: 'cors' }).catch(() => fetch(url));
+  const sourceBlob = await res.blob();
+  const bitmap = await createImageBitmap(sourceBlob).catch(() => null);
+  if (!bitmap) {
+    // Fallback: return original blob as dataURL
+    const dataUrl: string = await new Promise((resolve) => {
+      const r = new FileReader();
+      r.onloadend = () => resolve(r.result as string);
+      r.readAsDataURL(sourceBlob);
+    });
+    return { dataUrl, blob: sourceBlob };
+  }
+  // Cap dimensions for ad weight
+  const maxSide = 800;
+  const ratio = Math.min(maxSide / bitmap.width, maxSide / bitmap.height, 1);
+  const w = Math.round(bitmap.width * ratio);
+  const h = Math.round(bitmap.height * ratio);
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d')!;
+  ctx.drawImage(bitmap, 0, 0, w, h);
+  const blob: Blob = await new Promise((resolve) =>
+    canvas.toBlob((b) => resolve(b!), 'image/webp', quality)
+  );
+  const dataUrl: string = await new Promise((resolve) => {
+    const r = new FileReader();
+    r.onloadend = () => resolve(r.result as string);
+    r.readAsDataURL(blob);
+  });
+  return { dataUrl, blob };
+}
+
 export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps) {
   const { toast } = useToast();
   const [isGenerating, setIsGenerating] = useState(false);
@@ -39,7 +76,12 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
   const [style, setStyle] = useState<DisplayStyle>('modern');
   const [primaryColor, setPrimaryColor] = useState('#2563eb');
   const [secondaryColor, setSecondaryColor] = useState('#7c3aed');
+  const [accentColor, setAccentColor] = useState('#dc2626'); // CTA bg, white text → contrast check
   const [ctaText, setCtaText] = useState('Saiba Mais');
+  const [headline, setHeadline] = useState('');
+  const [subheadline, setSubheadline] = useState('');
+  const [showFdaBadge, setShowFdaBadge] = useState(false);
+  const [campaignSlug, setCampaignSlug] = useState('');
   const [finalUrl, setFinalUrl] = useState(product.product_url || '');
   const [selectedImage, setSelectedImage] = useState(product.image_url || '');
 
@@ -47,6 +89,9 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
     ...(product.image_url ? [{ url: product.image_url, alt: 'Principal' }] : []),
     ...(product.images_gallery || []),
   ].filter((img, i, arr) => arr.findIndex(x => x.url === img.url) === i);
+
+  const accentContrast = useMemo(() => contrastRatio(accentColor, '#ffffff'), [accentColor]);
+  const accentContrastOk = accentContrast >= 4.5;
 
   const toggleFormat = (format: DisplayFormat) => {
     setSelectedFormats(prev => {
@@ -72,22 +117,6 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
     setSelectedFormats(prev => prev.length === DISPLAY_FORMATS.length ? [] : [...DISPLAY_FORMATS]);
   };
 
-  const imageUrlToBase64 = async (url: string): Promise<string> => {
-    try {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error('Failed to fetch image');
-      const blob = await res.blob();
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
-    } catch {
-      return url; // fallback to original URL if conversion fails
-    }
-  };
-
   const handleGenerate = useCallback(async () => {
     if (!selectedImage) {
       toast({ title: 'Selecione uma foto do produto', variant: 'destructive' });
@@ -97,92 +126,89 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
       toast({ title: 'Selecione ao menos um formato', variant: 'destructive' });
       return;
     }
+    if (!finalUrl) {
+      toast({ title: 'URL Final é obrigatória para tracking IAB/UTM', variant: 'destructive' });
+      return;
+    }
+    if (!accentContrastOk) {
+      toast({ title: `Contraste do CTA insuficiente (${accentContrast.toFixed(2)}:1). Ajuste a cor de destaque (mín 4.5:1).`, variant: 'destructive' });
+      return;
+    }
 
     setIsGenerating(true);
     try {
-      // Convert image to Base64 once for preview embedding
-      const imageBase64 = await imageUrlToBase64(selectedImage);
+      // 1. Convert image to WebP once
+      const { dataUrl: webpDataUrl } = await convertImageToWebP(selectedImage);
 
-      const { data, error } = await supabase.functions.invoke('generate-display-banners', {
-        body: {
-          productId: product.id,
-          productName: product.name,
-          productDescription: product.description || '',
-          productImageUrl: selectedImage,
-          productImageBase64: imageBase64,
-          primaryColor,
-          secondaryColor,
-          ctaText,
-          style,
-          formats: selectedFormats,
-          finalUrl: finalUrl || '#',
-        }
-      });
-
-      if (error) throw error;
-
-      if (data?.banners) {
-        setBanners(data.banners);
-        toast({ title: `${data.banners.length} banners gerados com sucesso!` });
-      } else {
-        // Fallback: generate locally with Base64 image
-        const localBanners: DisplayBanner[] = selectedFormats.map(format => {
-          const html = generateBannerHTML({
-            width: format.width,
-            height: format.height,
-            style,
-            primaryColor,
-            secondaryColor,
-            headline: product.name,
-            description: product.description?.substring(0, 80) || '',
+      // 2. Fetch AI copy (one call, not per format)
+      let copies: Record<string, { headline: string; subheadline: string }> = {};
+      try {
+        const { data, error } = await supabase.functions.invoke('generate-display-banners', {
+          body: {
+            productName: product.name,
+            productDescription: product.description || '',
             ctaText,
-            productImageUrl: imageBase64,
-            finalUrl: finalUrl || '#',
-          });
-          return { format, html, sizeKB: new Blob([html]).size / 1024 };
+            formats: selectedFormats,
+            campaignSlug: campaignSlug || product.id,
+          },
         });
-        setBanners(localBanners);
-        toast({ title: `${localBanners.length} banners gerados (modo local)` });
+        if (!error && data?.copies) copies = data.copies;
+      } catch (e) {
+        console.warn('AI copy fetch failed, using manual/product fallback:', e);
       }
-    } catch (err) {
-      console.error('Error generating banners:', err);
-      // Fallback local with original URL
+
+      // 3. Render HTML in frontend (single source of truth)
       const localBanners: DisplayBanner[] = selectedFormats.map(format => {
+        const key = `${format.width}x${format.height}`;
+        const aiCopy = copies[key];
+        const finalHeadline = headline.trim() || aiCopy?.headline || product.name;
+        const finalSub = subheadline.trim() || aiCopy?.subheadline || '';
+
         const html = generateBannerHTML({
           width: format.width,
           height: format.height,
           style,
           primaryColor,
           secondaryColor,
-          headline: product.name,
-          description: product.description?.substring(0, 80) || '',
+          accentColor,
+          headline: finalHeadline,
+          subheadline: finalSub,
           ctaText,
-          productImageUrl: selectedImage,
-          finalUrl: finalUrl || '#',
+          productImageUrl: webpDataUrl,
+          finalUrl,
+          showFdaBadge,
+          campaignSlug: campaignSlug || product.id,
+          utm: {
+            source: 'google_display',
+            medium: 'banner',
+            campaign: campaignSlug || product.id,
+          },
         });
         return { format, html, sizeKB: new Blob([html]).size / 1024 };
       });
+
       setBanners(localBanners);
-      toast({ title: `${localBanners.length} banners gerados (fallback local)` });
+      const overweight = localBanners.filter(b => b.sizeKB > 150).length;
+      toast({
+        title: `${localBanners.length} banners gerados`,
+        description: overweight > 0 ? `⚠️ ${overweight} acima de 150KB — revise a imagem.` : 'Todos dentro do limite de peso.',
+      });
+    } catch (err) {
+      console.error('Error generating banners:', err);
+      toast({ title: 'Erro ao gerar banners', description: (err as Error).message, variant: 'destructive' });
     } finally {
       setIsGenerating(false);
     }
-  }, [product, selectedImage, selectedFormats, style, primaryColor, secondaryColor, ctaText, finalUrl, toast]);
-
-  const fetchImageBlob = async (url: string): Promise<Blob> => {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('Failed to fetch image');
-    return res.blob();
-  };
+  }, [product, selectedImage, selectedFormats, style, primaryColor, secondaryColor, accentColor, ctaText, headline, subheadline, finalUrl, showFdaBadge, campaignSlug, accentContrastOk, accentContrast, toast]);
 
   const handleDownload = async (banner: DisplayBanner) => {
     try {
       setIsDownloading(true);
       setDownloadProgress(`Preparando ${banner.format.width}x${banner.format.height}...`);
-      const imageBlob = await fetchImageBlob(selectedImage);
+      const { blob: webpBlob } = await convertImageToWebP(selectedImage);
       const zip = new JSZip();
       zip.file('index.html', banner.html);
-      zip.file('product.jpg', imageBlob);
+      zip.file('product.webp', webpBlob);
       const zipBlob = await zip.generateAsync({ type: 'blob' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(zipBlob);
@@ -201,8 +227,8 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
   const handleDownloadAll = async () => {
     try {
       setIsDownloading(true);
-      setDownloadProgress('Baixando imagem do produto...');
-      const imageBlob = await fetchImageBlob(selectedImage);
+      setDownloadProgress('Convertendo imagem para WebP...');
+      const { blob: webpBlob } = await convertImageToWebP(selectedImage);
       const zip = new JSZip();
       for (let i = 0; i < banners.length; i++) {
         const b = banners[i];
@@ -210,17 +236,17 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
         const folder = zip.folder(`${b.format.width}x${b.format.height}`);
         if (folder) {
           folder.file('index.html', b.html);
-          folder.file('product.jpg', imageBlob);
+          folder.file('product.webp', webpBlob);
         }
       }
       setDownloadProgress('Gerando ZIP final...');
       const zipBlob = await zip.generateAsync({ type: 'blob' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(zipBlob);
-      link.download = 'display-banners-all.zip';
+      link.download = `display-banners-${campaignSlug || 'all'}.zip`;
       link.click();
       URL.revokeObjectURL(link.href);
-      toast({ title: `${banners.length} banners empacotados em ZIP` });
+      toast({ title: `${banners.length} banners empacotados em ZIP (WebP)` });
     } catch (err) {
       console.error('Download all error:', err);
       toast({ title: 'Erro ao gerar ZIP', variant: 'destructive' });
@@ -229,6 +255,24 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
       setDownloadProgress('');
     }
   };
+
+  // Campaign-readiness checklist
+  const checklist = useMemo(() => {
+    const totalKB = banners.reduce((s, b) => s + b.sizeKB, 0);
+    const overweight = banners.filter(b => b.sizeKB > 150).length;
+    return [
+      { id: 'image', label: 'Foto do produto selecionada', passed: !!selectedImage, critical: true },
+      { id: 'url', label: 'URL final definida (clickTag/UTM)', passed: !!finalUrl, critical: true },
+      { id: 'contrast', label: `Contraste CTA WCAG AA (${accentContrast.toFixed(2)}:1 ≥ 4.5)`, passed: accentContrastOk, critical: true },
+      { id: 'cta', label: 'Texto do CTA definido', passed: !!ctaText.trim(), critical: true },
+      { id: 'campaign', label: 'Slug de campanha definido (UTM)', passed: !!campaignSlug.trim(), critical: false },
+      { id: 'formats', label: `${selectedFormats.length} formato(s) selecionado(s)`, passed: selectedFormats.length > 0, critical: true },
+      { id: 'banners', label: `${banners.length} banners gerados`, passed: banners.length > 0, critical: false },
+      { id: 'weight', label: `Peso total: ${totalKB.toFixed(1)}KB (sem 150KB+)`, passed: banners.length > 0 && overweight === 0, critical: banners.length > 0 },
+      { id: 'fda', label: showFdaBadge ? 'Badge FDA K260152 ativo' : 'Badge FDA opcional desativado', passed: true, critical: false },
+      { id: 'tracking', label: 'IAB clickTag + GA4/GTM injetados', passed: banners.length > 0, critical: banners.length > 0 },
+    ];
+  }, [banners, selectedImage, finalUrl, accentContrast, accentContrastOk, ctaText, campaignSlug, selectedFormats.length, showFdaBadge]);
 
   const categories = ['popular', 'horizontal', 'mobile', 'vertical', 'square'] as const;
   const categoryLabels: Record<string, string> = {
@@ -272,14 +316,25 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
         </CardContent>
       </Card>
 
-      {/* Style & Colors */}
+      {/* Copy & Style */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm flex items-center gap-2">
-            <Palette className="h-4 w-4" /> Estilo e Cores
+            <Palette className="h-4 w-4" /> Copy, Estilo e Cores
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">Headline (opcional, sobrepõe IA)</Label>
+              <Input value={headline} onChange={e => setHeadline(e.target.value)} className="h-8 text-xs mt-1" placeholder="Ex.: Resina Definitiva FDA Classe II" />
+            </div>
+            <div>
+              <Label className="text-xs">Subheadline (opcional)</Label>
+              <Input value={subheadline} onChange={e => setSubheadline(e.target.value)} className="h-8 text-xs mt-1" placeholder="Ex.: Restaurações duradouras com Bio Vitality" />
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {DISPLAY_STYLES.map(s => (
               <button
@@ -294,32 +349,57 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
               </button>
             ))}
           </div>
+
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div>
-              <Label className="text-xs">Cor Primária</Label>
+              <Label className="text-xs">Primária</Label>
               <div className="flex items-center gap-2 mt-1">
                 <input type="color" value={primaryColor} onChange={e => setPrimaryColor(e.target.value)} className="w-8 h-8 rounded cursor-pointer" />
                 <Input value={primaryColor} onChange={e => setPrimaryColor(e.target.value)} className="h-8 text-xs" />
               </div>
             </div>
             <div>
-              <Label className="text-xs">Cor Secundária</Label>
+              <Label className="text-xs">Secundária</Label>
               <div className="flex items-center gap-2 mt-1">
                 <input type="color" value={secondaryColor} onChange={e => setSecondaryColor(e.target.value)} className="w-8 h-8 rounded cursor-pointer" />
                 <Input value={secondaryColor} onChange={e => setSecondaryColor(e.target.value)} className="h-8 text-xs" />
               </div>
             </div>
-            <div className="col-span-2">
-              <Label className="text-xs">Texto do CTA</Label>
+            <div>
+              <Label className="text-xs flex items-center gap-1">
+                Destaque (CTA)
+                {accentContrastOk
+                  ? <CheckCircle2 className="h-3 w-3 text-green-600" />
+                  : <AlertTriangle className="h-3 w-3 text-destructive" />}
+              </Label>
+              <div className="flex items-center gap-2 mt-1">
+                <input type="color" value={accentColor} onChange={e => setAccentColor(e.target.value)} className="w-8 h-8 rounded cursor-pointer" />
+                <Input value={accentColor} onChange={e => setAccentColor(e.target.value)} className="h-8 text-xs" />
+              </div>
+              <p className={`text-[10px] mt-1 ${accentContrastOk ? 'text-muted-foreground' : 'text-destructive'}`}>
+                Contraste vs branco: {accentContrast.toFixed(2)}:1 {accentContrastOk ? '✓' : '(mín 4.5:1)'}
+              </p>
+            </div>
+            <div>
+              <Label className="text-xs">Texto CTA</Label>
               <Input value={ctaText} onChange={e => setCtaText(e.target.value)} className="h-8 text-xs mt-1" placeholder="Saiba Mais" />
             </div>
           </div>
-          <div>
-            <Label className="text-xs">URL Final (Loja Integrada)</Label>
-            <div className="flex items-center gap-2 mt-1">
-              <Input value={finalUrl} onChange={e => setFinalUrl(e.target.value)} className="h-8 text-xs" placeholder="https://minhaloja.lojaintegrada.com.br/produto/..." />
-              {!finalUrl && <Badge variant="warning" className="text-[10px] whitespace-nowrap">URL não definida</Badge>}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">URL Final (clickTag IAB)</Label>
+              <Input value={finalUrl} onChange={e => setFinalUrl(e.target.value)} className="h-8 text-xs mt-1" placeholder="https://minhaloja.lojaintegrada.com.br/produto/..." />
             </div>
+            <div>
+              <Label className="text-xs">Slug de Campanha (UTM)</Label>
+              <Input value={campaignSlug} onChange={e => setCampaignSlug(e.target.value)} className="h-8 text-xs mt-1" placeholder="bio_vitality_q2_2026" />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 pt-1">
+            <Switch id="fda" checked={showFdaBadge} onCheckedChange={setShowFdaBadge} />
+            <Label htmlFor="fda" className="text-xs cursor-pointer">Exibir badge FDA K260152 (Bio Vitality)</Label>
           </div>
         </CardContent>
       </Card>
@@ -379,6 +459,30 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
         </Button>
       </div>
 
+      {/* Campaign Readiness Checklist */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm">✅ Pronto para Campanha — {checklist.filter(c => c.passed).length}/{checklist.length}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ul className="space-y-1">
+            {checklist.map(item => (
+              <li key={item.id} className="flex items-center gap-2 text-xs">
+                {item.passed
+                  ? <CheckCircle2 className="h-3.5 w-3.5 text-green-600 shrink-0" />
+                  : item.critical
+                    ? <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0" />
+                    : <AlertTriangle className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                }
+                <span className={item.passed ? '' : item.critical ? 'text-destructive' : 'text-muted-foreground'}>
+                  {item.label}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
+
       {/* Banners Preview Grid */}
       {banners.length > 0 && (
         <Card>
@@ -387,7 +491,7 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
               <CardTitle className="text-sm">Banners Gerados ({banners.length})</CardTitle>
               <Button variant="outline" size="sm" className="gap-1 text-xs h-7" onClick={handleDownloadAll} disabled={isDownloading}>
                 {isDownloading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />}
-                {isDownloading ? downloadProgress : 'Baixar Todos (ZIP)'}
+                {isDownloading ? downloadProgress : 'Baixar Todos (ZIP WebP)'}
               </Button>
             </div>
           </CardHeader>
