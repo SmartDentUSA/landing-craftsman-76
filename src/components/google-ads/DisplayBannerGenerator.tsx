@@ -99,8 +99,19 @@ export function DisplayBannerGenerator({ product }: DisplayBannerGeneratorProps)
     ...(product.images_gallery || []),
   ].filter((img, i, arr) => arr.findIndex(x => x.url === img.url) === i);
 
-  const accentContrast = useMemo(() => contrastRatio(accentColor, '#ffffff'), [accentColor]);
-  const accentContrastOk = accentContrast >= 4.5;
+  // WCAG AA — 3 contrastes derivados do preset selecionado
+  const contrastChecks = useMemo(() => {
+    const p = STYLE_PRESETS[style];
+    const h = contrastRatio(p.textOnBg, p.bgDominant);
+    const c = contrastRatio(p.ctaText, p.ctaBg);
+    const f = contrastRatio(p.fdaBadgeText, p.fdaBadgeBg);
+    return {
+      headline: { label: 'Headline (texto vs fundo)', ratio: h, pass: h >= 4.5 },
+      cta:      { label: 'CTA (texto vs botão)',     ratio: c, pass: c >= 4.5 },
+      fda:      { label: 'FDA Badge',                 ratio: f, pass: f >= 4.5 },
+    };
+  }, [style]);
+  const allContrastsPass = contrastChecks.headline.pass && contrastChecks.cta.pass && contrastChecks.fda.pass;
 
   const toggleFormat = (format: DisplayFormat) => {
     setSelectedFormats(prev => {
