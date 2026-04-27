@@ -7,11 +7,12 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Download, Image as ImageIcon, Palette, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Loader2, Download, Image as ImageIcon, Palette, AlertTriangle, CheckCircle2, RotateCcw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { DisplayBanner, DisplayFormat, DisplayStyle } from '@/types/google-ads';
-import { DISPLAY_FORMATS, DISPLAY_STYLES, generateBannerHTML, contrastRatio } from './display-templates';
+import { DISPLAY_FORMATS, DISPLAY_STYLES, generateBannerHTML, contrastRatio, getLayoutBucket } from './display-templates';
+import { STYLE_PRESETS, DEFAULT_STYLE, type StylePreset } from './smartdent-constants';
 import { DisplayBannerPreview } from './DisplayBannerPreview';
 import JSZip from 'jszip';
 
