@@ -216,23 +216,27 @@ export const GoogleAdsProductTab = ({ product, onUpdate }: GoogleAdsProductTabPr
     setIsGeneratingAds(true);
     
     try {
-      const productData = getProductData();
+      const keywords = getProductKeywords();
       
-      const { data, error } = await supabase.functions.invoke('ai-content-generator', {
+      const { data, error } = await supabase.functions.invoke('generate-ad-copies', {
         body: {
-          type: 'google_ads',
-          productId: product.id,
-          productData,
-          keywords: getProductKeywords()
+          seoTitle: product.name,
+          seoDescription: product.description || product.name,
+          primaryKeyword: keywords[0] || product.name,
+          targetAudience: 'profissionais da área'
         }
       });
 
       if (error) throw error;
 
-      if (data?.adCopies) {
+      if (data?.headlines?.length) {
         const updatedPreview = {
           ...adPreview!,
-          adCopies: data.adCopies
+          adCopies: {
+            headlines: data.headlines,
+            descriptions: data.descriptions || [],
+            paths: data.paths || []
+          }
         };
         setAdPreview(updatedPreview);
         setLastGeneratedAt(new Date());
