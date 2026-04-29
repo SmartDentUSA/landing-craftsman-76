@@ -98,7 +98,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para modelos odontológicos digitais?",
-    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-modelos-odontologicos-digitais",
+    "url": "https://smartdent.com.br/es/blog/uais-produtos-mart-ent-usar-para-modelos-odontologicos-digitais-es",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -125,6 +125,12 @@ window.__NAV_DATA__ = [
     "url": "https://smartdent.com.br/linknabio",
     "isHome": false,
     "brand": "Smart Dent"
+  },
+  {
+    "name": "Smart Dent — Odontologia Digital, Resinas 3D e Scanners Intraorais",
+    "url": "https://smartdent.com.br/manuais",
+    "isHome": false,
+    "brand": null
   }
 ];
 (function() {
