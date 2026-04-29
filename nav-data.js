@@ -20,7 +20,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Como lavar e limpar peças impressas em resina 3D odontológica?",
-    "url": "https://smartdent.com.br/blog/omo-lavar-e-limpar-peas-impressas-em-resina-3-odontologica",
+    "url": "https://smartdent.com.br/en/blog/omo-lavar-e-limpar-peas-impressas-em-resina-3-odontologica-en",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -92,7 +92,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Parâmetros miicraft alpha | Smart Dent",
-    "url": "https://smartdent.com.br/blog/parametros-miicraft-alpha-smart-dent-smart-print-model-ocre",
+    "url": "https://smartdent.com.br/blog/parametros-miicraft-alpha-smart-dent-smart-print-gengiva",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -134,13 +134,13 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para coroa provisória de longa duração?",
-    "url": "https://smartdent.com.br/blog/uais-produtos-mart-ent-usar-para-coroa-provisoria-de-longa-duraeo",
+    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-coroa-provisoria-de-longa-duracao",
     "isHome": false,
     "brand": "Smart Dent"
   },
   {
     "name": "Quais produtos Smart Dent usar para coroa sobre implante unitária?",
-    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-coroa-sobre-implante-unitaria",
+    "url": "https://smartdent.com.br/blog/uais-produtos-mart-ent-usar-para-coroa-sobre-implante-unitaria",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -188,7 +188,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para prótese total digital?",
-    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-protese-total-digital",
+    "url": "https://smartdent.com.br/en/blog/uais-produtos-mart-ent-usar-para-protese-total-digital-en",
     "isHome": false,
     "brand": "Smart Dent"
   },
