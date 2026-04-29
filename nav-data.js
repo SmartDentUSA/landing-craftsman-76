@@ -205,6 +205,12 @@ window.__NAV_DATA__ = [
     "brand": "Smart Dent"
   },
   {
+    "name": "Quanto custa uma impressora 3D odontológica no Brasil?",
+    "url": "https://smartdent.com.br/blog/uanto-custa-uma-impressora-3-odontologica-no-rasil",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Rayshape Edge Mini a Impressora 3D para Odontologia",
     "url": "https://smartdent.com.br/linknabio",
     "isHome": false,
