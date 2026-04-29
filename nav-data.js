@@ -2,7 +2,7 @@
 window.__NAV_DATA__ = [
   {
     "name": "Comparativo Scanners Intraorais — Smart Dent",
-    "url": "https://smartdent.com.br/comparativo-scanners-intraorais",
+    "url": "https://smartdent.com.br/produtos/comparativo-scanners-intraorais",
     "isHome": false,
     "brand": null
   },
@@ -33,6 +33,12 @@ window.__NAV_DATA__ = [
   {
     "name": "Quais produtos Smart Dent usar para coroa provisória de longa duração?",
     "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-coroa-provisoria-de-longa-duracao",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
+    "name": "Quais produtos Smart Dent usar para fluxo chairside completo no consultório?",
+    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-fluxo-chairside-completo-no-consultorio",
     "isHome": false,
     "brand": "Smart Dent"
   },
