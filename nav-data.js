@@ -68,7 +68,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "QRCode",
-    "url": "https://smartdent.com.br/suport-resurces ",
+    "url": "https://smartdent.com.br/support-resources",
     "isHome": false,
     "brand": null
   },
@@ -122,7 +122,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para modelos odontológicos digitais?",
-    "url": "https://smartdent.com.br/es/blog/uais-produtos-mart-ent-usar-para-modelos-odontologicos-digitais-es",
+    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-modelos-odontologicos-digitais",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -147,6 +147,12 @@ window.__NAV_DATA__ = [
   {
     "name": "Qual a diferença entre resina 3D para modelo e para coroa?",
     "url": "https://smartdent.com.br/blog/ual-a-diferena-entre-resina-3-para-modelo-e-para-coroa",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
+    "name": "Qual o tempo de impressão de uma coroa dental em impressora 3D?",
+    "url": "https://smartdent.com.br/es/blog/ual-o-tempo-de-impresseo-de-uma-coroa-dental-em-impressora-3-es",
     "isHome": false,
     "brand": "Smart Dent"
   },
