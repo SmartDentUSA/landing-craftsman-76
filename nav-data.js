@@ -1,6 +1,12 @@
 /* Smart Dent Navigation Data - Auto-generated */
 window.__NAV_DATA__ = [
   {
+    "name": "Atos: Camadas Naturais em Resina Composta Anterior",
+    "url": "https://smartdent.com.br/blog/atos-camadas-naturais-em-resina-composta-anterior-1",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Atos: Natural Layers in Anterior Composite Resin",
     "url": "https://smartdent.com.br/en/blog/atos-natural-layers-in-anterior-composite-resin",
     "isHome": false,
@@ -26,7 +32,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Parâmetros anycubic photon-mono-se | Smart Dent",
-    "url": "https://smartdent.com.br/es/blog/parametros-anycubic-photon-mono-se-smart-dent-smart-print-model-precision-es",
+    "url": "https://smartdent.com.br/en/blog/parametros-anycubic-photon-mono-se-smart-dent-smart-print-model-precision-en",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -56,7 +62,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para coroa provisória de longa duração?",
-    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-coroa-provisoria-de-longa-duracao",
+    "url": "https://smartdent.com.br/blog/uais-produtos-mart-ent-usar-para-coroa-provisoria-de-longa-duraeo",
     "isHome": false,
     "brand": "Smart Dent"
   },
