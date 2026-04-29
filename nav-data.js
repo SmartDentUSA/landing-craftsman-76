@@ -49,6 +49,12 @@ window.__NAV_DATA__ = [
     "brand": "Smart Dent"
   },
   {
+    "name": "Parâmetros anycubic photon-m5 | Smart Dent",
+    "url": "https://smartdent.com.br/es/blog/parametros-anycubic-photon-m5-smart-dent-smart-print-model-laqua-es",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Parâmetros anycubic photon-m5s | Smart Dent",
     "url": "https://smartdent.com.br/blog/parametros-anycubic-photon-m5s-smart-dent-smart-print-model-plus",
     "isHome": false,
@@ -56,7 +62,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Parâmetros anycubic photon-mono-se | Smart Dent",
-    "url": "https://smartdent.com.br/es/blog/parametros-anycubic-photon-mono-se-smart-dent-smart-print-model-precision-es",
+    "url": "https://smartdent.com.br/blog/parametros-anycubic-photon-mono-se-smart-dent-smart-print-model-precision",
     "isHome": false,
     "brand": "Smart Dent"
   },
