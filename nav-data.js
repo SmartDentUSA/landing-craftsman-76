@@ -7,6 +7,12 @@ window.__NAV_DATA__ = [
     "brand": null
   },
   {
+    "name": "Atos: Capas Naturales en Resina Compuesta Anterior",
+    "url": "https://smartdent.com.br/es/blog/tos-apas-aturales-en-esina-ompuesta-nterior",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Atos: Natural Layers in Anterior Composite Resin",
     "url": "https://smartdent.com.br/en/blog/atos-natural-layers-in-anterior-composite-resin",
     "isHome": false,
@@ -20,13 +26,13 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Como lavar e limpar peças impressas em resina 3D odontológica?",
-    "url": "https://smartdent.com.br/blog/omo-lavar-e-limpar-peas-impressas-em-resina-3-odontologica",
+    "url": "https://smartdent.com.br/en/blog/omo-lavar-e-limpar-peas-impressas-em-resina-3-odontologica-en",
     "isHome": false,
     "brand": "Smart Dent"
   },
   {
     "name": "Comparativo Scanners Intraorais — Smart Dent",
-    "url": "https://smartdent.com.br/produtos/comparativo-scanners-intraorais",
+    "url": "https://smartdent.com.br/comparativo-scanners-intraorais",
     "isHome": false,
     "brand": null
   },
@@ -68,7 +74,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Parâmetros anycubic photon-mono-se | Smart Dent",
-    "url": "https://smartdent.com.br/en/blog/parametros-anycubic-photon-mono-se-smart-dent-smart-print-model-precision-en",
+    "url": "https://smartdent.com.br/es/blog/parametros-anycubic-photon-mono-se-smart-dent-smart-print-model-precision-es",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -86,7 +92,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "QRCode",
-    "url": "https://smartdent.com.br/suport-resurces ",
+    "url": "https://smartdent.com.br/support-resources",
     "isHome": false,
     "brand": null
   },
@@ -122,13 +128,13 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para coroa sobre implante unitária?",
-    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-coroa-sobre-implante-unitaria",
+    "url": "https://smartdent.com.br/blog/uais-produtos-mart-ent-usar-para-coroa-sobre-implante-unitaria",
     "isHome": false,
     "brand": "Smart Dent"
   },
   {
     "name": "Quais produtos Smart Dent usar para facetas dentais digitais?",
-    "url": "https://smartdent.com.br/blog/uais-produtos-mart-ent-usar-para-facetas-dentais-digitais",
+    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-facetas-dentais-digitais",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -152,7 +158,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para modelos odontológicos digitais?",
-    "url": "https://smartdent.com.br/es/blog/uais-produtos-mart-ent-usar-para-modelos-odontologicos-digitais-es",
+    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-modelos-odontologicos-digitais",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -164,7 +170,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para placa de bruxismo impressa em 3D?",
-    "url": "https://smartdent.com.br/es/blog/uais-produtos-mart-ent-usar-para-placa-de-bruxismo-impressa-em-3-es",
+    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-placa-de-bruxismo-impressa-em-3d",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -176,7 +182,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para protocolo all-on sobre implantes?",
-    "url": "https://smartdent.com.br/blog/uais-produtos-mart-ent-usar-para-protocolo-allon-sobre-implantes",
+    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-protocolo-all-on-sobre-implantes",
     "isHome": false,
     "brand": "Smart Dent"
   },
