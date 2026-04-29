@@ -32,7 +32,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Do Escaneamento à Cimentação com Vitality em 2 Horas — Caso Clínico Dr. Weber Ricci",
-    "url": "https://smartdent.com.br/es/blog/caso-clinico-dr-weber-ricci-coroa-posterior-vitality-2-horas-chairside-es",
+    "url": "https://smartdent.com.br/blog/caso-clinico-dr-weber-ricci-coroa-posterior-vitality-2-horas-chairside",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -68,7 +68,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Parâmetros anycubic photon-mono-se | Smart Dent",
-    "url": "https://smartdent.com.br/blog/parametros-anycubic-photon-mono-se-smart-dent-smart-print-model-precision",
+    "url": "https://smartdent.com.br/en/blog/parametros-anycubic-photon-mono-se-smart-dent-smart-print-model-precision-en",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -80,7 +80,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Parâmetros elegoo mars-4-ultra | Smart Dent",
-    "url": "https://smartdent.com.br/blog/parametros-elegoo-mars-4-ultra-smart-dent-smart-print-bio-bite-splint-clear",
+    "url": "https://smartdent.com.br/blog/parametros-elegoo-mars-4-ultra-smart-dent-smart-print-model-precision",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -92,7 +92,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Parâmetros miicraft alpha | Smart Dent",
-    "url": "https://smartdent.com.br/blog/parametros-miicraft-alpha-smart-dent-smart-print-gengiva",
+    "url": "https://smartdent.com.br/blog/parametros-miicraft-alpha-smart-dent-smart-print-model-ocre",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -134,19 +134,19 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para coroa provisória de longa duração?",
-    "url": "https://smartdent.com.br/blog/uais-produtos-mart-ent-usar-para-coroa-provisoria-de-longa-duraeo",
+    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-coroa-provisoria-de-longa-duracao",
     "isHome": false,
     "brand": "Smart Dent"
   },
   {
     "name": "Quais produtos Smart Dent usar para coroa sobre implante unitária?",
-    "url": "https://smartdent.com.br/blog/uais-produtos-mart-ent-usar-para-coroa-sobre-implante-unitaria",
+    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-coroa-sobre-implante-unitaria",
     "isHome": false,
     "brand": "Smart Dent"
   },
   {
     "name": "Quais produtos Smart Dent usar para facetas dentais digitais?",
-    "url": "https://smartdent.com.br/blog/uais-produtos-mart-ent-usar-para-facetas-dentais-digitais",
+    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-facetas-dentais-digitais",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -158,7 +158,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para guia cirúrgico de implante impresso em 3D?",
-    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-guia-cirurgico-de-implante-impresso-em-3d",
+    "url": "https://smartdent.com.br/en/blog/uais-produtos-mart-ent-usar-para-guia-circrgico-de-implante-impresso-em-3-en",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -170,7 +170,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para modelos odontológicos digitais?",
-    "url": "https://smartdent.com.br/es/blog/uais-produtos-mart-ent-usar-para-modelos-odontologicos-digitais-es",
+    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-modelos-odontologicos-digitais",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -194,7 +194,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para protocolo all-on sobre implantes?",
-    "url": "https://smartdent.com.br/blog/uais-produtos-mart-ent-usar-para-protocolo-allon-sobre-implantes",
+    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-protocolo-all-on-sobre-implantes",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -218,7 +218,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Qual o tempo de impressão de uma coroa dental em impressora 3D?",
-    "url": "https://smartdent.com.br/blog/ual-o-tempo-de-impresseo-de-uma-coroa-dental-em-impressora-3",
+    "url": "https://smartdent.com.br/en/blog/ual-o-tempo-de-impresseo-de-uma-coroa-dental-em-impressora-3-en",
     "isHome": false,
     "brand": "Smart Dent"
   },
