@@ -2,7 +2,7 @@
 window.__NAV_DATA__ = [
   {
     "name": "Comparativo Scanners Intraorais — Smart Dent",
-    "url": "https://smartdent.com.br/produtos/comparativo-scanners-intraorais",
+    "url": "https://smartdent.com.br/comparativo-scanners-intraorais",
     "isHome": false,
     "brand": null
   },
