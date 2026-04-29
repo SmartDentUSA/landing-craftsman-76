@@ -2,13 +2,13 @@
 window.__NAV_DATA__ = [
   {
     "name": "Comparativo Scanners Intraorais — Smart Dent",
-    "url": "https://smartdent.com.br/produtos/comparativo-scanners-intraorais",
+    "url": "https://smartdent.com.br/comparativo-scanners-intraorais",
     "isHome": false,
     "brand": null
   },
   {
     "name": "Do Escaneamento à Cimentação com Vitality em 2 Horas — Caso Clínico Dr. Weber Ricci",
-    "url": "https://smartdent.com.br/es/blog/caso-clinico-dr-weber-ricci-coroa-posterior-vitality-2-horas-chairside-es",
+    "url": "https://smartdent.com.br/blog/caso-clinico-dr-weber-ricci-coroa-posterior-vitality-2-horas-chairside",
     "isHome": false,
     "brand": "Smart Dent"
   },
