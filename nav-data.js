@@ -98,7 +98,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Parâmetros miicraft alpha | Smart Dent",
-    "url": "https://smartdent.com.br/blog/parametros-miicraft-alpha-smart-dent-smart-print-model-ocre",
+    "url": "https://smartdent.com.br/blog/parametros-miicraft-alpha-smart-dent-smart-print-gengiva",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -110,7 +110,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "QRCode",
-    "url": "https://smartdent.com.br/support-resources",
+    "url": "https://smartdent.com.br/suport-resurces ",
     "isHome": false,
     "brand": null
   },
@@ -140,7 +140,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para coroa provisória de longa duração?",
-    "url": "https://smartdent.com.br/blog/uais-produtos-mart-ent-usar-para-coroa-provisoria-de-longa-duraeo",
+    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-coroa-provisoria-de-longa-duracao",
     "isHome": false,
     "brand": "Smart Dent"
   },
