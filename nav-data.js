@@ -50,7 +50,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Parâmetros anycubic photon-m5 | Smart Dent",
-    "url": "https://smartdent.com.br/es/blog/parametros-anycubic-photon-m5-smart-dent-smart-print-model-laqua-es",
+    "url": "https://smartdent.com.br/blog/parametros-anycubic-photon-m5-smart-dent-smart-print-model-laqua",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -62,7 +62,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Parâmetros anycubic photon-mono-se | Smart Dent",
-    "url": "https://smartdent.com.br/blog/parametros-anycubic-photon-mono-se-smart-dent-smart-print-model-precision",
+    "url": "https://smartdent.com.br/en/blog/parametros-anycubic-photon-mono-se-smart-dent-smart-print-model-precision-en",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -134,13 +134,13 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para inlays e onlays digitais?",
-    "url": "https://smartdent.com.br/blog/uais-produtos-mart-ent-usar-para-inlays-e-onlays-digitais",
+    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-inlays-e-onlays-digitais",
     "isHome": false,
     "brand": "Smart Dent"
   },
   {
     "name": "Quais produtos Smart Dent usar para modelos odontológicos digitais?",
-    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-modelos-odontologicos-digitais",
+    "url": "https://smartdent.com.br/es/blog/uais-produtos-mart-ent-usar-para-modelos-odontologicos-digitais-es",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -152,7 +152,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para prótese total digital?",
-    "url": "https://smartdent.com.br/en/blog/uais-produtos-mart-ent-usar-para-protese-total-digital-en",
+    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-protese-total-digital",
     "isHome": false,
     "brand": "Smart Dent"
   },
