@@ -20,13 +20,13 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Como lavar e limpar peças impressas em resina 3D odontológica?",
-    "url": "https://smartdent.com.br/en/blog/omo-lavar-e-limpar-peas-impressas-em-resina-3-odontologica-en",
+    "url": "https://smartdent.com.br/blog/omo-lavar-e-limpar-peas-impressas-em-resina-3-odontologica",
     "isHome": false,
     "brand": "Smart Dent"
   },
   {
     "name": "Comparativo Scanners Intraorais — Smart Dent",
-    "url": "https://smartdent.com.br/produtos/comparativo-scanners-intraorais",
+    "url": "https://smartdent.com.br/comparativo-scanners-intraorais",
     "isHome": false,
     "brand": null
   },
@@ -56,7 +56,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Parâmetros anycubic photon-m5 | Smart Dent",
-    "url": "https://smartdent.com.br/es/blog/parametros-anycubic-photon-m5-smart-dent-smart-print-model-laqua-es",
+    "url": "https://smartdent.com.br/blog/parametros-anycubic-photon-m5-smart-dent-smart-print-model-laqua",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -68,7 +68,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Parâmetros anycubic photon-mono-se | Smart Dent",
-    "url": "https://smartdent.com.br/en/blog/parametros-anycubic-photon-mono-se-smart-dent-smart-print-model-precision-en",
+    "url": "https://smartdent.com.br/es/blog/parametros-anycubic-photon-mono-se-smart-dent-smart-print-model-precision-es",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -80,7 +80,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Parâmetros elegoo mars-4-ultra | Smart Dent",
-    "url": "https://smartdent.com.br/blog/parametros-elegoo-mars-4-ultra-smart-dent-smart-print-bio-bite-splint-clear",
+    "url": "https://smartdent.com.br/blog/parametros-elegoo-mars-4-ultra-smart-dent-smart-print-model-precision",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -92,7 +92,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Parâmetros miicraft alpha | Smart Dent",
-    "url": "https://smartdent.com.br/blog/parametros-miicraft-alpha-smart-dent-smart-print-model-ocre",
+    "url": "https://smartdent.com.br/blog/parametros-miicraft-alpha-smart-dent-smart-print-gengiva",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -104,7 +104,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "QRCode",
-    "url": "https://smartdent.com.br/support-resources",
+    "url": "https://smartdent.com.br/suport-resurces ",
     "isHome": false,
     "brand": null
   },
@@ -158,7 +158,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para modelos odontológicos digitais?",
-    "url": "https://smartdent.com.br/es/blog/uais-produtos-mart-ent-usar-para-modelos-odontologicos-digitais-es",
+    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-modelos-odontologicos-digitais",
     "isHome": false,
     "brand": "Smart Dent"
   },
