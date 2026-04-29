@@ -20,13 +20,13 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Como lavar e limpar peças impressas em resina 3D odontológica?",
-    "url": "https://smartdent.com.br/blog/omo-lavar-e-limpar-peas-impressas-em-resina-3-odontologica",
+    "url": "https://smartdent.com.br/en/blog/omo-lavar-e-limpar-peas-impressas-em-resina-3-odontologica-en",
     "isHome": false,
     "brand": "Smart Dent"
   },
   {
     "name": "Comparativo Scanners Intraorais — Smart Dent",
-    "url": "https://smartdent.com.br/produtos/comparativo-scanners-intraorais",
+    "url": "https://smartdent.com.br/comparativo-scanners-intraorais",
     "isHome": false,
     "brand": null
   },
@@ -56,7 +56,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Parâmetros anycubic photon-m5 | Smart Dent",
-    "url": "https://smartdent.com.br/es/blog/parametros-anycubic-photon-m5-smart-dent-smart-print-model-laqua-es",
+    "url": "https://smartdent.com.br/blog/parametros-anycubic-photon-m5-smart-dent-smart-print-model-laqua",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -104,7 +104,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "QRCode",
-    "url": "https://smartdent.com.br/suport-resurces ",
+    "url": "https://smartdent.com.br/support-resources",
     "isHome": false,
     "brand": null
   },
@@ -122,7 +122,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para coroa provisória de longa duração?",
-    "url": "https://smartdent.com.br/blog/uais-produtos-mart-ent-usar-para-coroa-provisoria-de-longa-duraeo",
+    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-coroa-provisoria-de-longa-duracao",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -134,7 +134,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para facetas dentais digitais?",
-    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-facetas-dentais-digitais",
+    "url": "https://smartdent.com.br/blog/uais-produtos-mart-ent-usar-para-facetas-dentais-digitais",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -152,13 +152,13 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para inlays e onlays digitais?",
-    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-inlays-e-onlays-digitais",
+    "url": "https://smartdent.com.br/blog/uais-produtos-mart-ent-usar-para-inlays-e-onlays-digitais",
     "isHome": false,
     "brand": "Smart Dent"
   },
   {
     "name": "Quais produtos Smart Dent usar para modelos odontológicos digitais?",
-    "url": "https://smartdent.com.br/es/blog/uais-produtos-mart-ent-usar-para-modelos-odontologicos-digitais-es",
+    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-modelos-odontologicos-digitais",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -181,6 +181,12 @@ window.__NAV_DATA__ = [
     "brand": "Smart Dent"
   },
   {
+    "name": "Quais produtos Smart Dent usar para restaurações diretas em resina composta?",
+    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-restauracoes-diretas-em-resina-composta",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Qual a diferença entre impressora 3D DLP e LCD para odontologia?",
     "url": "https://smartdent.com.br/blog/ual-a-diferena-entre-impressora-3-e-para-odontologia",
     "isHome": false,
@@ -194,7 +200,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Qual o tempo de impressão de uma coroa dental em impressora 3D?",
-    "url": "https://smartdent.com.br/en/blog/ual-o-tempo-de-impresseo-de-uma-coroa-dental-em-impressora-3-en",
+    "url": "https://smartdent.com.br/es/blog/ual-o-tempo-de-impresseo-de-uma-coroa-dental-em-impressora-3-es",
     "isHome": false,
     "brand": "Smart Dent"
   },
