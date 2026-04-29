@@ -7,6 +7,12 @@ window.__NAV_DATA__ = [
     "brand": null
   },
   {
+    "name": "Atos: Camadas Naturais em Resina Composta Anterior",
+    "url": "https://smartdent.com.br/blog/atos-camadas-naturais-em-resina-composta-anterior-1",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Atos: Natural Layers in Anterior Composite Resin",
     "url": "https://smartdent.com.br/en/blog/atos-natural-layers-in-anterior-composite-resin",
     "isHome": false,
@@ -26,13 +32,13 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Comparativo Scanners Intraorais — Smart Dent",
-    "url": "https://smartdent.com.br/comparativo-scanners-intraorais",
+    "url": "https://smartdent.com.br/produtos/comparativo-scanners-intraorais",
     "isHome": false,
     "brand": null
   },
   {
     "name": "Do Escaneamento à Cimentação com Vitality em 2 Horas — Caso Clínico Dr. Weber Ricci",
-    "url": "https://smartdent.com.br/blog/caso-clinico-dr-weber-ricci-coroa-posterior-vitality-2-horas-chairside",
+    "url": "https://smartdent.com.br/es/blog/caso-clinico-dr-weber-ricci-coroa-posterior-vitality-2-horas-chairside-es",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -68,7 +74,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Parâmetros anycubic photon-mono-se | Smart Dent",
-    "url": "https://smartdent.com.br/en/blog/parametros-anycubic-photon-mono-se-smart-dent-smart-print-model-precision-en",
+    "url": "https://smartdent.com.br/es/blog/parametros-anycubic-photon-mono-se-smart-dent-smart-print-model-precision-es",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -104,7 +110,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "QRCode",
-    "url": "https://smartdent.com.br/suport-resurces ",
+    "url": "https://smartdent.com.br/support-resources",
     "isHome": false,
     "brand": null
   },
@@ -116,7 +122,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para caracterização gengival em próteses?",
-    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-caracterizacao-gengival-em-proteses",
+    "url": "https://smartdent.com.br/en/blog/uais-produtos-mart-ent-usar-para-caracterizaeo-gengival-em-proteses-en",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -134,7 +140,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para coroa provisória de longa duração?",
-    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-coroa-provisoria-de-longa-duracao",
+    "url": "https://smartdent.com.br/blog/uais-produtos-mart-ent-usar-para-coroa-provisoria-de-longa-duraeo",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -146,7 +152,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para facetas dentais digitais?",
-    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-facetas-dentais-digitais",
+    "url": "https://smartdent.com.br/blog/uais-produtos-mart-ent-usar-para-facetas-dentais-digitais",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -164,13 +170,13 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para inlays e onlays digitais?",
-    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-inlays-e-onlays-digitais",
+    "url": "https://smartdent.com.br/blog/uais-produtos-mart-ent-usar-para-inlays-e-onlays-digitais",
     "isHome": false,
     "brand": "Smart Dent"
   },
   {
     "name": "Quais produtos Smart Dent usar para modelos odontológicos digitais?",
-    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-modelos-odontologicos-digitais",
+    "url": "https://smartdent.com.br/es/blog/uais-produtos-mart-ent-usar-para-modelos-odontologicos-digitais-es",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -182,7 +188,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para placa de bruxismo impressa em 3D?",
-    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-placa-de-bruxismo-impressa-em-3d",
+    "url": "https://smartdent.com.br/es/blog/uais-produtos-mart-ent-usar-para-placa-de-bruxismo-impressa-em-3-es",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -218,7 +224,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Qual o tempo de impressão de uma coroa dental em impressora 3D?",
-    "url": "https://smartdent.com.br/en/blog/ual-o-tempo-de-impresseo-de-uma-coroa-dental-em-impressora-3-en",
+    "url": "https://smartdent.com.br/es/blog/ual-o-tempo-de-impresseo-de-uma-coroa-dental-em-impressora-3-es",
     "isHome": false,
     "brand": "Smart Dent"
   },
