@@ -20,7 +20,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Como lavar e limpar peças impressas em resina 3D odontológica?",
-    "url": "https://smartdent.com.br/en/blog/omo-lavar-e-limpar-peas-impressas-em-resina-3-odontologica-en",
+    "url": "https://smartdent.com.br/blog/omo-lavar-e-limpar-peas-impressas-em-resina-3-odontologica",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -68,7 +68,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Parâmetros anycubic photon-mono-se | Smart Dent",
-    "url": "https://smartdent.com.br/blog/parametros-anycubic-photon-mono-se-smart-dent-smart-print-model-precision",
+    "url": "https://smartdent.com.br/es/blog/parametros-anycubic-photon-mono-se-smart-dent-smart-print-model-precision-es",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -104,7 +104,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "QRCode",
-    "url": "https://smartdent.com.br/support-resources",
+    "url": "https://smartdent.com.br/suport-resurces ",
     "isHome": false,
     "brand": null
   },
@@ -116,7 +116,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para caracterização gengival em próteses?",
-    "url": "https://smartdent.com.br/en/blog/uais-produtos-mart-ent-usar-para-caracterizaeo-gengival-em-proteses-en",
+    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-caracterizacao-gengival-em-proteses",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -182,7 +182,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para placa de bruxismo impressa em 3D?",
-    "url": "https://smartdent.com.br/es/blog/uais-produtos-mart-ent-usar-para-placa-de-bruxismo-impressa-em-3-es",
+    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-placa-de-bruxismo-impressa-em-3d",
     "isHome": false,
     "brand": "Smart Dent"
   },
