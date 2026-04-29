@@ -92,7 +92,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para coroa provisória de longa duração?",
-    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-coroa-provisoria-de-longa-duracao",
+    "url": "https://smartdent.com.br/blog/uais-produtos-mart-ent-usar-para-coroa-provisoria-de-longa-duraeo",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -140,7 +140,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para prótese total digital?",
-    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-protese-total-digital",
+    "url": "https://smartdent.com.br/en/blog/uais-produtos-mart-ent-usar-para-protese-total-digital-en",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -159,6 +159,12 @@ window.__NAV_DATA__ = [
   {
     "name": "Qual o tempo de impressão de uma coroa dental em impressora 3D?",
     "url": "https://smartdent.com.br/en/blog/ual-o-tempo-de-impresseo-de-uma-coroa-dental-em-impressora-3-en",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
+    "name": "Qual resina usar com impressora Elegoo Mars na odontologia?",
+    "url": "https://smartdent.com.br/blog/ual-resina-usar-com-impressora-legoo-ars-na-odontologia",
     "isHome": false,
     "brand": "Smart Dent"
   },
