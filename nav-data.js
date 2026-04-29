@@ -20,13 +20,13 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Como lavar e limpar peças impressas em resina 3D odontológica?",
-    "url": "https://smartdent.com.br/en/blog/omo-lavar-e-limpar-peas-impressas-em-resina-3-odontologica-en",
+    "url": "https://smartdent.com.br/blog/omo-lavar-e-limpar-peas-impressas-em-resina-3-odontologica",
     "isHome": false,
     "brand": "Smart Dent"
   },
   {
     "name": "Comparativo Scanners Intraorais — Smart Dent",
-    "url": "https://smartdent.com.br/comparativo-scanners-intraorais",
+    "url": "https://smartdent.com.br/produtos/comparativo-scanners-intraorais",
     "isHome": false,
     "brand": null
   },
@@ -56,7 +56,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Parâmetros anycubic photon-m5 | Smart Dent",
-    "url": "https://smartdent.com.br/blog/parametros-anycubic-photon-m5-smart-dent-smart-print-model-laqua",
+    "url": "https://smartdent.com.br/es/blog/parametros-anycubic-photon-m5-smart-dent-smart-print-model-laqua-es",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -80,7 +80,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Parâmetros elegoo mars-4-ultra | Smart Dent",
-    "url": "https://smartdent.com.br/blog/parametros-elegoo-mars-4-ultra-smart-dent-smart-print-model-precision",
+    "url": "https://smartdent.com.br/blog/parametros-elegoo-mars-4-ultra-smart-dent-smart-print-bio-bite-splint-clear",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -104,9 +104,15 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "QRCode",
-    "url": "https://smartdent.com.br/support-resources",
+    "url": "https://smartdent.com.br/suport-resurces ",
     "isHome": false,
     "brand": null
+  },
+  {
+    "name": "Quais produtos Smart Dent usar para caracterização dental em resinas impressas?",
+    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-caracterizacao-dental-em-resinas-impressas",
+    "isHome": false,
+    "brand": "Smart Dent"
   },
   {
     "name": "Quais produtos Smart Dent usar para cimentação de facetas e laminados cerâmicos?",
@@ -122,13 +128,13 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para coroa provisória de longa duração?",
-    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-coroa-provisoria-de-longa-duracao",
+    "url": "https://smartdent.com.br/blog/uais-produtos-mart-ent-usar-para-coroa-provisoria-de-longa-duraeo",
     "isHome": false,
     "brand": "Smart Dent"
   },
   {
     "name": "Quais produtos Smart Dent usar para coroa sobre implante unitária?",
-    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-coroa-sobre-implante-unitaria",
+    "url": "https://smartdent.com.br/blog/uais-produtos-mart-ent-usar-para-coroa-sobre-implante-unitaria",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -146,13 +152,13 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para guia cirúrgico de implante impresso em 3D?",
-    "url": "https://smartdent.com.br/en/blog/uais-produtos-mart-ent-usar-para-guia-circrgico-de-implante-impresso-em-3-en",
+    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-guia-cirurgico-de-implante-impresso-em-3d",
     "isHome": false,
     "brand": "Smart Dent"
   },
   {
     "name": "Quais produtos Smart Dent usar para inlays e onlays digitais?",
-    "url": "https://smartdent.com.br/blog/uais-produtos-mart-ent-usar-para-inlays-e-onlays-digitais",
+    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-inlays-e-onlays-digitais",
     "isHome": false,
     "brand": "Smart Dent"
   },
