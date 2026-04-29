@@ -98,7 +98,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para coroa provisória de longa duração?",
-    "url": "https://smartdent.com.br/blog/uais-produtos-mart-ent-usar-para-coroa-provisoria-de-longa-duraeo",
+    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-coroa-provisoria-de-longa-duracao",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -128,7 +128,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para inlays e onlays digitais?",
-    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-inlays-e-onlays-digitais",
+    "url": "https://smartdent.com.br/blog/uais-produtos-mart-ent-usar-para-inlays-e-onlays-digitais",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -146,13 +146,19 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para prótese total digital?",
-    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-protese-total-digital",
+    "url": "https://smartdent.com.br/en/blog/uais-produtos-mart-ent-usar-para-protese-total-digital-en",
     "isHome": false,
     "brand": "Smart Dent"
   },
   {
     "name": "Quais produtos Smart Dent usar para protocolo all-on sobre implantes?",
     "url": "https://smartdent.com.br/blog/uais-produtos-mart-ent-usar-para-protocolo-allon-sobre-implantes",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
+    "name": "Qual a diferença entre impressora 3D DLP e LCD para odontologia?",
+    "url": "https://smartdent.com.br/blog/ual-a-diferena-entre-impressora-3-e-para-odontologia",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -164,7 +170,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Qual o tempo de impressão de uma coroa dental em impressora 3D?",
-    "url": "https://smartdent.com.br/en/blog/ual-o-tempo-de-impresseo-de-uma-coroa-dental-em-impressora-3-en",
+    "url": "https://smartdent.com.br/blog/ual-o-tempo-de-impresseo-de-uma-coroa-dental-em-impressora-3",
     "isHome": false,
     "brand": "Smart Dent"
   },
