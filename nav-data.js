@@ -7,12 +7,6 @@ window.__NAV_DATA__ = [
     "brand": null
   },
   {
-    "name": "Atos: Camadas Naturais em Resina Composta Anterior",
-    "url": "https://smartdent.com.br/blog/atos-camadas-naturais-em-resina-composta-anterior-1",
-    "isHome": false,
-    "brand": "Smart Dent"
-  },
-  {
     "name": "Atos: Natural Layers in Anterior Composite Resin",
     "url": "https://smartdent.com.br/en/blog/atos-natural-layers-in-anterior-composite-resin",
     "isHome": false,
@@ -32,13 +26,13 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Comparativo Scanners Intraorais — Smart Dent",
-    "url": "https://smartdent.com.br/comparativo-scanners-intraorais",
+    "url": "https://smartdent.com.br/produtos/comparativo-scanners-intraorais",
     "isHome": false,
     "brand": null
   },
   {
     "name": "Do Escaneamento à Cimentação com Vitality em 2 Horas — Caso Clínico Dr. Weber Ricci",
-    "url": "https://smartdent.com.br/blog/caso-clinico-dr-weber-ricci-coroa-posterior-vitality-2-horas-chairside",
+    "url": "https://smartdent.com.br/es/blog/caso-clinico-dr-weber-ricci-coroa-posterior-vitality-2-horas-chairside-es",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -74,19 +68,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Parâmetros anycubic photon-mono-se | Smart Dent",
-    "url": "https://smartdent.com.br/blog/parametros-anycubic-photon-mono-se-smart-dent-smart-print-model-precision",
-    "isHome": false,
-    "brand": "Smart Dent"
-  },
-  {
-    "name": "Parâmetros creality hallot-one-pro/plus | Smart Dent",
-    "url": "https://smartdent.com.br/blog/parametros-creality-hallot-one-proplus-smart-dent-smart-print-bio-vitality",
-    "isHome": false,
-    "brand": "Smart Dent"
-  },
-  {
-    "name": "Parâmetros elegoo mars-4-ultra | Smart Dent",
-    "url": "https://smartdent.com.br/blog/parametros-elegoo-mars-4-ultra-smart-dent-smart-print-model-precision",
+    "url": "https://smartdent.com.br/en/blog/parametros-anycubic-photon-mono-se-smart-dent-smart-print-model-precision-en",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -98,19 +80,13 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Parâmetros miicraft alpha | Smart Dent",
-    "url": "https://smartdent.com.br/blog/parametros-miicraft-alpha-smart-dent-smart-print-gengiva",
-    "isHome": false,
-    "brand": "Smart Dent"
-  },
-  {
-    "name": "Parâmetros sprintray moonray-s | Smart Dent",
-    "url": "https://smartdent.com.br/blog/parametros-sprintray-moonray-s-smart-dent-smart-print-bio-bite-splint-clear",
+    "url": "https://smartdent.com.br/blog/parametros-miicraft-alpha-smart-dent-smart-print-model-ocre",
     "isHome": false,
     "brand": "Smart Dent"
   },
   {
     "name": "QRCode",
-    "url": "https://smartdent.com.br/support-resources",
+    "url": "https://smartdent.com.br/suport-resurces ",
     "isHome": false,
     "brand": null
   },
@@ -122,7 +98,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para caracterização gengival em próteses?",
-    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-caracterizacao-gengival-em-proteses",
+    "url": "https://smartdent.com.br/en/blog/uais-produtos-mart-ent-usar-para-caracterizaeo-gengival-em-proteses-en",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -164,13 +140,13 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para guia cirúrgico de implante impresso em 3D?",
-    "url": "https://smartdent.com.br/en/blog/uais-produtos-mart-ent-usar-para-guia-circrgico-de-implante-impresso-em-3-en",
+    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-guia-cirurgico-de-implante-impresso-em-3d",
     "isHome": false,
     "brand": "Smart Dent"
   },
   {
     "name": "Quais produtos Smart Dent usar para inlays e onlays digitais?",
-    "url": "https://smartdent.com.br/blog/uais-produtos-mart-ent-usar-para-inlays-e-onlays-digitais",
+    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-inlays-e-onlays-digitais",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -200,7 +176,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para protocolo all-on sobre implantes?",
-    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-protocolo-all-on-sobre-implantes",
+    "url": "https://smartdent.com.br/blog/uais-produtos-mart-ent-usar-para-protocolo-allon-sobre-implantes",
     "isHome": false,
     "brand": "Smart Dent"
   },
