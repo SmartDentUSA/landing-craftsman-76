@@ -25,6 +25,12 @@ window.__NAV_DATA__ = [
     "brand": "Smart Dent"
   },
   {
+    "name": "Quais produtos Smart Dent usar para coroa provisória de longa duração?",
+    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-coroa-provisoria-de-longa-duracao",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Quais produtos Smart Dent usar para modelos odontológicos digitais?",
     "url": "https://smartdent.com.br/es/blog/uais-produtos-mart-ent-usar-para-modelos-odontologicos-digitais-es",
     "isHome": false,
