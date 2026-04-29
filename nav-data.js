@@ -32,7 +32,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Do Escaneamento à Cimentação com Vitality em 2 Horas — Caso Clínico Dr. Weber Ricci",
-    "url": "https://smartdent.com.br/blog/caso-clinico-dr-weber-ricci-coroa-posterior-vitality-2-horas-chairside",
+    "url": "https://smartdent.com.br/es/blog/caso-clinico-dr-weber-ricci-coroa-posterior-vitality-2-horas-chairside-es",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -56,7 +56,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Parâmetros anycubic photon-m5 | Smart Dent",
-    "url": "https://smartdent.com.br/blog/parametros-anycubic-photon-m5-smart-dent-smart-print-model-laqua",
+    "url": "https://smartdent.com.br/es/blog/parametros-anycubic-photon-m5-smart-dent-smart-print-model-laqua-es",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -68,7 +68,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Parâmetros anycubic photon-mono-se | Smart Dent",
-    "url": "https://smartdent.com.br/blog/parametros-anycubic-photon-mono-se-smart-dent-smart-print-model-precision",
+    "url": "https://smartdent.com.br/en/blog/parametros-anycubic-photon-mono-se-smart-dent-smart-print-model-precision-en",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -80,7 +80,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Parâmetros elegoo mars-4-ultra | Smart Dent",
-    "url": "https://smartdent.com.br/blog/parametros-elegoo-mars-4-ultra-smart-dent-smart-print-model-precision",
+    "url": "https://smartdent.com.br/blog/parametros-elegoo-mars-4-ultra-smart-dent-smart-print-bio-bite-splint-clear",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -104,7 +104,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "QRCode",
-    "url": "https://smartdent.com.br/suport-resurces ",
+    "url": "https://smartdent.com.br/support-resources",
     "isHome": false,
     "brand": null
   },
