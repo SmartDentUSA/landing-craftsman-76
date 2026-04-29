@@ -32,7 +32,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Comparativo Scanners Intraorais — Smart Dent",
-    "url": "https://smartdent.com.br/comparativo-scanners-intraorais",
+    "url": "https://smartdent.com.br/produtos/comparativo-scanners-intraorais",
     "isHome": false,
     "brand": null
   },
@@ -67,32 +67,14 @@ window.__NAV_DATA__ = [
     "brand": "Smart Dent"
   },
   {
-    "name": "Parâmetros anycubic photon-m5s | Smart Dent",
-    "url": "https://smartdent.com.br/blog/parametros-anycubic-photon-m5s-smart-dent-smart-print-model-plus",
-    "isHome": false,
-    "brand": "Smart Dent"
-  },
-  {
     "name": "Parâmetros anycubic photon-mono-se | Smart Dent",
-    "url": "https://smartdent.com.br/es/blog/parametros-anycubic-photon-mono-se-smart-dent-smart-print-model-precision-es",
-    "isHome": false,
-    "brand": "Smart Dent"
-  },
-  {
-    "name": "Parâmetros elegoo mars-5-ultra | Smart Dent",
-    "url": "https://smartdent.com.br/blog/parametros-elegoo-mars-5-ultra-smart-dent-smart-print-bio-clear-guide",
-    "isHome": false,
-    "brand": "Smart Dent"
-  },
-  {
-    "name": "Parâmetros miicraft alpha | Smart Dent",
-    "url": "https://smartdent.com.br/blog/parametros-miicraft-alpha-smart-dent-smart-print-model-ocre",
+    "url": "https://smartdent.com.br/en/blog/parametros-anycubic-photon-mono-se-smart-dent-smart-print-model-precision-en",
     "isHome": false,
     "brand": "Smart Dent"
   },
   {
     "name": "QRCode",
-    "url": "https://smartdent.com.br/support-resources",
+    "url": "https://smartdent.com.br/suport-resurces ",
     "isHome": false,
     "brand": null
   },
@@ -104,7 +86,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para caracterização gengival em próteses?",
-    "url": "https://smartdent.com.br/en/blog/uais-produtos-mart-ent-usar-para-caracterizaeo-gengival-em-proteses-en",
+    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-caracterizacao-gengival-em-proteses",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -134,7 +116,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para facetas dentais digitais?",
-    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-facetas-dentais-digitais",
+    "url": "https://smartdent.com.br/blog/uais-produtos-mart-ent-usar-para-facetas-dentais-digitais",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -146,7 +128,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para guia cirúrgico de implante impresso em 3D?",
-    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-guia-cirurgico-de-implante-impresso-em-3d",
+    "url": "https://smartdent.com.br/en/blog/uais-produtos-mart-ent-usar-para-guia-circrgico-de-implante-impresso-em-3-en",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -170,7 +152,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para placa de bruxismo impressa em 3D?",
-    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-placa-de-bruxismo-impressa-em-3d",
+    "url": "https://smartdent.com.br/es/blog/uais-produtos-mart-ent-usar-para-placa-de-bruxismo-impressa-em-3-es",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -182,7 +164,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para protocolo all-on sobre implantes?",
-    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-protocolo-all-on-sobre-implantes",
+    "url": "https://smartdent.com.br/blog/uais-produtos-mart-ent-usar-para-protocolo-allon-sobre-implantes",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -207,6 +189,12 @@ window.__NAV_DATA__ = [
   {
     "name": "Qual o tempo de impressão de uma coroa dental em impressora 3D?",
     "url": "https://smartdent.com.br/es/blog/ual-o-tempo-de-impresseo-de-uma-coroa-dental-em-impressora-3-es",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
+    "name": "Qual resina 3D usar para coroa definitiva no Brasil?",
+    "url": "https://smartdent.com.br/blog/ual-resina-3-usar-para-coroa-definitiva-no-rasil",
     "isHome": false,
     "brand": "Smart Dent"
   },
