@@ -20,7 +20,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Do Escaneamento à Cimentação com Vitality em 2 Horas — Caso Clínico Dr. Weber Ricci",
-    "url": "https://smartdent.com.br/es/blog/caso-clinico-dr-weber-ricci-coroa-posterior-vitality-2-horas-chairside-es",
+    "url": "https://smartdent.com.br/blog/caso-clinico-dr-weber-ricci-coroa-posterior-vitality-2-horas-chairside",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -37,8 +37,14 @@ window.__NAV_DATA__ = [
     "brand": "Smart Dent"
   },
   {
+    "name": "Parâmetros anycubic photon-m5s | Smart Dent",
+    "url": "https://smartdent.com.br/blog/parametros-anycubic-photon-m5s-smart-dent-smart-print-model-plus",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Parâmetros anycubic photon-mono-se | Smart Dent",
-    "url": "https://smartdent.com.br/en/blog/parametros-anycubic-photon-mono-se-smart-dent-smart-print-model-precision-en",
+    "url": "https://smartdent.com.br/es/blog/parametros-anycubic-photon-mono-se-smart-dent-smart-print-model-precision-es",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -74,7 +80,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para coroa provisória de longa duração?",
-    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-coroa-provisoria-de-longa-duracao",
+    "url": "https://smartdent.com.br/blog/uais-produtos-mart-ent-usar-para-coroa-provisoria-de-longa-duraeo",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -104,13 +110,13 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para inlays e onlays digitais?",
-    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-inlays-e-onlays-digitais",
+    "url": "https://smartdent.com.br/blog/uais-produtos-mart-ent-usar-para-inlays-e-onlays-digitais",
     "isHome": false,
     "brand": "Smart Dent"
   },
   {
     "name": "Quais produtos Smart Dent usar para modelos odontológicos digitais?",
-    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-modelos-odontologicos-digitais",
+    "url": "https://smartdent.com.br/es/blog/uais-produtos-mart-ent-usar-para-modelos-odontologicos-digitais-es",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -122,7 +128,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para prótese total digital?",
-    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-protese-total-digital",
+    "url": "https://smartdent.com.br/en/blog/uais-produtos-mart-ent-usar-para-protese-total-digital-en",
     "isHome": false,
     "brand": "Smart Dent"
   },
