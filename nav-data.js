@@ -62,7 +62,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Parâmetros anycubic photon-mono-se | Smart Dent",
-    "url": "https://smartdent.com.br/blog/parametros-anycubic-photon-mono-se-smart-dent-smart-print-model-precision",
+    "url": "https://smartdent.com.br/es/blog/parametros-anycubic-photon-mono-se-smart-dent-smart-print-model-precision-es",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -74,7 +74,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Parâmetros elegoo mars-4-ultra | Smart Dent",
-    "url": "https://smartdent.com.br/blog/parametros-elegoo-mars-4-ultra-smart-dent-smart-print-bio-bite-splint-clear",
+    "url": "https://smartdent.com.br/blog/parametros-elegoo-mars-4-ultra-smart-dent-smart-print-model-precision",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -116,7 +116,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para coroa provisória de longa duração?",
-    "url": "https://smartdent.com.br/blog/uais-produtos-mart-ent-usar-para-coroa-provisoria-de-longa-duraeo",
+    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-coroa-provisoria-de-longa-duracao",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -146,7 +146,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para inlays e onlays digitais?",
-    "url": "https://smartdent.com.br/blog/uais-produtos-mart-ent-usar-para-inlays-e-onlays-digitais",
+    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-inlays-e-onlays-digitais",
     "isHome": false,
     "brand": "Smart Dent"
   },
