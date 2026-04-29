@@ -19,6 +19,12 @@ window.__NAV_DATA__ = [
     "brand": null
   },
   {
+    "name": "Quais produtos Smart Dent usar para prótese total digital?",
+    "url": "https://smartdent.com.br/en/blog/uais-produtos-mart-ent-usar-para-protese-total-digital-en",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Rayshape Edge Mini a Impressora 3D para Odontologia",
     "url": "https://smartdent.com.br/linknabio",
     "isHome": false,
