@@ -1,24 +1,6 @@
 /* Smart Dent Navigation Data - Auto-generated */
 window.__NAV_DATA__ = [
   {
-    "name": "Smart Dent — Odontologia Digital, Resinas 3D e Scanners Intraorais",
-    "url": "https://smartdent.com.br",
-    "isHome": true,
-    "brand": null
-  },
-  {
-    "name": "Atos: Camadas Naturais em Resina Composta Anterior",
-    "url": "https://smartdent.com.br/blog/atos-camadas-naturais-em-resina-composta-anterior-1",
-    "isHome": false,
-    "brand": "Smart Dent"
-  },
-  {
-    "name": "Atos: Natural Layers in Anterior Composite Resin",
-    "url": "https://smartdent.com.br/en/blog/atos-natural-layers-in-anterior-composite-resin",
-    "isHome": false,
-    "brand": "Smart Dent"
-  },
-  {
     "name": "Comparativo Scanners Intraorais — Smart Dent",
     "url": "https://smartdent.com.br/comparativo-scanners-intraorais",
     "isHome": false,
