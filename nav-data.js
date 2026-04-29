@@ -1,8 +1,14 @@
 /* Smart Dent Navigation Data - Auto-generated */
 window.__NAV_DATA__ = [
   {
+    "name": "Atos: Natural Layers in Anterior Composite Resin",
+    "url": "https://smartdent.com.br/en/blog/atos-natural-layers-in-anterior-composite-resin",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Comparativo Scanners Intraorais — Smart Dent",
-    "url": "https://smartdent.com.br/comparativo-scanners-intraorais",
+    "url": "https://smartdent.com.br/produtos/comparativo-scanners-intraorais",
     "isHome": false,
     "brand": null
   },
