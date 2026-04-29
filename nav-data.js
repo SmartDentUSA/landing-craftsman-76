@@ -19,6 +19,12 @@ window.__NAV_DATA__ = [
     "brand": "Imersão 3 Dias"
   },
   {
+    "name": "Parâmetros anycubic photon-mono-se | Smart Dent",
+    "url": "https://smartdent.com.br/es/blog/parametros-anycubic-photon-mono-se-smart-dent-smart-print-model-precision-es",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Parâmetros creality hallot-one-pro/plus | Smart Dent",
     "url": "https://smartdent.com.br/blog/parametros-creality-hallot-one-proplus-smart-dent-smart-print-bio-vitality",
     "isHome": false,
@@ -26,7 +32,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "QRCode",
-    "url": "https://smartdent.com.br/support-resources",
+    "url": "https://smartdent.com.br/suport-resurces ",
     "isHome": false,
     "brand": null
   },
