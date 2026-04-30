@@ -26,7 +26,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Como lavar e limpar peças impressas em resina 3D odontológica?",
-    "url": "https://smartdent.com.br/en/blog/omo-lavar-e-limpar-peas-impressas-em-resina-3-odontologica-en",
+    "url": "https://smartdent.com.br/blog/omo-lavar-e-limpar-peas-impressas-em-resina-3-odontologica",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -62,13 +62,13 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Parâmetros anycubic photon-m5 | Smart Dent",
-    "url": "https://smartdent.com.br/blog/parametros-anycubic-photon-m5-smart-dent-smart-print-model-laqua",
+    "url": "https://smartdent.com.br/es/blog/parametros-anycubic-photon-m5-smart-dent-smart-print-model-laqua-es",
     "isHome": false,
     "brand": "Smart Dent"
   },
   {
     "name": "Parâmetros anycubic photon-mono-se | Smart Dent",
-    "url": "https://smartdent.com.br/en/blog/parametros-anycubic-photon-mono-se-smart-dent-smart-print-model-precision-en",
+    "url": "https://smartdent.com.br/es/blog/parametros-anycubic-photon-mono-se-smart-dent-smart-print-model-precision-es",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -86,7 +86,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para caracterização gengival em próteses?",
-    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-caracterizacao-gengival-em-proteses",
+    "url": "https://smartdent.com.br/en/blog/uais-produtos-mart-ent-usar-para-caracterizaeo-gengival-em-proteses-en",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -104,7 +104,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para coroa provisória de longa duração?",
-    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-coroa-provisoria-de-longa-duracao",
+    "url": "https://smartdent.com.br/blog/uais-produtos-mart-ent-usar-para-coroa-provisoria-de-longa-duraeo",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -128,7 +128,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para guia cirúrgico de implante impresso em 3D?",
-    "url": "https://smartdent.com.br/en/blog/uais-produtos-mart-ent-usar-para-guia-circrgico-de-implante-impresso-em-3-en",
+    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-guia-cirurgico-de-implante-impresso-em-3d",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -140,7 +140,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quais produtos Smart Dent usar para modelos odontológicos digitais?",
-    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-modelos-odontologicos-digitais",
+    "url": "https://smartdent.com.br/es/blog/uais-produtos-mart-ent-usar-para-modelos-odontologicos-digitais-es",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -206,7 +206,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Quanto custa uma impressora 3D odontológica no Brasil?",
-    "url": "https://smartdent.com.br/blog/uanto-custa-uma-impressora-3-odontologica-no-rasil",
+    "url": "https://smartdent.com.br/es/blog/uanto-custa-uma-impressora-3-odontologica-no-rasil-es",
     "isHome": false,
     "brand": "Smart Dent"
   },
