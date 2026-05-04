@@ -73,6 +73,12 @@ window.__NAV_DATA__ = [
     "brand": "Smart Dent"
   },
   {
+    "name": "Parâmetros anycubic photon-mono-m7-pró | Smart Dent",
+    "url": "https://smartdent.com.br/blog/parametros-anycubic-photon-mono-m7-pro-smart-dent",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Parâmetros anycubic photon-s | Smart Dent",
     "url": "https://smartdent.com.br/blog/parametros-anycubic-photon-s-smart-dent",
     "isHome": false,
