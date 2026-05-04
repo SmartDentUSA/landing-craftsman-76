@@ -55,6 +55,12 @@ window.__NAV_DATA__ = [
     "brand": "Smart Dent"
   },
   {
+    "name": "Parâmetros anycubic photon-d2-dlp | Smart Dent",
+    "url": "https://smartdent.com.br/blog/parametros-anycubic-photon-d2-dlp-smart-dent",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Parâmetros anycubic photon-m2 | Smart Dent",
     "url": "https://smartdent.com.br/blog/parametros-anycubic-photon-m2-smart-dent",
     "isHome": false,
