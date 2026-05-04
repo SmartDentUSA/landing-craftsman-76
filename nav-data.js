@@ -61,8 +61,14 @@ window.__NAV_DATA__ = [
     "brand": "Smart Dent"
   },
   {
+    "name": "Parâmetros phrozen linha-sonic-4k-/-sonic-3d | Smart Dent",
+    "url": "https://smartdent.com.br/blog/parametros-phrozen-linha-sonic-4k-sonic-3d-smart-dent",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "QRCode",
-    "url": "https://smartdent.com.br/suport-resurces ",
+    "url": "https://smartdent.com.br/support-resources",
     "isHome": false,
     "brand": null
   },
