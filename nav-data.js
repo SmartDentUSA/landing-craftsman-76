@@ -277,6 +277,12 @@ window.__NAV_DATA__ = [
     "brand": "Smart Dent"
   },
   {
+    "name": "Parâmetros straumann cares®-p40 | Smart Dent",
+    "url": "https://smartdent.com.br/blog/parametros-straumann-cares-p40-smart-dent",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Parâmetros uniz slash-2 | Smart Dent",
     "url": "https://smartdent.com.br/blog/parametros-uniz-slash-2-smart-dent",
     "isHome": false,
