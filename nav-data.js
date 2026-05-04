@@ -259,6 +259,12 @@ window.__NAV_DATA__ = [
     "brand": "Smart Dent"
   },
   {
+    "name": "Parâmetros miicraft 150-ultra | Smart Dent",
+    "url": "https://smartdent.com.br/blog/parametros-miicraft-150-ultra-smart-dent",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Parâmetros miicraft alpha | Smart Dent",
     "url": "https://smartdent.com.br/blog/parametros-miicraft-alpha-smart-dent",
     "isHome": false,
