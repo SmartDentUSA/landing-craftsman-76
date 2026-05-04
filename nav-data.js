@@ -26,7 +26,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Comparativo Scanners Intraorais — Smart Dent",
-    "url": "https://smartdent.com.br/comparativo-scanners-intraorais",
+    "url": "https://smartdent.com.br/produtos/comparativo-scanners-intraorais",
     "isHome": false,
     "brand": null
   },
@@ -177,6 +177,12 @@ window.__NAV_DATA__ = [
   {
     "name": "Parâmetros miicraft plus | Smart Dent",
     "url": "https://smartdent.com.br/blog/parametros-miicraft-plus-smart-dent",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
+    "name": "Parâmetros phrozen linha-shuffle | Smart Dent",
+    "url": "https://smartdent.com.br/blog/parametros-phrozen-linha-shuffle-smart-dent",
     "isHome": false,
     "brand": "Smart Dent"
   },
