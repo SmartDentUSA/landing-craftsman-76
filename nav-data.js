@@ -97,8 +97,14 @@ window.__NAV_DATA__ = [
     "brand": "Smart Dent"
   },
   {
+    "name": "Placas Miorrelajantes en impresión 3D",
+    "url": "https://smartdent.com.br/es/blog/lacas-iorrelajantes-en-impresion-3",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "QRCode",
-    "url": "https://smartdent.com.br/support-resources",
+    "url": "https://smartdent.com.br/suport-resurces ",
     "isHome": false,
     "brand": null
   },
