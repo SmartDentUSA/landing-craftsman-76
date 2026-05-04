@@ -26,9 +26,15 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Comparativo Scanners Intraorais — Smart Dent",
-    "url": "https://smartdent.com.br/produtos/comparativo-scanners-intraorais",
+    "url": "https://smartdent.com.br/comparativo-scanners-intraorais",
     "isHome": false,
     "brand": null
+  },
+  {
+    "name": "Do Escaneamento à Cimentação com Vitality em 2 Horas — Caso Clínico Dr. Weber Ricci",
+    "url": "https://smartdent.com.br/blog/do-escaneamento-a-cimentacao-com-vitality-em-2-horas-caso-clinico-dr-weber-ricci",
+    "isHome": false,
+    "brand": "Smart Dent"
   },
   {
     "name": "Elegoo Mars 5 Ultra Parameters - Smart Dent Smart Print Bio Vitality",
