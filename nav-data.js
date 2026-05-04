@@ -385,8 +385,14 @@ window.__NAV_DATA__ = [
     "brand": "Smart Dent"
   },
   {
+    "name": "Posicionamiento de Placa Miorrelajante en Lychee Slicer",
+    "url": "https://smartdent.com.br/es/blog/osicionamiento-de-laca-iorrelajante-en-ychee-licer",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "QRCode",
-    "url": "https://smartdent.com.br/suport-resurces ",
+    "url": "https://smartdent.com.br/support-resources",
     "isHome": false,
     "brand": null
   },
