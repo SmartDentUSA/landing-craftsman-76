@@ -13,6 +13,12 @@ window.__NAV_DATA__ = [
     "brand": "Smart Dent"
   },
   {
+    "name": "Atos: Camadas Naturais em Resina Composta Anterior",
+    "url": "https://smartdent.com.br/blog/atos-camadas-naturais-em-resina-composta-anterior",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Atos: Capas Naturales en Resina Compuesta Anterior",
     "url": "https://smartdent.com.br/es/blog/tos-apas-aturales-en-esina-ompuesta-nterior",
     "isHome": false,
