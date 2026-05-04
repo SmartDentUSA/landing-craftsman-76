@@ -205,6 +205,12 @@ window.__NAV_DATA__ = [
     "brand": "Smart Dent"
   },
   {
+    "name": "Parâmetros miicraft 100-ultra | Smart Dent",
+    "url": "https://smartdent.com.br/blog/parametros-miicraft-100-ultra-smart-dent",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Parâmetros miicraft 125-ultra | Smart Dent",
     "url": "https://smartdent.com.br/blog/parametros-miicraft-125-ultra-smart-dent",
     "isHome": false,
@@ -290,7 +296,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "QRCode",
-    "url": "https://smartdent.com.br/support-resources",
+    "url": "https://smartdent.com.br/suport-resurces ",
     "isHome": false,
     "brand": null
   },
