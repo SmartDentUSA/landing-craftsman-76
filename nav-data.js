@@ -434,7 +434,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "QRCode",
-    "url": "https://smartdent.com.br/suport-resurces ",
+    "url": "https://smartdent.com.br/support-resources",
     "isHome": false,
     "brand": null
   },
@@ -465,6 +465,12 @@ window.__NAV_DATA__ = [
   {
     "name": "Quais produtos Smart Dent usar para fluxo chairside completo no consultório?",
     "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-fluxo-chairside-completo-no-consultorio",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
+    "name": "Quais produtos Smart Dent usar para guia cirúrgico de implante impresso em 3D?",
+    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-guia-cirurgico-de-implante-impresso-em-3d",
     "isHome": false,
     "brand": "Smart Dent"
   },
