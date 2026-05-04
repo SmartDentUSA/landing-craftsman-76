@@ -32,7 +32,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Comparativo Scanners Intraorais — Smart Dent",
-    "url": "https://smartdent.com.br/produtos/comparativo-scanners-intraorais",
+    "url": "https://smartdent.com.br/comparativo-scanners-intraorais",
     "isHome": false,
     "brand": null
   },
@@ -53,6 +53,12 @@ window.__NAV_DATA__ = [
     "url": "https://smartdent.com.br/blog/onbording",
     "isHome": false,
     "brand": "Imersão 3 Dias"
+  },
+  {
+    "name": "Impressora 3D para odontologia precisa de ANVISA?",
+    "url": "https://smartdent.com.br/blog/impressora-3d-para-odontologia-precisa-de-anvisa",
+    "isHome": false,
+    "brand": "Smart Dent"
   },
   {
     "name": "Parâmetros anycubic mono-x | Smart Dent",
@@ -398,7 +404,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "QRCode",
-    "url": "https://smartdent.com.br/support-resources",
+    "url": "https://smartdent.com.br/suport-resurces ",
     "isHome": false,
     "brand": null
   },
