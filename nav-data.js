@@ -31,6 +31,12 @@ window.__NAV_DATA__ = [
     "brand": "Smart Dent"
   },
   {
+    "name": "Como cimentar coroa impressa em 3D?",
+    "url": "https://smartdent.com.br/blog/como-cimentar-coroa-impressa-em-3d",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Comparativo Scanners Intraorais — Smart Dent",
     "url": "https://smartdent.com.br/produtos/comparativo-scanners-intraorais",
     "isHome": false,
