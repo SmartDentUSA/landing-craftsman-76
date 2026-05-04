@@ -26,7 +26,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Comparativo Scanners Intraorais — Smart Dent",
-    "url": "https://smartdent.com.br/comparativo-scanners-intraorais",
+    "url": "https://smartdent.com.br/produtos/comparativo-scanners-intraorais",
     "isHome": false,
     "brand": null
   },
@@ -87,6 +87,12 @@ window.__NAV_DATA__ = [
   {
     "name": "Parâmetros creality hallot-one-pro/plus | Smart Dent",
     "url": "https://smartdent.com.br/blog/parametros-creality-hallot-one-proplus-smart-dent",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
+    "name": "Parâmetros creality hallot-r6 | Smart Dent",
+    "url": "https://smartdent.com.br/blog/parametros-creality-hallot-r6-smart-dent",
     "isHome": false,
     "brand": "Smart Dent"
   },
