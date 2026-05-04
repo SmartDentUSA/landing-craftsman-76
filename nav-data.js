@@ -422,7 +422,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "QRCode",
-    "url": "https://smartdent.com.br/support-resources",
+    "url": "https://smartdent.com.br/suport-resurces ",
     "isHome": false,
     "brand": null
   },
@@ -459,6 +459,12 @@ window.__NAV_DATA__ = [
   {
     "name": "Quais produtos Smart Dent usar para restaurações diretas em resina composta?",
     "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-restauracoes-diretas-em-resina-composta",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
+    "name": "Qual a diferença entre impressora 3D DLP e LCD para odontologia?",
+    "url": "https://smartdent.com.br/blog/qual-a-diferenca-entre-impressora-3d-dlp-e-lcd-para-odontologia",
     "isHome": false,
     "brand": "Smart Dent"
   },
