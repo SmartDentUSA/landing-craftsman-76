@@ -7,6 +7,12 @@ window.__NAV_DATA__ = [
     "brand": null
   },
   {
+    "name": "3D Model Positioning and Resin Selection: Lychee Slicer Guide",
+    "url": "https://smartdent.com.br/en/blog/3-odel-ositioning-and-esin-election-ychee-licer-uide",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Atos: Capas Naturales en Resina Compuesta Anterior",
     "url": "https://smartdent.com.br/es/blog/tos-apas-aturales-en-esina-ompuesta-nterior",
     "isHome": false,
@@ -19,58 +25,16 @@ window.__NAV_DATA__ = [
     "brand": "Smart Dent"
   },
   {
-    "name": "Como cimentar coroa impressa em 3D?",
-    "url": "https://smartdent.com.br/blog/omo-cimentar-coroa-impressa-em-3",
-    "isHome": false,
-    "brand": "Smart Dent"
-  },
-  {
-    "name": "Como lavar e limpar peças impressas em resina 3D odontológica?",
-    "url": "https://smartdent.com.br/blog/omo-lavar-e-limpar-peas-impressas-em-resina-3-odontologica",
-    "isHome": false,
-    "brand": "Smart Dent"
-  },
-  {
     "name": "Comparativo Scanners Intraorais — Smart Dent",
-    "url": "https://smartdent.com.br/produtos/comparativo-scanners-intraorais",
+    "url": "https://smartdent.com.br/comparativo-scanners-intraorais",
     "isHome": false,
     "brand": null
-  },
-  {
-    "name": "Do Escaneamento à Cimentação com Vitality em 2 Horas — Caso Clínico Dr. Weber Ricci",
-    "url": "https://smartdent.com.br/es/blog/caso-clinico-dr-weber-ricci-coroa-posterior-vitality-2-horas-chairside-es",
-    "isHome": false,
-    "brand": "Smart Dent"
   },
   {
     "name": "Imersão 3 Dias Chairside Print",
     "url": "https://smartdent.com.br/blog/onbording",
     "isHome": false,
     "brand": "Imersão 3 Dias"
-  },
-  {
-    "name": "Impressora 3D para odontologia precisa de ANVISA?",
-    "url": "https://smartdent.com.br/blog/mpressora-3-para-odontologia-precisa-de-",
-    "isHome": false,
-    "brand": "Smart Dent"
-  },
-  {
-    "name": "O que é pós-cura UV e por que é obrigatória na impressão 3D odontológica?",
-    "url": "https://smartdent.com.br/blog/-que-e-poscura-e-por-que-e-obrigatoria-na-impresseo-3-odontologica",
-    "isHome": false,
-    "brand": "Smart Dent"
-  },
-  {
-    "name": "Parâmetros anycubic photon-m5 | Smart Dent",
-    "url": "https://smartdent.com.br/es/blog/parametros-anycubic-photon-m5-smart-dent-smart-print-model-laqua-es",
-    "isHome": false,
-    "brand": "Smart Dent"
-  },
-  {
-    "name": "Parâmetros anycubic photon-mono-se | Smart Dent",
-    "url": "https://smartdent.com.br/es/blog/parametros-anycubic-photon-mono-se-smart-dent-smart-print-model-precision-es",
-    "isHome": false,
-    "brand": "Smart Dent"
   },
   {
     "name": "QRCode",
@@ -81,12 +45,6 @@ window.__NAV_DATA__ = [
   {
     "name": "Quais produtos Smart Dent usar para caracterização dental em resinas impressas?",
     "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-caracterizacao-dental-em-resinas-impressas",
-    "isHome": false,
-    "brand": "Smart Dent"
-  },
-  {
-    "name": "Quais produtos Smart Dent usar para caracterização gengival em próteses?",
-    "url": "https://smartdent.com.br/en/blog/uais-produtos-mart-ent-usar-para-caracterizaeo-gengival-em-proteses-en",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -103,44 +61,8 @@ window.__NAV_DATA__ = [
     "brand": "Smart Dent"
   },
   {
-    "name": "Quais produtos Smart Dent usar para coroa provisória de longa duração?",
-    "url": "https://smartdent.com.br/blog/uais-produtos-mart-ent-usar-para-coroa-provisoria-de-longa-duraeo",
-    "isHome": false,
-    "brand": "Smart Dent"
-  },
-  {
-    "name": "Quais produtos Smart Dent usar para coroa sobre implante unitária?",
-    "url": "https://smartdent.com.br/blog/uais-produtos-mart-ent-usar-para-coroa-sobre-implante-unitaria",
-    "isHome": false,
-    "brand": "Smart Dent"
-  },
-  {
-    "name": "Quais produtos Smart Dent usar para facetas dentais digitais?",
-    "url": "https://smartdent.com.br/blog/uais-produtos-mart-ent-usar-para-facetas-dentais-digitais",
-    "isHome": false,
-    "brand": "Smart Dent"
-  },
-  {
     "name": "Quais produtos Smart Dent usar para fluxo chairside completo no consultório?",
     "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-fluxo-chairside-completo-no-consultorio",
-    "isHome": false,
-    "brand": "Smart Dent"
-  },
-  {
-    "name": "Quais produtos Smart Dent usar para guia cirúrgico de implante impresso em 3D?",
-    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-guia-cirurgico-de-implante-impresso-em-3d",
-    "isHome": false,
-    "brand": "Smart Dent"
-  },
-  {
-    "name": "Quais produtos Smart Dent usar para inlays e onlays digitais?",
-    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-inlays-e-onlays-digitais",
-    "isHome": false,
-    "brand": "Smart Dent"
-  },
-  {
-    "name": "Quais produtos Smart Dent usar para modelos odontológicos digitais?",
-    "url": "https://smartdent.com.br/es/blog/uais-produtos-mart-ent-usar-para-modelos-odontologicos-digitais-es",
     "isHome": false,
     "brand": "Smart Dent"
   },
@@ -151,74 +73,14 @@ window.__NAV_DATA__ = [
     "brand": "Smart Dent"
   },
   {
-    "name": "Quais produtos Smart Dent usar para placa de bruxismo impressa em 3D?",
-    "url": "https://smartdent.com.br/es/blog/uais-produtos-mart-ent-usar-para-placa-de-bruxismo-impressa-em-3-es",
-    "isHome": false,
-    "brand": "Smart Dent"
-  },
-  {
-    "name": "Quais produtos Smart Dent usar para prótese total digital?",
-    "url": "https://smartdent.com.br/en/blog/uais-produtos-mart-ent-usar-para-protese-total-digital-en",
-    "isHome": false,
-    "brand": "Smart Dent"
-  },
-  {
-    "name": "Quais produtos Smart Dent usar para protocolo all-on sobre implantes?",
-    "url": "https://smartdent.com.br/blog/uais-produtos-mart-ent-usar-para-protocolo-allon-sobre-implantes",
-    "isHome": false,
-    "brand": "Smart Dent"
-  },
-  {
     "name": "Quais produtos Smart Dent usar para restaurações diretas em resina composta?",
     "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-restauracoes-diretas-em-resina-composta",
     "isHome": false,
     "brand": "Smart Dent"
   },
   {
-    "name": "Qual a diferença entre impressora 3D DLP e LCD para odontologia?",
-    "url": "https://smartdent.com.br/blog/ual-a-diferena-entre-impressora-3-e-para-odontologia",
-    "isHome": false,
-    "brand": "Smart Dent"
-  },
-  {
-    "name": "Qual a diferença entre resina 3D para modelo e para coroa?",
-    "url": "https://smartdent.com.br/blog/ual-a-diferena-entre-resina-3-para-modelo-e-para-coroa",
-    "isHome": false,
-    "brand": "Smart Dent"
-  },
-  {
-    "name": "Qual o tempo de impressão de uma coroa dental em impressora 3D?",
-    "url": "https://smartdent.com.br/es/blog/ual-o-tempo-de-impresseo-de-uma-coroa-dental-em-impressora-3-es",
-    "isHome": false,
-    "brand": "Smart Dent"
-  },
-  {
-    "name": "Qual resina 3D usar para coroa definitiva no Brasil?",
-    "url": "https://smartdent.com.br/blog/ual-resina-3-usar-para-coroa-definitiva-no-rasil",
-    "isHome": false,
-    "brand": "Smart Dent"
-  },
-  {
-    "name": "Qual resina usar com impressora Elegoo Mars na odontologia?",
-    "url": "https://smartdent.com.br/blog/ual-resina-usar-com-impressora-legoo-ars-na-odontologia",
-    "isHome": false,
-    "brand": "Smart Dent"
-  },
-  {
-    "name": "Quanto custa uma impressora 3D odontológica no Brasil?",
-    "url": "https://smartdent.com.br/es/blog/uanto-custa-uma-impressora-3-odontologica-no-rasil-es",
-    "isHome": false,
-    "brand": "Smart Dent"
-  },
-  {
     "name": "Rayshape Edge Mini a Impressora 3D para Odontologia",
     "url": "https://smartdent.com.br/linknabio",
-    "isHome": false,
-    "brand": "Smart Dent"
-  },
-  {
-    "name": "Resina 3D pode ser usada para coroas permanentes ou só provisórias?",
-    "url": "https://smartdent.com.br/blog/esina-3-pode-ser-usada-para-coroas-permanentes-ou-so-provisorias",
     "isHome": false,
     "brand": "Smart Dent"
   }
