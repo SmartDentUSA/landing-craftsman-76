@@ -37,6 +37,12 @@ window.__NAV_DATA__ = [
     "brand": "Smart Dent"
   },
   {
+    "name": "Como lavar e limpar peças impressas em resina 3D odontológica?",
+    "url": "https://smartdent.com.br/blog/como-lavar-e-limpar-pecas-impressas-em-resina-3d-odontologica",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Comparativo Scanners Intraorais — Smart Dent",
     "url": "https://smartdent.com.br/produtos/comparativo-scanners-intraorais",
     "isHome": false,
