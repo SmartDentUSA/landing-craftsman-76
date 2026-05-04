@@ -32,7 +32,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Comparativo Scanners Intraorais — Smart Dent",
-    "url": "https://smartdent.com.br/comparativo-scanners-intraorais",
+    "url": "https://smartdent.com.br/produtos/comparativo-scanners-intraorais",
     "isHome": false,
     "brand": null
   },
@@ -381,6 +381,12 @@ window.__NAV_DATA__ = [
   {
     "name": "Posicionamento de Modelo 3D e Seleção de Resina no Lychee Slicer",
     "url": "https://smartdent.com.br/blog/posicionamento-de-modelo-3d-e-selecao-de-resina-no-lychee-slicer",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
+    "name": "Posicionamento de Placa Miorrelaxante no Lychee Slicer",
+    "url": "https://smartdent.com.br/blog/posicionamento-de-placa-miorrelaxante-no-lychee-slicer",
     "isHome": false,
     "brand": "Smart Dent"
   },
