@@ -187,6 +187,12 @@ window.__NAV_DATA__ = [
     "brand": "Smart Dent"
   },
   {
+    "name": "Parâmetros flashforge hunter | Smart Dent",
+    "url": "https://smartdent.com.br/blog/parametros-flashforge-hunter-smart-dent",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Parâmetros miicraft alpha | Smart Dent",
     "url": "https://smartdent.com.br/blog/parametros-miicraft-alpha-smart-dent",
     "isHome": false,
