@@ -49,6 +49,12 @@ window.__NAV_DATA__ = [
     "brand": "Smart Dent"
   },
   {
+    "name": "Parâmetros creality hallot-one-pro/plus | Smart Dent",
+    "url": "https://smartdent.com.br/blog/parametros-creality-hallot-one-proplus-smart-dent",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Parâmetros elegoo mars-3-pro | Smart Dent",
     "url": "https://smartdent.com.br/blog/parametros-elegoo-mars-3-pro-smart-dent",
     "isHome": false,
@@ -74,7 +80,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "QRCode",
-    "url": "https://smartdent.com.br/suport-resurces ",
+    "url": "https://smartdent.com.br/support-resources",
     "isHome": false,
     "brand": null
   },
