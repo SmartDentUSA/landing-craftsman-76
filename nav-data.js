@@ -85,6 +85,12 @@ window.__NAV_DATA__ = [
     "brand": "Smart Dent"
   },
   {
+    "name": "Parâmetros elegoo saturn-4-ultra | Smart Dent",
+    "url": "https://smartdent.com.br/blog/parametros-elegoo-saturn-4-ultra-smart-dent",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Parâmetros miicraft plus | Smart Dent",
     "url": "https://smartdent.com.br/blog/parametros-miicraft-plus-smart-dent",
     "isHome": false,
@@ -110,7 +116,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "QRCode",
-    "url": "https://smartdent.com.br/suport-resurces ",
+    "url": "https://smartdent.com.br/support-resources",
     "isHome": false,
     "brand": null
   },
