@@ -307,6 +307,12 @@ window.__NAV_DATA__ = [
     "brand": "Smart Dent"
   },
   {
+    "name": "Parâmetros pionext dj89-pró | Smart Dent",
+    "url": "https://smartdent.com.br/blog/parametros-pionext-dj89-pro-smart-dent",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Parâmetros sprintray moonray-s | Smart Dent",
     "url": "https://smartdent.com.br/blog/parametros-sprintray-moonray-s-smart-dent",
     "isHome": false,
