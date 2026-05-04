@@ -3,7 +3,7 @@
   Domínio esperado: smartdent.com.br
   Tracking principal: GTM-NZ64Q899 → server-side tagging
   Fallback pixels: Meta #167413567155597 + TikTok #D05CI83C77UE5QUU9FR0 (desabilitado)
-  Gerado em: 2026-04-29T03:21:03.252Z
+  Gerado em: 2026-05-04T11:54:48.769Z
 -->
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -219,6 +219,34 @@ O ajuste oclusal deficiente pode gerar pontos de contato prematuros ou interfer�
     <p style="font-size:11px;color:rgba(255,255,255,.4);margin:0">Smart Dent · MMTech · CNPJ 10.736.894/0001-36 · FDA Est. 3027526455 · ANVISA 22 registros · Wikidata Q138636902</p>
   </div>
 </footer>
+<script>
+/* GTM: blog_view + post_click — v19 */
+(function(){
+  var d=document;
+  var path=window.location.pathname;
+  var title=d.title.split("|")[0].trim();
+  var domain=window.location.hostname;
+  window.dataLayer=window.dataLayer||[];
+  window.dataLayer.push({
+    event:"blog_view",
+    blog_title:title,
+    blog_path:path,
+    blog_domain:domain,
+    content_type:"technical-article"
+  });
+  d.querySelectorAll('.cta-block a,.nav-cta,.related-links a').forEach(function(a){
+    a.addEventListener("click",function(){
+      window.dataLayer.push({
+        event:"post_click",
+        click_text:a.innerText.trim(),
+        click_url:a.href,
+        click_type:a.closest('.cta-block')?"cta":a.closest('.nav-cta')?"nav":"related",
+        blog_path:path
+      });
+    });
+  });
+})();
+</script>
 <script src="/nav-data.js" defer></script>
 </body>
 </html>
