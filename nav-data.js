@@ -26,7 +26,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Comparativo Scanners Intraorais — Smart Dent",
-    "url": "https://smartdent.com.br/produtos/comparativo-scanners-intraorais",
+    "url": "https://smartdent.com.br/comparativo-scanners-intraorais",
     "isHome": false,
     "brand": null
   },
@@ -117,6 +117,12 @@ window.__NAV_DATA__ = [
   {
     "name": "Parâmetros uniz slash-2 | Smart Dent",
     "url": "https://smartdent.com.br/blog/parametros-uniz-slash-2-smart-dent",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
+    "name": "Parâmetros wanhao duplicator-7 | Smart Dent",
+    "url": "https://smartdent.com.br/blog/parametros-wanhao-duplicator-7-smart-dent",
     "isHome": false,
     "brand": "Smart Dent"
   },
