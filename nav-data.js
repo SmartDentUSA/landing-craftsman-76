@@ -479,6 +479,12 @@ window.__NAV_DATA__ = [
     "url": "https://smartdent.com.br/blog/resina-3d-para-placa-de-bruxismo-qual-usar",
     "isHome": false,
     "brand": "Smart Dent"
+  },
+  {
+    "name": "Resina 3D pode ser usada para coroas permanentes ou só provisórias?",
+    "url": "https://smartdent.com.br/blog/resina-3d-pode-ser-usada-para-coroas-permanentes-ou-so-provisorias",
+    "isHome": false,
+    "brand": "Smart Dent"
   }
 ];
 (function() {
