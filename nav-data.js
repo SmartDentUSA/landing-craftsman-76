@@ -61,6 +61,12 @@ window.__NAV_DATA__ = [
     "brand": "Smart Dent"
   },
   {
+    "name": "O que é pós-cura UV e por que é obrigatória na impressão 3D odontológica?",
+    "url": "https://smartdent.com.br/blog/o-que-e-pos-cura-uv-e-por-que-e-obrigatoria-na-impressao-3d-odontologica",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Parâmetros anycubic mono-x | Smart Dent",
     "url": "https://smartdent.com.br/blog/parametros-anycubic-mono-x-smart-dent",
     "isHome": false,
@@ -410,7 +416,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "QRCode",
-    "url": "https://smartdent.com.br/suport-resurces ",
+    "url": "https://smartdent.com.br/support-resources",
     "isHome": false,
     "brand": null
   },
