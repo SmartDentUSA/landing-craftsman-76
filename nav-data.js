@@ -26,7 +26,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Comparativo Scanners Intraorais — Smart Dent",
-    "url": "https://smartdent.com.br/produtos/comparativo-scanners-intraorais",
+    "url": "https://smartdent.com.br/comparativo-scanners-intraorais",
     "isHome": false,
     "brand": null
   },
@@ -47,6 +47,12 @@ window.__NAV_DATA__ = [
     "url": "https://smartdent.com.br/blog/onbording",
     "isHome": false,
     "brand": "Imersão 3 Dias"
+  },
+  {
+    "name": "Parâmetros anycubic mono-x | Smart Dent",
+    "url": "https://smartdent.com.br/blog/parametros-anycubic-mono-x-smart-dent",
+    "isHome": false,
+    "brand": "Smart Dent"
   },
   {
     "name": "Parâmetros anycubic photon-m2 | Smart Dent",
