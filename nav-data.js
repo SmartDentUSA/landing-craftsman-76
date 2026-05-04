@@ -445,6 +445,12 @@ window.__NAV_DATA__ = [
     "brand": "Smart Dent"
   },
   {
+    "name": "Qual resina 3D usar para coroa definitiva no Brasil?",
+    "url": "https://smartdent.com.br/blog/qual-resina-3d-usar-para-coroa-definitiva-no-brasil",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Quanto custa uma impressora 3D odontológica no Brasil?",
     "url": "https://smartdent.com.br/blog/quanto-custa-uma-impressora-3d-odontologica-no-brasil",
     "isHome": false,
