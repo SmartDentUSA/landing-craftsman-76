@@ -26,7 +26,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Comparativo Scanners Intraorais — Smart Dent",
-    "url": "https://smartdent.com.br/produtos/comparativo-scanners-intraorais",
+    "url": "https://smartdent.com.br/comparativo-scanners-intraorais",
     "isHome": false,
     "brand": null
   },
@@ -45,6 +45,12 @@ window.__NAV_DATA__ = [
   {
     "name": "Parâmetros anycubic photon-mono-2 | Smart Dent",
     "url": "https://smartdent.com.br/blog/parametros-anycubic-photon-mono-2-smart-dent",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
+    "name": "Parâmetros anycubic photon-mono-4 | Smart Dent",
+    "url": "https://smartdent.com.br/blog/parametros-anycubic-photon-mono-4-smart-dent",
     "isHome": false,
     "brand": "Smart Dent"
   },
