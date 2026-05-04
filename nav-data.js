@@ -163,6 +163,12 @@ window.__NAV_DATA__ = [
     "brand": "Smart Dent"
   },
   {
+    "name": "Parâmetros ezy3d ezy3d | Smart Dent",
+    "url": "https://smartdent.com.br/blog/parametros-ezy3d-ezy3d-smart-dent",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Parâmetros miicraft plus | Smart Dent",
     "url": "https://smartdent.com.br/blog/parametros-miicraft-plus-smart-dent",
     "isHome": false,
