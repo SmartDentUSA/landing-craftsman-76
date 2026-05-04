@@ -127,6 +127,12 @@ window.__NAV_DATA__ = [
     "brand": "Smart Dent"
   },
   {
+    "name": "Parâmetros uniz slash-plus | Smart Dent",
+    "url": "https://smartdent.com.br/blog/parametros-uniz-slash-plus-smart-dent",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Parâmetros wanhao duplicator-7 | Smart Dent",
     "url": "https://smartdent.com.br/blog/parametros-wanhao-duplicator-7-smart-dent",
     "isHome": false,
@@ -140,7 +146,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "QRCode",
-    "url": "https://smartdent.com.br/suport-resurces ",
+    "url": "https://smartdent.com.br/support-resources",
     "isHome": false,
     "brand": null
   },
