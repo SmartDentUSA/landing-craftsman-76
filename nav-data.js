@@ -32,7 +32,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Comparativo Scanners Intraorais — Smart Dent",
-    "url": "https://smartdent.com.br/comparativo-scanners-intraorais",
+    "url": "https://smartdent.com.br/produtos/comparativo-scanners-intraorais",
     "isHome": false,
     "brand": null
   },
@@ -393,6 +393,12 @@ window.__NAV_DATA__ = [
   {
     "name": "Relaxation Splints in 3D Printing",
     "url": "https://smartdent.com.br/en/blog/elaxation-plints-in-3-rinting",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
+    "name": "Resina 3D para placa de bruxismo: qual usar?",
+    "url": "https://smartdent.com.br/blog/resina-3d-para-placa-de-bruxismo-qual-usar",
     "isHome": false,
     "brand": "Smart Dent"
   }
