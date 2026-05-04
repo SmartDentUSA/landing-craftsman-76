@@ -73,6 +73,12 @@ window.__NAV_DATA__ = [
     "brand": "Smart Dent"
   },
   {
+    "name": "Parâmetros elegoo saturn-3-ultra | Smart Dent",
+    "url": "https://smartdent.com.br/blog/parametros-elegoo-saturn-3-ultra-smart-dent",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Parâmetros miicraft plus | Smart Dent",
     "url": "https://smartdent.com.br/blog/parametros-miicraft-plus-smart-dent",
     "isHome": false,
