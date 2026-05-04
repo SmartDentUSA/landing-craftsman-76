@@ -37,6 +37,12 @@ window.__NAV_DATA__ = [
     "brand": "Imersão 3 Dias"
   },
   {
+    "name": "Parâmetros anycubic photon-mono-2 | Smart Dent",
+    "url": "https://smartdent.com.br/blog/parametros-anycubic-photon-mono-2-smart-dent",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Parâmetros anycubic photon-s | Smart Dent",
     "url": "https://smartdent.com.br/blog/parametros-anycubic-photon-s-smart-dent",
     "isHome": false,
