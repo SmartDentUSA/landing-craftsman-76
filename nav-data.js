@@ -38,7 +38,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Comparativo Scanners Intraorais — Smart Dent",
-    "url": "https://smartdent.com.br/comparativo-scanners-intraorais",
+    "url": "https://smartdent.com.br/produtos/comparativo-scanners-intraorais",
     "isHome": false,
     "brand": null
   },
@@ -471,6 +471,12 @@ window.__NAV_DATA__ = [
   {
     "name": "Qual a diferença entre impressora 3D DLP e LCD para odontologia?",
     "url": "https://smartdent.com.br/blog/qual-a-diferenca-entre-impressora-3d-dlp-e-lcd-para-odontologia",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
+    "name": "Qual a diferença entre resina 3D para modelo e para coroa?",
+    "url": "https://smartdent.com.br/blog/qual-a-diferenca-entre-resina-3d-para-modelo-e-para-coroa",
     "isHome": false,
     "brand": "Smart Dent"
   },
