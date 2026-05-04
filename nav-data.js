@@ -26,7 +26,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Comparativo Scanners Intraorais — Smart Dent",
-    "url": "https://smartdent.com.br/produtos/comparativo-scanners-intraorais",
+    "url": "https://smartdent.com.br/comparativo-scanners-intraorais",
     "isHome": false,
     "brand": null
   },
@@ -261,6 +261,12 @@ window.__NAV_DATA__ = [
   {
     "name": "Parâmetros pionext dj89 | Smart Dent",
     "url": "https://smartdent.com.br/blog/parametros-pionext-dj89-smart-dent",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
+    "name": "Parâmetros sprintray moonray-s | Smart Dent",
+    "url": "https://smartdent.com.br/blog/parametros-sprintray-moonray-s-smart-dent",
     "isHome": false,
     "brand": "Smart Dent"
   },
