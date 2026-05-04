@@ -32,7 +32,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Comparativo Scanners Intraorais — Smart Dent",
-    "url": "https://smartdent.com.br/produtos/comparativo-scanners-intraorais",
+    "url": "https://smartdent.com.br/comparativo-scanners-intraorais",
     "isHome": false,
     "brand": null
   },
@@ -147,6 +147,12 @@ window.__NAV_DATA__ = [
   {
     "name": "Parâmetros creality hallot-sky | Smart Dent",
     "url": "https://smartdent.com.br/blog/parametros-creality-hallot-sky-smart-dent",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
+    "name": "Parâmetros dental-factory ds200 | Smart Dent",
+    "url": "https://smartdent.com.br/blog/parametros-dental-factory-ds200-smart-dent",
     "isHome": false,
     "brand": "Smart Dent"
   },
