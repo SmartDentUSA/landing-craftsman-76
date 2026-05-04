@@ -25,8 +25,14 @@ window.__NAV_DATA__ = [
     "brand": "Smart Dent"
   },
   {
+    "name": "Como calcular o ROI de uma impressora 3D odontológica?",
+    "url": "https://smartdent.com.br/blog/como-calcular-o-roi-de-uma-impressora-3d-odontologica",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Comparativo Scanners Intraorais — Smart Dent",
-    "url": "https://smartdent.com.br/produtos/comparativo-scanners-intraorais",
+    "url": "https://smartdent.com.br/comparativo-scanners-intraorais",
     "isHome": false,
     "brand": null
   },
@@ -326,7 +332,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "QRCode",
-    "url": "https://smartdent.com.br/suport-resurces ",
+    "url": "https://smartdent.com.br/support-resources",
     "isHome": false,
     "brand": null
   },
