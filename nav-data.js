@@ -355,6 +355,12 @@ window.__NAV_DATA__ = [
     "brand": "Smart Dent"
   },
   {
+    "name": "Qual a melhor impressora 3D para odontologia no Brasil?",
+    "url": "https://smartdent.com.br/blog/qual-a-melhor-impressora-3d-para-odontologia-no-brasil",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Rayshape Edge Mini a Impressora 3D para Odontologia",
     "url": "https://smartdent.com.br/linknabio",
     "isHome": false,
