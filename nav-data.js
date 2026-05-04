@@ -463,6 +463,12 @@ window.__NAV_DATA__ = [
     "brand": "Smart Dent"
   },
   {
+    "name": "Quais produtos Smart Dent usar para modelos odontológicos digitais?",
+    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-modelos-odontologicos-digitais",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Quais produtos Smart Dent usar para ortodontia digital e alinhadores?",
     "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-ortodontia-digital-e-alinhadores",
     "isHome": false,
