@@ -26,9 +26,15 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Comparativo Scanners Intraorais — Smart Dent",
-    "url": "https://smartdent.com.br/comparativo-scanners-intraorais",
+    "url": "https://smartdent.com.br/produtos/comparativo-scanners-intraorais",
     "isHome": false,
     "brand": null
+  },
+  {
+    "name": "Elegoo Mars 5 Ultra Parameters - Smart Dent Smart Print Bio Vitality",
+    "url": "https://smartdent.com.br/en/blog/parametros-elegoo-mars-5-ultra-smart-dent-smart-print-bio-vitality-en",
+    "isHome": false,
+    "brand": "Smart Dent"
   },
   {
     "name": "Imersão 3 Dias Chairside Print",
@@ -200,7 +206,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "QRCode",
-    "url": "https://smartdent.com.br/suport-resurces ",
+    "url": "https://smartdent.com.br/support-resources",
     "isHome": false,
     "brand": null
   },
