@@ -26,7 +26,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Comparativo Scanners Intraorais — Smart Dent",
-    "url": "https://smartdent.com.br/comparativo-scanners-intraorais",
+    "url": "https://smartdent.com.br/produtos/comparativo-scanners-intraorais",
     "isHome": false,
     "brand": null
   },
@@ -37,8 +37,14 @@ window.__NAV_DATA__ = [
     "brand": "Imersão 3 Dias"
   },
   {
+    "name": "Parámetros elegoo mars-4-ultra | Smart Dent",
+    "url": "https://smartdent.com.br/es/blog/parametros-elegoo-mars-4-ultra-smart-dent-smart-print-try-in-calcinavel-es",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "QRCode",
-    "url": "https://smartdent.com.br/suport-resurces ",
+    "url": "https://smartdent.com.br/support-resources",
     "isHome": false,
     "brand": null
   },
