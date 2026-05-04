@@ -434,7 +434,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "QRCode",
-    "url": "https://smartdent.com.br/support-resources",
+    "url": "https://smartdent.com.br/suport-resurces ",
     "isHome": false,
     "brand": null
   },
@@ -465,6 +465,12 @@ window.__NAV_DATA__ = [
   {
     "name": "Quais produtos Smart Dent usar para ortodontia digital e alinhadores?",
     "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-ortodontia-digital-e-alinhadores",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
+    "name": "Quais produtos Smart Dent usar para prótese total digital?",
+    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-protese-total-digital",
     "isHome": false,
     "brand": "Smart Dent"
   },
