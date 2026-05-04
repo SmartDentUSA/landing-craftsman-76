@@ -37,6 +37,12 @@ window.__NAV_DATA__ = [
     "brand": "Imersão 3 Dias"
   },
   {
+    "name": "Parâmetros anycubic photon-s | Smart Dent",
+    "url": "https://smartdent.com.br/blog/parametros-anycubic-photon-s-smart-dent",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Parámetros elegoo mars-4-ultra | Smart Dent",
     "url": "https://smartdent.com.br/es/blog/parametros-elegoo-mars-4-ultra-smart-dent-smart-print-try-in-calcinavel-es",
     "isHome": false,
