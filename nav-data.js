@@ -469,6 +469,12 @@ window.__NAV_DATA__ = [
     "brand": "Smart Dent"
   },
   {
+    "name": "Quais produtos Smart Dent usar para facetas dentais digitais?",
+    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-facetas-dentais-digitais",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Quais produtos Smart Dent usar para fluxo chairside completo no consultório?",
     "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-fluxo-chairside-completo-no-consultorio",
     "isHome": false,
