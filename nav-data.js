@@ -157,6 +157,12 @@ window.__NAV_DATA__ = [
     "brand": "Smart Dent"
   },
   {
+    "name": "Parâmetros elegoo mars-5 | Smart Dent",
+    "url": "https://smartdent.com.br/blog/parametros-elegoo-mars-5-smart-dent",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Parâmetros elegoo saturn-3 | Smart Dent",
     "url": "https://smartdent.com.br/blog/parametros-elegoo-saturn-3-smart-dent",
     "isHome": false,
