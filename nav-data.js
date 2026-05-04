@@ -149,6 +149,12 @@ window.__NAV_DATA__ = [
     "url": "https://smartdent.com.br/linknabio",
     "isHome": false,
     "brand": "Smart Dent"
+  },
+  {
+    "name": "Relaxation Splints in 3D Printing",
+    "url": "https://smartdent.com.br/en/blog/elaxation-plints-in-3-rinting",
+    "isHome": false,
+    "brand": "Smart Dent"
   }
 ];
 (function() {
