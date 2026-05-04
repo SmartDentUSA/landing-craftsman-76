@@ -26,7 +26,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Comparativo Scanners Intraorais — Smart Dent",
-    "url": "https://smartdent.com.br/comparativo-scanners-intraorais",
+    "url": "https://smartdent.com.br/produtos/comparativo-scanners-intraorais",
     "isHome": false,
     "brand": null
   },
@@ -320,7 +320,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "QRCode",
-    "url": "https://smartdent.com.br/support-resources",
+    "url": "https://smartdent.com.br/suport-resurces ",
     "isHome": false,
     "brand": null
   },
@@ -363,6 +363,12 @@ window.__NAV_DATA__ = [
   {
     "name": "Qual a melhor impressora 3D para odontologia no Brasil?",
     "url": "https://smartdent.com.br/blog/qual-a-melhor-impressora-3d-para-odontologia-no-brasil",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
+    "name": "Quanto custa uma impressora 3D odontológica no Brasil?",
+    "url": "https://smartdent.com.br/blog/quanto-custa-uma-impressora-3d-odontologica-no-brasil",
     "isHome": false,
     "brand": "Smart Dent"
   },
