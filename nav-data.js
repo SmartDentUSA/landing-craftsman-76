@@ -79,6 +79,12 @@ window.__NAV_DATA__ = [
     "brand": "Smart Dent"
   },
   {
+    "name": "Parâmetros elegoo mars-(rgb) | Smart Dent",
+    "url": "https://smartdent.com.br/blog/parametros-elegoo-mars-rgb-smart-dent",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Parâmetros elegoo mars-3-pro | Smart Dent",
     "url": "https://smartdent.com.br/blog/parametros-elegoo-mars-3-pro-smart-dent",
     "isHome": false,
