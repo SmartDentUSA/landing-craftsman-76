@@ -517,6 +517,12 @@ window.__NAV_DATA__ = [
     "brand": "Smart Dent"
   },
   {
+    "name": "Quais produtos Smart Dent usar para protocolo all-on sobre implantes?",
+    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-protocolo-all-on-sobre-implantes",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Quais produtos Smart Dent usar para restaurações diretas em resina composta?",
     "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-restauracoes-diretas-em-resina-composta",
     "isHome": false,
