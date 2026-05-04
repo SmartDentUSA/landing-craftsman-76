@@ -91,6 +91,12 @@ window.__NAV_DATA__ = [
     "brand": "Smart Dent"
   },
   {
+    "name": "Parâmetros anycubic photon/w3d | Smart Dent",
+    "url": "https://smartdent.com.br/blog/parametros-anycubic-photonw3d-smart-dent",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Parâmetros anycubic ultra-dlp | Smart Dent",
     "url": "https://smartdent.com.br/blog/parametros-anycubic-ultra-dlp-smart-dent",
     "isHome": false,
