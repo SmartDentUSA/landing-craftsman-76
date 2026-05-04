@@ -49,6 +49,12 @@ window.__NAV_DATA__ = [
     "brand": "Smart Dent"
   },
   {
+    "name": "Parâmetros anycubic photon-mono-4-ultra-10k | Smart Dent",
+    "url": "https://smartdent.com.br/blog/parametros-anycubic-photon-mono-4-ultra-10k-smart-dent",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
     "name": "Parâmetros anycubic photon-mono-m5 | Smart Dent",
     "url": "https://smartdent.com.br/blog/parametros-anycubic-photon-mono-m5-smart-dent",
     "isHome": false,
@@ -158,7 +164,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "QRCode",
-    "url": "https://smartdent.com.br/support-resources",
+    "url": "https://smartdent.com.br/suport-resurces ",
     "isHome": false,
     "brand": null
   },
