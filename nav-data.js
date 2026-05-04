@@ -434,13 +434,19 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "QRCode",
-    "url": "https://smartdent.com.br/suport-resurces ",
+    "url": "https://smartdent.com.br/support-resources",
     "isHome": false,
     "brand": null
   },
   {
     "name": "Quais produtos Smart Dent usar para caracterização dental em resinas impressas?",
     "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-caracterizacao-dental-em-resinas-impressas",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
+    "name": "Quais produtos Smart Dent usar para caracterização gengival em próteses?",
+    "url": "https://smartdent.com.br/blog/quais-produtos-smart-dent-usar-para-caracterizacao-gengival-em-proteses",
     "isHome": false,
     "brand": "Smart Dent"
   },
