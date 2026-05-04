@@ -32,7 +32,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "Comparativo Scanners Intraorais — Smart Dent",
-    "url": "https://smartdent.com.br/comparativo-scanners-intraorais",
+    "url": "https://smartdent.com.br/produtos/comparativo-scanners-intraorais",
     "isHome": false,
     "brand": null
   },
@@ -416,7 +416,7 @@ window.__NAV_DATA__ = [
   },
   {
     "name": "QRCode",
-    "url": "https://smartdent.com.br/suport-resurces ",
+    "url": "https://smartdent.com.br/support-resources",
     "isHome": false,
     "brand": null
   },
@@ -471,6 +471,12 @@ window.__NAV_DATA__ = [
   {
     "name": "Qual resina 3D usar para coroa definitiva no Brasil?",
     "url": "https://smartdent.com.br/blog/qual-resina-3d-usar-para-coroa-definitiva-no-brasil",
+    "isHome": false,
+    "brand": "Smart Dent"
+  },
+  {
+    "name": "Qual resina usar com impressora Elegoo Mars na odontologia?",
+    "url": "https://smartdent.com.br/blog/qual-resina-usar-com-impressora-elegoo-mars-na-odontologia",
     "isHome": false,
     "brand": "Smart Dent"
   },
