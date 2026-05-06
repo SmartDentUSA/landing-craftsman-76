@@ -102,6 +102,13 @@ export type Database = {
             referencedRelation: "v_product_completeness"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "ads_generation_benchmark_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_content_feed"
+            referencedColumns: ["id"]
+          },
         ]
       }
       aftersales_messages: {
@@ -145,6 +152,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "v_product_completeness"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aftersales_messages_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_content_feed"
             referencedColumns: ["id"]
           },
         ]
@@ -1607,6 +1621,13 @@ export type Database = {
             referencedRelation: "v_product_completeness"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "cs_messages_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_content_feed"
+            referencedColumns: ["id"]
+          },
         ]
       }
       domain_config: {
@@ -2164,6 +2185,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "v_product_completeness"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "google_ads_campaigns_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_content_feed"
             referencedColumns: ["id"]
           },
         ]
@@ -3133,6 +3161,13 @@ export type Database = {
             referencedRelation: "v_product_completeness"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "product_blog_publications_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_content_feed"
+            referencedColumns: ["id"]
+          },
         ]
       }
       product_coupons: {
@@ -3176,6 +3211,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: true
             referencedRelation: "v_product_completeness"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_coupons_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "v_product_content_feed"
             referencedColumns: ["id"]
           },
         ]
@@ -4872,6 +4914,67 @@ export type Database = {
         }
         Relationships: []
       }
+      wa_generation_log: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          error_message: string | null
+          id: string
+          messages_count: number | null
+          product_id: string | null
+          product_name: string | null
+          status: string | null
+          triggered_by: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          messages_count?: number | null
+          product_id?: string | null
+          product_name?: string | null
+          status?: string | null
+          triggered_by?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          messages_count?: number | null
+          product_id?: string | null
+          product_name?: string | null
+          status?: string | null
+          triggered_by?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wa_generation_log_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_repository"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wa_generation_log_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_completeness"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wa_generation_log_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_content_feed"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wikidata_entity_map: {
         Row: {
           collision_candidates: Json | null
@@ -5297,6 +5400,129 @@ export type Database = {
         }
         Relationships: []
       }
+      v_product_content_feed: {
+        Row: {
+          active: boolean | null
+          anti_hallucination_rules: Json | null
+          applications: string | null
+          benefits: Json | null
+          bot_trigger_words: Json | null
+          brand: string | null
+          canonical_url: string | null
+          category: string | null
+          clinical_brain_status: string | null
+          clinical_brain_validation_notes: string | null
+          competitor_comparison: Json | null
+          content_score: number | null
+          description: string | null
+          featured: boolean | null
+          features: Json | null
+          forbidden_products: Json | null
+          gtin: string | null
+          id: string | null
+          image_url: string | null
+          keywords: Json | null
+          market_keywords: Json | null
+          name: string | null
+          ncm: string | null
+          price: number | null
+          product_type: string | null
+          promo_price: number | null
+          required_products: Json | null
+          sales_pitch: string | null
+          slug: string | null
+          subcategory: string | null
+          target_audience: Json | null
+          technical_specifications: Json | null
+          updated_at: string | null
+          wa_messages_array: Json | null
+          wa_messages_count: number | null
+          whatsapp_messages: Json | null
+          whatsapp_sequences: Json | null
+          wikidata_item_id: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          anti_hallucination_rules?: Json | null
+          applications?: string | null
+          benefits?: Json | null
+          bot_trigger_words?: Json | null
+          brand?: string | null
+          canonical_url?: string | null
+          category?: string | null
+          clinical_brain_status?: string | null
+          clinical_brain_validation_notes?: string | null
+          competitor_comparison?: Json | null
+          content_score?: never
+          description?: string | null
+          featured?: boolean | null
+          features?: Json | null
+          forbidden_products?: Json | null
+          gtin?: string | null
+          id?: string | null
+          image_url?: string | null
+          keywords?: Json | null
+          market_keywords?: Json | null
+          name?: string | null
+          ncm?: string | null
+          price?: number | null
+          product_type?: string | null
+          promo_price?: number | null
+          required_products?: Json | null
+          sales_pitch?: string | null
+          slug?: string | null
+          subcategory?: string | null
+          target_audience?: Json | null
+          technical_specifications?: Json | null
+          updated_at?: string | null
+          wa_messages_array?: never
+          wa_messages_count?: never
+          whatsapp_messages?: Json | null
+          whatsapp_sequences?: Json | null
+          wikidata_item_id?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          anti_hallucination_rules?: Json | null
+          applications?: string | null
+          benefits?: Json | null
+          bot_trigger_words?: Json | null
+          brand?: string | null
+          canonical_url?: string | null
+          category?: string | null
+          clinical_brain_status?: string | null
+          clinical_brain_validation_notes?: string | null
+          competitor_comparison?: Json | null
+          content_score?: never
+          description?: string | null
+          featured?: boolean | null
+          features?: Json | null
+          forbidden_products?: Json | null
+          gtin?: string | null
+          id?: string | null
+          image_url?: string | null
+          keywords?: Json | null
+          market_keywords?: Json | null
+          name?: string | null
+          ncm?: string | null
+          price?: number | null
+          product_type?: string | null
+          promo_price?: number | null
+          required_products?: Json | null
+          sales_pitch?: string | null
+          slug?: string | null
+          subcategory?: string | null
+          target_audience?: Json | null
+          technical_specifications?: Json | null
+          updated_at?: string | null
+          wa_messages_array?: never
+          wa_messages_count?: never
+          whatsapp_messages?: Json | null
+          whatsapp_sequences?: Json | null
+          wikidata_item_id?: string | null
+        }
+        Relationships: []
+      }
       v_reviews_with_responses: {
         Row: {
           action_needed: string | null
@@ -5317,6 +5543,18 @@ export type Database = {
           review_date: string | null
           review_id: string | null
           review_text: string | null
+        }
+        Relationships: []
+      }
+      v_sistema_b_integration_status: {
+        Row: {
+          com_anti_hall: number | null
+          com_benefits: number | null
+          com_pitch: number | null
+          com_wa_messages: number | null
+          fonte: string | null
+          pct_wa_completo: number | null
+          total: number | null
         }
         Relationships: []
       }
@@ -5579,6 +5817,11 @@ export type Database = {
         }[]
       }
       promote_user_to_admin: { Args: { _email: string }; Returns: boolean }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
+      slugify: { Args: { input: string }; Returns: string }
+      slugify_pt: { Args: { input: string }; Returns: string }
+      unaccent: { Args: { "": string }; Returns: string }
     }
     Enums: {
       app_role: "admin" | "user"
