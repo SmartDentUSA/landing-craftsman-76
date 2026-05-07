@@ -53,9 +53,13 @@ export default function YouTubeOAuthSettings() {
 
   const REDIRECT_URI = getRedirectUri();
 
-  // 🧹 Limpar chaves inválidas e carregar valores
+  // 🔒 Carregar credenciais do banco (RLS-protegido). Nunca usar localStorage para segredos.
   useEffect(() => {
-    const oldKeys = [
+    // Limpar quaisquer credenciais legadas de localStorage (migração de segurança)
+    const legacyKeys = [
+      STORAGE_KEYS.CLIENT_ID,
+      STORAGE_KEYS.CLIENT_SECRET,
+      STORAGE_KEYS.REFRESH_TOKEN,
       'YOUTUBE_CLIENT_ID',
       'YOUTUBE_CLIENT_SECRET',
       'YOUTUBE_REFRESH_TOKEN',
@@ -63,37 +67,27 @@ export default function YouTubeOAuthSettings() {
       'youtube_oauth_client_secret',
       'youtube_oauth_refresh_token',
     ];
-    let foundInvalid = false;
+    legacyKeys.forEach((k) => localStorage.removeItem(k));
 
-    oldKeys.forEach((key) => {
-      const val = localStorage.getItem(key);
-      if (val && !val.includes('apps.googleusercontent.com') && !val.startsWith('GOCSPX-')) {
-        console.warn(`⚠️ Removendo chave inválida: ${key} = ${val.slice(-10)}`);
-        localStorage.removeItem(key);
-        foundInvalid = true;
+    (async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return;
+      const { data: dbCreds } = await supabase
+        .from('oauth_credentials')
+        .select('client_id, client_secret, refresh_token')
+        .eq('user_id', userData.user.id)
+        .eq('provider', 'youtube')
+        .maybeSingle();
+      if (dbCreds) {
+        setClientId(dbCreds.client_id || '');
+        setClientSecret(dbCreds.client_secret || '');
+        setRefreshToken(dbCreds.refresh_token || '');
+        setIsClientIdValid(/^\d+-[a-z0-9]+\.apps\.googleusercontent\.com$/.test(dbCreds.client_id || ''));
+        if (dbCreds.client_id && dbCreds.client_secret && dbCreds.refresh_token) {
+          testConnection();
+        }
       }
-    });
-
-    if (foundInvalid) {
-      toast({
-        title: '🧹 Cache limpo',
-        description: 'Valores inválidos foram removidos.',
-      });
-    }
-
-    const cid = localStorage.getItem(STORAGE_KEYS.CLIENT_ID) || '';
-    const csec = localStorage.getItem(STORAGE_KEYS.CLIENT_SECRET) || '';
-    const rtok = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN) || '';
-    setClientId(cid);
-    setClientSecret(csec);
-    setRefreshToken(rtok);
-
-    setIsClientIdValid(/^\d+-[a-z0-9]+\.apps\.googleusercontent\.com$/.test(cid));
-
-    // Auto-test connection if all credentials exist
-    if (cid && csec && rtok) {
-      testConnection();
-    }
+    })();
   }, [toast]);
 
   // Detectar retorno do OAuth callback (igual ao Google Business)
