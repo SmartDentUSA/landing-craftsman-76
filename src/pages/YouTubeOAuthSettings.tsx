@@ -796,7 +796,7 @@ export default function YouTubeOAuthSettings() {
                 setClientId(v);
                 const isValid = /^\d+-[a-z0-9]+\.apps\.googleusercontent\.com$/.test(v);
                 setIsClientIdValid(isValid);
-                if (isValid) localStorage.setItem(STORAGE_KEYS.CLIENT_ID, v);
+                // 🔒 Não persistir em localStorage; salvo no banco ao clicar em "Salvar".
               }}
               className={clientId && !isClientIdValid ? 'border-red-500' : ''}
               autoComplete="off"
