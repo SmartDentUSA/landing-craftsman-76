@@ -57,81 +57,11 @@ export default function GoogleBusinessOAuthSettings() {
 
   const REDIRECT_URI = getRedirectUri();
 
-  // Limpar chaves inválidas e carregar valores
+  // 🔒 Carregar credenciais apenas do banco (RLS-protegido). Nunca usar localStorage para segredos.
   useEffect(() => {
-    console.log('🔍 Verificando localStorage do Google Business OAuth...');
-    
-    // Limpar valores inválidos (similar ao YouTube OAuth)
-    const cleanupInvalidKeys = () => {
-      let cleanedCount = 0;
-      
-      Object.values(STORAGE_KEYS).forEach((key) => {
-        const value = localStorage.getItem(key);
-        if (!value) return;
+    // Migração de segurança: remover quaisquer credenciais legadas do localStorage
+    Object.values(STORAGE_KEYS).forEach((k) => localStorage.removeItem(k));
 
-        // Limpar se não for string válida
-        if (typeof value !== 'string' || value === 'undefined' || value === 'null') {
-          console.log(`🧹 Removendo valor inválido de ${key}`);
-          localStorage.removeItem(key);
-          cleanedCount++;
-          return;
-        }
-
-        // Validações específicas
-        if (key === STORAGE_KEYS.CLIENT_ID) {
-          // Client ID deve ser formato: 123456789-abc.apps.googleusercontent.com
-          if (!value.includes('.apps.googleusercontent.com') || value.startsWith('GOCSPX-')) {
-            console.log(`🧹 Removendo Client ID inválido (formato incorreto): ${value.slice(0, 20)}...`);
-            localStorage.removeItem(key);
-            cleanedCount++;
-          }
-        } else if (key === STORAGE_KEYS.CLIENT_SECRET) {
-          // Client Secret deve começar com GOCSPX-
-          if (!value.startsWith('GOCSPX-')) {
-            console.log(`🧹 Removendo Client Secret inválido: ${value.slice(0, 10)}...`);
-            localStorage.removeItem(key);
-            cleanedCount++;
-          }
-        } else if (key === STORAGE_KEYS.REFRESH_TOKEN) {
-          // Refresh Token deve começar com 1// ou 4/ (não GOCSPX-)
-          if (value.startsWith('GOCSPX-')) {
-            console.log(`🧹 Removendo Refresh Token inválido (Client Secret detectado): ${value.slice(0, 20)}...`);
-            localStorage.removeItem(key);
-            cleanedCount++;
-          }
-        }
-      });
-
-      if (cleanedCount > 0) {
-        toast({
-          title: "🧹 Cache limpo",
-          description: `${cleanedCount} valor(es) inválido(s) removido(s)`,
-        });
-      }
-    };
-
-    cleanupInvalidKeys();
-
-    const cid = localStorage.getItem(STORAGE_KEYS.CLIENT_ID) || '';
-    const csec = localStorage.getItem(STORAGE_KEYS.CLIENT_SECRET) || '';
-    const rtok = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN) || '';
-    
-    console.log('📊 Credenciais carregadas:', {
-      clientId: cid ? `${cid.slice(0, 20)}...${cid.slice(-20)}` : 'vazio',
-      clientSecret: csec ? `${csec.slice(0, 10)}...` : 'vazio',
-      refreshToken: rtok ? `${rtok.slice(0, 10)}...` : 'vazio',
-      clientIdValid: /^\d+-[a-z0-9]+\.apps\.googleusercontent\.com$/.test(cid),
-      clientSecretValid: csec.startsWith('GOCSPX-'),
-      refreshTokenValid: rtok && (rtok.startsWith('1//') || rtok.startsWith('4/')) && !rtok.startsWith('GOCSPX-'),
-    });
-
-    setClientId(cid);
-    setClientSecret(csec);
-    setRefreshToken(rtok);
-
-    setIsClientIdValid(/^\d+-[a-z0-9]+\.apps\.googleusercontent\.com$/.test(cid));
-
-    // Load database credentials for status display
     const loadDbCredentials = async () => {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) return;
@@ -144,26 +74,29 @@ export default function GoogleBusinessOAuthSettings() {
         .maybeSingle();
 
       if (dbCreds) {
-        setClientId(dbCreds.client_id || '');
-        setClientSecret(dbCreds.client_secret || '');
-        setRefreshToken(dbCreds.refresh_token || '');
+        const cid = dbCreds.client_id || '';
+        const csec = dbCreds.client_secret || '';
+        const rtok = dbCreds.refresh_token || '';
+        setClientId(cid);
+        setClientSecret(csec);
+        setRefreshToken(rtok);
+        setIsClientIdValid(/^\d+-[a-z0-9]+\.apps\.googleusercontent\.com$/.test(cid));
         setDbCredentials({
-          token: dbCreds.refresh_token || '',
+          token: rtok,
           updatedAt: dbCreds.updated_at || '',
         });
+
+        if (cid && csec && rtok &&
+            /^\d+-[a-z0-9]+\.apps\.googleusercontent\.com$/.test(cid) &&
+            csec.trim().length >= 10 &&
+            !rtok.startsWith('GOCSPX-') &&
+            !rtok.includes('.apps.googleusercontent.com')) {
+          testConnection();
+        }
       }
     };
 
     loadDbCredentials();
-
-    // Auto-test connection if all credentials exist and are valid format
-    if (cid && csec && rtok && 
-        /^\d+-[a-z0-9]+\.apps\.googleusercontent\.com$/.test(cid) &&
-        csec.trim().length >= 10 &&
-        !rtok.startsWith('GOCSPX-') &&
-        !rtok.includes('.apps.googleusercontent.com')) {
-      testConnection();
-    }
   }, [toast]);
 
   // Detectar retorno do OAuth callback
@@ -434,10 +367,7 @@ export default function GoogleBusinessOAuthSettings() {
     setIsSaving(true);
 
     try {
-      // Save to localStorage for quick access
-      localStorage.setItem(STORAGE_KEYS.CLIENT_ID, clientId);
-      localStorage.setItem(STORAGE_KEYS.CLIENT_SECRET, clientSecret);
-      localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
+      // 🔒 Credenciais salvas apenas no banco (RLS-protegido); nunca em localStorage.
 
       // Save to database automatically
       const { data: userData, error: userError } = await supabase.auth.getUser();
@@ -646,7 +576,7 @@ export default function GoogleBusinessOAuthSettings() {
       console.log("✅ Token recebido com sucesso:", data.refresh_token.substring(0, 20) + "...");
       const newRefreshToken = data.refresh_token;
       setRefreshToken(newRefreshToken);
-      localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, newRefreshToken);
+      // 🔒 Refresh token persistido apenas no banco abaixo, nunca em localStorage.
 
       // Save to database automatically
       const { data: userData, error: userError } = await supabase.auth.getUser();
@@ -1037,7 +967,7 @@ export default function GoogleBusinessOAuthSettings() {
                 setClientId(v);
                 const isValid = /^\d+-[a-z0-9]+\.apps\.googleusercontent\.com$/.test(v);
                 setIsClientIdValid(isValid);
-                if (isValid) localStorage.setItem(STORAGE_KEYS.CLIENT_ID, v);
+                // 🔒 Não persistir em localStorage; salvo no banco ao clicar em "Salvar".
               }}
               className={clientId && !isClientIdValid ? 'border-red-500' : ''}
               autoComplete="off"
@@ -1065,7 +995,7 @@ export default function GoogleBusinessOAuthSettings() {
               onChange={(e) => {
                 const v = e.target.value.trim();
                 setClientSecret(v);
-                localStorage.setItem(STORAGE_KEYS.CLIENT_SECRET, v);
+                // 🔒 Não persistir secret em localStorage; salvo no banco ao clicar em "Salvar".
               }}
               autoComplete="new-password"
             />
