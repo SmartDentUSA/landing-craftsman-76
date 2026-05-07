@@ -1,54 +1,93 @@
-## Causa raiz (independente do DEEPSEEK_API_KEY)
+## Diagnóstico confirmado
 
-`DEEPSEEK_API_KEY` está corretamente configurada — mas **ela nem chega a ser usada nesse fluxo**, porque o frontend invoca a Edge Function errada.
+As páginas LP Clone **não têm `noindex`**. Verifiquei direto nas páginas vivas:
 
-Em `src/components/google-ads/GoogleAdsProductTab.tsx`, linha 221, a função `generateAdCopies` chama:
-
-```ts
-supabase.functions.invoke('ai-content-generator', {
-  body: { type: 'google_ads', productId, productData, keywords }
-})
+```
+$ curl https://mediti700.com.br/medit_i700_wireless/
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">  ← injetada por nós
+<meta name="robots" content="max-image-preview:large" />                                ← original WP (não removida)
 ```
 
-Problemas:
+O Google está marcando como **"Página alternativa com tag canônica adequada"** (categoria do GSC que aparece como "não indexada"). Causa real:
 
-1. **A função `ai-content-generator` não existe** no projeto. As funções reais são `generate-ad-copies` (RSA via DeepSeek) e `export-product-google-ads-csv`.
-2. Como o invoke retorna sem `data.adCopies`, o `if (data?.adCopies)` da linha 232 falha → cai no `else` da linha 247 → toast **"Anúncios gerados (fallback)"** com headlines genéricas tipo "Comprar X", "Melhor X em Oferta".
-3. Mesmo se a função existisse com esse nome, o **contrato está duplamente errado**:
-   - Body esperado por `generate-ad-copies`: `{ seoTitle, seoDescription, primaryKeyword, targetAudience }` — não `{ type, productId, productData, keywords }`.
-   - Resposta de `generate-ad-copies`: `{ headlines, descriptions, paths, quality_report }` na **raiz** — não `{ adCopies: {...} }`.
+### Bug 1 — canonical aponta para outro domínio (CRÍTICO)
 
-Confirmado: o outro caller (`ProductAICompleteGenerator.tsx` linha 197) já usa `generate-ad-copies` com o body certo e funciona. Só `GoogleAdsProductTab` está fora do padrão.
+`supabase/functions/clone-landing-page/index.ts` (linhas 256-262 e 1694) monta o canonical com `companyData.website_url`, que é fixo `https://smartdent.com.br`. Resultado real em todos os domínios:
 
-## Correção (1 arquivo, ~30 linhas)
+| URL servida                                      | Canonical declarado                                                        |
+|--------------------------------------------------|----------------------------------------------------------------------------|
+| `https://mediti700.com.br/medit_i700_wireless/`  | `https://smartdent.com.br//medit-scanner-intraoral-medit-i700-wireless`    |
+| `https://mediti700.com.br/`                      | `https://smartdent.com.br//medit-scanner-intraoral-medit-i700`             |
+| `https://mediti900.com/`                         | `https://smartdent.com.br//medit-scanner-intraoral-medit-i900`             |
 
-**`src/components/google-ads/GoogleAdsProductTab.tsx`** — reescrever apenas a função `generateAdCopies` (linhas 215-286):
+O Google obedece o canonical: descarta a URL servida e tenta indexar o destino apontado (que muitas vezes nem existe). É exatamente o que está acontecendo — **todos os domínios sem páginas indexadas**.
 
-- Trocar invoke para `generate-ad-copies` com body correto:
+Bônus do mesmo bug: **double slash** (`smartdent.com.br//slug`) — canonical inválido.
+
+### Bug 2 — duas tags `<meta name="robots">` no HTML final
+
+A regex de sanitização (linhas 1655-1666) remove `description`, `og:*`, `twitter:*`, `canonical`, `keywords`, `geo.*`, `ICBM`, `ld+json`, mas **não remove `<meta name="robots">`** original do WordPress clonado. Sobrevivem duas tags conflitantes na mesma página.
+
+---
+
+## Plano de correção
+
+### Edição 1 — `supabase/functions/clone-landing-page/index.ts`
+
+**A) Canonical correto por target_domain**
+- Propagar `targetDomain` e `pagePath` (já existem em `cloned_landing_pages`) até o bloco que injeta `seoTags` (linha 1990).
+- Substituir a montagem do canonical por:
   ```ts
-  {
-    seoTitle: product.name,
-    seoDescription: product.description || product.name,
-    primaryKeyword: getProductKeywords()[0] || product.name,
-    targetAudience: 'profissionais da área'
-  }
+  const canonicalHost = (targetDomain || websiteUrl)
+    .replace(/^https?:\/\//, '').replace(/\/$/, '');
+  const canonicalPathClean = (pagePath || `/${slug}`).replace(/\/+$/, '') || '/';
+  const canonical = canonicalPathClean === '/'
+    ? `https://${canonicalHost}/`
+    : `https://${canonicalHost}${canonicalPathClean}`;
   ```
-- Tratar `error` real do invoke com `throw` (em vez de cair em fallback silencioso, mostra o erro real ao usuário).
-- Aceitar resposta na raiz: `if (data?.headlines?.length)` em vez de `data?.adCopies`.
-- Montar `updatedPreview.adCopies = { headlines: data.headlines, descriptions: data.descriptions, paths: data.paths }` e `setQualityReport(data.quality_report)` quando presente.
-- Manter o ramo de fallback genérico **apenas** como rede de segurança para resposta vazia (caso raro), preservando o toast atual.
+- Aplicar a mesma fórmula no fallback `seoConfig.canonical || websiteUrl` (linha 1694).
+- Atualizar todos os usos derivados (`og:url`, `@id` do `webpage`/`product`, `BreadcrumbList`) para usarem o novo `canonical` — eles já referenciam a mesma variável, então a correção propaga.
 
-## Verificação pós-fix
+**B) Strip da meta robots herdada do HTML clonado**
+Adicionar à lista de regex em `result.replace(...)` (após linha 1666):
+```ts
+.replace(/<meta[^>]*name=["']robots["'][^>]*>/gi, '')
+.replace(/<meta[^>]*name=["']googlebot["'][^>]*>/gi, '')
+.replace(/<meta[^>]*name=["']bingbot["'][^>]*>/gi, '')
+```
 
-1. Abrir um produto → aba Google Ads → clicar em "Gerar anúncios".
-2. Esperado: toast verde **"Anúncios gerados com sucesso!"** com headlines/descriptions reais vindos do DeepSeek (não mais "Comprar X em Oferta").
-3. Se houver erro real (rate limit, etc.), agora vai borbulhar como toast vermelho em vez de mascarar como "fallback".
+### Edição 2 — Republicação em massa
 
-## Não tocar
+Listar todos os `target_domain` distintos com `publish_status='success'` e disparar `republish-domain-cloudflare-bulk` para cada um. Vou usar:
+```sql
+SELECT DISTINCT target_domain
+FROM cloned_landing_pages
+WHERE publish_status='success';
+```
+e iterar chamando a edge function (uma única deployment por domínio, conforme já implementado).
 
-- `supabase/functions/generate-ad-copies/index.ts` (já correto)
-- `ProductAICompleteGenerator.tsx` (já correto)
-- Validação WCAG, banners display v4.1, quality_report, CSV export
-- Demais ramos do `switch` em `GoogleAdsProductTab`
+### Edição 3 — Validação automática pós-deploy
+Para cada domínio republicado:
+```bash
+curl -s https://<dominio>/<path> \
+  | grep -E '<link[^>]*canonical|<meta[^>]*robots'
+```
+Critério de aceite:
+- **1** `<meta name="robots">` apenas, contendo `index, follow`.
+- Canonical com **mesmo host da URL servida**, sem `//` duplicado.
+- `og:url` igual ao canonical.
 
-Tempo estimado: 5 min.
+### Edição 4 — Solicitar reindexação
+Após validar, instruir você a:
+- Submeter os sitemaps de cada domínio no GSC (já existem via `generate-sitemap`).
+- Usar "Inspecionar URL → Solicitar indexação" em 1-2 URLs amostrais por domínio.
+
+---
+
+## O que NÃO vou alterar
+- `robots.txt` (sem bloqueio).
+- Headers `X-Robots-Tag` (não existem).
+- Geradores de blog, e-commerce, SPIN, local SEO (canonicals deles já estão corretos).
+- Lógica de SEO/Schema/Tracking — só canonical + sanitização de meta robots.
+
+Após aprovação, aplico as 2 correções e disparo a republicação em todos os domínios afetados.
