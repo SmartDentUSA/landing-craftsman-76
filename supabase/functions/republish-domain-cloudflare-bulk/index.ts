@@ -91,6 +91,40 @@ function buildFilePath(pagePath: string | null | undefined, isHomepage: boolean)
   return `/${clean}/index.html`;
 }
 
+/**
+ * SEO FIX 2026-05 — Rewrites canonical, og:url and meta robots to the actual
+ * served URL. Older HTML stored in DB has canonical pointing to smartdent.com.br
+ * (cross-domain) which causes Google to deindex everything as
+ * "Página alternativa com tag canônica adequada".
+ */
+function fixSeoForServedUrl(html: string, domain: string, filePath: string): string {
+  const urlPath = filePath === '/index.html' ? '/' : filePath.replace(/\/index\.html$/, '/');
+  const canonicalUrl = `https://${domain}${urlPath}`;
+  let out = html;
+
+  // Drop ALL existing canonical/og:url/robots/googlebot tags (any number of duplicates)
+  out = out
+    .replace(/<link[^>]*rel=["']canonical["'][^>]*>\s*/gi, '')
+    .replace(/<meta[^>]*property=["']og:url["'][^>]*>\s*/gi, '')
+    .replace(/<meta[^>]*name=["']robots["'][^>]*>\s*/gi, '')
+    .replace(/<meta[^>]*name=["']googlebot["'][^>]*>\s*/gi, '')
+    .replace(/<meta[^>]*name=["']bingbot["'][^>]*>\s*/gi, '');
+
+  // Re-inject canonical + og:url + a SINGLE indexable robots tag right after <head>
+  const seoBlock =
+    `\n<link rel="canonical" href="${canonicalUrl}">` +
+    `\n<meta property="og:url" content="${canonicalUrl}">` +
+    `\n<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">\n`;
+
+  if (/<head[^>]*>/i.test(out)) {
+    out = out.replace(/<head([^>]*)>/i, `<head$1>${seoBlock}`);
+  } else if (out.includes('</head>')) {
+    out = out.replace('</head>', `${seoBlock}</head>`);
+  }
+
+  return out;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
@@ -185,7 +219,8 @@ serve(async (req) => {
 
     for (const lp of eligibleLps) {
       const path = buildFilePath(lp.page_path, !!lp.is_homepage);
-      const html = injectTrackingScripts(lp.transformed_html || lp.original_html || '', trackingPixels);
+      let html = injectTrackingScripts(lp.transformed_html || lp.original_html || '', trackingPixels);
+      html = fixSeoForServedUrl(html, domain, path);
       // Homepage wins over a colliding path
       if (!byPath.has(path) || lp.is_homepage) {
         byPath.set(path, { path, html, sourceType: 'lp', sourceId: lp.id });
@@ -194,7 +229,8 @@ serve(async (req) => {
     for (const blog of eligibleBlogs) {
       const path = buildFilePath(blog.page_path, false);
       if (byPath.has(path)) continue;
-      const html = injectTrackingScripts(blog.html_content || '', trackingPixels);
+      let html = injectTrackingScripts(blog.html_content || '', trackingPixels);
+      html = fixSeoForServedUrl(html, domain, path);
       byPath.set(path, { path, html, sourceType: 'blog', sourceId: blog.id });
     }
 

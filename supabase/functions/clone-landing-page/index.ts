@@ -1663,7 +1663,11 @@ function injectSEO(
     .replace(/<meta[^>]*name=["']geo\.[^"']*["'][^>]*>/gi, '')
     .replace(/<meta[^>]*name=["']ICBM["'][^>]*>/gi, '')
     .replace(/<link[^>]*rel=["']alternate["'][^>]*hreflang[^>]*>/gi, '')
-    .replace(/<script[^>]*type=["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>/gi, '');
+    .replace(/<script[^>]*type=["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>/gi, '')
+    // SEO FIX 2026-05: strip inherited robots tags so we control indexability
+    .replace(/<meta[^>]*name=["']robots["'][^>]*>/gi, '')
+    .replace(/<meta[^>]*name=["']googlebot["'][^>]*>/gi, '')
+    .replace(/<meta[^>]*name=["']bingbot["'][^>]*>/gi, '');
   
   // Use Smart Dent data as fallback
   const company = companyData?.company_name || SMART_DENT_DATA.company_name;
