@@ -251,10 +251,7 @@ export default function YouTubeOAuthSettings() {
     setIsSaving(true);
 
     try {
-      // Save to localStorage for quick access
-      localStorage.setItem(STORAGE_KEYS.CLIENT_ID, clientId);
-      localStorage.setItem(STORAGE_KEYS.CLIENT_SECRET, clientSecret);
-      localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
+      // 🔒 Credenciais salvas apenas no banco (RLS-protegido); nunca em localStorage.
 
       // Save to database automatically
       const { data: userData, error: userError } = await supabase.auth.getUser();
