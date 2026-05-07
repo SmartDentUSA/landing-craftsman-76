@@ -219,7 +219,8 @@ serve(async (req) => {
 
     for (const lp of eligibleLps) {
       const path = buildFilePath(lp.page_path, !!lp.is_homepage);
-      const html = injectTrackingScripts(lp.transformed_html || lp.original_html || '', trackingPixels);
+      let html = injectTrackingScripts(lp.transformed_html || lp.original_html || '', trackingPixels);
+      html = fixSeoForServedUrl(html, domain, path);
       // Homepage wins over a colliding path
       if (!byPath.has(path) || lp.is_homepage) {
         byPath.set(path, { path, html, sourceType: 'lp', sourceId: lp.id });
@@ -228,7 +229,8 @@ serve(async (req) => {
     for (const blog of eligibleBlogs) {
       const path = buildFilePath(blog.page_path, false);
       if (byPath.has(path)) continue;
-      const html = injectTrackingScripts(blog.html_content || '', trackingPixels);
+      let html = injectTrackingScripts(blog.html_content || '', trackingPixels);
+      html = fixSeoForServedUrl(html, domain, path);
       byPath.set(path, { path, html, sourceType: 'blog', sourceId: blog.id });
     }
 
