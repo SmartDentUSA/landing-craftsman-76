@@ -995,7 +995,7 @@ export default function GoogleBusinessOAuthSettings() {
               onChange={(e) => {
                 const v = e.target.value.trim();
                 setClientSecret(v);
-                localStorage.setItem(STORAGE_KEYS.CLIENT_SECRET, v);
+                // 🔒 Não persistir secret em localStorage; salvo no banco ao clicar em "Salvar".
               }}
               autoComplete="new-password"
             />
