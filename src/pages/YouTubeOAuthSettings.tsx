@@ -502,7 +502,7 @@ export default function YouTubeOAuthSettings() {
       console.log("✅ Token recebido com sucesso:", data.refresh_token.substring(0, 20) + "...");
       const newRefreshToken = data.refresh_token;
       setRefreshToken(newRefreshToken);
-      localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, newRefreshToken);
+      // 🔒 Refresh token persistido apenas no banco abaixo, nunca em localStorage.
 
       // Save to database automatically
       const { data: userData, error: userError } = await supabase.auth.getUser();
