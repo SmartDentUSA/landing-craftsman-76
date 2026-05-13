@@ -1,93 +1,85 @@
-## Diagnóstico confirmado
+## Diagnóstico (a partir dos relatórios do Search Console + estado real)
 
-As páginas LP Clone **não têm `noindex`**. Verifiquei direto nas páginas vivas:
+Cruzei os 7 XLSX com o que está no banco e o que cada domínio devolve hoje. Os "404" e "Cópia sem canônica" reportados pelo Google têm causas concretas e reproduzíveis:
 
-```
-$ curl https://mediti700.com.br/medit_i700_wireless/
-<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">  ← injetada por nós
-<meta name="robots" content="max-image-preview:large" />                                ← original WP (não removida)
-```
+### 1) Homepages 404 (causa #1 das indexações zeradas)
+A raiz `/` retorna 404 nestes domínios:
+- dentala.com.br, eodonto.com, rayshape.com.br, rayshape3d.com.br, truioconnect.com.br, minivat.com, printsafebr.com.br
 
-O Google está marcando como **"Página alternativa com tag canônica adequada"** (categoria do GSC que aparece como "não indexada"). Causa real:
+Confirmação no banco: nenhuma linha com `page_path = '/'` para esses domínios em `cloned_landing_pages`. O snapshot bulk publicado no Cloudflare Pages, portanto, não inclui `index.html` na raiz. Sem homepage o Google "rastreia" os artigos do blog mas trata o site como quebrado e limita a indexação.
 
-### Bug 1 — canonical aponta para outro domínio (CRÍTICO)
+### 2) Sitemap publica `/robots.txt`, `/sitemap.xml` e `/feed.xml` como URLs de página
+Esses três caminhos foram cadastrados como `cloned_landing_pages` (publish_status = success/pending_deploy) e entram no sitemap como `<url><loc>` normal. O Search Console marca como 404 ou duplicata. Eles devem ser arquivos servidos pelo publisher, não páginas SEO.
 
-`supabase/functions/clone-landing-page/index.ts` (linhas 256-262 e 1694) monta o canonical com `companyData.website_url`, que é fixo `https://smartdent.com.br`. Resultado real em todos os domínios:
+### 3) Slugs quebrados gerados pelo clonador (em /en e /es)
+Exemplo real (rayshape):
+- `/en/blog/ental-3-re-printing-ssential-hecklist` (deveria ser `dental-3d-pre-printing-essential-checklist`)
+- `/es/blog/preparacao-da-impressora-3d-guia-essencial-1-es` (slug PT salvo como ES)
 
-| URL servida                                      | Canonical declarado                                                        |
-|--------------------------------------------------|----------------------------------------------------------------------------|
-| `https://mediti700.com.br/medit_i700_wireless/`  | `https://smartdent.com.br//medit-scanner-intraoral-medit-i700-wireless`    |
-| `https://mediti700.com.br/`                      | `https://smartdent.com.br//medit-scanner-intraoral-medit-i700`             |
-| `https://mediti900.com/`                         | `https://smartdent.com.br//medit-scanner-intraoral-medit-i900`             |
+Padrão: o slugifier está cortando a primeira letra de cada palavra após traduzir, e o fallback em ES está reusando o slug PT acrescentando "-1-es". Isso gera 404 cruzados, canonicals inconsistentes e páginas órfãs.
 
-O Google obedece o canonical: descarta a URL servida e tenta indexar o destino apontado (que muitas vezes nem existe). É exatamente o que está acontecendo — **todos os domínios sem páginas indexadas**.
+### 4) Divergência sitemap × canonical por trailing slash
+Sitemap publica `https://dentala.com.br/blog/x` (sem barra). Cloudflare Pages responde 308 → `/blog/x/` e a página servida tem `<link rel="canonical" href=".../x/">`. Resultado no GSC: "Página com redirecionamento" e "Cópia sem canônica selecionada pelo usuário". Solução: o sitemap deve conter exatamente a URL canônica final.
 
-Bônus do mesmo bug: **double slash** (`smartdent.com.br//slug`) — canonical inválido.
-
-### Bug 2 — duas tags `<meta name="robots">` no HTML final
-
-A regex de sanitização (linhas 1655-1666) remove `description`, `og:*`, `twitter:*`, `canonical`, `keywords`, `geo.*`, `ICBM`, `ld+json`, mas **não remove `<meta name="robots">`** original do WordPress clonado. Sobrevivem duas tags conflitantes na mesma página.
+### 5) Páginas duplicadas em DB com `pending_deploy`
+Cada domínio tem 3 registros `pending_deploy` (justamente robots/sitemap/feed). Eles ficam órfãos no painel e poluem qualquer query de "publicadas".
 
 ---
 
 ## Plano de correção
 
-### Edição 1 — `supabase/functions/clone-landing-page/index.ts`
+### Fase 1 — Limpar o sitemap (deploy imediato)
+1. Em `supabase/functions/generate-sitemap/index.ts`, filtrar `cloned_landing_pages` excluindo `page_path` em `('/robots.txt','/sitemap.xml','/feed.xml','/feed','/sitemap','/sitemap_index.xml')` e qualquer caminho terminado em `.xml` ou `.txt`.
+2. Normalizar todas as `<loc>` para terminar com `/` (exceto a raiz e arquivos), batendo com a canônica que o Cloudflare serve.
+3. Remover do XML qualquer entrada cuja `lang` não corresponda ao prefixo (`/es/...` deve ter `lang='es'`).
+4. Manter a homepage do domínio APENAS se existir registro `page_path='/'` publicado.
 
-**A) Canonical correto por target_domain**
-- Propagar `targetDomain` e `pagePath` (já existem em `cloned_landing_pages`) até o bloco que injeta `seoTags` (linha 1990).
-- Substituir a montagem do canonical por:
-  ```ts
-  const canonicalHost = (targetDomain || websiteUrl)
-    .replace(/^https?:\/\//, '').replace(/\/$/, '');
-  const canonicalPathClean = (pagePath || `/${slug}`).replace(/\/+$/, '') || '/';
-  const canonical = canonicalPathClean === '/'
-    ? `https://${canonicalHost}/`
-    : `https://${canonicalHost}${canonicalPathClean}`;
-  ```
-- Aplicar a mesma fórmula no fallback `seoConfig.canonical || websiteUrl` (linha 1694).
-- Atualizar todos os usos derivados (`og:url`, `@id` do `webpage`/`product`, `BreadcrumbList`) para usarem o novo `canonical` — eles já referenciam a mesma variável, então a correção propaga.
+### Fase 2 — Garantir homepage `/` em todos os domínios
+Para cada domínio sem `/`, criar uma página de Marca/Hub mínima (hero + lista de últimos artigos do blog do domínio + CTA Smart Dent), reutilizando o template do blog index. Domínios afetados:
+- dentala.com.br, eodonto.com, rayshape.com.br, rayshape3d.com.br, truioconnect.com.br, minivat.com, printsafebr.com.br
 
-**B) Strip da meta robots herdada do HTML clonado**
-Adicionar à lista de regex em `result.replace(...)` (após linha 1666):
-```ts
-.replace(/<meta[^>]*name=["']robots["'][^>]*>/gi, '')
-.replace(/<meta[^>]*name=["']googlebot["'][^>]*>/gi, '')
-.replace(/<meta[^>]*name=["']bingbot["'][^>]*>/gi, '')
-```
+Implementação: nova função `generate-domain-homepage` (ou estender `generate-blog-index`) que cria/atualiza um registro `cloned_landing_pages` com `page_path='/'`, `is_homepage=true`, canonical = `https://{dominio}/`. Em seguida disparar `republish-domain-cloudflare-bulk` para cada domínio.
 
-### Edição 2 — Republicação em massa
+### Fase 3 — Arrumar o slugifier multilíngue
+Em `supabase/functions/clone-landing-page/index.ts` (e helpers de slug):
+1. Não aplicar nenhum corte de "letra inicial". Investigar o regex que está produzindo `ental-3-re-printing-ssential-hecklist` — provavelmente um `replace(/^[bcdfgjkpt]/, '')` ou uma lib de transliteração mal usada.
+2. Para `lang != 'pt'`, exigir um título traduzido antes de gerar o slug; nunca cair em "slug PT + sufixo `-1-es`". Se a tradução falhar, abortar e marcar a página como `error` (não publicar lixo).
+3. Backfill: rodar uma migration que liste todos os slugs em `/en/...` e `/es/...` que (a) divergem do padrão idiomático ou (b) estão truncados (primeiros 3 chars do slug não batem com primeiros 3 chars do título normalizado), e marcar `publish_status='error'` para reprocessamento manual ou regerar via função.
 
-Listar todos os `target_domain` distintos com `publish_status='success'` e disparar `republish-domain-cloudflare-bulk` para cada um. Vou usar:
-```sql
-SELECT DISTINCT target_domain
-FROM cloned_landing_pages
-WHERE publish_status='success';
-```
-e iterar chamando a edge function (uma única deployment por domínio, conforme já implementado).
+### Fase 4 — Robots/sitemap/feed deixam de ser páginas
+1. Excluir do banco todos os registros com `page_path` em `('/robots.txt','/sitemap.xml','/feed.xml')` (44 linhas no total).
+2. O publisher do Cloudflare Pages já gera/serve `/robots.txt` e `/sitemap.xml` próprios — confirmar em `republish-domain-cloudflare-bulk` que esses dois arquivos são montados a partir de fontes oficiais (robots template + função `generate-sitemap`) e não a partir de `cloned_landing_pages`.
 
-### Edição 3 — Validação automática pós-deploy
-Para cada domínio republicado:
-```bash
-curl -s https://<dominio>/<path> \
-  | grep -E '<link[^>]*canonical|<meta[^>]*robots'
-```
-Critério de aceite:
-- **1** `<meta name="robots">` apenas, contendo `index, follow`.
-- Canonical com **mesmo host da URL servida**, sem `//` duplicado.
-- `og:url` igual ao canonical.
+### Fase 5 — Republicação em massa + ping ao Google
+1. Rodar `republish-domain-cloudflare-bulk` para os 9 domínios afetados.
+2. `curl https://www.google.com/ping?sitemap=https://{dominio}/sitemap.xml` para cada um.
+3. No GSC, "Validar correção" em cada erro listado nos XLSX.
 
-### Edição 4 — Solicitar reindexação
-Após validar, instruir você a:
-- Submeter os sitemaps de cada domínio no GSC (já existem via `generate-sitemap`).
-- Usar "Inspecionar URL → Solicitar indexação" em 1-2 URLs amostrais por domínio.
+### Fase 6 — Validação
+- `curl -I https://{dominio}/` → 200 em todos os 9 domínios.
+- `curl -s https://{dominio}/sitemap.xml | grep -c '<loc>'` bate com `count(*)` de `cloned_landing_pages` publicadas (excluídos robots/feed/sitemap).
+- Spot-check de 5 URLs por domínio: 1 canonical, 1 robots `index, follow`, sitemap loc == canonical.
+- Teste no Rich Results e URL Inspection do GSC para 2 URLs por domínio.
 
 ---
 
-## O que NÃO vou alterar
-- `robots.txt` (sem bloqueio).
-- Headers `X-Robots-Tag` (não existem).
-- Geradores de blog, e-commerce, SPIN, local SEO (canonicals deles já estão corretos).
-- Lógica de SEO/Schema/Tracking — só canonical + sanitização de meta robots.
+## Detalhes técnicos (referência)
 
-Após aprovação, aplico as 2 correções e disparo a republicação em todos os domínios afetados.
+Arquivos tocados:
+- `supabase/functions/generate-sitemap/index.ts` — filtros + normalização trailing slash.
+- `supabase/functions/clone-landing-page/index.ts` — slugifier e gating multilíngue.
+- `supabase/functions/republish-domain-cloudflare-bulk/index.ts` — confirmar geração de `/robots.txt` e `/sitemap.xml` a partir de fonte oficial.
+- Nova função `generate-domain-homepage` (ou estender `generate-blog-index`).
+- Migration: `DELETE FROM cloned_landing_pages WHERE page_path IN ('/robots.txt','/sitemap.xml','/feed.xml')`.
+- Migration de auditoria/marcação dos slugs `/en/...` e `/es/...` quebrados.
+
+Domínios sem `/` que precisam homepage criada (7):
+```
+dentala.com.br, eodonto.com, rayshape.com.br, rayshape3d.com.br,
+truioconnect.com.br, minivat.com, printsafebr.com.br
+```
+
+Métricas a acompanhar no GSC após validar:
+- "Não encontrado (404)": queda de >80% em 7 dias.
+- "Cópia sem página canônica selecionada pelo usuário": queda para 0–2.
+- "Indexados": começa a subir após o primeiro recrawl (3–10 dias).
