@@ -422,7 +422,7 @@ serve(async (req) => {
       const payload = slice.map((f) => ({
         key: f.hash,
         value: stringToBase64(f.html),
-        metadata: { contentType: 'text/html' },
+        metadata: { contentType: f.contentType || 'text/html' },
         base64: true,
       }));
       const upRes = await fetch('https://api.cloudflare.com/client/v4/pages/assets/upload', {
