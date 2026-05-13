@@ -85,10 +85,118 @@ function injectTrackingScripts(html: string, pixels: TrackingPixels): string {
   return out;
 }
 
+// Paths that must be served as literal files (no trailing-slash dir hack).
+const SYSTEM_FILE_PATHS = new Set(['/sitemap.xml', '/robots.txt', '/feed.xml']);
+
+// Detect broken-slug rows produced by an older clonador bug that stripped the
+// first letter of every word in /en and /es titles. They are 404 in practice
+// and pollute the sitemap. Skip them entirely.
+function isBrokenSlug(pagePath: string | null | undefined): boolean {
+  if (!pagePath) return false;
+  return /^\/(en|es)\/blog\/-/.test(pagePath);
+}
+
 function buildFilePath(pagePath: string | null | undefined, isHomepage: boolean): string {
   if (isHomepage || !pagePath || pagePath === '/' || pagePath === '') return '/index.html';
+  if (pagePath && SYSTEM_FILE_PATHS.has(pagePath)) return pagePath; // serve as-is
   const clean = pagePath.replace(/^\//, '').replace(/\/$/, '');
   return `/${clean}/index.html`;
+}
+
+function manifestPathToCanonical(domain: string, filePath: string): string {
+  if (filePath === '/index.html') return `https://${domain}/`;
+  if (SYSTEM_FILE_PATHS.has(filePath)) return `https://${domain}${filePath}`;
+  return `https://${domain}${filePath.replace(/\/index\.html$/, '/')}`;
+}
+
+function escapeXml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+}
+
+// Build a fresh sitemap.xml from the live manifest entries (excludes system files,
+// excludes broken slugs, uses trailing-slash canonicals matching what CF serves).
+function buildSitemapXml(domain: string, paths: string[], today: string): string {
+  const urls = paths
+    .filter((p) => !SYSTEM_FILE_PATHS.has(p) && p !== '/index.html' && !isBrokenSlug(p.replace(/\/index\.html$/, '')))
+    .map((p) => manifestPathToCanonical(domain, p))
+    .sort();
+
+  // Always include homepage at top
+  const all = [`https://${domain}/`, ...urls.filter((u) => u !== `https://${domain}/`)];
+
+  const body = all.map((u) => `  <url>
+    <loc>${escapeXml(u)}</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>${u === `https://${domain}/` ? '1.0' : '0.8'}</priority>
+  </url>`).join('\n');
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${body}
+</urlset>`;
+}
+
+function buildRobotsTxt(domain: string): string {
+  return `User-agent: *
+Allow: /
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+Sitemap: https://${domain}/sitemap.xml
+`;
+}
+
+// Minimal SEO-clean homepage when the domain has no `/` page.
+// Lists the most recent blog posts so Googlebot has internal links to crawl.
+function buildHomepageHtml(domain: string, brandName: string, recentPosts: Array<{ title: string; url: string }>): string {
+  const postsList = recentPosts.length
+    ? `<ul>${recentPosts.slice(0, 24).map((p) => `<li><a href="${escapeXml(p.url)}">${escapeXml(p.title)}</a></li>`).join('')}</ul>`
+    : '<p>Conteúdo em breve.</p>';
+
+  return `<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${escapeXml(brandName)} — Conteúdo técnico em odontologia digital</title>
+<meta name="description" content="${escapeXml(brandName)}: artigos, guias e materiais técnicos sobre odontologia digital, impressão 3D e fluxos clínicos.">
+<link rel="canonical" href="https://${domain}/">
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+<meta property="og:type" content="website">
+<meta property="og:title" content="${escapeXml(brandName)}">
+<meta property="og:url" content="https://${domain}/">
+<meta property="og:description" content="Conteúdo técnico em odontologia digital.">
+<style>body{font-family:system-ui,-apple-system,sans-serif;max-width:920px;margin:0 auto;padding:24px;line-height:1.6;color:#1f2937}h1{font-size:2rem;margin-bottom:8px}h2{margin-top:32px}a{color:#0f172a}ul{padding-left:20px}li{margin:6px 0}</style>
+</head>
+<body>
+<header>
+<h1>${escapeXml(brandName)}</h1>
+<p>Conteúdo técnico, guias e tutoriais em odontologia digital.</p>
+</header>
+<main>
+<h2>Artigos recentes</h2>
+${postsList}
+</main>
+<footer>
+<p><small>© ${new Date().getFullYear()} ${escapeXml(brandName)}. Todos os direitos reservados.</small></p>
+</footer>
+</body>
+</html>`;
 }
 
 /**
@@ -183,12 +291,18 @@ serve(async (req) => {
       .eq('target_domain', domain);
     if (lpErr) throw new Error(`LP fetch: ${lpErr.message}`);
 
+    // Skip:
+    //  - rows missing HTML
+    //  - rows that were never online (no published_url and no success/published status)
+    //  - SYSTEM files (we regenerate /sitemap.xml, /robots.txt fresh)
+    //  - broken-slug rows from the legacy clonador bug (e.g. /en/blog/-ink-...)
     const eligibleLps = (lps || []).filter((p) => {
       const html = p.transformed_html || p.original_html;
       if (!html) return false;
+      if (SYSTEM_FILE_PATHS.has(p.page_path || '')) return false;
+      if (isBrokenSlug(p.page_path)) return false;
       const status = p.publish_status || '';
-      const wasOnline = status === 'success' || status === 'published' || !!p.published_url;
-      return wasOnline;
+      return status === 'success' || status === 'published' || !!p.published_url;
     });
 
     // 3. Fetch ALL blog publications for this domain.
@@ -200,6 +314,8 @@ serve(async (req) => {
 
     const eligibleBlogs = (blogs || []).filter((b) => {
       if (!b.html_content) return false;
+      if (SYSTEM_FILE_PATHS.has(b.page_path || '')) return false;
+      if (isBrokenSlug(b.page_path)) return false;
       const status = b.publish_status || '';
       return status === 'published' || status === 'success' || !!b.published_url;
     });
@@ -214,16 +330,21 @@ serve(async (req) => {
     }
 
     // 4. Build the full file set, dedup'd by manifest path.
-    type Entry = { path: string; html: string; sourceType: 'lp' | 'blog'; sourceId: string };
+    type Entry = {
+      path: string;
+      html: string;
+      sourceType: 'lp' | 'blog' | 'system';
+      sourceId: string | null;
+      contentType: string;
+    };
     const byPath = new Map<string, Entry>();
 
     for (const lp of eligibleLps) {
       const path = buildFilePath(lp.page_path, !!lp.is_homepage);
       let html = injectTrackingScripts(lp.transformed_html || lp.original_html || '', trackingPixels);
       html = fixSeoForServedUrl(html, domain, path);
-      // Homepage wins over a colliding path
       if (!byPath.has(path) || lp.is_homepage) {
-        byPath.set(path, { path, html, sourceType: 'lp', sourceId: lp.id });
+        byPath.set(path, { path, html, sourceType: 'lp', sourceId: lp.id, contentType: 'text/html' });
       }
     }
     for (const blog of eligibleBlogs) {
@@ -231,11 +352,51 @@ serve(async (req) => {
       if (byPath.has(path)) continue;
       let html = injectTrackingScripts(blog.html_content || '', trackingPixels);
       html = fixSeoForServedUrl(html, domain, path);
-      byPath.set(path, { path, html, sourceType: 'blog', sourceId: blog.id });
+      byPath.set(path, { path, html, sourceType: 'blog', sourceId: blog.id, contentType: 'text/html' });
     }
 
+    // 4b. Auto-generate homepage `/index.html` if none was provided.
+    if (!byPath.has('/index.html')) {
+      const brandName = domainConfig.name || domain.replace(/^www\./, '');
+      const recentPosts = eligibleLps
+        .concat(eligibleBlogs.map((b: any) => ({ name: b.page_path, page_path: b.page_path, is_homepage: false })))
+        .filter((p: any) => /^\/blog\//.test(p.page_path || ''))
+        .slice(0, 24)
+        .map((p: any) => ({
+          title: p.name || p.page_path,
+          url: `https://${domain}${(p.page_path || '/').replace(/\/+$/, '')}/`,
+        }));
+      const homepageHtml = buildHomepageHtml(domain, brandName, recentPosts);
+      byPath.set('/index.html', {
+        path: '/index.html',
+        html: homepageHtml,
+        sourceType: 'system',
+        sourceId: null,
+        contentType: 'text/html',
+      });
+      console.log(`[bulk-cf] Auto-generated homepage with ${recentPosts.length} blog links`);
+    }
+
+    // 4c. Always emit fresh /sitemap.xml and /robots.txt from canonical sources.
+    const today = new Date().toISOString().split('T')[0];
+    const allPaths = Array.from(byPath.keys());
+    byPath.set('/sitemap.xml', {
+      path: '/sitemap.xml',
+      html: buildSitemapXml(domain, allPaths, today),
+      sourceType: 'system',
+      sourceId: null,
+      contentType: 'application/xml',
+    });
+    byPath.set('/robots.txt', {
+      path: '/robots.txt',
+      html: buildRobotsTxt(domain),
+      sourceType: 'system',
+      sourceId: null,
+      contentType: 'text/plain',
+    });
+
     const entries = Array.from(byPath.values());
-    console.log(`[bulk-cf] Manifest will contain ${entries.length} files`);
+    console.log(`[bulk-cf] Manifest will contain ${entries.length} files (incl. system files)`);
 
     // 5. Hash + payload
     const hashed = await Promise.all(entries.map(async (e) => ({
@@ -261,7 +422,7 @@ serve(async (req) => {
       const payload = slice.map((f) => ({
         key: f.hash,
         value: stringToBase64(f.html),
-        metadata: { contentType: 'text/html' },
+        metadata: { contentType: f.contentType || 'text/html' },
         base64: true,
       }));
       const upRes = await fetch('https://api.cloudflare.com/client/v4/pages/assets/upload', {
@@ -313,6 +474,7 @@ serve(async (req) => {
     // 10. Update DB so each item has a fresh published_url + status.
     const nowIso = new Date().toISOString();
     for (const f of hashed) {
+      if (f.sourceType === 'system' || !f.sourceId) continue; // system files have no DB row
       const publishedUrl = `https://${domain}${f.path === '/index.html' ? '/' : f.path.replace(/\/index\.html$/, '/')}`;
       if (f.sourceType === 'lp') {
         await supabase
@@ -326,7 +488,7 @@ serve(async (req) => {
             publish_error_message: null,
           })
           .eq('id', f.sourceId);
-      } else {
+      } else if (f.sourceType === 'blog') {
         await supabase
           .from('product_blog_publications')
           .update({
