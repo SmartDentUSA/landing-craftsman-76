@@ -291,12 +291,18 @@ serve(async (req) => {
       .eq('target_domain', domain);
     if (lpErr) throw new Error(`LP fetch: ${lpErr.message}`);
 
+    // Skip:
+    //  - rows missing HTML
+    //  - rows that were never online (no published_url and no success/published status)
+    //  - SYSTEM files (we regenerate /sitemap.xml, /robots.txt fresh)
+    //  - broken-slug rows from the legacy clonador bug (e.g. /en/blog/-ink-...)
     const eligibleLps = (lps || []).filter((p) => {
       const html = p.transformed_html || p.original_html;
       if (!html) return false;
+      if (SYSTEM_FILE_PATHS.has(p.page_path || '')) return false;
+      if (isBrokenSlug(p.page_path)) return false;
       const status = p.publish_status || '';
-      const wasOnline = status === 'success' || status === 'published' || !!p.published_url;
-      return wasOnline;
+      return status === 'success' || status === 'published' || !!p.published_url;
     });
 
     // 3. Fetch ALL blog publications for this domain.
@@ -308,6 +314,8 @@ serve(async (req) => {
 
     const eligibleBlogs = (blogs || []).filter((b) => {
       if (!b.html_content) return false;
+      if (SYSTEM_FILE_PATHS.has(b.page_path || '')) return false;
+      if (isBrokenSlug(b.page_path)) return false;
       const status = b.publish_status || '';
       return status === 'published' || status === 'success' || !!b.published_url;
     });
@@ -322,16 +330,21 @@ serve(async (req) => {
     }
 
     // 4. Build the full file set, dedup'd by manifest path.
-    type Entry = { path: string; html: string; sourceType: 'lp' | 'blog'; sourceId: string };
+    type Entry = {
+      path: string;
+      html: string;
+      sourceType: 'lp' | 'blog' | 'system';
+      sourceId: string | null;
+      contentType: string;
+    };
     const byPath = new Map<string, Entry>();
 
     for (const lp of eligibleLps) {
       const path = buildFilePath(lp.page_path, !!lp.is_homepage);
       let html = injectTrackingScripts(lp.transformed_html || lp.original_html || '', trackingPixels);
       html = fixSeoForServedUrl(html, domain, path);
-      // Homepage wins over a colliding path
       if (!byPath.has(path) || lp.is_homepage) {
-        byPath.set(path, { path, html, sourceType: 'lp', sourceId: lp.id });
+        byPath.set(path, { path, html, sourceType: 'lp', sourceId: lp.id, contentType: 'text/html' });
       }
     }
     for (const blog of eligibleBlogs) {
@@ -339,11 +352,51 @@ serve(async (req) => {
       if (byPath.has(path)) continue;
       let html = injectTrackingScripts(blog.html_content || '', trackingPixels);
       html = fixSeoForServedUrl(html, domain, path);
-      byPath.set(path, { path, html, sourceType: 'blog', sourceId: blog.id });
+      byPath.set(path, { path, html, sourceType: 'blog', sourceId: blog.id, contentType: 'text/html' });
     }
 
+    // 4b. Auto-generate homepage `/index.html` if none was provided.
+    if (!byPath.has('/index.html')) {
+      const brandName = domainConfig.name || domain.replace(/^www\./, '');
+      const recentPosts = eligibleLps
+        .concat(eligibleBlogs.map((b: any) => ({ name: b.page_path, page_path: b.page_path, is_homepage: false })))
+        .filter((p: any) => /^\/blog\//.test(p.page_path || ''))
+        .slice(0, 24)
+        .map((p: any) => ({
+          title: p.name || p.page_path,
+          url: `https://${domain}${(p.page_path || '/').replace(/\/+$/, '')}/`,
+        }));
+      const homepageHtml = buildHomepageHtml(domain, brandName, recentPosts);
+      byPath.set('/index.html', {
+        path: '/index.html',
+        html: homepageHtml,
+        sourceType: 'system',
+        sourceId: null,
+        contentType: 'text/html',
+      });
+      console.log(`[bulk-cf] Auto-generated homepage with ${recentPosts.length} blog links`);
+    }
+
+    // 4c. Always emit fresh /sitemap.xml and /robots.txt from canonical sources.
+    const today = new Date().toISOString().split('T')[0];
+    const allPaths = Array.from(byPath.keys());
+    byPath.set('/sitemap.xml', {
+      path: '/sitemap.xml',
+      html: buildSitemapXml(domain, allPaths, today),
+      sourceType: 'system',
+      sourceId: null,
+      contentType: 'application/xml',
+    });
+    byPath.set('/robots.txt', {
+      path: '/robots.txt',
+      html: buildRobotsTxt(domain),
+      sourceType: 'system',
+      sourceId: null,
+      contentType: 'text/plain',
+    });
+
     const entries = Array.from(byPath.values());
-    console.log(`[bulk-cf] Manifest will contain ${entries.length} files`);
+    console.log(`[bulk-cf] Manifest will contain ${entries.length} files (incl. system files)`);
 
     // 5. Hash + payload
     const hashed = await Promise.all(entries.map(async (e) => ({
