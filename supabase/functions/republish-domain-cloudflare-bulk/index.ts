@@ -474,6 +474,7 @@ serve(async (req) => {
     // 10. Update DB so each item has a fresh published_url + status.
     const nowIso = new Date().toISOString();
     for (const f of hashed) {
+      if (f.sourceType === 'system' || !f.sourceId) continue; // system files have no DB row
       const publishedUrl = `https://${domain}${f.path === '/index.html' ? '/' : f.path.replace(/\/index\.html$/, '/')}`;
       if (f.sourceType === 'lp') {
         await supabase
@@ -487,7 +488,7 @@ serve(async (req) => {
             publish_error_message: null,
           })
           .eq('id', f.sourceId);
-      } else {
+      } else if (f.sourceType === 'blog') {
         await supabase
           .from('product_blog_publications')
           .update({
