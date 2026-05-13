@@ -85,10 +85,118 @@ function injectTrackingScripts(html: string, pixels: TrackingPixels): string {
   return out;
 }
 
+// Paths that must be served as literal files (no trailing-slash dir hack).
+const SYSTEM_FILE_PATHS = new Set(['/sitemap.xml', '/robots.txt', '/feed.xml']);
+
+// Detect broken-slug rows produced by an older clonador bug that stripped the
+// first letter of every word in /en and /es titles. They are 404 in practice
+// and pollute the sitemap. Skip them entirely.
+function isBrokenSlug(pagePath: string | null | undefined): boolean {
+  if (!pagePath) return false;
+  return /^\/(en|es)\/blog\/-/.test(pagePath);
+}
+
 function buildFilePath(pagePath: string | null | undefined, isHomepage: boolean): string {
   if (isHomepage || !pagePath || pagePath === '/' || pagePath === '') return '/index.html';
+  if (pagePath && SYSTEM_FILE_PATHS.has(pagePath)) return pagePath; // serve as-is
   const clean = pagePath.replace(/^\//, '').replace(/\/$/, '');
   return `/${clean}/index.html`;
+}
+
+function manifestPathToCanonical(domain: string, filePath: string): string {
+  if (filePath === '/index.html') return `https://${domain}/`;
+  if (SYSTEM_FILE_PATHS.has(filePath)) return `https://${domain}${filePath}`;
+  return `https://${domain}${filePath.replace(/\/index\.html$/, '/')}`;
+}
+
+function escapeXml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+}
+
+// Build a fresh sitemap.xml from the live manifest entries (excludes system files,
+// excludes broken slugs, uses trailing-slash canonicals matching what CF serves).
+function buildSitemapXml(domain: string, paths: string[], today: string): string {
+  const urls = paths
+    .filter((p) => !SYSTEM_FILE_PATHS.has(p) && p !== '/index.html' && !isBrokenSlug(p.replace(/\/index\.html$/, '')))
+    .map((p) => manifestPathToCanonical(domain, p))
+    .sort();
+
+  // Always include homepage at top
+  const all = [`https://${domain}/`, ...urls.filter((u) => u !== `https://${domain}/`)];
+
+  const body = all.map((u) => `  <url>
+    <loc>${escapeXml(u)}</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>${u === `https://${domain}/` ? '1.0' : '0.8'}</priority>
+  </url>`).join('\n');
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${body}
+</urlset>`;
+}
+
+function buildRobotsTxt(domain: string): string {
+  return `User-agent: *
+Allow: /
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+Sitemap: https://${domain}/sitemap.xml
+`;
+}
+
+// Minimal SEO-clean homepage when the domain has no `/` page.
+// Lists the most recent blog posts so Googlebot has internal links to crawl.
+function buildHomepageHtml(domain: string, brandName: string, recentPosts: Array<{ title: string; url: string }>): string {
+  const postsList = recentPosts.length
+    ? `<ul>${recentPosts.slice(0, 24).map((p) => `<li><a href="${escapeXml(p.url)}">${escapeXml(p.title)}</a></li>`).join('')}</ul>`
+    : '<p>Conteúdo em breve.</p>';
+
+  return `<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${escapeXml(brandName)} — Conteúdo técnico em odontologia digital</title>
+<meta name="description" content="${escapeXml(brandName)}: artigos, guias e materiais técnicos sobre odontologia digital, impressão 3D e fluxos clínicos.">
+<link rel="canonical" href="https://${domain}/">
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+<meta property="og:type" content="website">
+<meta property="og:title" content="${escapeXml(brandName)}">
+<meta property="og:url" content="https://${domain}/">
+<meta property="og:description" content="Conteúdo técnico em odontologia digital.">
+<style>body{font-family:system-ui,-apple-system,sans-serif;max-width:920px;margin:0 auto;padding:24px;line-height:1.6;color:#1f2937}h1{font-size:2rem;margin-bottom:8px}h2{margin-top:32px}a{color:#0f172a}ul{padding-left:20px}li{margin:6px 0}</style>
+</head>
+<body>
+<header>
+<h1>${escapeXml(brandName)}</h1>
+<p>Conteúdo técnico, guias e tutoriais em odontologia digital.</p>
+</header>
+<main>
+<h2>Artigos recentes</h2>
+${postsList}
+</main>
+<footer>
+<p><small>© ${new Date().getFullYear()} ${escapeXml(brandName)}. Todos os direitos reservados.</small></p>
+</footer>
+</body>
+</html>`;
 }
 
 /**
