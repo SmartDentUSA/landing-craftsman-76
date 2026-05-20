@@ -304,6 +304,17 @@ serve(async (req) => {
       tiktok_pixel: rawPixels.tiktok_pixel || rawPixels.tiktok || null,
     };
 
+    // 1b. Token de verificação Google Search Console (se houver)
+    const { data: dcfg } = await supabase
+      .from('domain_config')
+      .select('gsc_verification_token')
+      .eq('domain', domain)
+      .maybeSingle();
+    const gscToken: string | null = dcfg?.gsc_verification_token || null;
+    if (gscToken) {
+      console.log(`[bulk-cf] GSC verification meta will be injected for ${domain}`);
+    }
+
     // 2. Fetch ALL LP pages that should be online for this domain.
     //    Accept BOTH legacy ('published') and Cloudflare ('success') statuses,
     //    plus any record that has a published_url and HTML — that's enough
@@ -320,6 +331,7 @@ serve(async (req) => {
     //  - SYSTEM files (we regenerate /sitemap.xml, /robots.txt fresh)
     //  - broken-slug rows from the legacy clonador bug (e.g. /en/blog/-ink-...)
     const eligibleLps = (lps || []).filter((p) => {
+
       const html = p.transformed_html || p.original_html;
       if (!html) return false;
       if (SYSTEM_FILE_PATHS.has(p.page_path || '')) return false;
