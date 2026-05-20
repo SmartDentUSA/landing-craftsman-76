@@ -1649,6 +1649,9 @@ export type Database = {
           domain: string
           ftp_profile: string | null
           google_indexing_enabled: boolean | null
+          gsc_last_sitemap_submission_at: string | null
+          gsc_verification_token: string | null
+          gsc_verified_at: string | null
           hreflang_locales: string[] | null
           hub_domain: string | null
           is_hub: boolean | null
@@ -1684,6 +1687,9 @@ export type Database = {
           domain: string
           ftp_profile?: string | null
           google_indexing_enabled?: boolean | null
+          gsc_last_sitemap_submission_at?: string | null
+          gsc_verification_token?: string | null
+          gsc_verified_at?: string | null
           hreflang_locales?: string[] | null
           hub_domain?: string | null
           is_hub?: boolean | null
@@ -1719,6 +1725,9 @@ export type Database = {
           domain?: string
           ftp_profile?: string | null
           google_indexing_enabled?: boolean | null
+          gsc_last_sitemap_submission_at?: string | null
+          gsc_verification_token?: string | null
+          gsc_verified_at?: string | null
           hreflang_locales?: string[] | null
           hub_domain?: string | null
           is_hub?: boolean | null
@@ -2226,6 +2235,45 @@ export type Database = {
           scopes?: string[] | null
           updated_at?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      gsc_submission_log: {
+        Row: {
+          action: string
+          domain: string
+          error_message: string | null
+          id: string
+          response_body: Json | null
+          site_url: string
+          sitemap_url: string
+          status_code: number | null
+          submitted_at: string
+          success: boolean
+        }
+        Insert: {
+          action: string
+          domain: string
+          error_message?: string | null
+          id?: string
+          response_body?: Json | null
+          site_url: string
+          sitemap_url: string
+          status_code?: number | null
+          submitted_at?: string
+          success?: boolean
+        }
+        Update: {
+          action?: string
+          domain?: string
+          error_message?: string | null
+          id?: string
+          response_body?: Json | null
+          site_url?: string
+          sitemap_url?: string
+          status_code?: number | null
+          submitted_at?: string
+          success?: boolean
         }
         Relationships: []
       }
