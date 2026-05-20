@@ -233,6 +233,29 @@ function fixSeoForServedUrl(html: string, domain: string, filePath: string): str
   return out;
 }
 
+/**
+ * Injeta `<meta name="google-site-verification">` no <head> de todas as páginas
+ * quando `domain_config.gsc_verification_token` está definido. Necessário para
+ * que o Google Search Console verifique a propriedade via método META.
+ * Idempotente: se a tag já existir com o mesmo content, não duplica.
+ */
+function injectGscVerification(html: string, token: string | null | undefined): string {
+  if (!token) return html;
+  if (new RegExp(`name=["']google-site-verification["'][^>]*content=["']${token}["']`, 'i').test(html)) {
+    return html;
+  }
+  let out = html.replace(/<meta[^>]*name=["']google-site-verification["'][^>]*>\s*/gi, '');
+  const tag = `\n<meta name="google-site-verification" content="${token}">\n`;
+  if (/<head[^>]*>/i.test(out)) {
+    out = out.replace(/<head([^>]*)>/i, `<head$1>${tag}`);
+  } else if (out.includes('</head>')) {
+    out = out.replace('</head>', `${tag}</head>`);
+  }
+  return out;
+}
+
+
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
@@ -281,6 +304,17 @@ serve(async (req) => {
       tiktok_pixel: rawPixels.tiktok_pixel || rawPixels.tiktok || null,
     };
 
+    // 1b. Token de verificação Google Search Console (se houver)
+    const { data: dcfg } = await supabase
+      .from('domain_config')
+      .select('gsc_verification_token')
+      .eq('domain', domain)
+      .maybeSingle();
+    const gscToken: string | null = dcfg?.gsc_verification_token || null;
+    if (gscToken) {
+      console.log(`[bulk-cf] GSC verification meta will be injected for ${domain}`);
+    }
+
     // 2. Fetch ALL LP pages that should be online for this domain.
     //    Accept BOTH legacy ('published') and Cloudflare ('success') statuses,
     //    plus any record that has a published_url and HTML — that's enough
@@ -297,6 +331,7 @@ serve(async (req) => {
     //  - SYSTEM files (we regenerate /sitemap.xml, /robots.txt fresh)
     //  - broken-slug rows from the legacy clonador bug (e.g. /en/blog/-ink-...)
     const eligibleLps = (lps || []).filter((p) => {
+
       const html = p.transformed_html || p.original_html;
       if (!html) return false;
       if (SYSTEM_FILE_PATHS.has(p.page_path || '')) return false;
@@ -343,6 +378,7 @@ serve(async (req) => {
       const path = buildFilePath(lp.page_path, !!lp.is_homepage);
       let html = injectTrackingScripts(lp.transformed_html || lp.original_html || '', trackingPixels);
       html = fixSeoForServedUrl(html, domain, path);
+      html = injectGscVerification(html, gscToken);
       if (!byPath.has(path) || lp.is_homepage) {
         byPath.set(path, { path, html, sourceType: 'lp', sourceId: lp.id, contentType: 'text/html' });
       }
@@ -352,6 +388,7 @@ serve(async (req) => {
       if (byPath.has(path)) continue;
       let html = injectTrackingScripts(blog.html_content || '', trackingPixels);
       html = fixSeoForServedUrl(html, domain, path);
+      html = injectGscVerification(html, gscToken);
       byPath.set(path, { path, html, sourceType: 'blog', sourceId: blog.id, contentType: 'text/html' });
     }
 
@@ -366,7 +403,11 @@ serve(async (req) => {
           title: p.name || p.page_path,
           url: `https://${domain}${(p.page_path || '/').replace(/\/+$/, '')}/`,
         }));
-      const homepageHtml = buildHomepageHtml(domain, brandName, recentPosts);
+      const homepageHtml = injectGscVerification(
+        buildHomepageHtml(domain, brandName, recentPosts),
+        gscToken,
+      );
+
       byPath.set('/index.html', {
         path: '/index.html',
         html: homepageHtml,
