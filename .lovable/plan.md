@@ -1,85 +1,71 @@
-## Diagnóstico (a partir dos relatórios do Search Console + estado real)
+## Diagnóstico
 
-Cruzei os 7 XLSX com o que está no banco e o que cada domínio devolve hoje. Os "404" e "Cópia sem canônica" reportados pelo Google têm causas concretas e reproduzíveis:
+Cruzei os 14 domínios com conteúdo publicado em `cloned_landing_pages` contra as propriedades verificadas no Google Search Console e os sitemaps já submetidos.
 
-### 1) Homepages 404 (causa #1 das indexações zeradas)
-A raiz `/` retorna 404 nestes domínios:
-- dentala.com.br, eodonto.com, rayshape.com.br, rayshape3d.com.br, truioconnect.com.br, minivat.com, printsafebr.com.br
+### Domínios com conteúdo publicado
 
-Confirmação no banco: nenhuma linha com `page_path = '/'` para esses domínios em `cloned_landing_pages`. O snapshot bulk publicado no Cloudflare Pages, portanto, não inclui `index.html` na raiz. Sem homepage o Google "rastreia" os artigos do blog mas trata o site como quebrado e limita a indexação.
+| Domínio | Páginas | Propriedade no GSC | Sitemap submetido |
+|---|---|---|---|
+| smartdent.com.br | 105 | ✅ (sc-domain + https) | ⚠️ 11 sitemaps antigos, **todos com erro** (URLs com typo: `sitema.xml`, `sitemap.xm`, `SITEMAP.XML`, `video-sitemap.xml.`) |
+| dentala.com.br | **172** | ❌ **NÃO existe no GSC** | — |
+| eodonto.com | 100 | ✅ (sc-domain) | ❌ nenhum |
+| rayshape3d.com.br | 14 | ✅ (sc-domain) | ❌ nenhum |
+| rayshape.com.br | 12 | ✅ (sc-domain) | ❌ nenhum |
+| labtechdent.com.br | 19 | ✅ (sc-domain) | ❌ nenhum |
+| blzdental.com.br | 17 | ✅ (sc-domain) | ❌ nenhum |
+| mediti600.com.br | 31 | ✅ (sc-domain + https) | ❌ nenhum |
+| mediti700.com.br | 7 | ✅ (sc-domain) | ❌ nenhum |
+| mediti900.com | 6 | ✅ (sc-domain) | ❌ nenhum |
+| mediti900.com.br | 6 | ✅ (https only) | ❌ nenhum |
+| truioconnect.com.br | 8 | ✅ (sc-domain) | ❌ nenhum |
+| minivat.com | 4 | ✅ (sc-domain + https) | ✅ `sitemap.xml` (OK) e `sitemap.rss` (2 warnings) |
+| printsafebr.com.br | 3 | ❌ **NÃO existe no GSC** | — |
 
-### 2) Sitemap publica `/robots.txt`, `/sitemap.xml` e `/feed.xml` como URLs de página
-Esses três caminhos foram cadastrados como `cloned_landing_pages` (publish_status = success/pending_deploy) e entram no sitemap como `<url><loc>` normal. O Search Console marca como 404 ou duplicata. Eles devem ser arquivos servidos pelo publisher, não páginas SEO.
+### Resumo dos problemas
 
-### 3) Slugs quebrados gerados pelo clonador (em /en e /es)
-Exemplo real (rayshape):
-- `/en/blog/ental-3-re-printing-ssential-hecklist` (deveria ser `dental-3d-pre-printing-essential-checklist`)
-- `/es/blog/preparacao-da-impressora-3d-guia-essencial-1-es` (slug PT salvo como ES)
+1. **2 domínios sem propriedade no GSC**: `dentala.com.br` (172 páginas órfãs!) e `printsafebr.com.br`.
+2. **10 propriedades verificadas sem sitemap submetido**: GSC não está sendo notificado das URLs novas.
+3. **smartdent.com.br polui­do** com 11 sitemaps antigos quebrados (typos) — precisa limpeza e re-submissão do correto.
+4. **`domain_config.sitemap_url` está NULL** em: `smartdent.com.br`, `dentala.com.br`, `printsafebr.com.br`, `minivat.com`, `parametros.smartdent.com.br` e todos os domínios temáticos (facetadental, etc.). O `republish-domain-cloudflare-bulk` já gera `/sitemap.xml` em runtime, então a coluna é só metadado, mas deveria ser preenchida para consistência.
 
-Padrão: o slugifier está cortando a primeira letra de cada palavra após traduzir, e o fallback em ES está reusando o slug PT acrescentando "-1-es". Isso gera 404 cruzados, canonicals inconsistentes e páginas órfãs.
+## Plano
 
-### 4) Divergência sitemap × canonical por trailing slash
-Sitemap publica `https://dentala.com.br/blog/x` (sem barra). Cloudflare Pages responde 308 → `/blog/x/` e a página servida tem `<link rel="canonical" href=".../x/">`. Resultado no GSC: "Página com redirecionamento" e "Cópia sem canônica selecionada pelo usuário". Solução: o sitemap deve conter exatamente a URL canônica final.
+### Fase 1 — Onboarding dos domínios faltantes (`dentala.com.br`, `printsafebr.com.br`)
+Para propriedades novas no GSC, a verificação para domínios de cliente exige DNS TXT (recomendado) ou meta tag no HTML servido pelo Cloudflare. Como esses sites são publicados via Cloudflare Pages a partir do nosso pipeline, é viável injetar a meta tag de verificação no HTML do homepage gerado pela `republish-domain-cloudflare-bulk` → `buildHomepageHtml`.
 
-### 5) Páginas duplicadas em DB com `pending_deploy`
-Cada domínio tem 3 registros `pending_deploy` (justamente robots/sitemap/feed). Eles ficam órfãos no painel e poluem qualquer query de "publicadas".
+Etapas:
+1. Solicitar token META do GSC para `https://dentala.com.br/` e `https://printsafebr.com.br/`.
+2. Armazenar tokens em `domain_config` (nova coluna `gsc_verification_token` ou em `content_intelligence` JSONB) — **a definir com você**.
+3. Adaptar `buildHomepageHtml` (e o builder principal de `index.html` de cada página) para injetar `<meta name="google-site-verification" content="..." />` quando o token existir.
+4. Republicar os 2 domínios.
+5. Chamar `siteVerification/v1/webResource` para verificar.
+6. Adicionar como propriedade via `PUT webmasters/v3/sites/{url}`.
 
----
+### Fase 2 — Limpeza do smartdent.com.br
+1. Deletar via API GSC os 9 sitemaps com typo (`sitema.xml`, `sitemap.xm`, `SITEMAP.XML`, `video-sitemap.xml.`, etc.).
+2. Manter apenas os válidos após a Fase 3.
 
-## Plano de correção
+### Fase 3 — Submissão automática de sitemaps para os 14 domínios
+1. Criar Edge Function nova `gsc-submit-sitemaps` que:
+   - Lê todos domínios ativos de `domain_config` com publicações.
+   - Para cada um, monta a `siteUrl` no formato GSC (prefere `sc-domain:<dominio>`; fallback `https://<dominio>/`).
+   - Chama `PUT webmasters/v3/sites/{siteUrl}/sitemaps/{sitemapUrl}` para `https://<dominio>/sitemap.xml`.
+   - Loga sucesso/erro em uma tabela `gsc_submission_log` (id, domain, sitemap_url, status_code, error, submitted_at).
+   - Idempotente: pode rodar repetidamente.
+2. Usar o secret `GOOGLE_SEARCH_CONSOLE_API_KEY` + `LOVABLE_API_KEY` via gateway `connector-gateway.lovable.dev`.
+3. Atualizar `domain_config.sitemap_url` para `https://<dominio>/sitemap.xml` nos registros NULL relevantes.
+4. Botão "Submeter sitemaps ao GSC" na UI (página de Publicação/SEO) chamando a função.
 
-### Fase 1 — Limpar o sitemap (deploy imediato)
-1. Em `supabase/functions/generate-sitemap/index.ts`, filtrar `cloned_landing_pages` excluindo `page_path` em `('/robots.txt','/sitemap.xml','/feed.xml','/feed','/sitemap','/sitemap_index.xml')` e qualquer caminho terminado em `.xml` ou `.txt`.
-2. Normalizar todas as `<loc>` para terminar com `/` (exceto a raiz e arquivos), batendo com a canônica que o Cloudflare serve.
-3. Remover do XML qualquer entrada cuja `lang` não corresponda ao prefixo (`/es/...` deve ter `lang='es'`).
-4. Manter a homepage do domínio APENAS se existir registro `page_path='/'` publicado.
+### Fase 4 — Verificação pós-submissão
+1. Listar sitemaps de cada propriedade e confirmar `errors=0`.
+2. Persistir contagem `lastSubmitted`, `contents.submitted/indexed` em `gsc_submission_log` para painel de monitoramento.
 
-### Fase 2 — Garantir homepage `/` em todos os domínios
-Para cada domínio sem `/`, criar uma página de Marca/Hub mínima (hero + lista de últimos artigos do blog do domínio + CTA Smart Dent), reutilizando o template do blog index. Domínios afetados:
-- dentala.com.br, eodonto.com, rayshape.com.br, rayshape3d.com.br, truioconnect.com.br, minivat.com, printsafebr.com.br
+### Fora de escopo (manter pendente)
+- Domínios temáticos sem conteúdo publicado (escaneamentointraoral, facetadental, fresagem­dental, guiacirurgico3d, implanteimediato, impressao3ddental, modelodental3d, protesedental3d, resina3ddental, splitedental, vitality3d) — não submeter sitemap enquanto não tiverem páginas.
+- Slugifier multilingual (`/en/...`, `/es/...`) — pendência já registrada da iteração anterior.
 
-Implementação: nova função `generate-domain-homepage` (ou estender `generate-blog-index`) que cria/atualiza um registro `cloned_landing_pages` com `page_path='/'`, `is_homepage=true`, canonical = `https://{dominio}/`. Em seguida disparar `republish-domain-cloudflare-bulk` para cada domínio.
+## Perguntas antes de implementar
 
-### Fase 3 — Arrumar o slugifier multilíngue
-Em `supabase/functions/clone-landing-page/index.ts` (e helpers de slug):
-1. Não aplicar nenhum corte de "letra inicial". Investigar o regex que está produzindo `ental-3-re-printing-ssential-hecklist` — provavelmente um `replace(/^[bcdfgjkpt]/, '')` ou uma lib de transliteração mal usada.
-2. Para `lang != 'pt'`, exigir um título traduzido antes de gerar o slug; nunca cair em "slug PT + sufixo `-1-es`". Se a tradução falhar, abortar e marcar a página como `error` (não publicar lixo).
-3. Backfill: rodar uma migration que liste todos os slugs em `/en/...` e `/es/...` que (a) divergem do padrão idiomático ou (b) estão truncados (primeiros 3 chars do slug não batem com primeiros 3 chars do título normalizado), e marcar `publish_status='error'` para reprocessamento manual ou regerar via função.
-
-### Fase 4 — Robots/sitemap/feed deixam de ser páginas
-1. Excluir do banco todos os registros com `page_path` em `('/robots.txt','/sitemap.xml','/feed.xml')` (44 linhas no total).
-2. O publisher do Cloudflare Pages já gera/serve `/robots.txt` e `/sitemap.xml` próprios — confirmar em `republish-domain-cloudflare-bulk` que esses dois arquivos são montados a partir de fontes oficiais (robots template + função `generate-sitemap`) e não a partir de `cloned_landing_pages`.
-
-### Fase 5 — Republicação em massa + ping ao Google
-1. Rodar `republish-domain-cloudflare-bulk` para os 9 domínios afetados.
-2. `curl https://www.google.com/ping?sitemap=https://{dominio}/sitemap.xml` para cada um.
-3. No GSC, "Validar correção" em cada erro listado nos XLSX.
-
-### Fase 6 — Validação
-- `curl -I https://{dominio}/` → 200 em todos os 9 domínios.
-- `curl -s https://{dominio}/sitemap.xml | grep -c '<loc>'` bate com `count(*)` de `cloned_landing_pages` publicadas (excluídos robots/feed/sitemap).
-- Spot-check de 5 URLs por domínio: 1 canonical, 1 robots `index, follow`, sitemap loc == canonical.
-- Teste no Rich Results e URL Inspection do GSC para 2 URLs por domínio.
-
----
-
-## Detalhes técnicos (referência)
-
-Arquivos tocados:
-- `supabase/functions/generate-sitemap/index.ts` — filtros + normalização trailing slash.
-- `supabase/functions/clone-landing-page/index.ts` — slugifier e gating multilíngue.
-- `supabase/functions/republish-domain-cloudflare-bulk/index.ts` — confirmar geração de `/robots.txt` e `/sitemap.xml` a partir de fonte oficial.
-- Nova função `generate-domain-homepage` (ou estender `generate-blog-index`).
-- Migration: `DELETE FROM cloned_landing_pages WHERE page_path IN ('/robots.txt','/sitemap.xml','/feed.xml')`.
-- Migration de auditoria/marcação dos slugs `/en/...` e `/es/...` quebrados.
-
-Domínios sem `/` que precisam homepage criada (7):
-```
-dentala.com.br, eodonto.com, rayshape.com.br, rayshape3d.com.br,
-truioconnect.com.br, minivat.com, printsafebr.com.br
-```
-
-Métricas a acompanhar no GSC após validar:
-- "Não encontrado (404)": queda de >80% em 7 dias.
-- "Cópia sem página canônica selecionada pelo usuário": queda para 0–2.
-- "Indexados": começa a subir após o primeiro recrawl (3–10 dias).
+1. **Verificação dos novos domínios** (`dentala.com.br`, `printsafebr.com.br`): prefere DNS TXT (você cola manualmente na zona Cloudflare) ou injeção automática de meta tag no HTML pelo pipeline?
+2. **Sitemap único ou múltiplos**: hoje servimos só `/sitemap.xml`. Deseja gerar separados (`sitemap-blog.xml`, `sitemap-lp.xml`) ou manter um só por domínio?
+3. **Posso prosseguir com a Fase 3** (criar a Edge Function e submeter os sitemaps dos 12 domínios já verificados) **em paralelo** à resolução das Fases 1/2?
