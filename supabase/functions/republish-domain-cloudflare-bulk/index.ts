@@ -233,6 +233,29 @@ function fixSeoForServedUrl(html: string, domain: string, filePath: string): str
   return out;
 }
 
+/**
+ * Injeta `<meta name="google-site-verification">` no <head> de todas as páginas
+ * quando `domain_config.gsc_verification_token` está definido. Necessário para
+ * que o Google Search Console verifique a propriedade via método META.
+ * Idempotente: se a tag já existir com o mesmo content, não duplica.
+ */
+function injectGscVerification(html: string, token: string | null | undefined): string {
+  if (!token) return html;
+  if (new RegExp(`name=["']google-site-verification["'][^>]*content=["']${token}["']`, 'i').test(html)) {
+    return html;
+  }
+  let out = html.replace(/<meta[^>]*name=["']google-site-verification["'][^>]*>\s*/gi, '');
+  const tag = `\n<meta name="google-site-verification" content="${token}">\n`;
+  if (/<head[^>]*>/i.test(out)) {
+    out = out.replace(/<head([^>]*)>/i, `<head$1>${tag}`);
+  } else if (out.includes('</head>')) {
+    out = out.replace('</head>', `${tag}</head>`);
+  }
+  return out;
+}
+
+
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
