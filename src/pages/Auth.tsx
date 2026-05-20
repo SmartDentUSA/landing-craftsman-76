@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useAuthReady } from "@/hooks/useAuthReady";
+import { Helmet } from "react-helmet-async";
 
 const PUBLISHED_URL = "https://landing-craftsman-76.lovable.app";
 const LOGIN_TIMEOUT_MS = 12000;
@@ -210,6 +211,16 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted">
+      <Helmet>
+        <title>Entrar — Smart Dent LP & Blog</title>
+        <meta name="description" content="Acesse a plataforma Smart Dent LP & Blog para gerenciar landing pages, blogs e publicação multi-domínio." />
+        <link rel="canonical" href="https://landing-craftsman-76.lovable.app/auth" />
+        <meta property="og:title" content="Entrar — Smart Dent LP & Blog" />
+        <meta property="og:description" content="Acesse a plataforma Smart Dent LP & Blog." />
+        <meta property="og:url" content="https://landing-craftsman-76.lovable.app/auth" />
+        <meta property="og:type" content="website" />
+        <meta name="robots" content="noindex,follow" />
+      </Helmet>
       <Card className="w-[400px]">
         <CardHeader>
           <CardTitle>Bem-vindo</CardTitle>
