@@ -20,4 +20,5 @@ Allow: /
 User-agent: Google-Extended
 Allow: /
 
+Sitemap: https://landing-craftsman-76.lovable.app/sitemap.xml
 LLMs: /llms.txt
