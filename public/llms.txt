@@ -52,9 +52,15 @@ Nome correto: Smart Dent (não SmartDent)
 Fundadores: Del Guerra e Cestari apenas
 Ricci = Consultor Clínico, não fundador
 
+## Pages
+
+- [Home](/): Visão geral da plataforma Smart Dent LP & Blog.
+- [Entrar / Criar Conta](/auth): Acesso para administradores do gerador.
+
 ## Links
 
-https://www.smartdent.com.br
-https://loja.smartdent.com.br
-https://parametros.smartdent.com.br/base-conhecimento
-https://www.wikidata.org/wiki/Q138636902
+- [Site institucional Smart Dent](https://www.smartdent.com.br): Site oficial da Smart Dent.
+- [Loja Smart Dent](https://loja.smartdent.com.br): E-commerce oficial.
+- [Base de Conhecimento](https://parametros.smartdent.com.br/base-conhecimento): Parâmetros técnicos e documentação clínica.
+- [Wikidata Q138636902](https://www.wikidata.org/wiki/Q138636902): Identidade canônica em grafo de conhecimento.
+
