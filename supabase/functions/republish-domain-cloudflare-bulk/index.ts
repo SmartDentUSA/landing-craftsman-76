@@ -378,6 +378,7 @@ serve(async (req) => {
       const path = buildFilePath(lp.page_path, !!lp.is_homepage);
       let html = injectTrackingScripts(lp.transformed_html || lp.original_html || '', trackingPixels);
       html = fixSeoForServedUrl(html, domain, path);
+      html = injectGscVerification(html, gscToken);
       if (!byPath.has(path) || lp.is_homepage) {
         byPath.set(path, { path, html, sourceType: 'lp', sourceId: lp.id, contentType: 'text/html' });
       }
@@ -387,6 +388,7 @@ serve(async (req) => {
       if (byPath.has(path)) continue;
       let html = injectTrackingScripts(blog.html_content || '', trackingPixels);
       html = fixSeoForServedUrl(html, domain, path);
+      html = injectGscVerification(html, gscToken);
       byPath.set(path, { path, html, sourceType: 'blog', sourceId: blog.id, contentType: 'text/html' });
     }
 
@@ -401,7 +403,11 @@ serve(async (req) => {
           title: p.name || p.page_path,
           url: `https://${domain}${(p.page_path || '/').replace(/\/+$/, '')}/`,
         }));
-      const homepageHtml = buildHomepageHtml(domain, brandName, recentPosts);
+      const homepageHtml = injectGscVerification(
+        buildHomepageHtml(domain, brandName, recentPosts),
+        gscToken,
+      );
+
       byPath.set('/index.html', {
         path: '/index.html',
         html: homepageHtml,
