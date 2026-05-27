@@ -10,7 +10,7 @@ const corsHeaders = {
 
 const REPO_OWNER = 'SmartDentUSA';
 const REPO_NAME = 'landing-craftsman-76';
-const BRANCH = 'stable-website';
+const PREFERRED_BRANCHES = ['stable-website', 'main', 'master'];
 const GH_API = 'https://api.github.com';
 
 interface RequestBody {
