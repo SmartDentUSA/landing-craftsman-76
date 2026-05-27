@@ -151,7 +151,7 @@ serve(async (req) => {
 
     // 5. Git flow via GitHub REST API
     // Step A: Get branch ref
-    const refData = await ghFetch(`/git/ref/heads/${BRANCH}`, githubToken);
+    const { branch: BRANCH, ref: refData } = await resolveBranch(githubToken);
     const latestCommitSha = refData.object.sha;
     console.log(`🔗 Branch ${BRANCH} at ${latestCommitSha}`);
 
