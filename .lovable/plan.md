@@ -1,39 +1,42 @@
-## Objetivo
-Produzir um documento técnico completo listando **todos os dados que o Sistema A expõe a sistemas externos** — útil para parceiros, integradores, equipe de SEO e auditoria.
+## Diagnóstico
 
-## Entregáveis (em `/mnt/documents/`)
-1. `SmartDent-API-Endpoints-Externos.pdf` — versão formatada para distribuição
-2. `SmartDent-API-Endpoints-Externos.md` — fonte editável
+A publicação do domínio `www.smartdent.com.br` está falhando dentro da Edge Function `publish-git-kinghost`.
 
-## Estrutura do documento (8 seções)
+Pelo log recente, o HTML é gerado, tracking é injetado e o caminho final é calculado como `index.html`, mas a etapa de GitHub falha aqui:
 
-1. **Visão Geral** — Base URLs, autenticação (`verify_jwt=false`), CORS
-2. **Endpoints de Conhecimento / Dados Estruturados**
-   - `GET /knowledge-base` — params (`format`: json/ai_training/system_b/rag), cache 3h
-   - `GET /knowledge-feed` — paginação, formatos json/rss/atom
-   - `GET /get-product-data` — por `slug`/`product_id`/`category`
-   - `GET /export-product-ai-playbook`
-   - `POST /rag-chat` — Dra. L.I.A.
-   - `GET|POST /mcp-server` — tools MCP expostos
-3. **Endpoints SEO / Discovery**
-   - `/generate-sitemap`, `/generate-video-sitemap`, `/generate-robots-txt`, `/generate-merchant-feed`
-   - Rewrites `/llms.txt` e `/.well-known/llms.txt`
-4. **Endpoints de Sincronização / Ingestão**
-   - `/sync-system-b-articles` (modes ingest/full/incremental), `/sync-system-b-documents`, `/debug-systemb-product`, `/refresh-knowledge-base`
-5. **Webhooks de Recebimento**
-   - `POST /content-submission` (fila assíncrona `content_jobs`)
-   - `POST /evaluate-interaction`
-6. **Fonte Externa Consumida (Sistema B)** — `data-export?format=ai_ready`
-7. **Matriz de Consumidores Conhecidos** (Google, IA crawlers, MCP clients, Loja Integrada, parceiros)
-8. **Limites & Boas Práticas** — rate-limit recomendado, paginação, formato de erros
+```text
+GitHub API 404: Not Found
+GET /repos/SmartDentUSA/landing-craftsman-76/git/ref/heads/stable-website
+```
 
-Cada endpoint incluirá: query params (tabela), body (quando POST), exemplo de request, exemplo de response JSON, e referência ao arquivo-fonte em `supabase/functions/`.
+Isso indica que a função está tentando publicar na branch fixa `stable-website`, mas essa referência não existe, não está acessível pelo token atual, ou o repositório/branch mudou.
 
-## Como será gerado
-- Markdown completo já redigido a partir da inspeção real das funções (`supabase/functions/*/index.ts` + `supabase/config.toml`)
-- Conversão para PDF via `pandoc` + `xelatex`, fonte Arial, margens 2cm, TOC com 3 níveis
+## Plano de correção
 
-## Não inclui
-- Endpoints administrativos autenticados (publicação, geração de conteúdo, OAuth)
-- Schemas internos de tabelas do Postgres
-- Secrets / chaves de API
+1. Atualizar `supabase/functions/publish-git-kinghost/index.ts`
+   - Remover a dependência rígida da branch única `stable-website`.
+   - Implementar resolução automática de branch:
+     - tentar `stable-website` primeiro, para manter compatibilidade;
+     - se não existir, tentar branches comuns como `main` e `master`;
+     - se ainda falhar, consultar o repositório no GitHub e usar a `default_branch`.
+
+2. Melhorar o erro retornado ao frontend
+   - Quando nenhuma branch válida for encontrada, retornar mensagem clara explicando:
+     - repositório alvo;
+     - branches tentadas;
+     - possível problema de permissão do `GITHUB_PAT_DEPLOY`;
+     - possível branch ausente.
+
+3. Preservar o fluxo atual de publicação
+   - Continuar publicando `index.html` para homepage.
+   - Continuar gerando `nav-data.js` quando houver páginas publicadas.
+   - Continuar atualizando `cloned_landing_pages` com `publish_status`, `published_url` e erro quando necessário.
+   - Não alterar banco de dados, domínio, HTML gerado ou tracking.
+
+4. Validar por sinal correto
+   - Conferir que a função passa a resolver uma branch válida antes de criar blob/tree/commit.
+   - Após a alteração, o próximo teste de publicação deverá mostrar nos logs qual branch foi usada.
+
+## Resultado esperado
+
+A publicação de `www.smartdent.com.br` deixa de quebrar no erro 404 da branch `stable-website` e passa a usar automaticamente a branch existente do repositório GitHub.

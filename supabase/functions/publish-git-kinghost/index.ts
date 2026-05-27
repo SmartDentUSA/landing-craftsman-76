@@ -10,7 +10,7 @@ const corsHeaders = {
 
 const REPO_OWNER = 'SmartDentUSA';
 const REPO_NAME = 'landing-craftsman-76';
-const BRANCH = 'stable-website';
+const PREFERRED_BRANCHES = ['stable-website', 'main', 'master'];
 const GH_API = 'https://api.github.com';
 
 interface RequestBody {
@@ -38,6 +38,44 @@ async function ghFetch(path: string, token: string, options: RequestInit = {}) {
     throw new Error(`GitHub API ${res.status}: ${body}`);
   }
   return JSON.parse(body);
+}
+
+async function tryGetRef(branch: string, token: string) {
+  try {
+    return await ghFetch(`/git/ref/heads/${branch}`, token);
+  } catch (e: any) {
+    if (String(e.message).includes('404')) return null;
+    throw e;
+  }
+}
+
+async function resolveBranch(token: string): Promise<{ branch: string; ref: any }> {
+  const tried: string[] = [];
+  for (const b of PREFERRED_BRANCHES) {
+    tried.push(b);
+    const ref = await tryGetRef(b, token);
+    if (ref) {
+      console.log(`✅ Branch resolved: ${b}`);
+      return { branch: b, ref };
+    }
+    console.log(`⚠️ Branch '${b}' not found, trying next...`);
+  }
+  // Fallback: query repo for default_branch
+  const repo = await ghFetch('', token);
+  const defaultBranch = repo.default_branch;
+  if (defaultBranch && !tried.includes(defaultBranch)) {
+    tried.push(defaultBranch);
+    const ref = await tryGetRef(defaultBranch, token);
+    if (ref) {
+      console.log(`✅ Branch resolved via default_branch: ${defaultBranch}`);
+      return { branch: defaultBranch, ref };
+    }
+  }
+  throw new Error(
+    `Nenhuma branch acessível em ${REPO_OWNER}/${REPO_NAME}. Tentadas: ${tried.join(', ')}. ` +
+    `Verifique se o repositório existe, se a branch 'stable-website' (ou default) está criada, ` +
+    `e se o token GITHUB_PAT_DEPLOY tem acesso ao repositório.`
+  );
 }
 
 // ✅ Tracking inline removido — agora usa _shared/tracking-injector.ts
@@ -113,7 +151,7 @@ serve(async (req) => {
 
     // 5. Git flow via GitHub REST API
     // Step A: Get branch ref
-    const refData = await ghFetch(`/git/ref/heads/${BRANCH}`, githubToken);
+    const { branch: BRANCH, ref: refData } = await resolveBranch(githubToken);
     const latestCommitSha = refData.object.sha;
     console.log(`🔗 Branch ${BRANCH} at ${latestCommitSha}`);
 
