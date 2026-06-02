@@ -1,115 +1,85 @@
-# Endpoint Único: `knowledge-export-full`
+## Expansão do `knowledge-export-full` — Cobertura 100% + HTML formatado
 
-Criar **uma única Edge Function** que exponha **todo o conteúdo gerado no sistema** (produtos, blogs, landing pages, mensagens CS/pós-venda, imagens, vídeos, reviews, KOLs, SPIN, milestones, FAQs) já formatado em **HTML pronto + JSON estruturado + Schema.org JSON-LD**.
+Objetivo: garantir que o endpoint exporte **literalmente tudo** que o sistema gera (cards, tabelas, mensagens, mídias, campanhas, atendimentos, prompts), com HTML pronto para indexação/IA e JSON estruturado espelhando cada tabela.
 
-Substitui a necessidade de chamar `get-product-data`, `knowledge-feed`, `get_complete_knowledge_base`, `generate-product-blog`, etc., separadamente.
+### Novos blocos a incluir
 
-## URL
+1. **`campaign_templates`** — templates promocionais WhatsApp (campanhas, sazonais, lançamentos)
+2. **`lia_attendances`** — histórico Dra. L.I.A. (perguntas, respostas, leads, conversões)
+3. **`lia_leads`** — leads capturados via Copilot Comercial
+4. **`whatsapp_templates`** — templates oficiais Meta/WhatsApp aprovados
+5. **`approved_reviews`** + **`video_testimonials`** com `html_card` formatado individual
+6. **`company_milestones`** com `html_card` (timeline E-E-A-T) + JSON-LD Event
+7. **`authors`** (autores E-E-A-T de `src/data/authors.ts` espelhados)
+8. **`coupons`** globais (não só por produto) com validade
+9. **`generated_pages`** ampliado: incluir `landing_page`, `spin_landing_page`, `consolidated_blog`, não só `product_blog`
+10. **`spin_solutions`** com `html_card` completo (hero, jornada SPIN, métricas, FAQ, CTA, WhatsApp)
+11. **`instagram_carousels`** gerados (slides, captions, hashtags)
+12. **`tracking_config`** (GTM-NZ64Q899) + **`wikidata_qid`** (Q138636902)
+13. **`prompts_configuration`** (somente os públicos/system prompts versionados)
 
-```
-GET https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/knowledge-export-full
-```
+### Cards HTML adicionais a renderizar
 
-## Query params (todos opcionais)
+- `renderReviewCard(r)` — estrela, autor, texto, data, JSON-LD Review
+- `renderTestimonialVideoCard(v)` — `<video>` + transcript + JSON-LD VideoObject
+- `renderMilestoneCard(m)` — ano, título, descrição, JSON-LD Event
+- `renderSpinCard(s)` — pitch + jornada + métricas + WhatsApp completo + JSON-LD Service
+- `renderKolCard(k)` — foto, bio, credenciais, JSON-LD Person
+- `renderCampaignTemplateCard(t)` — gatilho, sequência de mensagens, mídias
+- `renderLandingPageCard(lp)` — usa `consolidated_html_cache` quando existir
 
-| Param | Default | Uso |
-|---|---|---|
-| `format` | `json` | `json` \| `html` \| `both` |
-| `include` | `all` | csv: `products,blogs,landing_pages,reviews,kols,videos,messages,company,milestones,spin` |
-| `slug` | — | filtra por produto específico |
-| `category` | — | filtra por categoria |
-| `approved_only` | `true` | só publicados/aprovados |
-| `since` | — | ISO date — devolve só registros com `updated_at > since` (sync incremental) |
-| `limit` / `offset` | `100` / `0` | paginação de produtos/blogs |
-| `embed_html` | `true` | inclui campo `html_card` renderizado em cada item |
+### Novos parâmetros
 
-## Estrutura do retorno (JSON)
+- `include` ganha chaves: `campaigns`, `lia`, `whatsapp_templates`, `authors`, `coupons`, `carousels`, `prompts`
+- `format=html` agrega TODOS os cards (produtos + reviews + milestones + spin + kols + landing pages + blogs + campanhas) em um único documento `<main>` indexável
+- `format=both` retorna JSON + `html_full` + `html_by_section` (objeto com HTML por bloco)
+- `pretty=true` indenta JSON para inspeção
+- `schema_only=true` retorna só os `@graph` JSON-LD consolidados
 
-```json
-{
-  "generated_at": "2026-06-02T...",
-  "company": { /* company_profile completo + JSON-LD Organization */ },
-  "products": [{
-    "id", "slug", "name", "category", "price", "currency",
-    "description_html", "benefits[]", "features[]", "faq[]",
-    "image_url", "images_gallery[]",
-    "videos": {
-      "youtube":   [{ "url","title","description","thumbnail" }],
-      "instagram": [...], "tiktok":[...], "technical":[...], "testimonial":[...]
-    },
-    "ctas": { "product_url", "resource_cta1..3" },
-    "messages": {
-      "cs":          [/* cs_messages ordenadas */],
-      "aftersales":  [/* aftersales_messages */]
-    },
-    "coupons": [...], "google_ads": [...],
-    "schema_jsonld": { /* Product + Offer + AggregateRating */ },
-    "html_card": "<article class='indexable-content'>...</article>",
-    "completion_score": { "percentage", "details" }
-  }],
-  "blogs":         [{ "...generated_pages com html_full + schema_jsonld" }],
-  "landing_pages": [{ "...landing_pages com data + html renderizado" }],
-  "reviews": {
-    "aggregate":   { "ratingValue","reviewCount" },
-    "approved":    [...],
-    "schema_jsonld": { /* AggregateRating + Review[] */ }
-  },
-  "video_testimonials": [...],
-  "kols":              [...],
-  "spin_solutions":    [...],
-  "milestones":        [...],
-  "stats": { "total_products", "total_blogs", "total_reviews" }
-}
-```
+### HTML consolidado (semantic integrity)
 
-Quando `format=html` → devolve `text/html` com **um documento único** agregando todos os cards (`<article>` por produto/blog) — pronto para iframe/embed.
-
-## Fontes de dados (já existentes, só reaproveitar)
-
-| Bloco | Origem |
-|---|---|
-| Produtos + score + relações | RPC `get_complete_knowledge_base` (já consolida cs/aftersales/coupons/google_ads) |
-| HTML de produto | reaproveitar `_shared/render-product-card.ts` (extrair do `generate-product-blog`) |
-| HTML de blog | tabela `generated_pages.html` + `generate-blog-index` |
-| HTML de LP | tabela `landing_pages.data` + builder do `save-landing-page` |
-| Reviews + schema | RPC `fn_get_reviews_schema_block` |
-| Vídeos | colunas JSONB já em `products_repository` |
-| Schema produto | reaproveitar `useProductSchemaGenerator` (portar p/ Deno em `_shared/`) |
-
-## Segurança e performance
-
-- **Público (sem JWT)** — mesmo padrão do `get-product-data` / `knowledge-feed`
-- Internamente usa `SERVICE_ROLE_KEY` (bypass RLS)
-- **NUNCA** `select('*')` em `products_repository` — colunas explícitas (regra core do projeto)
-- Cache HTTP: `Cache-Control: public, max-age=300, s-maxage=900`
-- Reaproveita cache `pg_cron` de 3h do KB (regra core)
-- Paginação obrigatória se `include` contém `products` sem `slug` (evita timeout)
-- Suporte a `since` para sync incremental (Loja Integrada, sites externos, LIA RAG)
-- CORS aberto
-
-## Arquivos a criar/editar
+Estrutura final do `format=html`:
 
 ```text
-supabase/functions/knowledge-export-full/index.ts        (novo, < 800 linhas)
-supabase/functions/_shared/render-product-card.ts        (novo — HTML do card)
-supabase/functions/_shared/render-blog-card.ts           (novo — HTML do blog)
-supabase/functions/_shared/build-export-payload.ts       (novo — montagem JSON)
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  meta + canonical + GTM-NZ64Q899 + JSON-LD @graph unificado
+  (Organization, AggregateRating, Reviews, Products, Services, Events, Persons, VideoObjects, FAQPage)
+</head>
+<body>
+  <main>
+    <article class="indexable-content company-profile">...</article>
+    <article class="indexable-content product-card">... × N</article>
+    <article class="indexable-content spin-card">... × N</article>
+    <article class="indexable-content milestone-card">... × N</article>
+    <article class="indexable-content review-card">... × N</article>
+    <article class="indexable-content testimonial-video-card">... × N</article>
+    <article class="indexable-content kol-card">... × N</article>
+    <article class="indexable-content landing-page-card">... × N</article>
+    <article class="indexable-content blog-card">... × N</article>
+    <article class="indexable-content campaign-template-card">... × N</article>
+  </main>
+</body>
 ```
 
-Sem mudanças de schema/RLS — apenas leitura.
+### Detalhes técnicos
 
-## Validação
+- Arquivo único: `supabase/functions/knowledge-export-full/index.ts` (mantém abaixo de 2500 linhas, extrai renderers para `_shared/knowledge-renderers.ts` se passar)
+- Sem alterações de schema/DB — somente leitura
+- Mantém `SERVICE_ROLE_KEY`, CORS público, cache `max-age=300, s-maxage=900`
+- Continua usando `get_complete_knowledge_base` RPC + queries diretas para os blocos novos
+- `messages.cs` e `messages.aftersales` já presentes — confirmados como "Sequência de 7 Mensagens / Pós-venda"
+- SPIN WhatsApp completo já presente em `spin_solutions[].whatsapp_complete_message`
+- Tabelas inexistentes (ex.: `campaign_templates`) → query com `try/catch` silencioso, retorna `[]` sem quebrar
 
-1. `curl ".../knowledge-export-full?slug=bio-vitality&format=both"` → JSON + html_card preenchido
-2. `curl ".../knowledge-export-full?include=reviews,company"` → payload mínimo
-3. `curl ".../knowledge-export-full?since=2026-05-01"` → só deltas
-4. Verificar contagem `stats.total_products` bate com SELECT count(*) WHERE approved=true
-5. Validar JSON-LD com schema.org validator
+### Documentação
 
-## O que NÃO entra agora
+- Atualizar `docs/KNOWLEDGE_BASE_API.md` com a lista completa de blocos, exemplos `curl` e shape JSON de cada card
+- Adicionar exemplo `format=html` + `include=all` no `docs/knowledge-base-api.postman_collection.json`
 
-- Escrita (endpoint é read-only)
-- Conteúdo do System B (`okeogjgqijbfkudfjadz`) — imutável e fora do escopo
-- Streaming/SSE (resposta única JSON)
+### Validação pós-deploy
 
-Pronto para implementar quando você aprovar.
+1. `curl ".../knowledge-export-full?format=json&include=all" | jq '.stats'` — confirmar contagens > 0
+2. `curl ".../knowledge-export-full?format=html&include=all" -o /tmp/k.html` — abrir e validar `<article>` por seção
+3. Rodar Rich Results Test no HTML gerado — todos os schemas válidos
