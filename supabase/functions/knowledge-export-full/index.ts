@@ -520,7 +520,7 @@ Deno.serve(async (req) => {
           )
           .order("updated_at", { ascending: false })
           .limit(limit);
-        if (approvedOnly) q = q.eq("status", "published");
+        if (approvedOnly) q = q.in("status", ["approved", "published"]);
         if (since) q = q.gt("updated_at", since);
         const { data, error } = await q;
         if (error) throw error;
