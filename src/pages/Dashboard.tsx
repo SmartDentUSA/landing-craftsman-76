@@ -466,8 +466,9 @@ const DashboardContent = () => {
           description: "Não foi possível copiar o código. Tente novamente.",
           variant: "destructive",
         });
+      } finally {
+        setBusyId(null);
       }
-    }
   };
 
   const handleDelete = (landingPage: LandingPage) => {
