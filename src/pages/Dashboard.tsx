@@ -723,9 +723,12 @@ const DashboardContent = () => {
                           variant="default"
                           size="sm"
                           onClick={() => handleCopyCode(landingPage)}
+                          disabled={busyId === landingPage.id}
                           className="bg-success hover:bg-success/90"
                         >
-                          <Copy className="h-4 w-4 mr-2" />
+                          {busyId === landingPage.id
+                            ? <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            : <Copy className="h-4 w-4 mr-2" />}
                           Copiar Código
                         </Button>
                         
