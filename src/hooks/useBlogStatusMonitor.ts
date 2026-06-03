@@ -19,40 +19,26 @@ export const useBlogStatusMonitor = (supabaseLandingPages?: any[]) => {
 
   useEffect(() => {
     fetchPublishedBlogs();
-    fetchProductsWithBlogs();
   }, []);
 
-  // Fetch products with individual blogs when approved landing pages change
+  // Fetch products with individual blogs only when approved LP set actually changes (stable key)
+  const approvedKey = useMemo(
+    () => approvedLandingPagesWithBlogs.map(lp => lp.id).sort().join(','),
+    [approvedLandingPagesWithBlogs]
+  );
   useEffect(() => {
+    if (!approvedKey) {
+      setProductsWithBlogs([]);
+      return;
+    }
     fetchProductsWithBlogs();
-  }, [approvedLandingPagesWithBlogs]);
+  }, [approvedKey]);
 
-  // Add real-time subscription to blog_posts table
+  // Real-time subscription to blog_posts (lightweight refresh)
   useEffect(() => {
     const channel = supabase
       .channel('blog-posts-monitor')
-      .on('postgres_changes', { 
-        event: 'INSERT', 
-        schema: 'public', 
-        table: 'blog_posts' 
-      }, () => {
-        console.log('📢 Blog post inserted, refreshing published blogs');
-        fetchPublishedBlogs();
-      })
-      .on('postgres_changes', { 
-        event: 'UPDATE', 
-        schema: 'public', 
-        table: 'blog_posts' 
-      }, () => {
-        console.log('📢 Blog post updated, refreshing published blogs');
-        fetchPublishedBlogs();
-      })
-      .on('postgres_changes', { 
-        event: 'DELETE', 
-        schema: 'public', 
-        table: 'blog_posts' 
-      }, () => {
-        console.log('📢 Blog post deleted, refreshing published blogs');
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'blog_posts' }, () => {
         fetchPublishedBlogs();
       })
       .subscribe();
@@ -62,25 +48,17 @@ export const useBlogStatusMonitor = (supabaseLandingPages?: any[]) => {
     };
   }, []);
 
-  // React to changes in approved landing pages
-  useEffect(() => {
-    console.log('🔄 Blog monitor detected landing page changes:', {
-      approvedCount: approvedLandingPagesWithBlogs.length,
-      withBlogGenerated: approvedLandingPagesWithBlogs.filter(lp => (lp.blog_generated ?? lp.blogGenerated)).length
-    });
-  }, [approvedLandingPagesWithBlogs]);
-
   const fetchPublishedBlogs = async () => {
     try {
+      // Select only the columns we actually use (no select('*'))
       const { data, error } = await supabase
         .from('blog_posts')
-        .select('*')
+        .select('id, title, status, created_at, landing_page_id')
         .eq('status', 'published')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       setPublishedBlogs(data || []);
-      console.log('📚 Published blogs fetched:', data?.length || 0);
     } catch (error) {
       console.error('❌ Error fetching published blogs:', error);
     }
