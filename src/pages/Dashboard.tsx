@@ -52,6 +52,7 @@ const DashboardContent = () => {
   const [publishLP, setPublishLP] = useState<LandingPage | null>(null);
   const [publishedMap, setPublishedMap] = useState<Record<string, { publish_status: string; published_url: string | null }>>({});
   const [unpublishingId, setUnpublishingId] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   useEffect(() => {
     getTrackingConfig().then(setTrackingConfig);
@@ -78,9 +79,14 @@ const DashboardContent = () => {
     }
   }, []);
 
+  // Stable key: only re-fetch when the set of LP ids actually changes
+  const landingPageIdsKey = useMemo(
+    () => landingPages.map(lp => lp.id).sort().join(','),
+    [landingPages]
+  );
   useEffect(() => {
     fetchPublishedInfo();
-  }, [landingPages, fetchPublishedInfo]);
+  }, [landingPageIdsKey, fetchPublishedInfo]);
 
   const handleUnpublish = async (lpId: string) => {
     if (!window.confirm('Despublicar esta LP? O conteúdo será removido do servidor.')) return;
@@ -369,10 +375,9 @@ const DashboardContent = () => {
     }
   };
 
-  const handleDuplicate = (landingPage: LandingPage) => {
+  const handleDuplicate = async (landingPage: LandingPage) => {
     try {
-      console.log('📋 Duplicating landing page:', landingPage.name);
-      
+      setBusyId(landingPage.id);
       const duplicateData = {
         name: `${landingPage.name} - Cópia`,
         status: 'draft' as const,
@@ -381,10 +386,10 @@ const DashboardContent = () => {
         embed: landingPage.embed,
         selected_product_ids: landingPage.selected_product_ids
       };
-      
-      const newId = addLandingPage(duplicateData);
+
+      const newId = await addLandingPage(duplicateData);
       console.log('✅ Landing page duplicated with ID:', newId);
-      
+
       toast({
         title: "Landing duplicada",
         description: `"${landingPage.name}" foi duplicada como rascunho.`,
@@ -396,12 +401,15 @@ const DashboardContent = () => {
         description: "Não foi possível duplicar a landing page. Tente novamente.",
         variant: "destructive",
       });
+    } finally {
+      setBusyId(null);
     }
   };
 
   const handleCopyCode = async (landingPage: LandingPage) => {
-    if (landingPage.status === 'approved') {
-      try {
+    if (landingPage.status !== 'approved') return;
+    setBusyId(landingPage.id);
+    try {
         const { data: lpData, error: lpError } = await supabase
           .from('landing_pages')
           .select('*')
@@ -458,8 +466,9 @@ const DashboardContent = () => {
           description: "Não foi possível copiar o código. Tente novamente.",
           variant: "destructive",
         });
+      } finally {
+        setBusyId(null);
       }
-    }
   };
 
   const handleDelete = (landingPage: LandingPage) => {
@@ -714,9 +723,12 @@ const DashboardContent = () => {
                           variant="default"
                           size="sm"
                           onClick={() => handleCopyCode(landingPage)}
+                          disabled={busyId === landingPage.id}
                           className="bg-success hover:bg-success/90"
                         >
-                          <Copy className="h-4 w-4 mr-2" />
+                          {busyId === landingPage.id
+                            ? <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            : <Copy className="h-4 w-4 mr-2" />}
                           Copiar Código
                         </Button>
                         
