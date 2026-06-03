@@ -1,73 +1,54 @@
+## Causa raiz da lentidão
 
-## Objetivo
+A tabela `company_profile` tem **2 registros** quando o sistema exige **exatamente 1** (regra core do projeto):
 
-Disponibilizar **uma única URL pública, sem API key**, em **texto puro otimizado para LLM**, que o WhatsApp Business AI (Meta Business Agent) possa consumir como base de conhecimento da Smart Dent — produtos, empresa, FAQs, mensagens CS, reviews, milestones.
+| id | company_name | criado em |
+|---|---|---|
+| `3b20b85d…` | **Smart Dent** (real, em uso) | 2025-10-14 |
+| `6f984e6c…` | **Nova Empresa** (lixo, vazio — sem email/site) | 2026-04-14 |
 
-## URLs finais que você vai usar no WhatsApp Business AI
+Isso quebra todas as queries que usam `.maybeSingle()` / `.single()` em `company_profile`, retornando o erro `PGRST116` visível no console:
 
-Após esta implementação, você vai cadastrar **3 fontes** no agente do WhatsApp:
-
-1. **URL principal (contexto geral, HTML)**
-   `https://www.smartdent.com.br` — site institucional
-
-2. **Identidade canônica (já existe)**
-   `https://www.smartdent.com.br/llms.txt`
-
-3. **Base de conhecimento completa em texto puro (NOVA)**
-   `https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/knowledge-export-full?format=txt&include=all`
-
-   Variantes úteis:
-   - Só produtos: `?format=txt&include=products,company`
-   - Markdown (melhor para alguns LLMs): `?format=markdown&include=all`
-   - Só empresa + reviews + milestones (institucional): `?format=txt&include=company,reviews,milestones`
-
-## O que muda no código
-
-### Arquivo: `supabase/functions/knowledge-export-full/index.ts`
-
-Adicionar dois novos formatos ao endpoint existente (que já é público, sem JWT, e já consulta todos os dados):
-
-1. **`format=txt`** — texto puro, sem markdown, otimizado para token economy:
-   - Cabeçalho com empresa (nome, CNPJ, fundação, fundadores, endereço, contato)
-   - Para cada produto: nome, categoria, preço, descrição limpa (strip HTML), benefícios, características, especificações técnicas (lista chave: valor), FAQ (P/R), link
-   - Reviews aprovados (autor, rating, texto)
-   - Milestones (ano — título — descrição)
-   - Landing pages (nome, status, URL)
-   - Blogs publicados (título, resumo, URL)
-   - Sem JSON, sem tags HTML, sem JSON-LD — apenas texto corrido com separadores `---`
-
-2. **`format=markdown`** — mesma estrutura, mas com `#`, `##`, `-`, `**negrito**`, tabelas markdown para specs e bullets para benefícios. Melhor para Claude/GPT que entendem markdown nativamente.
-
-3. Reutilizar funções já existentes (`stripHtml`, `asArray`, dados já carregados de `company`, `products`, `reviewsBlock`, `milestones`, `landingPages`, `blogs`) — apenas adicionar dois novos renderers de saída antes do bloco `format === "html"` (linha 774).
-
-4. Content-Type:
-   - `format=txt` → `text/plain; charset=utf-8`
-   - `format=markdown` → `text/markdown; charset=utf-8`
-   - Manter `Cache-Control: public, max-age=300, s-maxage=900`
-
-### Sem alterações em
-
-- Banco de dados (sem migration)
-- Auth/RLS (endpoint já público com SERVICE_ROLE interno)
-- Outros formatos existentes (`json`, `html`, `both`, `schema_only`) — preservados intactos
-
-## Validação após implementação
-
-```bash
-curl "https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/knowledge-export-full?format=txt&include=all" | head -200
-curl "https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/knowledge-export-full?format=markdown&include=products&limit=5"
+```
+❌ Error loading tracking config:
+{ code: "PGRST116", message: "Results contain 2 rows, application/vnd.pgrst.object+json requires 1 row" }
+    at getTrackingConfig (src/lib/tracking-injector.ts:12)
 ```
 
-Resultado esperado: texto limpo, legível por humanos e por LLMs, sem tags HTML, sem JSON.
+`company_profile` é consumido em **34 arquivos** (hooks de vídeos, reviews, links institucionais, target audience, NPS metrics, tracking, template engine, blog editor, LP publish, code view, etc.). Toda página que monta o Dashboard/LP/Blog dispara várias dessas queries em paralelo — **todas falhando** → React Query tenta retry → re-renders em cascata → sistema travado.
 
-## Detalhes técnicos
+Não tem relação com o deploy do `knowledge-export-full` (esse é backend, não é chamado pelo frontend). A coincidência de timing é só percepção.
 
-- O endpoint `knowledge-export-full` já agrega tudo o que o WhatsApp AI precisa (produtos com benefícios/FAQ/specs, mensagens CS por produto, reviews Google, milestones, LPs, blogs, empresa expandida com fundadores e regulatório).
-- O `?approved_only=true` (default) já filtra apenas itens publicados/aprovados — seguro para uso público.
-- Limite atual de produtos: `limit=50` por default, ajustável até maior via query param.
-- Não precisa de cache extra: o endpoint já tem `s-maxage=900` (15 min) no Cloudflare edge.
+## Correção (1 migration)
 
-## Fora de escopo
+Deletar o registro duplicado "Nova Empresa" (vazio, nunca foi preenchido):
 
-- Corrigir o `knowledge-base?format=ai_training` (erro `column products_repository.competitors`) — tarefa separada se quiser manter o endpoint legado com API key.
-- Adicionar autenticação ao `knowledge-export-full` — manter público é o ponto da feature.
+```sql
+DELETE FROM public.company_profile
+WHERE id = '6f984e6c-8bec-4dc9-a81e-9d29e9714909'
+  AND company_name = 'Nova Empresa';
+```
+
+Manter apenas o registro real `3b20b85d…` (Smart Dent).
+
+## Proteção futura (opcional, recomendado)
+
+Adicionar constraint para impedir que isso volte a acontecer:
+
+```sql
+CREATE UNIQUE INDEX company_profile_singleton
+  ON public.company_profile ((true));
+```
+
+Isso garante que só pode existir 1 linha na tabela — qualquer INSERT extra falha imediatamente, em vez de quebrar o app silenciosamente. Alinhado com a regra core "company_profile MUST contain exactly ONE record".
+
+## Validação
+
+1. Recarregar `/dashboard` — o erro `PGRST116` no console deve sumir.
+2. Navegação geral deve voltar à velocidade normal.
+3. `SELECT COUNT(*) FROM company_profile` → deve retornar `1`.
+
+## Fora do escopo
+
+- Não mexer no `knowledge-export-full` (está funcionando, não é a causa).
+- Não alterar nenhum hook/componente — o código está correto, o dado é que está inválido.
