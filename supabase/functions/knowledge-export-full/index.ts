@@ -71,6 +71,233 @@ const safe = async <T,>(fn: () => Promise<T>, fallback: T): Promise<T> => {
   }
 };
 
+const stripHtml = (s: unknown): string =>
+  String(s ?? "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+
+// ---------- Plain-text / Markdown renderers (LLM / WhatsApp AI) ----------
+
+function renderTxt(payload: any): string {
+  const out: string[] = [];
+  const c = payload.company;
+  const sep = "\n" + "-".repeat(60) + "\n";
+
+  out.push(`BASE DE CONHECIMENTO — gerada em ${payload.generated_at}`);
+  out.push(`Versao: ${payload.version}`);
+
+  if (c) {
+    out.push(sep + "EMPRESA");
+    out.push(`Nome: ${c.company_name || ""}`);
+    if (c.legal_name) out.push(`Razao Social: ${c.legal_name}`);
+    if (c.tax_id) out.push(`CNPJ: ${c.tax_id}`);
+    if (c.founded_year) out.push(`Fundacao: ${c.founded_year}`);
+    if (c.business_sector) out.push(`Setor: ${c.business_sector}`);
+    if (c.company_description) out.push(`Descricao: ${stripHtml(c.company_description)}`);
+    if (c.mission_statement) out.push(`Missao: ${stripHtml(c.mission_statement)}`);
+    if (c.vision_statement) out.push(`Visao: ${stripHtml(c.vision_statement)}`);
+    if (c.brand_values) out.push(`Valores: ${stripHtml(c.brand_values)}`);
+    if (c.differentiators) out.push(`Diferenciais: ${stripHtml(c.differentiators)}`);
+    if (c.target_audience) out.push(`Publico-alvo: ${stripHtml(c.target_audience)}`);
+    if (c.location) out.push(`Endereco: ${c.location}`);
+    if (c.contact_phone) out.push(`Telefone: ${c.contact_phone}`);
+    if (c.contact_email) out.push(`Email: ${c.contact_email}`);
+    if (c.website_url) out.push(`Website: ${c.website_url}`);
+    if (Array.isArray(c.founders) && c.founders.length) {
+      out.push("Fundadores e equipe:");
+      c.founders.forEach((f: any) =>
+        out.push(`  - ${f.name}${f.role ? ` (${f.role})` : ""}${f.academic_title ? ` — ${f.academic_title}` : ""}`),
+      );
+    }
+  }
+
+  const products = asArray<any>(payload.products);
+  if (products.length) {
+    out.push(sep + `PRODUTOS (${products.length})`);
+    products.forEach((p: any, i: number) => {
+      out.push(`\n[${i + 1}] ${p.name}`);
+      if (p.category) out.push(`Categoria: ${p.category}${p.subcategory ? ` > ${p.subcategory}` : ""}`);
+      if (p.price != null) out.push(`Preco: ${p.currency || "BRL"} ${p.price}${p.promo_price ? ` (promo: ${p.promo_price})` : ""}`);
+      if (p.description) out.push(`Descricao: ${stripHtml(p.description)}`);
+      if (p.applications) out.push(`Aplicacoes: ${stripHtml(p.applications)}`);
+      if (asArray(p.benefits).length) {
+        out.push("Beneficios:");
+        asArray<string>(p.benefits).forEach((b) => out.push(`  - ${stripHtml(b)}`));
+      }
+      if (asArray(p.features).length) {
+        out.push("Caracteristicas:");
+        asArray<string>(p.features).forEach((b) => out.push(`  - ${stripHtml(b)}`));
+      }
+      if (asArray(p.technical_specifications).length) {
+        out.push("Especificacoes tecnicas:");
+        asArray<any>(p.technical_specifications).forEach((s: any) =>
+          out.push(`  - ${s.label || s.key || s.name}: ${s.value || s.val}`),
+        );
+      }
+      if (asArray(p.faq).length) {
+        out.push("FAQ:");
+        asArray<any>(p.faq).forEach((f: any) => {
+          out.push(`  P: ${stripHtml(f.question || f.q)}`);
+          out.push(`  R: ${stripHtml(f.answer || f.a)}`);
+        });
+      }
+      if (asArray(p.keywords).length) out.push(`Palavras-chave: ${asArray(p.keywords).join(", ")}`);
+      if (p.ctas?.product_url) out.push(`Link: ${p.ctas.product_url}`);
+    });
+  }
+
+  const milestones = asArray<any>(payload.milestones);
+  if (milestones.length) {
+    out.push(sep + `MARCOS HISTORICOS (${milestones.length})`);
+    milestones.forEach((m: any) =>
+      out.push(`${m.year}${m.month ? `-${String(m.month).padStart(2, "0")}` : ""} — ${m.title}${m.description ? `: ${stripHtml(m.description)}` : ""}`),
+    );
+  }
+
+  const reviews = asArray<any>(payload.reviews?.approved);
+  if (reviews.length) {
+    out.push(sep + `AVALIACOES GOOGLE (${reviews.length})`);
+    if (payload.reviews?.aggregate) {
+      const a = payload.reviews.aggregate;
+      out.push(`Nota media: ${a.rating || a.average_rating || "?"} (${a.review_count || a.total || reviews.length} avaliacoes)`);
+    }
+    reviews.forEach((r: any) => {
+      out.push(`- ${r.author_name || "Anonimo"} (${r.rating || 5}/5)${r.review_date ? ` em ${r.review_date}` : ""}`);
+      if (r.review_text) out.push(`  "${stripHtml(r.review_text)}"`);
+    });
+  }
+
+  const lps = asArray<any>(payload.landing_pages);
+  if (lps.length) {
+    out.push(sep + `LANDING PAGES (${lps.length})`);
+    lps.forEach((lp: any) => out.push(`- ${lp.name} [${lp.status}]`));
+  }
+
+  const blogs = asArray<any>(payload.blogs);
+  if (blogs.length) {
+    out.push(sep + `BLOGS (${blogs.length})`);
+    blogs.forEach((b: any) => out.push(`- ${b.title || b.name}${b.url ? ` — ${b.url}` : ""}`));
+  }
+
+  const kols = asArray<any>(payload.kols);
+  if (kols.length) {
+    out.push(sep + `KOLS (${kols.length})`);
+    kols.forEach((k: any) => out.push(`- ${k.name}${k.profession ? ` (${k.profession})` : ""}`));
+  }
+
+  return out.join("\n") + "\n";
+}
+
+function renderMarkdown(payload: any): string {
+  const out: string[] = [];
+  const c = payload.company;
+
+  out.push(`# Base de Conhecimento`);
+  out.push(`*Gerada em ${payload.generated_at} — versao ${payload.version}*\n`);
+
+  if (c) {
+    out.push(`## Empresa: ${c.company_name || ""}`);
+    if (c.legal_name) out.push(`- **Razao Social:** ${c.legal_name}`);
+    if (c.tax_id) out.push(`- **CNPJ:** ${c.tax_id}`);
+    if (c.founded_year) out.push(`- **Fundacao:** ${c.founded_year}`);
+    if (c.business_sector) out.push(`- **Setor:** ${c.business_sector}`);
+    if (c.location) out.push(`- **Endereco:** ${c.location}`);
+    if (c.contact_phone) out.push(`- **Telefone:** ${c.contact_phone}`);
+    if (c.contact_email) out.push(`- **Email:** ${c.contact_email}`);
+    if (c.website_url) out.push(`- **Website:** ${c.website_url}`);
+    if (c.company_description) out.push(`\n${stripHtml(c.company_description)}\n`);
+    if (c.mission_statement) out.push(`**Missao:** ${stripHtml(c.mission_statement)}`);
+    if (c.vision_statement) out.push(`**Visao:** ${stripHtml(c.vision_statement)}`);
+    if (c.differentiators) out.push(`**Diferenciais:** ${stripHtml(c.differentiators)}`);
+    if (c.target_audience) out.push(`**Publico-alvo:** ${stripHtml(c.target_audience)}`);
+    if (Array.isArray(c.founders) && c.founders.length) {
+      out.push(`\n### Fundadores e Equipe`);
+      c.founders.forEach((f: any) =>
+        out.push(`- **${f.name}**${f.role ? ` — ${f.role}` : ""}${f.academic_title ? ` (${f.academic_title})` : ""}`),
+      );
+    }
+  }
+
+  const products = asArray<any>(payload.products);
+  if (products.length) {
+    out.push(`\n## Produtos (${products.length})\n`);
+    products.forEach((p: any) => {
+      out.push(`### ${p.name}`);
+      if (p.category) out.push(`*${p.category}${p.subcategory ? ` › ${p.subcategory}` : ""}*`);
+      if (p.price != null) out.push(`**Preco:** ${p.currency || "BRL"} ${p.price}${p.promo_price ? ` ~~${p.promo_price}~~` : ""}`);
+      if (p.description) out.push(`\n${stripHtml(p.description)}\n`);
+      if (asArray(p.benefits).length) {
+        out.push(`**Beneficios:**`);
+        asArray<string>(p.benefits).forEach((b) => out.push(`- ${stripHtml(b)}`));
+      }
+      if (asArray(p.features).length) {
+        out.push(`\n**Caracteristicas:**`);
+        asArray<string>(p.features).forEach((b) => out.push(`- ${stripHtml(b)}`));
+      }
+      if (asArray(p.technical_specifications).length) {
+        out.push(`\n**Especificacoes tecnicas:**\n`);
+        out.push(`| Campo | Valor |`);
+        out.push(`|---|---|`);
+        asArray<any>(p.technical_specifications).forEach((s: any) =>
+          out.push(`| ${s.label || s.key || s.name} | ${s.value || s.val} |`),
+        );
+      }
+      if (asArray(p.faq).length) {
+        out.push(`\n**FAQ:**`);
+        asArray<any>(p.faq).forEach((f: any) => {
+          out.push(`- **${stripHtml(f.question || f.q)}** — ${stripHtml(f.answer || f.a)}`);
+        });
+      }
+      if (p.ctas?.product_url) out.push(`\n[Ver produto](${p.ctas.product_url})\n`);
+      out.push(`\n---\n`);
+    });
+  }
+
+  const milestones = asArray<any>(payload.milestones);
+  if (milestones.length) {
+    out.push(`\n## Marcos Historicos\n`);
+    milestones.forEach((m: any) =>
+      out.push(`- **${m.year}** — ${m.title}${m.description ? `: ${stripHtml(m.description)}` : ""}`),
+    );
+  }
+
+  const reviews = asArray<any>(payload.reviews?.approved);
+  if (reviews.length) {
+    out.push(`\n## Avaliacoes Google (${reviews.length})\n`);
+    if (payload.reviews?.aggregate) {
+      const a = payload.reviews.aggregate;
+      out.push(`**Nota media:** ${a.rating || a.average_rating || "?"} (${a.review_count || a.total || reviews.length} avaliacoes)\n`);
+    }
+    reviews.forEach((r: any) => {
+      out.push(`- **${r.author_name || "Anonimo"}** (${r.rating || 5}/5)${r.review_date ? ` — *${r.review_date}*` : ""}`);
+      if (r.review_text) out.push(`  > ${stripHtml(r.review_text)}`);
+    });
+  }
+
+  const lps = asArray<any>(payload.landing_pages);
+  if (lps.length) {
+    out.push(`\n## Landing Pages\n`);
+    lps.forEach((lp: any) => out.push(`- ${lp.name} *[${lp.status}]*`));
+  }
+
+  const blogs = asArray<any>(payload.blogs);
+  if (blogs.length) {
+    out.push(`\n## Blogs\n`);
+    blogs.forEach((b: any) => out.push(`- ${b.title || b.name}${b.url ? ` — ${b.url}` : ""}`));
+  }
+
+  return out.join("\n") + "\n";
+}
+
 // ---------- HTML renderers ----------
 
 function renderProductCard(p: any, company: any, msgs: any): string {
