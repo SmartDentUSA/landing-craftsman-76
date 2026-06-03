@@ -69,19 +69,21 @@ export const useSelectedProducts = () => {
     if (productIds.length === 0) return [];
 
     try {
-      console.log('🔄 Loading products by IDs, force refresh:', forceRefresh);
-      
-      const query = supabase
-        .from('products_repository')
-        .select('*')
-        .in('id', productIds);
-        
-      // Force refresh bypasses any potential caching
-      if (forceRefresh) {
-        console.log('🔄 Forcing refresh, clearing any potential cache');
-      }
+      // Explicit column list — never use select('*') on products_repository (causes DB timeouts)
+      const COLUMNS = [
+        'id', 'name', 'description', 'sales_pitch', 'benefits', 'features',
+        'keywords', 'market_keywords', 'search_intent_keywords',
+        'price', 'currency', 'category', 'image_url', 'images_gallery',
+        'product_url', 'target_audience',
+        'youtube_videos', 'instagram_videos', 'testimonial_videos',
+        'technical_videos', 'tiktok_videos',
+        'offer_discount_cta', 'individual_blog_content', 'original_data',
+      ].join(', ');
 
-      const { data, error } = await query;
+      const { data, error } = await supabase
+        .from('products_repository')
+        .select(COLUMNS)
+        .in('id', productIds);
 
       if (error) throw error;
 
