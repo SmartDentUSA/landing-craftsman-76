@@ -88,8 +88,9 @@ export const useSelectedProducts = () => {
       if (error) throw error;
 
       // Order products according to productIds order and format for template
+      const rows = (data as any[]) || [];
       const orderedProducts = productIds
-        .map(id => data?.find(p => p.id === id))
+        .map(id => rows.find((p: any) => p.id === id))
         .filter(Boolean)
         .map(product => ({
           id: product.id,
