@@ -997,6 +997,28 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ---------- TXT / Markdown format (LLM / WhatsApp AI) ----------
+    if (format === "txt" || format === "text" || format === "plain") {
+      return new Response(renderTxt(payload), {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "text/plain; charset=utf-8",
+          "Cache-Control": "public, max-age=300, s-maxage=900",
+        },
+      });
+    }
+    if (format === "markdown" || format === "md") {
+      return new Response(renderMarkdown(payload), {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "text/markdown; charset=utf-8",
+          "Cache-Control": "public, max-age=300, s-maxage=900",
+        },
+      });
+    }
+
     // ---------- HTML format ----------
     if (format === "html" || format === "both") {
       const sections: Record<string, string> = {
