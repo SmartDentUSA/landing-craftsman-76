@@ -79,9 +79,14 @@ const DashboardContent = () => {
     }
   }, []);
 
+  // Stable key: only re-fetch when the set of LP ids actually changes
+  const landingPageIdsKey = useMemo(
+    () => landingPages.map(lp => lp.id).sort().join(','),
+    [landingPages]
+  );
   useEffect(() => {
     fetchPublishedInfo();
-  }, [landingPages, fetchPublishedInfo]);
+  }, [landingPageIdsKey, fetchPublishedInfo]);
 
   const handleUnpublish = async (lpId: string) => {
     if (!window.confirm('Despublicar esta LP? O conteúdo será removido do servidor.')) return;
