@@ -1,54 +1,75 @@
-## Causa raiz da lentidão
+## Diagnóstico
 
-A tabela `company_profile` tem **2 registros** quando o sistema exige **exatamente 1** (regra core do projeto):
+A lentidão vem de dois pontos principais no carregamento do dashboard:
 
-| id | company_name | criado em |
-|---|---|---|
-| `3b20b85d…` | **Smart Dent** (real, em uso) | 2025-10-14 |
-| `6f984e6c…` | **Nova Empresa** (lixo, vazio — sem email/site) | 2026-04-14 |
+1. **Todas as páginas pesadas são importadas no início do app**
+   - `App.tsx` importa `Editor`, `Repository`, OAuth settings, métricas e outras telas grandes antes mesmo de abrir essas rotas.
+   - O perfil mostra 248 scripts carregados e recursos pesados como `Editor.tsx`, `recharts`, `ProductEditModal` e `lucide-react`, elevando o primeiro carregamento para ~8,5s.
 
-Isso quebra todas as queries que usam `.maybeSingle()` / `.single()` em `company_profile`, retornando o erro `PGRST116` visível no console:
+2. **O dashboard faz consultas pesadas e repetidas logo ao abrir**
+   - `useBlogStatusMonitor` carrega todos os `blog_posts` com `select('*')` e depois carrega centenas de produtos associados (`allSelectedProductIds: 367`).
+   - `useSelectedProducts` também usa `select('*')` em `products_repository`, contrariando a regra do projeto de nunca usar wildcard nessa tabela.
+   - Isso trava a interface e faz qualquer clique parecer que “não funciona”.
 
-```
-❌ Error loading tracking config:
-{ code: "PGRST116", message: "Results contain 2 rows, application/vnd.pgrst.object+json requires 1 row" }
-    at getTrackingConfig (src/lib/tracking-injector.ts:12)
-```
+## Plano de correção
 
-`company_profile` é consumido em **34 arquivos** (hooks de vídeos, reviews, links institucionais, target audience, NPS metrics, tracking, template engine, blog editor, LP publish, code view, etc.). Toda página que monta o Dashboard/LP/Blog dispara várias dessas queries em paralelo — **todas falhando** → React Query tenta retry → re-renders em cascata → sistema travado.
+### 1. Tornar rotas pesadas carregadas sob demanda
 
-Não tem relação com o deploy do `knowledge-export-full` (esse é backend, não é chamado pelo frontend). A coincidência de timing é só percepção.
+Alterar `src/App.tsx` para usar `React.lazy` + `Suspense` nas páginas pesadas:
 
-## Correção (1 migration)
+- `Dashboard`
+- `Editor`
+- `CodeView`
+- `Repository`
+- configurações OAuth/Cloudflare/Publicação
+- `LPClone`
+- métricas RAG
 
-Deletar o registro duplicado "Nova Empresa" (vazio, nunca foi preenchido):
+Resultado esperado: abrir o sistema não baixa/editoria tudo de uma vez; cada tela carrega apenas quando acessada.
 
-```sql
-DELETE FROM public.company_profile
-WHERE id = '6f984e6c-8bec-4dc9-a81e-9d29e9714909'
-  AND company_name = 'Nova Empresa';
-```
+### 2. Remover consulta pesada automática do dashboard
 
-Manter apenas o registro real `3b20b85d…` (Smart Dent).
+Ajustar `src/hooks/useBlogStatusMonitor.ts` para:
 
-## Proteção futura (opcional, recomendado)
+- não carregar produtos de blogs automaticamente no mount;
+- carregar apenas dados mínimos dos posts publicados, sem `select('*')`;
+- remover logs repetitivos que disparam em renderizações;
+- calcular contadores com dados leves.
 
-Adicionar constraint para impedir que isso volte a acontecer:
+Resultado esperado: dashboard aparece rápido e os botões ficam responsivos.
 
-```sql
-CREATE UNIQUE INDEX company_profile_singleton
-  ON public.company_profile ((true));
-```
+### 3. Corrigir `products_repository` sem wildcard
 
-Isso garante que só pode existir 1 linha na tabela — qualquer INSERT extra falha imediatamente, em vez de quebrar o app silenciosamente. Alinhado com a regra core "company_profile MUST contain exactly ONE record".
+Alterar `src/hooks/useSelectedProducts.ts` para selecionar apenas colunas necessárias, seguindo a regra do projeto:
+
+- `id`, `name`, `description`, `sales_pitch`, `benefits`, `features`, `keywords`, etc.
+- manter `individual_blog_content` apenas quando necessário.
+
+Resultado esperado: evitar timeout e reduzir payload ao buscar produtos.
+
+### 4. Dar feedback imediato nos botões da lista
+
+Adicionar estados de carregamento por LP no `Dashboard.tsx` para botões demorados:
+
+- `Copiar Código`
+- `Baixar HTML`
+- `Duplicar`
+- `Excluir`
+- `Nova Landing Page`
+
+Resultado esperado: ao clicar, o botão mostra spinner/desabilita, deixando claro que o sistema recebeu o clique.
+
+### 5. Ajustar pequenos pontos que causam chamadas extras
+
+- Evitar `fetchPublishedInfo()` rodando a cada alteração completa de `landingPages`; usar uma dependência estável por IDs/status.
+- Corrigir `handleDuplicate`, que hoje chama `addLandingPage()` sem `await`, podendo mostrar sucesso antes de terminar.
+- Trocar `.single()` por `.maybeSingle()` onde há risco de não retornar linha.
 
 ## Validação
 
-1. Recarregar `/dashboard` — o erro `PGRST116` no console deve sumir.
-2. Navegação geral deve voltar à velocidade normal.
-3. `SELECT COUNT(*) FROM company_profile` → deve retornar `1`.
+Após implementar:
 
-## Fora do escopo
-
-- Não mexer no `knowledge-export-full` (está funcionando, não é a causa).
-- Não alterar nenhum hook/componente — o código está correto, o dado é que está inválido.
+- medir novamente o perfil de performance no dashboard;
+- confirmar que o dashboard não baixa `Editor.tsx`/`recharts` no carregamento inicial;
+- clicar em `Copiar Código`, `Publicar`, `Baixar HTML` e `Editar` para confirmar resposta imediata;
+- verificar que não há novos erros no console.
