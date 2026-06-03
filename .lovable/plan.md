@@ -1,32 +1,26 @@
+## Correção do endpoint `knowledge-export-full` — landing_pages aprovadas no markdown
 
-# Limpeza de SEO Overrides Placeholder
+### Problema
+Hoje, com `approved_only=true` (default), o filtro é `status = 'published'`. Existem 5 landing pages com `status = 'approved'` e 0 com `published`, então o resultado vem vazio nos formatos JSON/markdown/txt.
 
-## Objetivo
-Remover textos genéricos/placeholder dos campos `seo_title_override` e `seo_description_override` em `products_repository`, fazendo o endpoint `knowledge-export-full` voltar a usar os nomes/descrições reais dos produtos como fallback.
+### Mudança
+Em `supabase/functions/knowledge-export-full/index.ts`, linha 523:
 
-## Passos
+- Substituir:
+  ```ts
+  if (approvedOnly) q = q.eq("status", "published");
+  ```
+- Por:
+  ```ts
+  if (approvedOnly) q = q.in("status", ["approved", "published"]);
+  ```
 
-1. **Backup CSV (reversibilidade)**
-   - Exportar para `/mnt/documents/backup_seo_overrides_pre_cleanup.csv` as 43+13 linhas afetadas (id, name, seo_title_override, seo_description_override) antes de qualquer UPDATE.
+Assim, com o default `approved_only=true`, o endpoint retorna tanto landing pages `approved` quanto `published` — incluindo as 5 atualmente aprovadas. O comportamento opt-in `approved_only=false` continua retornando tudo.
 
-2. **UPDATE via insert tool (DML, não migration)**
-   - `seo_title_override = NULL` onde casa regex:
-     `smartphone|colch[aã]o|notebook|guia definitivo.*(escolher|como|escolha)|melhores.*2024|2024.*(comparativo|guia|an[aá]lise|modelos)`
-   - `seo_description_override = NULL` onde ILIKE padrões genéricos:
-     - `%melhores produtos premium%entrega rápida%`
-     - `%anúncios personalizados no TikTok%`
-     - demais frases genéricas identificadas na auditoria anterior
+### Validação
+1. `curl ".../knowledge-export-full?format=json&include=landing_pages"` → `total_landing_pages >= 5`.
+2. `curl ".../knowledge-export-full?format=markdown&include=landing_pages&embed_html=true"` → seção `landing_pages` populada com os `html_card` das 5 LPs.
+3. Conferir que `products`, `milestones`, `reviews` continuam intactos (nenhuma outra branch alterada).
 
-3. **Validação pós-update**
-   - `curl` no endpoint `?format=json&include=all` e `grep -ci` para "colchão", "smartphone", "guia definitivo", "2024" → esperado 0 ocorrências dos placeholders.
-   - Query SQL contando linhas ainda com padrões → esperado 0.
-
-4. **Relatório final**
-   - Quantas linhas tiveram `seo_title_override` limpo
-   - Quantas linhas tiveram `seo_description_override` limpo
-   - Link do CSV de backup
-
-## Fora de escopo
-- Nenhuma alteração em código, edge functions, prompts ou schema.
-- Páginas publicadas não são tocadas (apenas o override no banco).
-- Reversível: basta re-importar o CSV de backup.
+### Fora do escopo (decisão)
+A inclusão direta da tabela `blog_posts` para resolver `blogs=0` **não** será feita nesta mudança — fica como tarefa separada, pois envolve definir mapeamento de campos (`blog_posts` → schema de `generated_pages`) e política de aprovação distinta. Esta correção foca exclusivamente em `landing_pages`, conforme pedido.
