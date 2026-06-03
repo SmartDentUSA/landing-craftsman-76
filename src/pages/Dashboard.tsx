@@ -375,10 +375,9 @@ const DashboardContent = () => {
     }
   };
 
-  const handleDuplicate = (landingPage: LandingPage) => {
+  const handleDuplicate = async (landingPage: LandingPage) => {
     try {
-      console.log('📋 Duplicating landing page:', landingPage.name);
-      
+      setBusyId(landingPage.id);
       const duplicateData = {
         name: `${landingPage.name} - Cópia`,
         status: 'draft' as const,
@@ -387,10 +386,10 @@ const DashboardContent = () => {
         embed: landingPage.embed,
         selected_product_ids: landingPage.selected_product_ids
       };
-      
-      const newId = addLandingPage(duplicateData);
+
+      const newId = await addLandingPage(duplicateData);
       console.log('✅ Landing page duplicated with ID:', newId);
-      
+
       toast({
         title: "Landing duplicada",
         description: `"${landingPage.name}" foi duplicada como rascunho.`,
@@ -402,12 +401,15 @@ const DashboardContent = () => {
         description: "Não foi possível duplicar a landing page. Tente novamente.",
         variant: "destructive",
       });
+    } finally {
+      setBusyId(null);
     }
   };
 
   const handleCopyCode = async (landingPage: LandingPage) => {
-    if (landingPage.status === 'approved') {
-      try {
+    if (landingPage.status !== 'approved') return;
+    setBusyId(landingPage.id);
+    try {
         const { data: lpData, error: lpError } = await supabase
           .from('landing_pages')
           .select('*')
