@@ -41,53 +41,54 @@ export function useCompanyReviews() {
         return null;
       }
 
+      // company_profile é SINGLETON — buscar a única linha sem filtrar por user_id
       const { data, error } = await supabase
         .from("company_profile")
-        .select("company_reviews")
-        .eq("user_id", user.id)
+        .select("id, company_reviews")
+        .limit(1)
         .maybeSingle();
 
       if (error) throw error;
 
-      // Se não existir company_profile, cria automaticamente
+      const emptyReviews: CompanyReviewsJSONB = {
+        manual_reviews: [],
+        google_reviews_imported: false,
+        google_place_id: null,
+        last_google_sync: null,
+      };
+
+      // Só insere se realmente não existir NENHUMA linha
       if (!data) {
         const { error: insertError } = await supabase
           .from("company_profile")
           .insert({
             user_id: user.id,
             company_name: "Nova Empresa",
-            company_reviews: {
-              manual_reviews: [],
-              google_reviews_imported: false,
-              google_place_id: null,
-              last_google_sync: null
-            }
+            company_reviews: emptyReviews as any,
           });
 
-        if (insertError) throw insertError;
-
-        return {
-          manual_reviews: [],
-          google_reviews_imported: false,
-          google_place_id: null,
-          last_google_sync: null
-        };
+        // Se outro processo já criou (23505 do singleton), ignorar silenciosamente
+        if (insertError && (insertError as any).code !== "23505") {
+          throw insertError;
+        }
+        return emptyReviews;
       }
 
-      if (!data?.company_reviews) {
-        return {
-          manual_reviews: [],
-          google_reviews_imported: false,
-          google_place_id: null,
-          last_google_sync: null
-        };
-      }
-      
+      if (!data.company_reviews) return emptyReviews;
+
       return data.company_reviews as unknown as CompanyReviewsJSONB;
       
     } catch (error: any) {
+      // Erro 23505 do singleton é benigno (linha já existe) — não logar como erro
+      if (error?.code === "23505") {
+        return {
+          manual_reviews: [],
+          google_reviews_imported: false,
+          google_place_id: null,
+          last_google_sync: null,
+        };
+      }
       console.error("Erro ao carregar company reviews:", error);
-      // Não mostrar toast para erros de autenticação inicial
       if (error.message && !error.message.includes("não autenticado")) {
         toast({
           title: "Erro ao carregar reviews",
@@ -119,13 +120,23 @@ export function useCompanyReviews() {
         reviews_preview: reviews.manual_reviews?.slice(0, 2)
       });
 
+      // Localizar a única linha do singleton e atualizá-la pelo id
+      const { data: existing, error: fetchErr } = await supabase
+        .from("company_profile")
+        .select("id")
+        .limit(1)
+        .maybeSingle();
+
+      if (fetchErr) throw fetchErr;
+      if (!existing) throw new Error("company_profile não encontrado");
+
       const { error } = await supabase
         .from("company_profile")
         .update({
           company_reviews: reviews as any,
           updated_at: new Date().toISOString()
         })
-        .eq("user_id", user.id);
+        .eq("id", existing.id);
 
       if (error) throw error;
 
