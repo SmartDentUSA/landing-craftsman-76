@@ -54,8 +54,8 @@ export const useLinksRepository = () => {
 
   const loadExternalLinks = async () => {
     try {
-      const { data, error } = await withRetry(() =>
-        supabase
+      const { data, error } = await withRetry(async () =>
+        await supabase
           .from('external_links')
           .select('*')
           .eq('approved', true)
