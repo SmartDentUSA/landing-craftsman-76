@@ -370,6 +370,9 @@ function generateCompanyMarkdown(company: any): string {
     md += `\`\`\`\n${company.youtube_company_footer}\n\`\`\`\n\n`;
   }
 
+  // === Dump JSON Bruto — garantia de cobertura total ===
+  md += `<details><summary>📦 Dados Brutos da Empresa (JSON Completo)</summary>\n\n\`\`\`json\n${JSON.stringify(company, null, 2)}\n\`\`\`\n\n</details>\n\n`;
+
   md += `---\n\n`;
   return md;
 }
