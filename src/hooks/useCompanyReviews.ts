@@ -120,13 +120,23 @@ export function useCompanyReviews() {
         reviews_preview: reviews.manual_reviews?.slice(0, 2)
       });
 
+      // Localizar a única linha do singleton e atualizá-la pelo id
+      const { data: existing, error: fetchErr } = await supabase
+        .from("company_profile")
+        .select("id")
+        .limit(1)
+        .maybeSingle();
+
+      if (fetchErr) throw fetchErr;
+      if (!existing) throw new Error("company_profile não encontrado");
+
       const { error } = await supabase
         .from("company_profile")
         .update({
           company_reviews: reviews as any,
           updated_at: new Date().toISOString()
         })
-        .eq("user_id", user.id);
+        .eq("id", existing.id);
 
       if (error) throw error;
 
