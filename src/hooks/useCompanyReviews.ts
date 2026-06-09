@@ -79,8 +79,16 @@ export function useCompanyReviews() {
       return data.company_reviews as unknown as CompanyReviewsJSONB;
       
     } catch (error: any) {
+      // Erro 23505 do singleton é benigno (linha já existe) — não logar como erro
+      if (error?.code === "23505") {
+        return {
+          manual_reviews: [],
+          google_reviews_imported: false,
+          google_place_id: null,
+          last_google_sync: null,
+        };
+      }
       console.error("Erro ao carregar company reviews:", error);
-      // Não mostrar toast para erros de autenticação inicial
       if (error.message && !error.message.includes("não autenticado")) {
         toast({
           title: "Erro ao carregar reviews",
