@@ -41,48 +41,41 @@ export function useCompanyReviews() {
         return null;
       }
 
+      // company_profile é SINGLETON — buscar a única linha sem filtrar por user_id
       const { data, error } = await supabase
         .from("company_profile")
-        .select("company_reviews")
-        .eq("user_id", user.id)
+        .select("id, company_reviews")
+        .limit(1)
         .maybeSingle();
 
       if (error) throw error;
 
-      // Se não existir company_profile, cria automaticamente
+      const emptyReviews: CompanyReviewsJSONB = {
+        manual_reviews: [],
+        google_reviews_imported: false,
+        google_place_id: null,
+        last_google_sync: null,
+      };
+
+      // Só insere se realmente não existir NENHUMA linha
       if (!data) {
         const { error: insertError } = await supabase
           .from("company_profile")
           .insert({
             user_id: user.id,
             company_name: "Nova Empresa",
-            company_reviews: {
-              manual_reviews: [],
-              google_reviews_imported: false,
-              google_place_id: null,
-              last_google_sync: null
-            }
+            company_reviews: emptyReviews as any,
           });
 
-        if (insertError) throw insertError;
-
-        return {
-          manual_reviews: [],
-          google_reviews_imported: false,
-          google_place_id: null,
-          last_google_sync: null
-        };
+        // Se outro processo já criou (23505 do singleton), ignorar silenciosamente
+        if (insertError && (insertError as any).code !== "23505") {
+          throw insertError;
+        }
+        return emptyReviews;
       }
 
-      if (!data?.company_reviews) {
-        return {
-          manual_reviews: [],
-          google_reviews_imported: false,
-          google_place_id: null,
-          last_google_sync: null
-        };
-      }
-      
+      if (!data.company_reviews) return emptyReviews;
+
       return data.company_reviews as unknown as CompanyReviewsJSONB;
       
     } catch (error: any) {
