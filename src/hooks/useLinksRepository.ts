@@ -85,8 +85,8 @@ export const useLinksRepository = () => {
 
   const loadInternalLinks = async () => {
     try {
-      const { data, error } = await withRetry(() =>
-        supabase
+      const { data, error } = await withRetry(async () =>
+        await supabase
           .from('landing_pages')
           .select('id, name, data')
           .eq('status', 'published')
