@@ -374,88 +374,399 @@ function generateCompanyMarkdown(company: any): string {
   return md;
 }
 
+// Campos renderizados explicitamente — usados para excluir do dump JSON bruto
+const RENDERED_PRODUCT_FIELDS = new Set([
+  'id', 'name', 'category', 'subcategory', 'brand', 'description', 'price', 'promo_price',
+  'currency', 'availability', 'stock_quantity', 'condition', 'active', 'approved', 'featured',
+  'showcase', 'product_url', 'slug', 'canonical_url', 'seo_title_override', 'seo_description_override',
+  'gtin', 'mpn', 'ean', 'google_product_category', 'image_url', 'images_gallery',
+  'youtube_videos', 'instagram_videos', 'tiktok_videos', 'technical_videos', 'testimonial_videos',
+  'video_captions', 'technical_documents', 'document_transcriptions',
+  'benefits', 'features', 'technical_specifications', 'faq',
+  'keywords', 'market_keywords', 'search_intent_keywords', 'bot_trigger_words', 'tags',
+  'target_audience', 'applications', 'sales_pitch',
+  'workflow_stages', 'competitor_comparison', 'required_products', 'forbidden_products',
+  'anti_hallucination_rules',
+  'instagram_copies', 'youtube_descriptions', 'tiktok_content',
+  'whatsapp_messages', 'whatsapp_sequences', 'after_sales_messages',
+  'resource_cta1', 'resource_cta2', 'resource_cta3', 'resource_descriptions',
+  'tutorial_resources', 'offer_discount_cta',
+  'color', 'size', 'material', 'weight', 'height', 'width', 'depth',
+  'variations', 'created_at', 'updated_at',
+  'individual_blog_content', 'ecommerce_html'
+]);
+
+function val(v: any): string {
+  if (v == null || v === '') return '';
+  if (typeof v === 'string') return v;
+  return String(v);
+}
+
+function listToStr(arr: any[]): string[] {
+  return arr.map((x: any) => {
+    if (x == null) return '';
+    if (typeof x === 'string') return x;
+    if (typeof x === 'object') return x.title || x.name || x.label || x.text || x.keyword || x.value || JSON.stringify(x);
+    return String(x);
+  }).filter(Boolean);
+}
+
+function renderVideoList(label: string, videos: any): string {
+  if (!Array.isArray(videos) || videos.length === 0) return '';
+  let md = `**Vídeos ${label} (${videos.length}):**\n`;
+  videos.forEach((v: any, i: number) => {
+    if (typeof v === 'string') { md += `${i + 1}. ${v}\n`; return; }
+    const title = v.title || v.titulo || v.name || `Vídeo ${i + 1}`;
+    const url = v.url || v.video_url || v.embed_url || v.youtube_url || '';
+    md += `${i + 1}. **${title}**${url ? ` — ${url}` : ''}\n`;
+    if (v.description || v.descricao) md += `   - Descrição: ${v.description || v.descricao}\n`;
+    if (v.duration || v.duracao_segundos) md += `   - Duração: ${v.duration || v.duracao_segundos}s\n`;
+  });
+  return md + '\n';
+}
+
+function renderCaptions(label: string, items: any): string {
+  if (!Array.isArray(items) || items.length === 0) return '';
+  let md = `**${label} (${items.length}):**\n`;
+  items.forEach((c: any, i: number) => {
+    const t = c.video_title || c.document_name || c.title || c.name || `Item ${i + 1}`;
+    const text = c.captions || c.transcription || c.transcricao || c.content || c.text || '';
+    md += `\n*${i + 1}. ${t}*\n`;
+    if (text) md += `> ${String(text).replace(/\n/g, '\n> ')}\n`;
+  });
+  return md + '\n';
+}
+
+function renderJsonBlock(label: string, data: any): string {
+  if (data == null) return '';
+  if (typeof data === 'string') {
+    if (!data.trim()) return '';
+    return `**${label}:**\n\n\`\`\`\n${data}\n\`\`\`\n\n`;
+  }
+  if (Array.isArray(data) && data.length === 0) return '';
+  if (typeof data === 'object' && Object.keys(data).length === 0) return '';
+  return `**${label}:**\n\n\`\`\`json\n${JSON.stringify(data, null, 2)}\n\`\`\`\n\n`;
+}
+
+function renderMessageBlock(label: string, data: any): string {
+  if (!data) return '';
+  let md = `#### ${label}\n\n`;
+  if (Array.isArray(data)) {
+    data.forEach((m: any, i: number) => {
+      if (typeof m === 'string') { md += `**${i + 1}.** ${m}\n\n`; return; }
+      if (m && typeof m === 'object') {
+        const title = m.title || m.name || m.label || m.type || `Mensagem ${i + 1}`;
+        const text = m.message || m.text || m.content || m.body || m.copy || '';
+        md += `**${i + 1}. ${title}**\n`;
+        if (text) md += `> ${String(text).replace(/\n/g, '\n> ')}\n`;
+        Object.keys(m).filter(k => !['title','name','label','type','message','text','content','body','copy'].includes(k)).forEach(k => {
+          const v = m[k];
+          if (v != null && v !== '' && (typeof v !== 'object' || (Array.isArray(v) && v.length > 0) || Object.keys(v || {}).length > 0)) {
+            md += `   - ${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}\n`;
+          }
+        });
+        md += '\n';
+      }
+    });
+  } else if (typeof data === 'object') {
+    Object.entries(data).forEach(([k, v]: [string, any]) => {
+      md += `**${k}:**\n`;
+      if (typeof v === 'string') md += `> ${v.replace(/\n/g, '\n> ')}\n\n`;
+      else md += `\`\`\`json\n${JSON.stringify(v, null, 2)}\n\`\`\`\n\n`;
+    });
+  } else {
+    md += `${data}\n\n`;
+  }
+  return md;
+}
+
+function renderWorkflowStages(stages: any): string {
+  if (!stages || typeof stages !== 'object') return '';
+  const entries = Object.entries(stages);
+  if (entries.length === 0) return '';
+  let md = `#### 🔄 Etapas do Workflow Clínico\n\n`;
+  entries.forEach(([stage, data]: [string, any]) => {
+    if (!data) return;
+    md += `**${stage}**`;
+    if (data.applicable === false) md += ` _(não aplicável)_`;
+    md += `\n`;
+    if (data.description) md += `- Descrição: ${data.description}\n`;
+    if (Array.isArray(data.competitive_advantages) && data.competitive_advantages.length > 0) {
+      md += `- Vantagens Competitivas: ${data.competitive_advantages.join('; ')}\n`;
+    }
+    if (Array.isArray(data.related_products) && data.related_products.length > 0) {
+      md += `- Produtos Relacionados:\n`;
+      data.related_products.forEach((rp: any) => {
+        md += `  - ${rp.product_name || rp.name || '?'}${rp.role ? ` (${rp.role})` : ''}${rp.context ? ` — ${rp.context}` : ''}\n`;
+      });
+    }
+    Object.keys(data).filter(k => !['applicable','description','competitive_advantages','related_products'].includes(k)).forEach(k => {
+      const v = data[k];
+      if (v != null && v !== '' && (typeof v !== 'object' || (Array.isArray(v) ? v.length > 0 : Object.keys(v || {}).length > 0))) {
+        md += `- ${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}\n`;
+      }
+    });
+    md += `\n`;
+  });
+  return md;
+}
+
 function generateProductsMarkdown(products: any[]): string {
   if (!products || products.length === 0) return '';
-  
+
   let md = `## 2. CATÁLOGO DE PRODUTOS (${products.length} produtos)\n\n`;
-  
-  // Agrupar por categoria
+
   const byCategory: Record<string, any[]> = {};
   products.forEach(p => {
     const cat = p.category || 'Sem Categoria';
     if (!byCategory[cat]) byCategory[cat] = [];
     byCategory[cat].push(p);
   });
-  
+
   Object.entries(byCategory).forEach(([category, prods]) => {
     md += `### ${category} (${prods.length})\n\n`;
-    
+
     prods.forEach((p, idx) => {
       md += `#### ${idx + 1}. ${p.name}\n\n`;
-      
-      // Informações básicas
-      md += `| Campo | Valor |\n`;
-      md += `|-------|-------|\n`;
-      md += `| SKU | ${p.ean || p.mpn || 'N/A'} |\n`;
-      md += `| Preço | ${formatCurrency(p.price)} |\n`;
-      if (p.promo_price) md += `| Preço Promocional | ${formatCurrency(p.promo_price)} |\n`;
-      md += `| Marca | ${p.brand || 'N/A'} |\n`;
-      md += `| Subcategoria | ${p.subcategory || 'N/A'} |\n`;
+
+      // ===== Identidade & E-commerce =====
+      md += `| Campo | Valor |\n|-------|-------|\n`;
+      md += `| ID | \`${p.id || 'N/A'}\` |\n`;
+      md += `| Marca | ${val(p.brand) || 'N/A'} |\n`;
+      md += `| Categoria > Subcategoria | ${val(p.category)}${p.subcategory ? ` > ${p.subcategory}` : ''} |\n`;
+      md += `| Preço | ${formatCurrency(p.price)}${p.promo_price ? ` (Promo: ${formatCurrency(p.promo_price)})` : ''} |\n`;
+      if (p.currency) md += `| Moeda | ${p.currency} |\n`;
       md += `| Disponibilidade | ${p.availability || (p.active ? 'Em Estoque' : 'Indisponível')} |\n`;
-      if (p.product_url) md += `| URL | ${p.product_url} |\n`;
+      if (p.stock_quantity != null) md += `| Estoque | ${p.stock_quantity} |\n`;
+      if (p.condition) md += `| Condição | ${p.condition} |\n`;
+      if (p.gtin) md += `| GTIN | ${p.gtin} |\n`;
+      if (p.mpn) md += `| MPN | ${p.mpn} |\n`;
+      if (p.ean) md += `| EAN | ${p.ean} |\n`;
+      if (p.google_product_category) md += `| Google Product Category | ${p.google_product_category} |\n`;
+      if (p.slug) md += `| Slug | ${p.slug} |\n`;
+      if (p.product_url) md += `| URL Produto | ${p.product_url} |\n`;
+      if (p.canonical_url) md += `| Canonical | ${p.canonical_url} |\n`;
+      md += `| Status | active=${!!p.active}, approved=${!!p.approved}, featured=${!!p.featured}, showcase=${!!p.showcase} |\n`;
+      if (p.created_at) md += `| Criado em | ${formatDate(p.created_at)} |\n`;
+      if (p.updated_at) md += `| Atualizado em | ${formatDate(p.updated_at)} |\n`;
       md += `\n`;
-      
-      // Descrição
-      if (p.description) {
-        md += `**Descrição:**\n${stripHtml(p.description)}\n\n`;
+
+      // Atributos físicos
+      const phys = ['color','size','material','weight','height','width','depth'].filter(k => p[k] != null && p[k] !== '');
+      if (phys.length > 0) md += `**Atributos Físicos:** ${phys.map(k => `${k}=${p[k]}`).join(' · ')}\n\n`;
+
+      // SEO Overrides
+      if (p.seo_title_override || p.seo_description_override) {
+        md += `**SEO Overrides:**\n`;
+        if (p.seo_title_override) md += `- Title: ${p.seo_title_override}\n`;
+        if (p.seo_description_override) md += `- Description: ${p.seo_description_override}\n`;
+        md += `\n`;
       }
-      
-      // Benefícios
-      if (p.benefits && Array.isArray(p.benefits) && p.benefits.length > 0) {
+
+      // Descrição / Pitch / Aplicações
+      if (p.description) md += `**Descrição:**\n${stripHtml(p.description)}\n\n`;
+      if (p.sales_pitch) md += `**Sales Pitch:**\n${stripHtml(p.sales_pitch)}\n\n`;
+      if (p.applications) md += `**Aplicações:**\n${stripHtml(p.applications)}\n\n`;
+
+      // Público-alvo
+      if (Array.isArray(p.target_audience) && p.target_audience.length > 0) {
+        md += `**Público-Alvo:** ${listToStr(p.target_audience).join(', ')}\n\n`;
+      }
+
+      // Keywords variants
+      const kwBlocks: Array<[string, any]> = [
+        ['Keywords', p.keywords],
+        ['Market Keywords', p.market_keywords],
+        ['Search Intent Keywords', p.search_intent_keywords],
+        ['Bot Trigger Words', p.bot_trigger_words],
+        ['Tags', p.tags],
+      ];
+      kwBlocks.forEach(([label, arr]) => {
+        if (Array.isArray(arr) && arr.length > 0) md += `**${label}:** ${listToStr(arr).join(', ')}\n\n`;
+      });
+
+      // Benefícios / Features
+      if (Array.isArray(p.benefits) && p.benefits.length > 0) {
         md += `**Benefícios:**\n`;
         p.benefits.forEach((b: any) => {
-          if (typeof b === 'string') {
-            md += `- ${b}\n`;
-          } else if (b.title || b.description) {
-            md += `- **${b.title || ''}:** ${b.description || ''}\n`;
-          }
+          if (typeof b === 'string') md += `- ${b}\n`;
+          else md += `- **${b.title || b.name || ''}:** ${b.description || ''}\n`;
         });
         md += `\n`;
       }
-      
-      // Especificações Técnicas
-      if (p.technical_specifications && Array.isArray(p.technical_specifications) && p.technical_specifications.length > 0) {
-        md += `**Especificações Técnicas:**\n`;
-        md += `| Atributo | Valor |\n`;
-        md += `|----------|-------|\n`;
+      if (Array.isArray(p.features) && p.features.length > 0) {
+        md += `**Características:**\n`;
+        p.features.forEach((f: any) => {
+          if (typeof f === 'string') md += `- ${f}\n`;
+          else md += `- **${f.title || f.name || ''}:** ${f.description || ''}\n`;
+        });
+        md += `\n`;
+      }
+
+      // Specs
+      if (Array.isArray(p.technical_specifications) && p.technical_specifications.length > 0) {
+        md += `**Especificações Técnicas:**\n\n| Atributo | Valor |\n|----------|-------|\n`;
         p.technical_specifications.forEach((spec: any) => {
-          md += `| ${spec.name || spec.attribute || 'N/A'} | ${spec.value || 'N/A'} |\n`;
+          if (typeof spec === 'string') md += `| - | ${spec} |\n`;
+          else md += `| ${spec.name || spec.attribute || spec.label || spec.key || 'N/A'} | ${spec.value || 'N/A'} |\n`;
         });
         md += `\n`;
       }
-      
-      // FAQ
-      if (p.faq && Array.isArray(p.faq) && p.faq.length > 0) {
-        md += `**FAQ:**\n`;
-        p.faq.forEach((faq: any) => {
-          md += `- **P:** ${faq.question || faq.pergunta || ''}\n`;
-          md += `  **R:** ${faq.answer || faq.resposta || ''}\n`;
-        });
-        md += `\n`;
-      }
-      
-      // Keywords
-      if (p.keywords && Array.isArray(p.keywords) && p.keywords.length > 0) {
-        const kwList = p.keywords.map((k: any) => typeof k === 'string' ? k : k.keyword).filter(Boolean);
-        if (kwList.length > 0) {
-          md += `**Keywords:** ${kwList.join(', ')}\n\n`;
+
+      // Workflow stages
+      md += renderWorkflowStages(p.workflow_stages);
+
+      // Anti-Alucinação
+      if (p.anti_hallucination_rules) {
+        const r = p.anti_hallucination_rules;
+        const has = (r.never_claim?.length || r.never_mix_with?.length || r.always_require?.length || r.always_explain?.length);
+        if (has) {
+          md += `#### ⚠️ Regras Anti-Alucinação\n\n`;
+          if (r.never_claim?.length) md += `- **NUNCA afirmar:** ${r.never_claim.join('; ')}\n`;
+          if (r.never_mix_with?.length) md += `- **NUNCA misturar com:** ${r.never_mix_with.join('; ')}\n`;
+          if (r.always_require?.length) md += `- **SEMPRE exigir:** ${r.always_require.join('; ')}\n`;
+          if (r.always_explain?.length) md += `- **SEMPRE explicar:** ${r.always_explain.join('; ')}\n`;
+          md += `\n`;
         }
       }
-      
+
+      // Required / Forbidden
+      if (Array.isArray(p.required_products) && p.required_products.length > 0) {
+        md += `**🔗 Produtos Requeridos:**\n`;
+        p.required_products.forEach((rp: any) => {
+          md += `- ${rp.product_name || rp.name || '?'}${rp.context || rp.reason ? `: ${rp.context || rp.reason}` : ''}\n`;
+        });
+        md += `\n`;
+      }
+      if (Array.isArray(p.forbidden_products) && p.forbidden_products.length > 0) {
+        md += `**🚫 Produtos Proibidos:**\n`;
+        p.forbidden_products.forEach((fp: any) => {
+          md += `- ${fp.product_name || fp.name || '?'}${fp.reason ? `: ${fp.reason}` : ''}\n`;
+        });
+        md += `\n`;
+      }
+
+      // Competitor Comparison
+      if (p.competitor_comparison) {
+        const cc = p.competitor_comparison;
+        if (cc.enabled !== false && (cc.table_data?.length || cc.competitors?.length)) {
+          md += `#### 📊 Comparativo com Concorrentes\n\n`;
+          if (cc.title) md += `**${cc.title}**\n\n`;
+          if (cc.subtitle) md += `${cc.subtitle}\n\n`;
+          const headers = cc.table_headers || (cc.table_data?.[0] ? Object.keys(cc.table_data[0]) : []);
+          if (headers.length > 0 && cc.table_data?.length) {
+            md += `| ${headers.join(' | ')} |\n|${headers.map(() => '---').join('|')}|\n`;
+            cc.table_data.forEach((row: any) => {
+              md += `| ${headers.map((h: string) => row[h] ?? '-').join(' | ')} |\n`;
+            });
+            md += `\n`;
+          } else {
+            md += `\`\`\`json\n${JSON.stringify(cc, null, 2)}\n\`\`\`\n\n`;
+          }
+        }
+      }
+
+      // FAQ
+      if (Array.isArray(p.faq) && p.faq.length > 0) {
+        md += `**FAQ (${p.faq.length}):**\n\n`;
+        p.faq.forEach((f: any, i: number) => {
+          md += `**P${i + 1}:** ${f.question || f.pergunta || ''}\n`;
+          md += `**R${i + 1}:** ${stripHtml(f.answer || f.resposta || '')}\n\n`;
+        });
+      }
+
+      // Imagens
+      if (p.image_url) md += `**Imagem Principal:** ${p.image_url}\n\n`;
+      if (Array.isArray(p.images_gallery) && p.images_gallery.length > 0) {
+        md += `**Galeria de Imagens (${p.images_gallery.length}):**\n`;
+        p.images_gallery.forEach((img: any, i: number) => {
+          const url = typeof img === 'string' ? img : img.url || img.src;
+          const alt = typeof img === 'string' ? '' : img.alt || '';
+          if (url) md += `${i + 1}. ${url}${alt ? ` _(${alt})_` : ''}\n`;
+        });
+        md += `\n`;
+      }
+
+      // Vídeos
+      md += renderVideoList('YouTube', p.youtube_videos);
+      md += renderVideoList('Instagram', p.instagram_videos);
+      md += renderVideoList('TikTok', p.tiktok_videos);
+      md += renderVideoList('Técnicos', p.technical_videos);
+      md += renderVideoList('Depoimentos', p.testimonial_videos);
+      md += renderCaptions('🎬 Transcrições de Vídeo', p.video_captions);
+
+      // Documentos técnicos
+      if (Array.isArray(p.technical_documents) && p.technical_documents.length > 0) {
+        md += `**📄 Documentos Técnicos (${p.technical_documents.length}):**\n`;
+        p.technical_documents.forEach((d: any, i: number) => {
+          const name = d.nome || d.name || d.nome_arquivo || `Doc ${i + 1}`;
+          const url = d.url_download || d.url || d.download_url || '';
+          md += `${i + 1}. **${name}**${url ? ` — ${url}` : ''}`;
+          if (d.descricao || d.description) md += ` — ${d.descricao || d.description}`;
+          md += `\n`;
+        });
+        md += `\n`;
+      }
+      md += renderCaptions('📑 Transcrições de Documentos', p.document_transcriptions);
+
+      // CTAs / Recursos
+      const ctas = [p.resource_cta1, p.resource_cta2, p.resource_cta3].filter(Boolean);
+      if (ctas.length > 0) {
+        md += `**CTAs de Recursos:**\n`;
+        ctas.forEach((c: any, i: number) => {
+          if (typeof c === 'string') md += `- CTA ${i+1}: ${c}\n`;
+          else md += `- CTA ${i+1}: ${c.title || c.label || ''} → ${c.url || c.href || ''}${c.description ? ` (${c.description})` : ''}\n`;
+        });
+        md += `\n`;
+      }
+      if (p.resource_descriptions) md += renderJsonBlock('Descrições de Recursos', p.resource_descriptions);
+      if (Array.isArray(p.tutorial_resources) && p.tutorial_resources.length > 0) md += renderJsonBlock('Tutoriais', p.tutorial_resources);
+      if (p.offer_discount_cta) md += renderJsonBlock('CTA de Oferta/Desconto', p.offer_discount_cta);
+
+      // Variações
+      if (Array.isArray(p.variations) && p.variations.length > 0) {
+        md += `**Variações (${p.variations.length}):**\n\n\`\`\`json\n${JSON.stringify(p.variations, null, 2)}\n\`\`\`\n\n`;
+      }
+
+      // WhatsApp
+      if (p.whatsapp_messages) md += renderMessageBlock('💬 Mensagens WhatsApp', p.whatsapp_messages);
+      if (p.whatsapp_sequences) md += renderMessageBlock('💬 Sequências WhatsApp', p.whatsapp_sequences);
+      if (p.after_sales_messages) md += renderMessageBlock('💬 Pós-Venda', p.after_sales_messages);
+
+      // Social
+      if (p.instagram_copies) md += renderMessageBlock('📷 Instagram (copies)', p.instagram_copies);
+      if (p.youtube_descriptions) md += renderMessageBlock('▶️ YouTube (descrições)', p.youtube_descriptions);
+      if (p.tiktok_content) md += renderMessageBlock('🎵 TikTok (conteúdo)', p.tiktok_content);
+
+      // Blog / Ecommerce HTML (referência de tamanho)
+      if (p.individual_blog_content) {
+        md += `**📝 Blog Individual:** ${typeof p.individual_blog_content === 'string' ? `${p.individual_blog_content.length} chars` : 'gerado'}\n\n`;
+      }
+      if (p.ecommerce_html) {
+        md += `**🛒 E-commerce HTML:** ${typeof p.ecommerce_html === 'string' ? `${p.ecommerce_html.length} chars` : 'gerado'}\n\n`;
+      }
+
+      // Campos extras não mapeados
+      const extras: Record<string, any> = {};
+      Object.keys(p).forEach(k => {
+        if (RENDERED_PRODUCT_FIELDS.has(k)) return;
+        const v = p[k];
+        if (v == null || v === '') return;
+        if (Array.isArray(v) && v.length === 0) return;
+        if (typeof v === 'object' && Object.keys(v).length === 0) return;
+        extras[k] = v;
+      });
+      if (Object.keys(extras).length > 0) {
+        md += `**Campos Adicionais:**\n\n\`\`\`json\n${JSON.stringify(extras, null, 2)}\n\`\`\`\n\n`;
+      }
+
+      // Dump JSON bruto — garantia de cobertura total
+      md += `<details><summary>📦 Dados Brutos (JSON Completo)</summary>\n\n\`\`\`json\n${JSON.stringify(p, null, 2)}\n\`\`\`\n\n</details>\n\n`;
+
       md += `---\n\n`;
     });
   });
-  
+
   return md;
 }
 
