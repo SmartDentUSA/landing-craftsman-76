@@ -1,40 +1,38 @@
-## Problema
+## Diagnóstico
 
-O console mostra erro recorrente no Dashboard:
+O toast "Não foi possível carregar as configurações de prompts" vem de `src/hooks/usePromptsConfiguration.ts` (catch do `loadConfigurations`).
 
-```
-duplicate key value violates unique constraint "company_profile_singleton"
-```
+Olhando o console real do preview, o erro de fundo é **`TypeError: Failed to fetch`** — mesmo padrão que aparece em `useLinksRepository.ts` (external_links, internal_links). Testando direto da sandbox, a API do Supabase (`prompts_configuration`) responde **HTTP 200** com a anon key. Portanto:
 
-Origem: `src/hooks/useCompanyReviews.ts` → função `loadCompanyReviews`.
+- Não é RLS (RLS retorna 401/403, não "Failed to fetch").
+- Não é schema/coluna inválida.
+- É **falha de rede no browser**: requisição abortada antes de chegar no Supabase. Causas típicas: extensão/ad-blocker, perda momentânea de conectividade, ou aba reativada após hibernação (Vite/Supabase fetch é cancelado).
 
-Hoje ela faz:
-1. `SELECT company_reviews FROM company_profile WHERE user_id = <user>` com `.maybeSingle()`.
-2. Se não encontra, faz `INSERT` em `company_profile` com o `user_id` atual.
+O hook hoje:
+- Não distingue erro de rede de erro de servidor — joga o mesmo toast genérico.
+- Não tem retry.
+- O `useEffect` dispara só uma vez no mount, então qualquer falha de rede momentânea trava o componente até reload manual.
 
-Isso conflita com a regra do projeto: **`company_profile` é singleton — só pode existir UMA linha** (garantida pelo constraint `company_profile_singleton`).
+## Correção (somente frontend)
 
-Quando o usuário logado **não é dono** da linha existente, o `SELECT` por `user_id` retorna `null`, o código tenta `INSERT`, o Postgres rejeita pelo constraint, o hook lança erro, o toast/erro dispara re-render do Dashboard, e em alguns fluxos o `ProtectedRoute` chega a re-checar sessão — gerando a sensação de "sistema saindo e voltando" entre páginas.
+Editar `src/hooks/usePromptsConfiguration.ts`:
 
-## Correção
+1. **Detectar erro de rede** (`error?.message?.includes('Failed to fetch')` ou `TypeError`) e, nesse caso:
+   - Tentar 1 retry automático com backoff de 1.5s.
+   - Se ainda falhar, mostrar toast **diferente** explicando que é problema de conexão ("Falha de conexão ao carregar prompts — verifique sua internet ou extensões de bloqueio") e **não** o genérico.
+2. **Logar o erro real** com `code`, `message`, `details` no `console.error` para facilitar diagnóstico futuro.
+3. **Evitar spam de toast**: se já houver um toast de erro ativo do mesmo hook nesta sessão, suprimir o segundo.
+4. Manter a mesma assinatura pública do hook (sem mudanças em quem consome).
 
-Editar apenas `src/hooks/useCompanyReviews.ts`:
-
-1. **`loadCompanyReviews`**: remover o filtro `.eq("user_id", user.id)`. Buscar a única linha do singleton:
-   ```ts
-   supabase.from("company_profile").select("company_reviews").limit(1).maybeSingle()
-   ```
-2. **Bloco de auto-criação**: só executar o `INSERT` se realmente não existir nenhuma linha (caso raro de banco vazio). Antes do insert, fazer um `select count` ou `select id limit 1` sem filtro de user; se já existir linha, retornar o default vazio em vez de inserir.
-3. **`saveCompanyReviews`**: trocar `.update(...).eq("user_id", user.id)` por update na única linha existente (buscar `id` primeiro, depois `update().eq("id", id)`). Isso evita silenciosamente "não atualizar nada" quando o usuário logado não é o owner do singleton.
-4. Manter o tratamento de erro existente, mas não jogar toast quando o erro for o próprio `23505` do singleton (defensivo).
+Aplicar o mesmo padrão mínimo (retry 1x + log com `code/message`) em `useLinksRepository.ts` (`loadExternalLinks`, `loadInternalLinks`) para parar a enxurrada de "Failed to fetch" no console da página `/repository`.
 
 ## Validação
 
-- Recarregar `/dashboard` e confirmar no console que **não aparece mais** `duplicate key value violates unique constraint "company_profile_singleton"`.
-- Confirmar que a navegação fica estável (sem reload/redirect inesperado).
-- Confirmar que reviews continuam carregando/salvando normalmente.
+- Recarregar `/repository` e confirmar:
+  - O toast vermelho de prompts não aparece em condições normais.
+  - Se ainda aparecer, o console mostra agora `code`/`message`/`details` reais (não só `TypeError: Failed to fetch`) — assim conseguimos diagnosticar a causa real (ex.: ad-blocker bloqueando `*.supabase.co`).
+- Sem mexer em backend, RLS, schema ou Edge Functions.
 
-## Fora de escopo
+## Observação
 
-- Não mexer em RLS, schema do banco, ou em outros hooks.
-- Não tocar nas Edge Functions de exportação de apostila (assunto anterior já encerrado).
+Se mesmo após o fix o erro persistir, o próximo passo é checar: (a) extensões do navegador (uBlock/AdGuard tendem a bloquear domínios), (b) DNS/VPN corporativa, (c) abrir o preview em janela anônima sem extensões. Isso será mais fácil de confirmar com o log detalhado que esse plano adiciona.

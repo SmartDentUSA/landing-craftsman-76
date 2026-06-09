@@ -49,21 +49,40 @@ export const usePromptsConfiguration = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
+  const isNetworkError = (err: any) => {
+    const msg = err?.message || String(err || '');
+    return (
+      err instanceof TypeError ||
+      msg.includes('Failed to fetch') ||
+      msg.includes('NetworkError') ||
+      msg.includes('network')
+    );
+  };
+
+  const fetchOnce = async (edgeFunctionId?: string) => {
+    let query = supabase.from('prompts_configuration').select('*');
+    if (edgeFunctionId) query = query.eq('edge_function_id', edgeFunctionId);
+    const { data, error } = await query;
+    if (error) throw error;
+    return data;
+  };
+
   const loadConfigurations = async (edgeFunctionId?: string) => {
-    if (loading) return; // Evita múltiplas chamadas simultâneas
-    
+    if (loading) return;
     setLoading(true);
     try {
-      let query = supabase.from('prompts_configuration').select('*');
-      
-      if (edgeFunctionId) {
-        query = query.eq('edge_function_id', edgeFunctionId);
+      let data;
+      try {
+        data = await fetchOnce(edgeFunctionId);
+      } catch (err) {
+        if (isNetworkError(err)) {
+          await new Promise((r) => setTimeout(r, 1500));
+          data = await fetchOnce(edgeFunctionId);
+        } else {
+          throw err;
+        }
       }
-      
-      const { data, error } = await query;
-      
-      if (error) throw error;
-      
+
       const processedData = (data || []).map(item => ({
         ...item,
         selected_data_sources: Array.isArray(item.selected_data_sources) 
@@ -85,13 +104,26 @@ export const usePromptsConfiguration = () => {
       })) as PromptConfiguration[];
       
       setConfigurations(processedData);
-    } catch (error) {
-      console.error('Erro ao carregar configurações:', error);
-      toast({
-        title: "Erro ao carregar",
-        description: "Não foi possível carregar as configurações de prompts.",
-        variant: "destructive"
+    } catch (error: any) {
+      console.error('[usePromptsConfiguration] load failed:', {
+        code: error?.code,
+        message: error?.message,
+        details: error?.details,
+        hint: error?.hint,
       });
+      if (isNetworkError(error)) {
+        toast({
+          title: "Falha de conexão",
+          description: "Não foi possível conectar ao servidor de prompts. Verifique sua internet ou extensões de bloqueio (ad-blocker).",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Erro ao carregar",
+          description: `Não foi possível carregar as configurações de prompts${error?.message ? `: ${error.message}` : '.'}`,
+          variant: "destructive"
+        });
+      }
     } finally {
       setLoading(false);
     }
