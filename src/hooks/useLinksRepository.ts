@@ -35,35 +35,17 @@ export const useLinksRepository = () => {
   const [internalLinks, setInternalLinks] = useState<InternalLink[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const isNetworkError = (err: any) => {
-    const msg = err?.message || String(err || '');
-    return err instanceof TypeError || msg.includes('Failed to fetch') || msg.includes('NetworkError');
-  };
-
-  const withRetry = async <T,>(fn: () => Promise<T>): Promise<T> => {
-    try {
-      return await fn();
-    } catch (err) {
-      if (isNetworkError(err)) {
-        await new Promise((r) => setTimeout(r, 1500));
-        return await fn();
-      }
-      throw err;
-    }
-  };
-
   const loadExternalLinks = async () => {
     try {
-      const { data, error } = await withRetry(async () =>
-        await supabase
-          .from('external_links')
-          .select('*')
-          .eq('approved', true)
-          .order('category', { ascending: true })
-          .order('name', { ascending: true })
-      );
+      const { data, error } = await supabase
+        .from('external_links')
+        .select('*')
+        .eq('approved', true)
+        .order('category', { ascending: true })
+        .order('name', { ascending: true });
 
       if (error) {
+        // Silenciar erros de autenticação (esperados)
         if (error.code === 'PGRST301' || error.message?.includes('JWT')) {
           console.warn('⚠️ External links: User not authenticated');
           return;
@@ -71,29 +53,22 @@ export const useLinksRepository = () => {
         throw error;
       }
       setExternalLinks(data || []);
-    } catch (error: any) {
-      console.error('[useLinksRepository] external load failed:', {
-        code: error?.code, message: error?.message, details: error?.details, hint: error?.hint,
-      });
-      if (isNetworkError(error)) {
-        toast.error('Falha de conexão ao carregar links externos. Verifique sua internet ou extensões de bloqueio.');
-      } else {
-        toast.error('Erro ao carregar links externos');
-      }
+    } catch (error) {
+      console.error('Error loading external links:', error);
+      toast.error('Erro ao carregar links externos');
     }
   };
 
   const loadInternalLinks = async () => {
     try {
-      const { data, error } = await withRetry(async () =>
-        await supabase
-          .from('landing_pages')
-          .select('id, name, data')
-          .eq('status', 'published')
-          .order('name', { ascending: true })
-      );
+      const { data, error } = await supabase
+        .from('landing_pages')
+        .select('id, name, data')
+        .eq('status', 'published')
+        .order('name', { ascending: true });
 
       if (error) {
+        // Silenciar erros de autenticação (esperados)
         if (error.code === 'PGRST301' || error.message?.includes('JWT')) {
           console.warn('⚠️ Internal links: User not authenticated');
           return;
@@ -112,15 +87,9 @@ export const useLinksRepository = () => {
       }) || [];
       
       setInternalLinks(formatted);
-    } catch (error: any) {
-      console.error('[useLinksRepository] internal load failed:', {
-        code: error?.code, message: error?.message, details: error?.details, hint: error?.hint,
-      });
-      if (isNetworkError(error)) {
-        toast.error('Falha de conexão ao carregar links internos. Verifique sua internet ou extensões de bloqueio.');
-      } else {
-        toast.error('Erro ao carregar links internos');
-      }
+    } catch (error) {
+      console.error('Error loading internal links:', error);
+      toast.error('Erro ao carregar links internos');
     }
   };
 
