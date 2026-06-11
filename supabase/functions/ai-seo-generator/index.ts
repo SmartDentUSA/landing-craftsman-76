@@ -24,6 +24,25 @@ serve(async (req) => {
       );
     }
 
+    // 🔐 Auth guard
+    const authHeader = req.headers.get('Authorization') || '';
+    if (!authHeader.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    const authClient = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+    const { data: { user }, error: authError } = await authClient.auth.getUser();
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
     if (!DEEPSEEK_API_KEY) {
       console.error('❌ DEEPSEEK_API_KEY não configurada');
       return new Response(
@@ -43,10 +62,10 @@ serve(async (req) => {
 
     console.log(`🤖 Gerando SEO com IA - Tipo: ${type}, Modo: ${speed}`);
 
-    // Initialize Supabase client and fetch products context
+    // Initialize Supabase service client (server-side, bypasses RLS for context fetching)
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient('https://pgfgripuanuwwolmtknn.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBnZmdyaXB1YW51d3dvbG10a25uIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjE0OTE3MywiZXhwIjoyMDcxNzI1MTczfQ.vn4PJ2fNqyPjuJyEv1Ln8fGpTT0r5L7pQu_V3M4HnEA');
+    const supabase = createClient(supabaseUrl, supabaseKey);
     
     // Fetch products context for enhanced SEO generation
     let productsContext = '';
