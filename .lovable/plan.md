@@ -1,40 +1,30 @@
-## Problema
+## Objetivo
+Corrigir o achado de segurança `unauth_oauth_exchange`: as edge functions `exchange-youtube-code` e `exchange-google-business-code` aceitam `clientSecret` no body e repassam ao Google sem qualquer verificação de JWT, funcionando como proxy OAuth aberto.
 
-O console mostra erro recorrente no Dashboard:
+## Abordagem
+Adicionar guarda de autenticação JWT no topo de ambas as funções, seguindo exatamente o padrão já usado em `exchange-oauth-code/index.ts` (que é a versão segura/canônica).
 
-```
-duplicate key value violates unique constraint "company_profile_singleton"
-```
+## Alterações
 
-Origem: `src/hooks/useCompanyReviews.ts` → função `loadCompanyReviews`.
+### 1. `supabase/functions/exchange-youtube-code/index.ts`
+- Importar `createClient` do `npm:@supabase/supabase-js@2`.
+- Antes de qualquer parsing do body, validar o header `Authorization`:
+  - Criar client Supabase com o JWT do caller (URL + ANON_KEY).
+  - Chamar `supabase.auth.getUser()`.
+  - Se erro ou sem user → retornar `401 { error: "unauthorized" }` com `corsHeaders`.
+- Logar `user.id` junto com os demais logs estruturados (sem dados sensíveis).
+- Manter todo o resto da lógica (sanitização de redirect_uri, troca com Google, respostas) inalterado.
 
-Hoje ela faz:
-1. `SELECT company_reviews FROM company_profile WHERE user_id = <user>` com `.maybeSingle()`.
-2. Se não encontra, faz `INSERT` em `company_profile` com o `user_id` atual.
+### 2. `supabase/functions/exchange-google-business-code/index.ts`
+- Mesma mudança: bloco de auth idêntico no início do handler, retornando 401 quando não autenticado.
+- Demais validações (formato do client_id, client_secret, redirect_uri) permanecem como estão.
 
-Isso conflita com a regra do projeto: **`company_profile` é singleton — só pode existir UMA linha** (garantida pelo constraint `company_profile_singleton`).
-
-Quando o usuário logado **não é dono** da linha existente, o `SELECT` por `user_id` retorna `null`, o código tenta `INSERT`, o Postgres rejeita pelo constraint, o hook lança erro, o toast/erro dispara re-render do Dashboard, e em alguns fluxos o `ProtectedRoute` chega a re-checar sessão — gerando a sensação de "sistema saindo e voltando" entre páginas.
-
-## Correção
-
-Editar apenas `src/hooks/useCompanyReviews.ts`:
-
-1. **`loadCompanyReviews`**: remover o filtro `.eq("user_id", user.id)`. Buscar a única linha do singleton:
-   ```ts
-   supabase.from("company_profile").select("company_reviews").limit(1).maybeSingle()
-   ```
-2. **Bloco de auto-criação**: só executar o `INSERT` se realmente não existir nenhuma linha (caso raro de banco vazio). Antes do insert, fazer um `select count` ou `select id limit 1` sem filtro de user; se já existir linha, retornar o default vazio em vez de inserir.
-3. **`saveCompanyReviews`**: trocar `.update(...).eq("user_id", user.id)` por update na única linha existente (buscar `id` primeiro, depois `update().eq("id", id)`). Isso evita silenciosamente "não atualizar nada" quando o usuário logado não é o owner do singleton.
-4. Manter o tratamento de erro existente, mas não jogar toast quando o erro for o próprio `23505` do singleton (defensivo).
-
-## Validação
-
-- Recarregar `/dashboard` e confirmar no console que **não aparece mais** `duplicate key value violates unique constraint "company_profile_singleton"`.
-- Confirmar que a navegação fica estável (sem reload/redirect inesperado).
-- Confirmar que reviews continuam carregando/salvando normalmente.
+### 3. Verificação dos callers
+- `src/pages/YouTubeOAuthSettings.tsx` e `src/pages/GoogleBusinessOAuthSettings.tsx` já invocam via `supabase.functions.invoke(...)`, que envia automaticamente o JWT do usuário logado — nenhuma mudança de frontend é necessária.
 
 ## Fora de escopo
+- Outros achados de segurança listados (service role hardcoded, AI generators abertos, XSS no `ProductEditModal`) serão tratados separadamente.
+- Não vou deprecar/remover as funções antigas; apenas fechar a brecha de auth, preservando o comportamento atual para os callers existentes.
 
-- Não mexer em RLS, schema do banco, ou em outros hooks.
-- Não tocar nas Edge Functions de exportação de apostila (assunto anterior já encerrado).
+## Validação
+Após implementar, marcar o finding `unauth_oauth_exchange` como corrigido e atualizar a security memory.
