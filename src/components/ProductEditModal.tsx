@@ -16,6 +16,7 @@ import { Save, Trash2, Plus, X, Sparkles, Download, Check, ChevronsUpDown, FileT
 import { syncProductToWikidata } from "@/services/wikidata-sync";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { sanitizeBlogContent } from "@/utils/sanitize-html";
 import { VideoSection } from "@/components/VideoSection";
 import { CaptionExtractor } from "@/components/CaptionExtractor";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
@@ -949,7 +950,7 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
                 <div 
                   className="text-blue-700 mt-1 line-clamp-2"
                   dangerouslySetInnerHTML={{ 
-                    __html: generatedData.faq[0].answer?.substring(0, 150) + '...' 
+                    __html: sanitizeBlogContent((generatedData.faq[0].answer?.substring(0, 150) ?? '') + '...')
                   }}
                 />
                 <div className="flex gap-2 mt-1">
