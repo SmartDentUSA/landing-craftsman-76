@@ -950,7 +950,7 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
                 <div 
                   className="text-blue-700 mt-1 line-clamp-2"
                   dangerouslySetInnerHTML={{ 
-                    __html: generatedData.faq[0].answer?.substring(0, 150) + '...' 
+                    __html: sanitizeBlogContent((generatedData.faq[0].answer?.substring(0, 150) ?? '') + '...')
                   }}
                 />
                 <div className="flex gap-2 mt-1">
