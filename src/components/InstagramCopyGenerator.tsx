@@ -853,6 +853,60 @@ ${slide.text}`;
     }
   };
 
+  // === Enviar SmartOps — Carrossel Visual ===
+  const handleSendSmartOpsVisual = async () => {
+    setSendingSmartOps(true);
+    try {
+      const productData = {
+        name: productName,
+        price: productPrice,
+        category: productCategory,
+        benefits: productBenefits,
+        features: productFeatures,
+        technicalSpecs: technicalSpecs,
+        productUrl: productUrl,
+        feedCopyBenefits: feedCopies.find(v => v.approach === 'benefits')?.copy || undefined,
+        feedCopyProblemSolution: feedCopies.find(v => v.approach === 'problem_solution')?.copy || undefined,
+        competitorComparison: competitorComparison,
+      };
+
+      const blobs: Blob[] = [];
+      for (let i = 1; i <= 6; i++) {
+        const textsForSlide = (slideTexts[i as keyof SlideTextsType] as Record<string, string>) || {};
+        let safeDataUrl = '';
+        try {
+          safeDataUrl = await fetchAsDataUrl(slideImageMap[i] || '');
+        } catch (e) {
+          console.warn(`SmartOps slide ${i} sem imagem (fallback):`, e);
+        }
+        const pngBlob = await generateSlidePNG(i, safeDataUrl, primaryColor, accentColor, productData, textsForSlide);
+        blobs.push(pngBlob);
+      }
+
+      const produtoSlug = slugify(productName);
+      const { ref, total } = await uploadCarouselToSmartOps({
+        slides: blobs,
+        produtoSlug,
+        tipo: 'visual',
+      });
+
+      toast({ title: '📤 Carrossel enviado!', description: 'Abrindo Social Publisher...' });
+      const url = buildSocialPublisherUrl({ ref, produtoSlug, tipo: 'visual', total });
+      window.open(url, '_blank', 'noopener');
+    } catch (err) {
+      console.error('[SMARTOPS_UPLOAD_FAIL]', err);
+      toast({
+        title: 'Erro ao enviar para SmartOps',
+        description: 'Tente baixar e fazer upload manualmente.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSendingSmartOps(false);
+    }
+  };
+
+
+
   // === Gerar textos do Carrossel Visual com IA ===
   const generateVisualCarouselTexts = async () => {
     setGeneratingVisualCarousel(true);
