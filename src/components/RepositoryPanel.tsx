@@ -119,7 +119,7 @@ const PRODUCT_REPOSITORY_LIST_COLUMNS = [
   'testimonial_videos', 'video_captions', 'images_gallery', 'technical_specifications',
   'faq', 'gtin', 'ean', 'mpn', 'brand', 'variations', 'show_in_resources', 'selected',
   'resource_cta1', 'resource_cta2', 'resource_cta3', 'offer_discount_cta',
-  'individual_blog_content', 'display_order', 'wikidata_item_id'
+  'individual_blog_content', 'original_data', 'display_order', 'wikidata_item_id'
 ].join(', ');
 
 const PRODUCT_REPOSITORY_EDIT_COLUMNS = [
@@ -399,7 +399,7 @@ export function RepositoryPanel({
         window.setTimeout(() => reject(new Error('Tempo limite ao carregar produtos do repositório')), PRODUCTS_QUERY_TIMEOUT_MS);
       });
 
-      const { data, error } = await Promise.race([query, timeout]);
+      const { data, error } = await Promise.race([query, timeout]) as { data: any[] | null; error: any };
 
       if (error) {
         console.error('[DEBUG] Erro ao carregar produtos:', error);
@@ -595,7 +595,7 @@ export function RepositoryPanel({
       window.setTimeout(() => reject(new Error('Tempo limite ao carregar produto')), PRODUCTS_QUERY_TIMEOUT_MS);
     });
 
-    const { data: freshProduct, error } = await Promise.race([query, timeout]);
+    const { data: freshProduct, error } = await Promise.race([query, timeout]) as { data: any; error: any };
 
     if (error) {
       toast({
