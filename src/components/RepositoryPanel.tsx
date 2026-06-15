@@ -389,14 +389,17 @@ export function RepositoryPanel({
   const loadProducts = async () => {
     try {
       console.log('[DEBUG] Carregando produtos do repositório...');
-      const { data, error } = await supabase
+      const query = supabase
         .from('products_repository')
-        .select(`
-          *,
-          variations
-        `)
+        .select(PRODUCT_REPOSITORY_LIST_COLUMNS)
         .eq('approved', showUnapproved ? false : true)
         .order('display_order', { ascending: true });
+
+      const timeout = new Promise<never>((_, reject) => {
+        window.setTimeout(() => reject(new Error('Tempo limite ao carregar produtos do repositório')), PRODUCTS_QUERY_TIMEOUT_MS);
+      });
+
+      const { data, error } = await Promise.race([query, timeout]);
 
       if (error) {
         console.error('[DEBUG] Erro ao carregar produtos:', error);
@@ -582,11 +585,17 @@ export function RepositoryPanel({
   };
 
   const handleEditProduct = async (product: Product) => {
-    const { data: freshProduct, error } = await supabase
+    const query = supabase
       .from('products_repository')
-      .select('*')
+      .select(PRODUCT_REPOSITORY_EDIT_COLUMNS)
       .eq('id', product.id)
       .single();
+
+    const timeout = new Promise<never>((_, reject) => {
+      window.setTimeout(() => reject(new Error('Tempo limite ao carregar produto')), PRODUCTS_QUERY_TIMEOUT_MS);
+    });
+
+    const { data: freshProduct, error } = await Promise.race([query, timeout]);
 
     if (error) {
       toast({
