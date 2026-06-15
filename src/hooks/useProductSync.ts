@@ -20,6 +20,12 @@ interface ProductOffer {
   technical_videos?: Video[];
 }
 
+const PRODUCT_SYNC_COLUMNS = [
+  'name', 'description', 'price', 'image_url', 'product_url',
+  'youtube_videos', 'instagram_videos', 'testimonial_videos', 'technical_videos',
+  'display_order'
+].join(', ');
+
 export const useProductSync = () => {
   const { toast } = useToast();
 
@@ -106,7 +112,7 @@ export const useProductSync = () => {
     try {
       const { data: products } = await supabase
         .from('products_repository')
-        .select('*')
+        .select(PRODUCT_SYNC_COLUMNS)
         .eq('source_landing_page_id', landingPageId)
         .eq('use_in_ai_generation', true)
         .order('display_order', { ascending: true });
@@ -159,7 +165,7 @@ export const useProductSync = () => {
     try {
       const { data: products } = await supabase
         .from('products_repository')
-        .select('*')
+        .select(PRODUCT_SYNC_COLUMNS)
         .eq('approved', true)
         .eq('use_in_ai_generation', true)
         .order('display_order', { ascending: true });
