@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Copy, Sparkles, Image, RefreshCw, Download, Save } from "lucide-react";
+import { Loader2, Copy, Sparkles, Image, RefreshCw, Download, Save, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { EngagementCarouselPreview, generateEngagementSlidePNG, generateEngagementSlideVideo, fetchAsDataUrl, resolveVideoSource } from "./EngagementCarouselPreview";
 import type { EngagementSlideTexts, EngagementSlideTextsMap } from "./EngagementCarouselPreview";
 import JSZip from "jszip";
+import { uploadCarouselToSmartOps, buildSocialPublisherUrl, slugify } from "@/lib/smartops-upload";
 
 interface EngagementCarouselSectionProps {
   productId: string;
