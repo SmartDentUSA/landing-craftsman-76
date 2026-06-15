@@ -44,6 +44,7 @@ export function EngagementCarouselSection({
   const [generating, setGenerating] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [sendingSmartOps, setSendingSmartOps] = useState(false);
   const [loading, setLoading] = useState(true);
   const [hasContent, setHasContent] = useState(false);
   const { toast } = useToast();
