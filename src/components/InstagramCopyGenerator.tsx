@@ -2118,6 +2118,7 @@ ${slide.text}`;
                           <Send className="h-4 w-4 mr-2" />
                         )}
                         {sendingSmartOps ? 'Enviando...' : '📤 Enviar SmartOps'}
+                      </Button>
                       <Button
                         onClick={saveVisualCarouselTexts}
                         disabled={savingVisualCarousel}
