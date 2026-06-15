@@ -117,7 +117,7 @@ export const useProductSync = () => {
         .eq('use_in_ai_generation', true)
         .order('display_order', { ascending: true });
 
-      return products?.map(product => ({
+      return (products as any[] | null)?.map(product => ({
         name: product.name,
         description: product.description || '',
         price: product.price ? product.price.toString() : '',
@@ -170,7 +170,7 @@ export const useProductSync = () => {
         .eq('use_in_ai_generation', true)
         .order('display_order', { ascending: true });
 
-      return products?.map(product => ({
+      return (products as any[] | null)?.map(product => ({
         name: product.name,
         description: product.description || '',
         price: product.price ? product.price.toString() : '',
