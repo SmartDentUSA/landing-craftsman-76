@@ -474,6 +474,44 @@ export function EngagementCarouselSection({
     }
   };
 
+  const handleSendSmartOps = async () => {
+    setSendingSmartOps(true);
+    try {
+      const blobs: Blob[] = [];
+      for (let i = 1; i <= 6; i++) {
+        const texts = slideTexts[i];
+        let imgUrl = slideImageMap[i] || '';
+        if (imgUrl && !imgUrl.startsWith('data:')) {
+          try { imgUrl = await fetchAsDataUrl(imgUrl); } catch (e) {
+            console.warn(`SmartOps engajamento slide ${i}: img falhou`, e);
+          }
+        }
+        const blob = await generateEngagementSlidePNG(i, imgUrl, texts, primaryColor, accentColor, brandName, handleName);
+        blobs.push(blob);
+      }
+
+      const produtoSlug = slugify(productName);
+      const { ref, total } = await uploadCarouselToSmartOps({
+        slides: blobs,
+        produtoSlug,
+        tipo: 'engajamento',
+      });
+
+      toast({ title: '📤 Carrossel enviado!', description: 'Abrindo Social Publisher...' });
+      const url = buildSocialPublisherUrl({ ref, produtoSlug, tipo: 'engajamento', total });
+      window.open(url, '_blank', 'noopener');
+    } catch (err) {
+      console.error('[SMARTOPS_UPLOAD_FAIL]', err);
+      toast({
+        title: 'Erro ao enviar para SmartOps',
+        description: 'Tente baixar e fazer upload manualmente.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSendingSmartOps(false);
+    }
+  };
+
   const handleManualSave = async () => {
     setSaving(true);
     try {
