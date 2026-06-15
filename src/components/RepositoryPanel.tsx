@@ -136,6 +136,14 @@ const PRODUCT_REPOSITORY_EDIT_COLUMNS = [
 
 const PRODUCTS_QUERY_TIMEOUT_MS = 15000;
 
+const withRepositoryTimeout = <T,>(promise: PromiseLike<T>, message: string): Promise<T> => {
+  const timeout = new Promise<never>((_, reject) => {
+    globalThis.setTimeout(() => reject(new Error(message)), PRODUCTS_QUERY_TIMEOUT_MS);
+  });
+
+  return Promise.race([promise, timeout]);
+};
+
 export function RepositoryPanel({ 
   landingPageId, 
   onProductSelectionChange, 
@@ -261,10 +269,10 @@ export function RepositoryPanel({
   const refreshAllData = async () => {
     setLoading(true);
     try {
-      await Promise.all([
-        loadProducts(),
-        loadCompanyProfile(),
-        loadKBCacheStatus()
+      await Promise.allSettled([
+        withRepositoryTimeout(loadProducts(), 'Tempo limite ao carregar produtos'),
+        withRepositoryTimeout(loadCompanyProfile(), 'Tempo limite ao carregar perfil da empresa'),
+        withRepositoryTimeout(loadKBCacheStatus(), 'Tempo limite ao carregar cache da Knowledge Base')
       ]);
       toast({
         title: "Sucesso",
@@ -395,11 +403,7 @@ export function RepositoryPanel({
         .eq('approved', showUnapproved ? false : true)
         .order('display_order', { ascending: true });
 
-      const timeout = new Promise<never>((_, reject) => {
-        window.setTimeout(() => reject(new Error('Tempo limite ao carregar produtos do repositório')), PRODUCTS_QUERY_TIMEOUT_MS);
-      });
-
-      const { data, error } = await Promise.race([query, timeout]) as { data: any[] | null; error: any };
+      const { data, error } = await withRepositoryTimeout(query, 'Tempo limite ao carregar produtos do repositório') as { data: any[] | null; error: any };
 
       if (error) {
         console.error('[DEBUG] Erro ao carregar produtos:', error);
