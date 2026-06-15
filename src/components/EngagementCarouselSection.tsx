@@ -565,6 +565,10 @@ export function EngagementCarouselSection({
                   {exporting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Download className="h-4 w-4 mr-1" />}
                   📦 Baixar ZIP
                 </Button>
+                <Button size="sm" onClick={handleSendSmartOps} disabled={sendingSmartOps || exporting}>
+                  {sendingSmartOps ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Send className="h-4 w-4 mr-1" />}
+                  {sendingSmartOps ? 'Enviando...' : '📤 Enviar SmartOps'}
+                </Button>
               </>
             )}
             <Button
