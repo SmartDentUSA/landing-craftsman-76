@@ -172,6 +172,7 @@ export function InstagramCopyGenerator({ productId, productName, productPrice, p
   const [primaryColor, setPrimaryColor] = useState('#1a1a2e');
   const [accentColor, setAccentColor] = useState('#e94560');
   const [isExportingZip, setIsExportingZip] = useState(false);
+  const [sendingSmartOps, setSendingSmartOps] = useState(false);
   const [generatingVisualCarousel, setGeneratingVisualCarousel] = useState(false);
   const [generatingHook, setGeneratingHook] = useState(false);
   const [generatingScience, setGeneratingScience] = useState(false);
