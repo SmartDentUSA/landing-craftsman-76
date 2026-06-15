@@ -110,6 +110,32 @@ interface RepositoryPanelProps {
   onCompanyProfileChange?: (profile: any) => void;
 }
 
+const PRODUCT_REPOSITORY_LIST_COLUMNS = [
+  'id', 'name', 'description', 'price', 'promo_price', 'currency', 'category', 'subcategory',
+  'image_url', 'product_url', 'seo_title_override', 'seo_description_override', 'slug',
+  'canonical_url', 'sales_pitch', 'use_in_ai_generation', 'approved', 'keywords', 'benefits',
+  'features', 'target_audience', 'search_intent_keywords', 'market_keywords', 'tags',
+  'bot_trigger_words', 'youtube_videos', 'instagram_videos', 'technical_videos',
+  'testimonial_videos', 'video_captions', 'images_gallery', 'technical_specifications',
+  'faq', 'gtin', 'ean', 'mpn', 'brand', 'variations', 'show_in_resources', 'selected',
+  'resource_cta1', 'resource_cta2', 'resource_cta3', 'offer_discount_cta',
+  'individual_blog_content', 'display_order', 'wikidata_item_id'
+].join(', ');
+
+const PRODUCT_REPOSITORY_EDIT_COLUMNS = [
+  PRODUCT_REPOSITORY_LIST_COLUMNS, 'applications', 'image_alt', 'color', 'size', 'material',
+  'google_product_category', 'condition', 'availability', 'package_size', 'weight', 'height',
+  'width', 'depth', 'store_category', 'stock_quantity', 'stock_managed', 'min_order_quantity',
+  'max_order_quantity', 'multiple_order_quantity', 'unit_measure', 'shipping_time', 'free_shipping',
+  'shipping_type', 'active', 'featured', 'launch', 'promotion', 'showcase', 'ncm', 'fiscal_class',
+  'tax_situation', 'fiscal_origin', 'resource_descriptions', 'technical_documents',
+  'document_transcriptions', 'workflow_stages', 'competitor_comparison', 'tutorial_resources',
+  'tiktok_videos', 'forbidden_products', 'required_products', 'anti_hallucination_rules',
+  'product_type', 'clinical_brain_status', 'clinical_brain_validation_notes'
+].join(', ');
+
+const PRODUCTS_QUERY_TIMEOUT_MS = 15000;
+
 export function RepositoryPanel({ 
   landingPageId, 
   onProductSelectionChange, 
