@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Copy, Edit, Save, X, Zap, Code, ExternalLink, Film, Plus, ChevronLeft, ChevronRight, Image, Sparkles, Download, Palette } from "lucide-react";
+import { Loader2, Copy, Edit, Save, X, Zap, Code, ExternalLink, Film, Plus, ChevronLeft, ChevronRight, Image, Sparkles, Download, Palette, Send } from "lucide-react";
+import { uploadCarouselToSmartOps, buildSocialPublisherUrl, slugify } from "@/lib/smartops-upload";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -171,6 +172,7 @@ export function InstagramCopyGenerator({ productId, productName, productPrice, p
   const [primaryColor, setPrimaryColor] = useState('#1a1a2e');
   const [accentColor, setAccentColor] = useState('#e94560');
   const [isExportingZip, setIsExportingZip] = useState(false);
+  const [sendingSmartOps, setSendingSmartOps] = useState(false);
   const [generatingVisualCarousel, setGeneratingVisualCarousel] = useState(false);
   const [generatingHook, setGeneratingHook] = useState(false);
   const [generatingScience, setGeneratingScience] = useState(false);
@@ -850,6 +852,60 @@ ${slide.text}`;
       setIsExportingZip(false);
     }
   };
+
+  // === Enviar SmartOps — Carrossel Visual ===
+  const handleSendSmartOpsVisual = async () => {
+    setSendingSmartOps(true);
+    try {
+      const productData = {
+        name: productName,
+        price: productPrice,
+        category: productCategory,
+        benefits: productBenefits,
+        features: productFeatures,
+        technicalSpecs: technicalSpecs,
+        productUrl: productUrl,
+        feedCopyBenefits: feedCopies.find(v => v.approach === 'benefits')?.copy || undefined,
+        feedCopyProblemSolution: feedCopies.find(v => v.approach === 'problem_solution')?.copy || undefined,
+        competitorComparison: competitorComparison,
+      };
+
+      const blobs: Blob[] = [];
+      for (let i = 1; i <= 6; i++) {
+        const textsForSlide = (slideTexts[i as keyof SlideTextsType] as Record<string, string>) || {};
+        let safeDataUrl = '';
+        try {
+          safeDataUrl = await fetchAsDataUrl(slideImageMap[i] || '');
+        } catch (e) {
+          console.warn(`SmartOps slide ${i} sem imagem (fallback):`, e);
+        }
+        const pngBlob = await generateSlidePNG(i, safeDataUrl, primaryColor, accentColor, productData, textsForSlide);
+        blobs.push(pngBlob);
+      }
+
+      const produtoSlug = slugify(productName);
+      const { ref, total } = await uploadCarouselToSmartOps({
+        slides: blobs,
+        produtoSlug,
+        tipo: 'visual',
+      });
+
+      toast({ title: '📤 Carrossel enviado!', description: 'Abrindo Social Publisher...' });
+      const url = buildSocialPublisherUrl({ ref, produtoSlug, tipo: 'visual', total });
+      window.open(url, '_blank', 'noopener');
+    } catch (err) {
+      console.error('[SMARTOPS_UPLOAD_FAIL]', err);
+      toast({
+        title: 'Erro ao enviar para SmartOps',
+        description: 'Tente baixar e fazer upload manualmente.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSendingSmartOps(false);
+    }
+  };
+
+
 
   // === Gerar textos do Carrossel Visual com IA ===
   const generateVisualCarouselTexts = async () => {
@@ -2050,6 +2106,18 @@ ${slide.text}`;
                           <Download className="h-4 w-4 mr-2" />
                         )}
                         📦 Baixar ZIP
+                      </Button>
+                      <Button
+                        onClick={handleSendSmartOpsVisual}
+                        disabled={sendingSmartOps || isExportingZip}
+                        size="sm"
+                      >
+                        {sendingSmartOps ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : (
+                          <Send className="h-4 w-4 mr-2" />
+                        )}
+                        {sendingSmartOps ? 'Enviando...' : '📤 Enviar SmartOps'}
                       </Button>
                       <Button
                         onClick={saveVisualCarouselTexts}

@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Copy, Sparkles, Image, RefreshCw, Download, Save } from "lucide-react";
+import { Loader2, Copy, Sparkles, Image, RefreshCw, Download, Save, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { EngagementCarouselPreview, generateEngagementSlidePNG, generateEngagementSlideVideo, fetchAsDataUrl, resolveVideoSource } from "./EngagementCarouselPreview";
 import type { EngagementSlideTexts, EngagementSlideTextsMap } from "./EngagementCarouselPreview";
 import JSZip from "jszip";
+import { uploadCarouselToSmartOps, buildSocialPublisherUrl, slugify } from "@/lib/smartops-upload";
 
 interface EngagementCarouselSectionProps {
   productId: string;
@@ -43,6 +44,7 @@ export function EngagementCarouselSection({
   const [generating, setGenerating] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [sendingSmartOps, setSendingSmartOps] = useState(false);
   const [loading, setLoading] = useState(true);
   const [hasContent, setHasContent] = useState(false);
   const { toast } = useToast();
@@ -472,6 +474,44 @@ export function EngagementCarouselSection({
     }
   };
 
+  const handleSendSmartOps = async () => {
+    setSendingSmartOps(true);
+    try {
+      const blobs: Blob[] = [];
+      for (let i = 1; i <= 6; i++) {
+        const texts = slideTexts[i];
+        let imgUrl = slideImageMap[i] || '';
+        if (imgUrl && !imgUrl.startsWith('data:')) {
+          try { imgUrl = await fetchAsDataUrl(imgUrl); } catch (e) {
+            console.warn(`SmartOps engajamento slide ${i}: img falhou`, e);
+          }
+        }
+        const blob = await generateEngagementSlidePNG(i, imgUrl, texts, primaryColor, accentColor, brandName, handleName);
+        blobs.push(blob);
+      }
+
+      const produtoSlug = slugify(productName);
+      const { ref, total } = await uploadCarouselToSmartOps({
+        slides: blobs,
+        produtoSlug,
+        tipo: 'engajamento',
+      });
+
+      toast({ title: '📤 Carrossel enviado!', description: 'Abrindo Social Publisher...' });
+      const url = buildSocialPublisherUrl({ ref, produtoSlug, tipo: 'engajamento', total });
+      window.open(url, '_blank', 'noopener');
+    } catch (err) {
+      console.error('[SMARTOPS_UPLOAD_FAIL]', err);
+      toast({
+        title: 'Erro ao enviar para SmartOps',
+        description: 'Tente baixar e fazer upload manualmente.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSendingSmartOps(false);
+    }
+  };
+
   const handleManualSave = async () => {
     setSaving(true);
     try {
@@ -524,6 +564,10 @@ export function EngagementCarouselSection({
                 <Button size="sm" variant="outline" onClick={exportAllPNGs} disabled={exporting}>
                   {exporting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Download className="h-4 w-4 mr-1" />}
                   📦 Baixar ZIP
+                </Button>
+                <Button size="sm" onClick={handleSendSmartOps} disabled={sendingSmartOps || exporting}>
+                  {sendingSmartOps ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Send className="h-4 w-4 mr-1" />}
+                  {sendingSmartOps ? 'Enviando...' : '📤 Enviar SmartOps'}
                 </Button>
               </>
             )}
