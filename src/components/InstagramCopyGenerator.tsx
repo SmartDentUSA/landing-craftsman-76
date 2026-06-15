@@ -2108,6 +2108,17 @@ ${slide.text}`;
                         📦 Baixar ZIP
                       </Button>
                       <Button
+                        onClick={handleSendSmartOpsVisual}
+                        disabled={sendingSmartOps || isExportingZip}
+                        size="sm"
+                      >
+                        {sendingSmartOps ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : (
+                          <Send className="h-4 w-4 mr-2" />
+                        )}
+                        {sendingSmartOps ? 'Enviando...' : '📤 Enviar SmartOps'}
+                      <Button
                         onClick={saveVisualCarouselTexts}
                         disabled={savingVisualCarousel}
                         size="sm"
