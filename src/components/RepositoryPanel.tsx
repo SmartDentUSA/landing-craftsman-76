@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -110,21 +110,13 @@ interface RepositoryPanelProps {
   onCompanyProfileChange?: (profile: any) => void;
 }
 
-// Colunas LEVES para o grid/listagem — exclui JSONB pesados (vídeos, galeria,
-// blog gerado, original_data, specs, faq, variations). Esses são carregados
-// sob demanda pelo ProductEditModal usando PRODUCT_REPOSITORY_EDIT_COLUMNS.
+// Colunas LEVES para o grid/listagem — sem JSONB pesados.
 const PRODUCT_REPOSITORY_LIST_COLUMNS = [
   'id', 'name', 'description', 'price', 'promo_price', 'currency',
-  'category', 'subcategory', 'image_url', 'product_url', 'slug',
-  'canonical_url', 'seo_title_override', 'seo_description_override',
-  'sales_pitch', 'use_in_ai_generation', 'approved', 'display_order',
+  'category', 'subcategory', 'image_url', 'product_url',
+  'use_in_ai_generation', 'approved', 'display_order',
   'show_in_resources', 'selected', 'brand', 'gtin', 'ean', 'mpn',
   'wikidata_item_id',
-  // arrays pequenos usados em filtros/chips do card
-  'keywords', 'tags', 'benefits', 'features', 'target_audience',
-  'search_intent_keywords', 'market_keywords', 'bot_trigger_words',
-  // CTAs (objetos pequenos exibidos no card)
-  'resource_cta1', 'resource_cta2', 'resource_cta3', 'offer_discount_cta',
 ].join(', ');
 
 const PRODUCT_REPOSITORY_EDIT_COLUMNS = [
@@ -178,6 +170,8 @@ export function RepositoryPanel({
   const { migrateExistingOffers, syncOffersToRepository } = useProductSync();
   const { getLandingPage } = useLandingPages();
   const { refreshAllCategories } = useCategoryContext();
+  const productsLoadedSuccessfullyRef = useRef(false);
+  const productsLoadingRef = useRef(false);
 
   // Load KB cache status
   const loadKBCacheStatus = async () => {
@@ -307,6 +301,11 @@ export function RepositoryPanel({
   // Listen for category changes and refresh data automatically
   useEffect(() => {
     const handleCategoryUpdate = async () => {
+      if (productsLoadedSuccessfullyRef.current || productsLoadingRef.current) {
+        console.log('Category data updated, product list already loaded; skipping refresh.');
+        return;
+      }
+
       console.log('Category data updated, refreshing product list...');
       await loadProducts();
     };
@@ -402,6 +401,12 @@ export function RepositoryPanel({
   }, [selectedProductIds, products, onProductSelectionChange]);
 
   const loadProducts = async () => {
+    if (productsLoadingRef.current) {
+      console.log('[DEBUG] Carregamento de produtos já em andamento; ignorando nova chamada.');
+      return;
+    }
+
+    productsLoadingRef.current = true;
     try {
       console.log('[DEBUG] Carregando produtos do repositório...');
       const query = supabase
@@ -485,6 +490,7 @@ export function RepositoryPanel({
       // Auto-select products marked for AI generation
       const aiProducts = formattedProducts.filter(p => p.use_in_ai_generation);
       setSelectedProductIds(new Set(aiProducts.map(p => p.id)));
+      productsLoadedSuccessfullyRef.current = true;
 
     } catch (error: any) {
       // Log detalhado para diferenciar timeout × RLS × coluna inexistente
@@ -501,6 +507,7 @@ export function RepositoryPanel({
         variant: "destructive"
       });
     } finally {
+      productsLoadingRef.current = false;
       setLoading(false);
     }
   };
