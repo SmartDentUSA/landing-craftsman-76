@@ -870,8 +870,10 @@ ${slide.text}`;
         competitorComparison: competitorComparison,
       };
 
+      toast({ title: 'Gerando carrossel...', description: 'Renderizando 6 slides em PNG.' });
       const blobs: Blob[] = [];
       for (let i = 1; i <= 6; i++) {
+        console.log(`[SMARTOPS_VISUAL] preparando slide ${i}/6`);
         const textsForSlide = (slideTexts[i as keyof SlideTextsType] as Record<string, string>) || {};
         let safeDataUrl = '';
         try {
@@ -879,10 +881,23 @@ ${slide.text}`;
         } catch (e) {
           console.warn(`SmartOps slide ${i} sem imagem (fallback):`, e);
         }
-        const pngBlob = await generateSlidePNG(i, safeDataUrl, primaryColor, accentColor, productData, textsForSlide);
+        let pngBlob: Blob;
+        try {
+          pngBlob = await Promise.race<Blob>([
+            generateSlidePNG(i, safeDataUrl, primaryColor, accentColor, productData, textsForSlide),
+            new Promise<Blob>((_, reject) =>
+              setTimeout(() => reject(new Error(`Timeout (45s) renderizando slide ${i}`)), 45_000)
+            ),
+          ]);
+        } catch (e) {
+          console.error(`[SMARTOPS_VISUAL] falha slide ${i}:`, e);
+          throw e;
+        }
+        console.log(`[SMARTOPS_VISUAL] slide ${i} pronto (${pngBlob.size} bytes)`);
         blobs.push(pngBlob);
       }
 
+      toast({ title: 'Enviando para SmartOps...', description: '6 slides → bucket wa-media.' });
       const produtoSlug = slugify(productName);
       const { ref, total } = await uploadCarouselToSmartOps({
         slides: blobs,
@@ -893,11 +908,11 @@ ${slide.text}`;
       toast({ title: '📤 Carrossel enviado!', description: 'Abrindo Social Publisher...' });
       const url = buildSocialPublisherUrl({ ref, produtoSlug, tipo: 'visual', total });
       window.open(url, '_blank', 'noopener');
-    } catch (err) {
+    } catch (err: any) {
       console.error('[SMARTOPS_UPLOAD_FAIL]', err);
       toast({
         title: 'Erro ao enviar para SmartOps',
-        description: 'Tente baixar e fazer upload manualmente.',
+        description: err?.message || 'Tente baixar e fazer upload manualmente.',
         variant: 'destructive',
       });
     } finally {

@@ -25,6 +25,25 @@ export interface UploadCarouselResult {
   total: number;
 }
 
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const t = setTimeout(
+      () => reject(new Error(`Timeout (${ms}ms): ${label}`)),
+      ms,
+    );
+    promise.then(
+      (v) => {
+        clearTimeout(t);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(t);
+        reject(e);
+      },
+    );
+  });
+}
+
 export async function uploadCarouselToSmartOps(
   args: UploadCarouselArgs,
 ): Promise<UploadCarouselResult> {
@@ -32,21 +51,41 @@ export async function uploadCarouselToSmartOps(
   if (!slides.length) throw new Error("Nenhum slide para enviar.");
 
   const ref = `carrosseis/${produtoSlug}/${crypto.randomUUID()}`;
+  console.log(`[SMARTOPS_UPLOAD] iniciando ref=${ref} total=${slides.length}`);
 
   for (let i = 0; i < slides.length; i++) {
     const slide = slides[i];
     const path = `${ref}/slide-${i + 1}.png`;
-    const { error } = await sistemaBClient.storage
-      .from("wa-media")
-      .upload(path, slide, {
-        contentType: "image/png",
-        upsert: false,
-      });
-    if (error) {
-      throw new Error(`Falha no upload do slide ${i + 1}: ${error.message}`);
+    console.log(
+      `[SMARTOPS_UPLOAD] enviando slide ${i + 1}/${slides.length} (${slide.size} bytes) → ${path}`,
+    );
+    try {
+      const { error } = await withTimeout(
+        sistemaBClient.storage
+          .from("wa-media")
+          .upload(path, slide, {
+            contentType: "image/png",
+            upsert: false,
+          }),
+        30_000,
+        `upload slide ${i + 1}`,
+      );
+      if (error) {
+        console.error(`[SMARTOPS_UPLOAD] erro slide ${i + 1}:`, error);
+        throw new Error(
+          `Falha no upload do slide ${i + 1}: ${error.message}`,
+        );
+      }
+      console.log(`[SMARTOPS_UPLOAD] ok slide ${i + 1}`);
+    } catch (err: any) {
+      console.error(`[SMARTOPS_UPLOAD] exceção slide ${i + 1}:`, err);
+      throw err instanceof Error
+        ? err
+        : new Error(`Falha no upload do slide ${i + 1}`);
     }
   }
 
+  console.log(`[SMARTOPS_UPLOAD] concluído ref=${ref}`);
   return { ref, total: slides.length };
 }
 
