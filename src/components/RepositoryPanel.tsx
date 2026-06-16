@@ -401,6 +401,12 @@ export function RepositoryPanel({
   }, [selectedProductIds, products, onProductSelectionChange]);
 
   const loadProducts = async () => {
+    if (productsLoadingRef.current) {
+      console.log('[DEBUG] Carregamento de produtos já em andamento; ignorando nova chamada.');
+      return;
+    }
+
+    productsLoadingRef.current = true;
     try {
       console.log('[DEBUG] Carregando produtos do repositório...');
       const query = supabase
@@ -484,6 +490,7 @@ export function RepositoryPanel({
       // Auto-select products marked for AI generation
       const aiProducts = formattedProducts.filter(p => p.use_in_ai_generation);
       setSelectedProductIds(new Set(aiProducts.map(p => p.id)));
+      productsLoadedSuccessfullyRef.current = true;
 
     } catch (error: any) {
       // Log detalhado para diferenciar timeout × RLS × coluna inexistente
@@ -500,6 +507,7 @@ export function RepositoryPanel({
         variant: "destructive"
       });
     } finally {
+      productsLoadingRef.current = false;
       setLoading(false);
     }
   };
