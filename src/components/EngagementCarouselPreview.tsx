@@ -943,8 +943,9 @@ export async function generateEngagementSlidePNG(
       allowTaint: false,
       backgroundColor: null,
       logging: false,
-      imageTimeout: 4000,
+      imageTimeout: 8000,
     });
+
 
     blob = await new Promise<Blob | null>((resolve) => {
       snapshot.toBlob((b) => resolve(b), 'image/png');
