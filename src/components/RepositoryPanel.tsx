@@ -116,7 +116,7 @@ const PRODUCT_REPOSITORY_LIST_COLUMNS = [
   'category', 'subcategory', 'image_url', 'product_url',
   'use_in_ai_generation', 'approved', 'display_order',
   'show_in_resources', 'selected', 'brand', 'gtin', 'ean', 'mpn',
-  'wikidata_item_id',
+  'wikidata_item_id', 'technical_specifications',
 ].join(', ');
 
 const PRODUCT_REPOSITORY_EDIT_COLUMNS = [
