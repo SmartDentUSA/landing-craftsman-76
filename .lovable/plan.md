@@ -1,35 +1,33 @@
-## Implementação — Botão "📤 Enviar SmartOps"
+## Objetivo
 
-Anon key recebida. Pronto para implementar exatamente o que foi descrito anteriormente:
+Liberar o acesso ao sistema removendo o bloqueio "Acesso Restrito" que aparece em rotas marcadas como `requiredRole='admin'`. Você está logado, mas o `has_role` RPC está retornando/timeout como `'user'`, ativando a tela de bloqueio.
 
-### 1. `.env` (append)
+## Mudança (1 arquivo)
+
+**`src/components/ProtectedRoute.tsx`** — desativar o bloco de verificação de admin. Qualquer usuário autenticado passa.
+
+Trecho a remover (linhas 96–116):
+
+```tsx
+// Admin check
+if (requiredRole === 'admin' && userRole === 'user') {
+  return ( ...Acesso Restrito... );
+}
 ```
-VITE_SISTEMA_B_URL="https://parametros.smartdent.com.br"
-VITE_SISTEMA_B_SUPABASE_URL="https://okeogjgqijbfkudfjadz.supabase.co"
-VITE_SISTEMA_B_SUPABASE_ANON_KEY="eyJhbGciOi...TsXS38TaVtk"
+
+Substituído por um comentário:
+
+```tsx
+// Admin guard temporariamente desativado a pedido do usuário.
+// Reativar quando o has_role RPC estiver confiável.
 ```
 
-### 2. `src/integrations/sistema-b/client.ts` (novo)
-Cliente Supabase isolado apontando para `okeogjgqijbfkudfjadz`, somente para Storage (bucket `wa-media`). Não toca no cliente principal.
+Nenhuma outra lógica de auth, hook ou tabela é tocada. `useAuthReady`, `/auth`, sessão Supabase e roles continuam exatamente iguais — apenas o gate visual de admin no `ProtectedRoute` é desligado.
 
-### 3. `src/lib/smartops-upload.ts` (novo)
-- `slugify(name)` — lowercase, sem acentos, espaços→hífen.
-- `uploadCarouselToSmartOps({ slides, produtoSlug, tipo })` — gera `ref = carrosseis/{slug}/{uuid}`, faz upload sequencial `slide-{n}.png` em `wa-media`, retorna `{ ref, total }`.
-- `buildSocialPublisherUrl({ ref, produtoSlug, tipo, total })` → `${VITE_SISTEMA_B_URL}/ferramentas/social-publisher/criar?source=carrossel&ref=...&produto=...&tipo=...&total=...`.
+## Resultado
 
-### 4. `src/components/InstagramCopyGenerator.tsx`
-- Extrair geração dos 6 PNGs (loop já em `handleExportZip`) para função interna `generateVisualSlideBlobs(): Promise<Blob[]>`, reusada pelo ZIP e pelo SmartOps.
-- Estado `sendingSmartOps`. Handler `handleSendSmartOpsVisual` que chama o helper, mostra toasts e abre nova aba em sucesso.
-- Botão `📤 Enviar SmartOps` (`variant="default"`, ícone `Send`, loading com `Loader2`) ao lado do `📦 Baixar ZIP` (linha ~2050), mesmas condições de disabled.
+- Login em `/auth` continua obrigatório.
+- Após logar, todas as rotas (inclusive `/repository` e admin) abrem normalmente.
+- Para reativar depois: restaurar o bloco removido.
 
-### 5. `src/components/EngagementCarouselSection.tsx`
-- Extrair geração PNG (mesmo loop de `exportAllPNGs`, sempre PNG mesmo quando há vídeo — SmartOps recebe imagens) para `generateEngagementSlideBlobs(): Promise<Blob[]>`.
-- Estado `sendingSmartOps` + `handleSendSmartOpsEngagement` análogo.
-- Botão na mesma linha de `📦 Baixar ZIP` (linha ~526).
-
-### Restrições respeitadas
-- Não altera lógica de geração, downloads existentes, edge functions, schema.
-- System B continua read-only no app (apenas upload para Storage, não DB).
-- Nenhuma migration.
-
-Aguardando o sistema mudar para **build mode** para aplicar as mudanças.
+Confirma que pode aplicar?
