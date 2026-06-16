@@ -110,16 +110,21 @@ interface RepositoryPanelProps {
   onCompanyProfileChange?: (profile: any) => void;
 }
 
+// Colunas LEVES para o grid/listagem — exclui JSONB pesados (vídeos, galeria,
+// blog gerado, original_data, specs, faq, variations). Esses são carregados
+// sob demanda pelo ProductEditModal usando PRODUCT_REPOSITORY_EDIT_COLUMNS.
 const PRODUCT_REPOSITORY_LIST_COLUMNS = [
-  'id', 'name', 'description', 'price', 'promo_price', 'currency', 'category', 'subcategory',
-  'image_url', 'product_url', 'seo_title_override', 'seo_description_override', 'slug',
-  'canonical_url', 'sales_pitch', 'use_in_ai_generation', 'approved', 'keywords', 'benefits',
-  'features', 'target_audience', 'search_intent_keywords', 'market_keywords', 'tags',
-  'bot_trigger_words', 'youtube_videos', 'instagram_videos', 'technical_videos',
-  'testimonial_videos', 'video_captions', 'images_gallery', 'technical_specifications',
-  'faq', 'gtin', 'ean', 'mpn', 'brand', 'variations', 'show_in_resources', 'selected',
+  'id', 'name', 'description', 'price', 'promo_price', 'currency',
+  'category', 'subcategory', 'image_url', 'product_url', 'slug',
+  'canonical_url', 'seo_title_override', 'seo_description_override',
+  'sales_pitch', 'use_in_ai_generation', 'approved', 'display_order',
+  'show_in_resources', 'selected', 'brand', 'gtin', 'ean', 'mpn',
+  'wikidata_item_id',
+  // arrays pequenos usados em filtros/chips do card
+  'keywords', 'tags', 'benefits', 'features', 'target_audience',
+  'search_intent_keywords', 'market_keywords', 'bot_trigger_words',
+  // CTAs (objetos pequenos exibidos no card)
   'resource_cta1', 'resource_cta2', 'resource_cta3', 'offer_discount_cta',
-  'individual_blog_content', 'original_data', 'display_order', 'wikidata_item_id'
 ].join(', ');
 
 const PRODUCT_REPOSITORY_EDIT_COLUMNS = [
@@ -269,10 +274,12 @@ export function RepositoryPanel({
   const refreshAllData = async () => {
     setLoading(true);
     try {
+      // loadProducts já tem withRepositoryTimeout interno na própria query.
+      // Não envelopar de novo aqui para evitar timeout duplicado.
       await Promise.allSettled([
-        withRepositoryTimeout(loadProducts(), 'Tempo limite ao carregar produtos'),
-        withRepositoryTimeout(loadCompanyProfile(), 'Tempo limite ao carregar perfil da empresa'),
-        withRepositoryTimeout(loadKBCacheStatus(), 'Tempo limite ao carregar cache da Knowledge Base')
+        loadProducts(),
+        loadCompanyProfile(),
+        loadKBCacheStatus(),
       ]);
       toast({
         title: "Sucesso",
@@ -479,11 +486,18 @@ export function RepositoryPanel({
       const aiProducts = formattedProducts.filter(p => p.use_in_ai_generation);
       setSelectedProductIds(new Set(aiProducts.map(p => p.id)));
 
-    } catch (error) {
-      console.error('Error loading products:', error);
+    } catch (error: any) {
+      // Log detalhado para diferenciar timeout × RLS × coluna inexistente
+      console.error('[REPOSITORY_LOAD_FAIL]', {
+        code: error?.code,
+        message: error?.message,
+        details: error?.details,
+        hint: error?.hint,
+        stack: error?.stack,
+      });
       toast({
-        title: "Erro",
-        description: "Erro ao carregar produtos do repositório",
+        title: "Erro ao carregar produtos do repositório",
+        description: error?.message || "Falha desconhecida ao consultar products_repository.",
         variant: "destructive"
       });
     } finally {
