@@ -1,27 +1,49 @@
-## Objetivo
-Resolver os erros "Erro ao carregar links externos" e "Erro ao carregar produtos do repositório" e a sumiço das LPs publicadas, liberando leitura/escrita das tabelas envolvidas para todos os usuários autenticados (e leitura pública onde fizer sentido).
+# Correção da Captura dos Slides — Engagement Carousel → SmartOps
 
 ## Diagnóstico
-As mensagens vêm de hooks que consultam tabelas no Supabase (`external_links`, `products_repository`, `cloned_landing_pages`, `landing_pages`, etc.). Após a remoção do guard de admin, o front passou a tentar ler como usuário comum — e as tabelas exigem role `admin` (ou simplesmente não têm GRANT para `authenticated`/`anon`). Resultado: PostgREST devolve "permission denied" e o toast de erro aparece, além das LPs publicadas sumirem do Dashboard.
 
-## Plano (1 migration de permissões + verificação)
+A indexação está correta: o loop em `handleSendSmartOps` itera `i = 1..6`, empurra blobs nessa ordem, e o `uploadCarouselToSmartOps` salva como `slide-${i+1}.png` (i 0-based) → mapeamento 1:1 (`blobs[0] → slide-1.png`). **Não há off-by-one.** Os problemas vêm da renderização antes da captura:
 
-1. **Migration única** ajustando permissões das tabelas usadas pela UI logada, sem alterar dados nem estrutura:
-   - `external_links`: `GRANT SELECT, INSERT, UPDATE, DELETE` para `authenticated`; `GRANT SELECT` para `anon` (links públicos aprovados); policies permissivas equivalentes (`USING (true)` para SELECT de aprovados, full CRUD para authenticated).
-   - `products_repository`: `GRANT SELECT, INSERT, UPDATE, DELETE` para `authenticated`; policy `USING (true) WITH CHECK (true)` para authenticated.
-   - `cloned_landing_pages` e `landing_pages`: idem — `authenticated` com CRUD completo via policy permissiva, para que o Dashboard volte a enxergar as LPs publicadas (Home, QRCode, Comparativo Scanners).
-   - Para qualquer outra tabela do repositório usada nos hooks listados (keywords, categorias, cupons, KOLs, reviews, prompts, etc.) aplicar o mesmo padrão: CRUD para `authenticated`, sem `anon`.
-   - Manter `service_role` com `ALL` em todas.
-   - **Não tocar** em System B (`okeogjgqijbfkudfjadz`) nem em tabelas de auth/storage.
+### Problema A — Slide 1 em branco
+`generateEngagementSlidePNG` faz `root.render(...)` e logo depois um único `requestAnimationFrame` antes de procurar `<img>`. React pode ainda não ter comitado o DOM nesse primeiro frame, então `container.querySelectorAll('img')` retorna 0, o código cai no fallback `setTimeout(resolve, 50)` e o `html2canvas` snapshota **antes da imagem decodificar**. Slide 1 (layout *full-bleed*) é o que mais sofre porque a imagem ocupa 100% do canvas — sem ela sobra só o gradiente preto + o badge "1" + texto branco recortado (daí "lide 1" visível).
 
-2. **Verificação pós-migration**:
-   - Recarregar `/repository` e o Dashboard.
-   - Confirmar que os toasts de erro somem e que as LPs publicadas (Home → smartdent.com.br, QRCode, Comparativo Scanners) voltam a aparecer com selo "Publicado" e URL.
+Pior ainda: no slide 1 o `<img onError>` faz `style.display = 'none'`, então qualquer hiccup de decode esconde a imagem silenciosamente e o snapshot fica preto.
 
-## Aviso de segurança
-Liberar CRUD para todo usuário autenticado significa que **qualquer pessoa logada pode editar/excluir** produtos, links, LPs etc. Como o sistema é interno (apenas operadores logam), isso é aceitável, mas o ideal a médio prazo é reintroduzir o role `admin` via `user_roles` + `has_role()` nas policies. Posso fazer isso num passo seguinte se quiser.
+### Problema B — Imagens "diferentes" no Sistema B
+Mesma raiz: quando o `await img.decode()` não acontece, o html2canvas captura o `<img>` ainda **sem pixels decodificados** (mostra a versão cacheada/anterior do browser, ou um placeholder cinza do user-agent). Como o navegador costuma ter cache de PNGs já vistos no `EngagementCarouselPreview` em tela, o snapshot pega frames antigos/parciais — daí a sensação de "imagem de outro carrossel".
 
-## Fora do escopo
-- Nenhuma mudança em conteúdo publicado (smartdent.com.br continua no ar como está).
-- Nenhuma mudança em System B.
-- Nenhuma alteração de UI além do que voltar a renderizar naturalmente.
+Nada no `sistemaBClient.upload` mistura arquivos: cada `path` é único (`carrosseis/<slug>/<uuid>/slide-N.png`).
+
+## Mudanças (escopo mínimo, só captura)
+
+### 1. `src/components/EngagementCarouselPreview.tsx` — `generateEngagementSlidePNG`
+Substituir o bloco `requestAnimationFrame(...)` (linhas ~906-924) por uma espera robusta:
+
+- Aguardar **dois** `requestAnimationFrame` em sequência (garante commit do React + layout).
+- Após isso, para cada `<img>` dentro do container, aguardar `img.decode()` (não só `onload`) com timeout individual de 4 s; ignorar erro do `decode` mas continuar.
+- Aguardar mais um `requestAnimationFrame` final + 50 ms de folga antes do `html2canvas`.
+- Aumentar `imageTimeout` do html2canvas para 8000 ms.
+
+### 2. `src/components/EngagementCarouselPreview.tsx` — Slide 1 render (linha ~629)
+Remover o `onError` que faz `style.display = 'none'` no `<img>` do slide 1. Falha de imagem deve deixar o `<img>` no DOM (quebrado, mas ainda na árvore) para que possamos detectar via logs em vez de gerar PNG silenciosamente preto. Mesma mudança nos slides 2-5 se tiverem o mesmo `onError` (verificar e remover).
+
+### 3. `src/components/EngagementCarouselSection.tsx` — `handleSendSmartOps` (linhas 477-528)
+Apenas instrumentação (sem mudar fluxo):
+- Logar `slideImageMap[i]` (URL completa) e tamanho do `imgDataUrl` antes de chamar `generateEngagementSlidePNG`.
+- Se `blob.size < 10_000` bytes, logar `console.warn('[SMARTOPS_ENGAJ] slide N suspeito — PNG muito pequeno', { size })` (PNG legítimo 1080×1350 raramente cai abaixo disso).
+
+### 4. Sem outras mudanças
+- **Não** mexer em `smartops-upload.ts` (indexação já está correta).
+- **Não** mexer em `sistema-b/client.ts`.
+- **Não** mexer em RLS, policies, schema, edge functions.
+
+## Arquivos tocados
+- `src/components/EngagementCarouselPreview.tsx` (espera de render + remoção do `onError` que oculta img)
+- `src/components/EngagementCarouselSection.tsx` (logs diagnósticos no `handleSendSmartOps`)
+
+## Validação
+Após aprovar, reenviar o carrossel e conferir no console:
+- `[SMARTOPS_ENGAJ] preparando slide 1/6` deve mostrar a URL real da imagem e `imgDataUrl` com tamanho > 50 KB.
+- `[SMARTOPS_ENGAJ] slide 1 pronto (NNNN bytes)` deve mostrar > 100 KB.
+- Nenhum aviso `slide N suspeito`.
+- Slide 1 no Sistema B deve conter a imagem (não mais o placeholder com "lide 1").
