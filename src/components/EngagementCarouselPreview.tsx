@@ -582,7 +582,7 @@ function renderSlideContent(
             transform: `scale(${imageScale / 100})`,
             borderRadius: 16,
           }}
-          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+          onError={(e) => { console.warn('[ENGAGEMENT_RENDER] img onError (slide non-1)', { src: (e.target as HTMLImageElement).src?.slice(0, 80) }); }}
         />
       </div>
     ) : (
