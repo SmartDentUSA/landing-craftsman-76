@@ -477,8 +477,10 @@ export function EngagementCarouselSection({
   const handleSendSmartOps = async () => {
     setSendingSmartOps(true);
     try {
+      toast({ title: 'Gerando carrossel...', description: 'Renderizando 6 slides em PNG.' });
       const blobs: Blob[] = [];
       for (let i = 1; i <= 6; i++) {
+        console.log(`[SMARTOPS_ENGAJ] preparando slide ${i}/6`);
         const texts = slideTexts[i];
         let imgUrl = slideImageMap[i] || '';
         if (imgUrl && !imgUrl.startsWith('data:')) {
@@ -486,10 +488,23 @@ export function EngagementCarouselSection({
             console.warn(`SmartOps engajamento slide ${i}: img falhou`, e);
           }
         }
-        const blob = await generateEngagementSlidePNG(i, imgUrl, texts, primaryColor, accentColor, brandName, handleName);
+        let blob: Blob;
+        try {
+          blob = await Promise.race<Blob>([
+            generateEngagementSlidePNG(i, imgUrl, texts, primaryColor, accentColor, brandName, handleName),
+            new Promise<Blob>((_, reject) =>
+              setTimeout(() => reject(new Error(`Timeout (45s) renderizando slide ${i}`)), 45_000)
+            ),
+          ]);
+        } catch (e) {
+          console.error(`[SMARTOPS_ENGAJ] falha slide ${i}:`, e);
+          throw e;
+        }
+        console.log(`[SMARTOPS_ENGAJ] slide ${i} pronto (${blob.size} bytes)`);
         blobs.push(blob);
       }
 
+      toast({ title: 'Enviando para SmartOps...', description: '6 slides → bucket wa-media.' });
       const produtoSlug = slugify(productName);
       const { ref, total } = await uploadCarouselToSmartOps({
         slides: blobs,
@@ -500,11 +515,11 @@ export function EngagementCarouselSection({
       toast({ title: '📤 Carrossel enviado!', description: 'Abrindo Social Publisher...' });
       const url = buildSocialPublisherUrl({ ref, produtoSlug, tipo: 'engajamento', total });
       window.open(url, '_blank', 'noopener');
-    } catch (err) {
+    } catch (err: any) {
       console.error('[SMARTOPS_UPLOAD_FAIL]', err);
       toast({
         title: 'Erro ao enviar para SmartOps',
-        description: 'Tente baixar e fazer upload manualmente.',
+        description: err?.message || 'Tente baixar e fazer upload manualmente.',
         variant: 'destructive',
       });
     } finally {
