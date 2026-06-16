@@ -477,12 +477,54 @@ export function EngagementCarouselSection({
   const handleSendSmartOps = async () => {
     setSendingSmartOps(true);
     try {
-      toast({ title: 'Gerando carrossel...', description: 'Renderizando 6 slides em PNG.' });
-      const blobs: Blob[] = [];
+      toast({ title: 'Gerando carrossel...', description: 'Renderizando 6 slides (PNG/Vídeo).' });
+      const slides: { blob: Blob; ext: string; contentType: string }[] = [];
+      let hasVideos = false;
       for (let i = 1; i <= 6; i++) {
-        const rawUrl = slideImageMap[i] || '';
-        console.log(`[SMARTOPS_ENGAJ] preparando slide ${i}/6`, { rawUrl: rawUrl.slice(0, 120) });
         const texts = slideTexts[i];
+        const videoUrl = resolveVideoSource(texts);
+        const rawUrl = slideImageMap[i] || '';
+        console.log(`[SMARTOPS_ENGAJ] preparando slide ${i}/6`, {
+          hasVideo: !!videoUrl,
+          rawUrl: rawUrl.slice(0, 120),
+        });
+
+        // Try video first if there's a video source
+        if (videoUrl) {
+          const sources = [videoUrl];
+          if (texts.videoSrc && texts.videoSrc !== videoUrl) sources.push(texts.videoSrc);
+          if (texts.videoStorageUrl && texts.videoStorageUrl !== videoUrl) sources.push(texts.videoStorageUrl);
+
+          let rendered = false;
+          let lastErr = '';
+          for (const src of sources) {
+            try {
+              const videoBlob = await Promise.race<Blob>([
+                generateEngagementSlideVideo(i, src, texts, primaryColor, accentColor, brandName, handleName),
+                new Promise<Blob>((_, reject) =>
+                  setTimeout(() => reject(new Error(`Timeout (90s) renderizando vídeo slide ${i}`)), 90_000)
+                ),
+              ]);
+              console.log(`[SMARTOPS_ENGAJ] slide ${i} vídeo pronto (${videoBlob.size} bytes)`);
+              slides.push({ blob: videoBlob, ext: 'webm', contentType: 'video/webm' });
+              hasVideos = true;
+              rendered = true;
+              break;
+            } catch (err) {
+              lastErr = (err as Error)?.message ?? String(err);
+              console.error('[SMARTOPS_ENGAJ] vídeo falhou', { slideNum: i, src: src.slice(0, 80), error: lastErr });
+            }
+          }
+          if (rendered) continue;
+          console.warn(`[SMARTOPS_ENGAJ] slide ${i}: vídeo falhou (${lastErr}), enviando PNG.`);
+          toast({
+            title: `⚠️ Slide ${i}: vídeo falhou, enviando como imagem`,
+            description: lastErr,
+            duration: 6000,
+          });
+        }
+
+        // PNG fallback / default
         let imgUrl = rawUrl;
         if (imgUrl && !imgUrl.startsWith('data:')) {
           try {
@@ -492,30 +534,27 @@ export function EngagementCarouselSection({
             console.warn(`SmartOps engajamento slide ${i}: img falhou`, e);
           }
         }
-        let blob: Blob;
-        try {
-          blob = await Promise.race<Blob>([
-            generateEngagementSlidePNG(i, imgUrl, texts, primaryColor, accentColor, brandName, handleName),
-            new Promise<Blob>((_, reject) =>
-              setTimeout(() => reject(new Error(`Timeout (45s) renderizando slide ${i}`)), 45_000)
-            ),
-          ]);
-        } catch (e) {
-          console.error(`[SMARTOPS_ENGAJ] falha slide ${i}:`, e);
-          throw e;
-        }
-        console.log(`[SMARTOPS_ENGAJ] slide ${i} pronto (${blob.size} bytes)`);
+        const blob = await Promise.race<Blob>([
+          generateEngagementSlidePNG(i, imgUrl, texts, primaryColor, accentColor, brandName, handleName),
+          new Promise<Blob>((_, reject) =>
+            setTimeout(() => reject(new Error(`Timeout (45s) renderizando slide ${i}`)), 45_000)
+          ),
+        ]);
+        console.log(`[SMARTOPS_ENGAJ] slide ${i} PNG pronto (${blob.size} bytes)`);
         if (blob.size < 10_000) {
           console.warn(`[SMARTOPS_ENGAJ] slide ${i} suspeito — PNG muito pequeno`, { size: blob.size });
         }
-        blobs.push(blob);
+        slides.push({ blob, ext: 'png', contentType: 'image/png' });
       }
 
 
-      toast({ title: 'Enviando para SmartOps...', description: '6 slides → bucket wa-media.' });
+      toast({
+        title: 'Enviando para SmartOps...',
+        description: hasVideos ? '6 slides (PNG+Vídeo) → bucket wa-media.' : '6 slides → bucket wa-media.',
+      });
       const produtoSlug = slugify(productName);
       const { ref, total } = await uploadCarouselToSmartOps({
-        slides: blobs,
+        slides,
         produtoSlug,
         tipo: 'engajamento',
       });
