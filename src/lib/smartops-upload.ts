@@ -19,8 +19,14 @@ export function slugify(name: string): string {
     .replace(/^-|-$/g, "");
 }
 
+export interface UploadCarouselSlide {
+  blob: Blob;
+  ext?: string;          // 'png' | 'webm' | 'mp4' ...
+  contentType?: string;  // 'image/png' | 'video/webm' ...
+}
+
 export interface UploadCarouselArgs {
-  slides: Blob[];
+  slides: Array<Blob | UploadCarouselSlide>;
   produtoSlug: string;
   tipo: CarouselTipo;
 }
