@@ -903,26 +903,32 @@ export async function generateEngagementSlidePNG(
         handleName,
       })
     );
-    // Wait for React to commit + image to decode
+    // Double rAF guarantees React commit + browser layout pass
     requestAnimationFrame(() => {
-      const imgs = container.querySelectorAll('img');
-      if (imgs.length === 0) {
-        setTimeout(resolve, 50);
-        return;
-      }
-      Promise.all(
-        Array.from(imgs).map(
-          (i) =>
-            new Promise<void>((res) => {
-              if (i.complete && i.naturalWidth > 0) return res();
-              i.onload = () => res();
-              i.onerror = () => res();
-              setTimeout(res, 3000); // hard timeout per image
-            })
-        )
-      ).then(() => setTimeout(resolve, 80));
+      requestAnimationFrame(async () => {
+        const imgs = Array.from(container.querySelectorAll('img'));
+        console.log(`[ENGAGEMENT_PNG] slide ${slideNum}: rendered, ${imgs.length} img(s) in container`);
+        // Await img.decode() per image (more reliable than onload) with timeout
+        await Promise.all(
+          imgs.map((i) =>
+            Promise.race<void>([
+              (async () => {
+                try {
+                  await i.decode();
+                } catch (err) {
+                  console.warn(`[ENGAGEMENT_PNG] slide ${slideNum}: img.decode() failed`, { src: i.src?.slice(0, 80), err });
+                }
+              })(),
+              new Promise<void>((res) => setTimeout(res, 4000)),
+            ])
+          )
+        );
+        // Extra frame + idle to let final pixels settle before snapshot
+        requestAnimationFrame(() => setTimeout(resolve, 80));
+      });
     });
   });
+
 
   let blob: Blob | null = null;
   try {
