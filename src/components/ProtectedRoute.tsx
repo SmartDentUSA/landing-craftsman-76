@@ -11,8 +11,8 @@ interface ProtectedRouteProps {
 
 const PUBLISHED_URL = "https://landing-craftsman-76.lovable.app";
 
-const ProtectedRoute = ({ children, requiredRole = 'user' }: ProtectedRouteProps) => {
-  const { authStatus, user, userRole, error, clearSession } = useAuthReady();
+const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
+  const { authStatus, user, error, clearSession } = useAuthReady();
   const navigate = useNavigate();
   const hasNavigated = useRef(false);
 
@@ -93,27 +93,8 @@ const ProtectedRoute = ({ children, requiredRole = 'user' }: ProtectedRouteProps
   // No user after ready
   if (!user) return null;
 
-  // Admin check
-  if (requiredRole === 'admin' && userRole === 'user') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="max-w-md mx-auto text-center p-8">
-          <div className="bg-card rounded-lg shadow-md p-6 border">
-            <div className="w-16 h-16 mx-auto mb-4 bg-destructive/10 rounded-full flex items-center justify-center">
-              <svg className="w-8 h-8 text-destructive" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-              </svg>
-            </div>
-            <h2 className="text-xl font-semibold mb-2 text-foreground">Acesso Restrito</h2>
-            <p className="text-muted-foreground mb-4">
-              Esta página requer privilégios de administrador.
-            </p>
-            <Button onClick={() => navigate('/dashboard')} className="w-full">Voltar ao Dashboard</Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Admin guard temporariamente desativado a pedido do usuário.
+  // Reativar quando o has_role RPC estiver confiável.
 
   return <CategoryProvider>{children}</CategoryProvider>;
 };
