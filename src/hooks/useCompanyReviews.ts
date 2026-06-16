@@ -63,7 +63,7 @@ export function useCompanyReviews() {
           .from("company_profile")
           .insert({
             user_id: user.id,
-            company_name: "Nova Empresa",
+            company_name: "Smart Dent",
             company_reviews: emptyReviews as any,
           });
 
