@@ -480,11 +480,15 @@ export function EngagementCarouselSection({
       toast({ title: 'Gerando carrossel...', description: 'Renderizando 6 slides em PNG.' });
       const blobs: Blob[] = [];
       for (let i = 1; i <= 6; i++) {
-        console.log(`[SMARTOPS_ENGAJ] preparando slide ${i}/6`);
+        const rawUrl = slideImageMap[i] || '';
+        console.log(`[SMARTOPS_ENGAJ] preparando slide ${i}/6`, { rawUrl: rawUrl.slice(0, 120) });
         const texts = slideTexts[i];
-        let imgUrl = slideImageMap[i] || '';
+        let imgUrl = rawUrl;
         if (imgUrl && !imgUrl.startsWith('data:')) {
-          try { imgUrl = await fetchAsDataUrl(imgUrl); } catch (e) {
+          try {
+            imgUrl = await fetchAsDataUrl(imgUrl);
+            console.log(`[SMARTOPS_ENGAJ] slide ${i} imgDataUrl bytes ≈`, imgUrl.length);
+          } catch (e) {
             console.warn(`SmartOps engajamento slide ${i}: img falhou`, e);
           }
         }
@@ -501,8 +505,12 @@ export function EngagementCarouselSection({
           throw e;
         }
         console.log(`[SMARTOPS_ENGAJ] slide ${i} pronto (${blob.size} bytes)`);
+        if (blob.size < 10_000) {
+          console.warn(`[SMARTOPS_ENGAJ] slide ${i} suspeito — PNG muito pequeno`, { size: blob.size });
+        }
         blobs.push(blob);
       }
+
 
       toast({ title: 'Enviando para SmartOps...', description: '6 slides → bucket wa-media.' });
       const produtoSlug = slugify(productName);
