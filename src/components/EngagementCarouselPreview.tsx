@@ -639,15 +639,15 @@ function renderSlideContent(
           </div>
         )}
 
-        {/* Gradient overlay bottom 50% */}
+        {/* Gradient overlay bottom 70% */}
         <div style={{
-          position: 'absolute', bottom: 0, left: 0, width: '100%', height: '60%',
-          background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.5) 50%, transparent 100%)',
+          position: 'absolute', bottom: 0, left: 0, width: '100%', height: '70%',
+          background: 'linear-gradient(to top, rgba(0,0,0,0.85) 20%, rgba(0,0,0,0.5) 55%, transparent 100%)',
         }} />
 
         {/* Text over gradient */}
         <div style={{
-          position: 'absolute', bottom: 60, left: 60, right: 60,
+          position: 'absolute', bottom: 200, left: 60, right: 60,
           maxHeight: '55%', overflow: 'hidden',
           display: 'flex', flexDirection: 'column', gap: 16,
         }}>
@@ -669,11 +669,11 @@ function renderSlideContent(
 
         {/* Slide number badge */}
         <div style={{
-          position: 'absolute', bottom: 40, right: 48,
+          position: 'absolute', top: 40, right: 48,
           width: 60, height: 60, borderRadius: '50%',
-          background: 'rgba(255,255,255,0.15)',
+          background: 'rgba(0,0,0,0.35)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 28, fontWeight: 900, color: 'rgba(255,255,255,0.5)',
+          fontSize: 28, fontWeight: 900, color: 'rgba(255,255,255,0.85)',
         }}>
           1
         </div>
