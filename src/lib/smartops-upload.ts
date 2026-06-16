@@ -1,4 +1,9 @@
-import { sistemaBClient, SISTEMA_B_APP_URL } from "@/integrations/sistema-b/client";
+import {
+  sistemaBClient,
+  SISTEMA_B_APP_URL,
+  SISTEMA_B_ANON_KEY,
+  SISTEMA_B_SUPABASE_URL,
+} from "@/integrations/sistema-b/client";
 
 export type CarouselTipo = "visual" | "engajamento";
 
@@ -52,6 +57,19 @@ export async function uploadCarouselToSmartOps(
 
   const ref = `carrosseis/${produtoSlug}/${crypto.randomUUID()}`;
   console.log(`[SMARTOPS_UPLOAD] iniciando ref=${ref} total=${slides.length}`);
+  console.log("[SMARTOPS_UPLOAD] Sistema B URL:", SISTEMA_B_SUPABASE_URL || "(vazio)");
+  console.log(
+    "[SMARTOPS_UPLOAD] Anon key presente:",
+    !!SISTEMA_B_ANON_KEY,
+    "len:",
+    SISTEMA_B_ANON_KEY?.length || 0,
+  );
+  if (!SISTEMA_B_SUPABASE_URL || !SISTEMA_B_ANON_KEY) {
+    throw new Error(
+      "Envs do Sistema B ausentes (VITE_SISTEMA_B_SUPABASE_URL / VITE_SISTEMA_B_SUPABASE_ANON_KEY). Configure em Settings → Environment Variables do Lovable.",
+    );
+  }
+
 
   for (let i = 0; i < slides.length; i++) {
     const slide = slides[i];
