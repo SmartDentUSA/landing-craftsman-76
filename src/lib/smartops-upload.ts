@@ -78,20 +78,26 @@ export async function uploadCarouselToSmartOps(
 
 
   for (let i = 0; i < slides.length; i++) {
-    const slide = slides[i];
-    const path = `${ref}/slide-${i + 1}.png`;
+    const raw = slides[i];
+    const isWrapped = raw instanceof Blob ? false : true;
+    const blob: Blob = isWrapped ? (raw as UploadCarouselSlide).blob : (raw as Blob);
+    const ext = isWrapped ? ((raw as UploadCarouselSlide).ext || 'png') : 'png';
+    const contentType = isWrapped
+      ? ((raw as UploadCarouselSlide).contentType || 'image/png')
+      : 'image/png';
+    const path = `${ref}/slide-${i + 1}.${ext}`;
     console.log(
-      `[SMARTOPS_UPLOAD] enviando slide ${i + 1}/${slides.length} (${slide.size} bytes) → ${path}`,
+      `[SMARTOPS_UPLOAD] enviando slide ${i + 1}/${slides.length} (${blob.size} bytes, ${contentType}) → ${path}`,
     );
     try {
       const { error } = await withTimeout(
         sistemaBClient.storage
           .from("wa-media")
-          .upload(path, slide, {
-            contentType: "image/png",
+          .upload(path, blob, {
+            contentType,
             upsert: false,
           }),
-        30_000,
+        60_000,
         `upload slide ${i + 1}`,
       );
       if (error) {
