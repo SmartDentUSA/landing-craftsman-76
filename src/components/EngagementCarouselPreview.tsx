@@ -859,37 +859,35 @@ function renderSlideContent(
         fontFamily: 'system-ui, -apple-system, sans-serif',
         overflow: 'hidden',
         position: 'relative',
-        justifyContent: 'flex-start',
+        justifyContent: 'space-between',
         alignItems: 'center',
-        padding: '90px 60px 120px',
-        gap: 36,
+        padding: '80px 60px 100px',
         textAlign: 'center',
       }}>
-        {/* Title — full height, no clamp, sits at the top */}
-        <div style={{
-          fontSize: 44, fontWeight: 900, color: textColor, lineHeight: 1.2,
-          width: '100%', wordBreak: 'break-word' as const,
-          flexShrink: 0,
-        }}>
-          <RichText text={displayTitle} />
+        {/* Top: Title + Body */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', gap: 16 }}>
+          <div style={{
+            fontSize: 44, fontWeight: 900, color: textColor, lineHeight: 1.2,
+            width: '100%', wordBreak: 'break-word' as const,
+          }}>
+            <RichText text={displayTitle} />
+          </div>
+          {displayBody && (
+            <div style={{
+              fontSize: 26, lineHeight: 1.45, color: subTextColor, fontWeight: 400,
+              maxHeight: 120, overflow: 'hidden',
+              display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as const,
+              width: '100%',
+            }}>
+              <RichText text={displayBody} />
+            </div>
+          )}
         </div>
 
-        {/* Media — reduced height to leave breathing room for body text */}
-        <MediaBlock height={240} />
+        {/* Center: Media */}
+        <MediaBlock height={280} />
 
-        {/* Body — short, muted */}
-        {displayBody && (
-          <div style={{
-            fontSize: 26, lineHeight: 1.45, color: subTextColor, fontWeight: 400,
-            maxHeight: 120, overflow: 'hidden',
-            display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as const,
-            width: '100%',
-          }}>
-            <RichText text={displayBody} />
-          </div>
-        )}
-
-        {/* CTA button */}
+        {/* Bottom: CTA button */}
         {ctaLabel && (
           <div style={{
             background: accent,
@@ -902,7 +900,6 @@ function renderSlideContent(
             width: '100%',
             wordBreak: 'break-word' as const,
             overflowWrap: 'break-word' as const,
-            flexShrink: 0,
           }}>
             {ctaLabel}
           </div>
