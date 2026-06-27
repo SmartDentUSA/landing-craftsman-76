@@ -347,6 +347,8 @@ export function EngagementCarouselSection({
         toast({ title: `📦 Exportando slide ${i}/6...` });
 
         try {
+          const hasVideoForSlide = !!resolveVideoSource(slideTexts[i]);
+          const slideTimeoutMs = hasVideoForSlide ? 150_000 : 45_000;
           await Promise.race([
             (async () => {
               const texts = slideTexts[i];
@@ -417,7 +419,12 @@ export function EngagementCarouselSection({
                 zip.file(`slide_${i}.png`, blob);
               }
             })(),
-            new Promise<never>((_, reject) => setTimeout(() => reject(new Error(`Slide ${i} timeout (30s)`)), 30_000)),
+            new Promise<never>((_, reject) =>
+              setTimeout(
+                () => reject(new Error(`Slide ${i} timeout (${Math.round(slideTimeoutMs / 1000)}s)`)),
+                slideTimeoutMs
+              )
+            ),
           ]);
         } catch (err) {
           const msg = (err as Error)?.message ?? String(err);
