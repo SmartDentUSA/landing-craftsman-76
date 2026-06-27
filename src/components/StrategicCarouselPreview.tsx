@@ -289,7 +289,9 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
 
   // ===== Media customization (mask / video / text overrides) =====
   const mediaType: 'image' | 'video' = (slideTexts?.mediaType as 'image' | 'video') || 'image';
-  const videoUrl: string = slideTexts?.videoSrc || slideTexts?.videoStorageUrl || '';
+  // Unificar prioridade com o export: URL persistida primeiro, blob local só como fallback.
+  // Evita divergência preview↔export e blobs revogados após reload.
+  const videoUrl: string = slideTexts?.videoStorageUrl || slideTexts?.videoSrc || '';
   const maskOpacityNum = Math.min(90, Math.max(0, Number(slideTexts?.maskOpacity ?? 0)));
   const maskColor = slideTexts?.maskColor || '#000000';
   const textColorOverride = slideTexts?.textColor || '';
@@ -1662,6 +1664,28 @@ export async function fetchAsDataUrl(url: string): Promise<string> {
   try {
     const res = await withTimeout(fetch(url, { mode: 'cors' }), 10_000, 'direct fetch');
     const blob = await res.blob();
+    // SVG → rasterizar para PNG: html2canvas/canvas falham em alguns SVGs servidos via data URL.
+    if (blob.type === 'image/svg+xml' || /\.svg(\?|$)/i.test(url)) {
+      try {
+        const svgUrl = URL.createObjectURL(blob);
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => resolve();
+          img.onerror = () => reject(new Error('SVG load failed'));
+          img.src = svgUrl;
+        });
+        const w = img.naturalWidth || 512;
+        const h = img.naturalHeight || 512;
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
+        URL.revokeObjectURL(svgUrl);
+        return canvas.toDataURL('image/png');
+      } catch (svgErr) {
+        console.warn('[fetchAsDataUrl] SVG rasterize failed, falling back to data URL:', svgErr);
+      }
+    }
     return await new Promise<string>((resolve) => {
       const reader = new FileReader();
       reader.onloadend = () => resolve(reader.result as string);
@@ -1729,7 +1753,7 @@ async function waitForDomMedia(container: HTMLElement, label: string) {
       new Promise<void>((resolve) => setTimeout(resolve, 5000)),
     ]))
   );
-  await new Promise<void>((resolve) => requestAnimationFrame(() => setTimeout(resolve, 80)));
+  await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(resolve, 250))));
 }
 
 async function resolveVideoUrlForCanvas(videoUrl: string, logPrefix: string): Promise<{ src: string; revoke?: () => void; usingBlobUrl: boolean }> {
