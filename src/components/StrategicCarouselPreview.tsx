@@ -399,14 +399,31 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
 
         <button
           onClick={() => fileInputRef.current?.click()}
-          title="Upload nova imagem"
+          title="Upload nova imagem ou vídeo"
           className="flex items-center gap-1 text-xs px-2 py-1 rounded border border-border bg-background hover:bg-muted cursor-pointer"
           style={{ fontSize: 10, height: 26, flexShrink: 0 }}
         >
-          <Upload style={{ width: 10, height: 10 }} />
-          <span>Upload</span>
+          {mediaType === 'video' ? <Video style={{ width: 10, height: 10 }} /> : <Upload style={{ width: 10, height: 10 }} />}
+          <span>{mediaType === 'video' ? 'Vídeo' : 'Upload'}</span>
         </button>
-        <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*,video/mp4,video/quicktime,video/webm,video/x-m4v"
+          className="hidden"
+          onChange={handleFileUpload}
+        />
+        {mediaType === 'video' && (
+          <button
+            onClick={() => { onSlideTextChange?.('mediaType', 'image'); onSlideTextChange?.('videoSrc', ''); onSlideTextChange?.('videoStorageUrl', ''); }}
+            title="Remover vídeo e voltar para imagem"
+            className="flex items-center gap-1 text-xs px-2 py-1 rounded border border-border bg-background hover:bg-muted cursor-pointer"
+            style={{ fontSize: 10, height: 26, flexShrink: 0 }}
+          >
+            <ImageIcon style={{ width: 10, height: 10 }} />
+            <span>Imagem</span>
+          </button>
+        )}
 
         {onSlideTextChange && (
           <button
