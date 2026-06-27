@@ -241,7 +241,7 @@ interface SlideWrapperProps {
   productImages: Array<{ url: string; alt?: string }>;
   currentImage: string;
   onImageChange: (slideNum: number, url: string) => void;
-  onImageFileUpload?: (slideNum: number, file: File) => void;
+  onImageFileUpload?: (slideNum: number, file: File, kind?: LogoUploadKind) => void;
   primaryColor: string;
   slideTexts?: Record<string, string>;
   onSlideTextChange?: (key: string, value: string) => void;
@@ -249,13 +249,25 @@ interface SlideWrapperProps {
   onMediaTypeChange?: (type: 'image' | 'video') => void;
 }
 
-const EDITOR_FIELDS: Record<number, Array<{ key: string; label: string; type: 'input' | 'textarea' | 'slider' | 'color' }>> = {
+type EditorFieldType = 'input' | 'textarea' | 'slider' | 'color' | 'logo';
+interface EditorField { key: string; label: string; type: EditorFieldType; min?: number; max?: number; step?: number; defaultValue?: number; }
+
+// Logo fields shared by all 6 slides
+const LOGO_FIELDS: EditorField[] = [
+  { key: 'companyLogoUrl',   label: '🏢 Logo da Empresa',        type: 'logo' },
+  { key: 'companyLogoScale', label: 'Tamanho da Logo (Empresa)', type: 'slider', min: 40, max: 200, step: 5, defaultValue: 100 },
+  { key: 'productLogoUrl',   label: '📦 Logo do Produto',        type: 'logo' },
+  { key: 'productLogoScale', label: 'Tamanho da Logo (Produto)', type: 'slider', min: 40, max: 200, step: 5, defaultValue: 100 },
+];
+
+const EDITOR_FIELDS: Record<number, EditorField[]> = {
   1: [
     { key: 'title', label: 'Título (gancho)', type: 'textarea' },
     { key: 'text', label: 'Subtítulo', type: 'textarea' },
     { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
     { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
     { key: 'accentColor', label: 'Cor de destaque', type: 'color' },
+    ...LOGO_FIELDS,
   ],
   2: [
     { key: 'title', label: 'Título', type: 'textarea' },
@@ -263,6 +275,7 @@ const EDITOR_FIELDS: Record<number, Array<{ key: string; label: string; type: 'i
     { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
     { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
     { key: 'accentColor', label: 'Cor de destaque', type: 'color' },
+    ...LOGO_FIELDS,
   ],
   3: [
     { key: 'title', label: 'Título', type: 'textarea' },
@@ -270,6 +283,7 @@ const EDITOR_FIELDS: Record<number, Array<{ key: string; label: string; type: 'i
     { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
     { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
     { key: 'accentColor', label: 'Cor de destaque', type: 'color' },
+    ...LOGO_FIELDS,
   ],
   4: [
     { key: 'title', label: 'Título', type: 'textarea' },
@@ -277,6 +291,7 @@ const EDITOR_FIELDS: Record<number, Array<{ key: string; label: string; type: 'i
     { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
     { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
     { key: 'accentColor', label: 'Cor de destaque', type: 'color' },
+    ...LOGO_FIELDS,
   ],
   5: [
     { key: 'title', label: 'Título', type: 'textarea' },
@@ -284,6 +299,7 @@ const EDITOR_FIELDS: Record<number, Array<{ key: string; label: string; type: 'i
     { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
     { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
     { key: 'accentColor', label: 'Cor de destaque', type: 'color' },
+    ...LOGO_FIELDS,
   ],
   6: [
     { key: 'title', label: 'Título CTA', type: 'textarea' },
@@ -292,6 +308,7 @@ const EDITOR_FIELDS: Record<number, Array<{ key: string; label: string; type: 'i
     { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
     { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
     { key: 'accentColor', label: 'Cor de destaque', type: 'color' },
+    ...LOGO_FIELDS,
   ],
 };
 
