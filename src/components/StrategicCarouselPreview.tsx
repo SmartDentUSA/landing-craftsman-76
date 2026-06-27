@@ -62,12 +62,12 @@ export interface CommonSlideMediaFields {
 }
 
 export interface SlideTextsType {
-  1: { hook: string; productName: string; imageScale?: string; bgColor?: string; overlayOpacity?: string; faixaVisible?: string; faixaColor?: string } & CommonSlideMediaFields;
-  2: { category: string; introLabel?: string; productName: string; imageScale?: string; bgColor?: string } & CommonSlideMediaFields;
-  3: { title: string; headline?: string; body?: string; bullet1?: string; bullet2?: string; bullet3?: string; bullet4?: string; imageScale?: string; bgColor?: string } & CommonSlideMediaFields;
-  4: { label: string; keyword: string; benefit: string; imageScale?: string; bgColor?: string } & CommonSlideMediaFields;
-  5: { title: string; badge1: string; badge2: string; badge3: string; imageScale?: string; bgColor?: string } & CommonSlideMediaFields;
-  6: { productName: string; ctaButton: string; linkLabel: string; footer: string; imageScale?: string; bgColor?: string } & CommonSlideMediaFields;
+  1: { hook: string; productName: string; imageScale?: string; bgColor?: string; overlayOpacity?: string; faixaVisible?: string; faixaColor?: string; faixaOpacity?: string; hookVisible?: string; nameVisible?: string; badgeVisible?: string } & CommonSlideMediaFields;
+  2: { category: string; introLabel?: string; productName: string; imageScale?: string; bgColor?: string; badgeVisible?: string; categoryVisible?: string; introLabelVisible?: string; nameVisible?: string } & CommonSlideMediaFields;
+  3: { title: string; headline?: string; body?: string; bullet1?: string; bullet2?: string; bullet3?: string; bullet4?: string; imageScale?: string; bgColor?: string; headlineVisible?: string; sideStripVisible?: string; badgeVisible?: string; titleVisible?: string } & CommonSlideMediaFields;
+  4: { label: string; keyword: string; benefit: string; imageScale?: string; bgColor?: string; badgeVisible?: string; labelVisible?: string; keywordVisible?: string; benefitVisible?: string } & CommonSlideMediaFields;
+  5: { title: string; badge1: string; badge2: string; badge3: string; imageScale?: string; bgColor?: string; badgeVisible?: string; titleVisible?: string; badge1Visible?: string; badge2Visible?: string; badge3Visible?: string } & CommonSlideMediaFields;
+  6: { productName: string; ctaButton: string; linkLabel: string; footer: string; imageScale?: string; bgColor?: string; badgeVisible?: string; productNameVisible?: string; ctaButtonVisible?: string; linkLabelVisible?: string; footerVisible?: string; imageVisible?: string } & CommonSlideMediaFields;
 }
 
 interface StrategicCarouselPreviewProps {
