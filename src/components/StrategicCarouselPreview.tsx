@@ -194,29 +194,61 @@ interface SlideWrapperProps {
   productImages: Array<{ url: string; alt?: string }>;
   currentImage: string;
   onImageChange: (slideNum: number, url: string) => void;
+  /** When provided, image AND video uploads are delegated to this handler (which can persist to Storage). */
+  onImageFileUpload?: (slideNum: number, file: File) => void;
   primaryColor: string;
   slideTexts?: Record<string, string>;
   onSlideTextChange?: (key: string, value: string) => void;
 }
 
-function SlideWrapper({ slideNum, children, productImages, currentImage, onImageChange, primaryColor, slideTexts, onSlideTextChange }: SlideWrapperProps) {
+function SlideWrapper({ slideNum, children, productImages, currentImage, onImageChange, onImageFileUpload, primaryColor, slideTexts, onSlideTextChange }: SlideWrapperProps) {
   const containerW = SLIDE_W * SLIDE_SCALE;
   const containerH = SLIDE_H * SLIDE_SCALE;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
   const [editorOpen, setEditorOpen] = useState(false);
 
+  // ===== Media customization (mask / video / text overrides) =====
+  const mediaType: 'image' | 'video' = (slideTexts?.mediaType as 'image' | 'video') || 'image';
+  const videoUrl: string = slideTexts?.videoSrc || slideTexts?.videoStorageUrl || '';
+  const maskOpacityNum = Math.min(90, Math.max(0, Number(slideTexts?.maskOpacity ?? 0)));
+  const maskColor = slideTexts?.maskColor || '#000000';
+  const textColorOverride = slideTexts?.textColor || '';
+  const textPosition = (slideTexts?.textPosition as 'top' | 'center' | 'bottom') || '';
+  const textBlockScale = Number(slideTexts?.textBlockScale ?? 100);
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const dataUrl = ev.target?.result as string;
-      onImageChange(slideNum, dataUrl);
-    };
-    reader.readAsDataURL(file);
+    // Video: must go through the parent handler (Storage upload). Otherwise reject gracefully.
+    if (file.type.startsWith('video/')) {
+      if (onImageFileUpload) {
+        onImageFileUpload(slideNum, file);
+        // Mark this slide as video media so the renderer overlays the <video>.
+        onSlideTextChange?.('mediaType', 'video');
+        const blobUrl = URL.createObjectURL(file);
+        onSlideTextChange?.('videoSrc', blobUrl);
+      } else {
+        console.warn('[CAROUSEL_VISUAL] Upload de vídeo requer onImageFileUpload no parent.');
+      }
+      e.target.value = '';
+      return;
+    }
+    // Image: delegate to parent if available (persists to Storage), else fallback to local dataURL.
+    if (onImageFileUpload) {
+      onImageFileUpload(slideNum, file);
+      onSlideTextChange?.('mediaType', 'image');
+    } else {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const dataUrl = ev.target?.result as string;
+        onImageChange(slideNum, dataUrl);
+      };
+      reader.readAsDataURL(file);
+    }
     e.target.value = '';
   };
+
 
   const insertFormat = (key: string, prefix: string, suffix: string) => {
     if (!onSlideTextChange) return;
