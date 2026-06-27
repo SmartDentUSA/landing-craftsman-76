@@ -641,7 +641,7 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
 }
 
 // ==================== SLIDE 1 — HOOK / GANCHO ====================
-function Slide1Hook({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; productData: ProductData; texts?: { hook?: string; productName?: string; imageScale?: string; bgColor?: string; overlayOpacity?: string; faixaVisible?: string; faixaColor?: string } }) {
+function Slide1Hook({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; productData: ProductData; texts?: { hook?: string; productName?: string; imageScale?: string; bgColor?: string; overlayOpacity?: string; faixaVisible?: string; faixaColor?: string; faixaOpacity?: string } }) {
   const hook = texts?.hook || (() => {
     if (productData.salesPitch) {
       const pitch = productData.salesPitch.trim();
@@ -665,6 +665,16 @@ function Slide1Hook({ image, primaryColor, productData, texts }: { image: string
   const imageScale = Number(texts?.imageScale) || 100;
   const bgColor = texts?.bgColor || '';
   const hasCustomBg = bgColor && bgColor !== '#333333';
+  const faixaVisible = (texts?.faixaVisible ?? 'true') !== 'false';
+
+  // Auto text color: when faixa is OFF, adapt text/hook to page background luminance.
+  // When ON, white stays best contrast against the colored band.
+  const refBg = hasCustomBg ? bgColor : (image ? '' : '#333333');
+  const autoTextColor = refBg && getLuminance(refBg) > 0.55 ? '#111111' : '#ffffff';
+  const noFaixaTextColor = autoTextColor;
+  const noFaixaShadow = autoTextColor === '#ffffff'
+    ? '0 2px 12px rgba(0,0,0,0.7)'
+    : '0 2px 8px rgba(255,255,255,0.4)';
 
   return (
     <div style={{ width: SLIDE_W, height: SLIDE_H, position: 'relative', overflow: 'hidden', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
@@ -690,7 +700,7 @@ function Slide1Hook({ image, primaryColor, productData, texts }: { image: string
       </div>
 
       {/* FAIXA CENTRAL OPACA com a frase — centralizada verticalmente */}
-      {(texts?.faixaVisible ?? 'true') !== 'false' && (
+      {faixaVisible ? (
         <div style={{
           position: 'absolute',
           top: '50%',
@@ -704,18 +714,35 @@ function Slide1Hook({ image, primaryColor, productData, texts }: { image: string
             const r = parseInt(clean.slice(0, 2), 16);
             const g = parseInt(clean.slice(2, 4), 16);
             const b = parseInt(clean.slice(4, 6), 16);
-            return `rgba(${r},${g},${b},0.78)`;
+            const rawOp = texts?.faixaOpacity;
+            const op = rawOp !== undefined && rawOp !== '' ? Math.max(0, Math.min(100, Number(rawOp))) / 100 : 0.78;
+            return `rgba(${r},${g},${b},${op})`;
           })(),
           textAlign: 'center',
         }}>
           <p style={{ color: '#ffffff', fontWeight: 500, fontSize: 52, lineHeight: 1.3, margin: 0, textShadow: '0 2px 8px rgba(0,0,0,0.6)' }}>{hook}</p>
         </div>
+      ) : (
+        // SEM faixa: texto livre na página, cor adaptada ao fundo
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          transform: 'translateY(-50%)',
+          left: 0,
+          right: 0,
+          padding: '60px 80px',
+          textAlign: 'center',
+        }}>
+          <p style={{ color: noFaixaTextColor, fontWeight: 700, fontSize: 56, lineHeight: 1.25, margin: 0, textShadow: noFaixaShadow }}>{hook}</p>
+        </div>
       )}
 
       {/* Gradiente rodapé + nome do produto */}
-      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 200, background: 'linear-gradient(to top, rgba(0,0,0,0.75), transparent)' }} />
+      {faixaVisible && (
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 200, background: 'linear-gradient(to top, rgba(0,0,0,0.75), transparent)' }} />
+      )}
       <div style={{ position: 'absolute', bottom: 60, left: 80, right: 80 }}>
-        <p style={{ color: '#ffffff', fontSize: 44, fontWeight: 600, margin: 0, textAlign: 'center' }}>{name}</p>
+        <p style={{ color: faixaVisible ? '#ffffff' : noFaixaTextColor, fontSize: 44, fontWeight: 600, margin: 0, textAlign: 'center', textShadow: faixaVisible ? undefined : noFaixaShadow }}>{name}</p>
       </div>
     </div>
   );
