@@ -839,44 +839,44 @@ function renderSlideContent(
         fontFamily: 'system-ui, -apple-system, sans-serif',
         overflow: 'hidden',
         position: 'relative',
-        justifyContent: 'center',
+        justifyContent: 'flex-start',
         alignItems: 'center',
-        padding: '60px 60px 140px',
-        gap: 40,
+        padding: '90px 60px 120px',
+        gap: 36,
         textAlign: 'center',
       }}>
-        {/* Title — compact, centered */}
+        {/* Title — full height, no clamp, sits at the top */}
         <div style={{
-          fontSize: 40, fontWeight: 900, color: textColor, lineHeight: 1.2,
-          maxHeight: 180, overflow: 'hidden',
-          display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as const,
+          fontSize: 44, fontWeight: 900, color: textColor, lineHeight: 1.2,
+          width: '100%', wordBreak: 'break-word' as const,
+          flexShrink: 0,
         }}>
           <RichText text={displayTitle} />
         </div>
 
         {/* Media — reduced height to leave breathing room for body text */}
-        <MediaBlock height={260} />
+        <MediaBlock height={240} />
 
-        {/* Body — short, muted, with extra top breathing room */}
+        {/* Body — short, muted */}
         {displayBody && (
           <div style={{
-            fontSize: 28, lineHeight: 1.5, color: subTextColor, fontWeight: 400,
-            maxHeight: 130, overflow: 'hidden',
+            fontSize: 26, lineHeight: 1.45, color: subTextColor, fontWeight: 400,
+            maxHeight: 120, overflow: 'hidden',
             display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as const,
-            marginTop: 8,
+            width: '100%',
           }}>
             <RichText text={displayBody} />
           </div>
         )}
 
-        {/* CTA button — full width, word-wrap safe */}
+        {/* CTA button */}
         {ctaLabel && (
           <div style={{
             background: accent,
             color: getLuminance(accent) > 0.5 ? '#000' : '#fff',
             padding: '20px 40px',
             borderRadius: 20,
-            fontSize: 32,
+            fontSize: 30,
             fontWeight: 900,
             textAlign: 'center',
             width: '100%',
