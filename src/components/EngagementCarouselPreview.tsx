@@ -811,7 +811,7 @@ function renderSlideContent(
 
         {/* Text over gradient */}
         <div style={{
-          position: 'absolute', bottom: 200, left: 60, right: 60,
+          position: 'absolute', bottom: 340, left: 60, right: 60,
           maxHeight: '55%', overflow: 'hidden',
           display: 'flex', flexDirection: 'column', gap: 16,
         }}>
