@@ -716,28 +716,29 @@ function renderSlideContent(
         position: 'relative',
         justifyContent: 'center',
         alignItems: 'center',
-        padding: '60px',
-        gap: 32,
+        padding: '60px 60px 140px',
+        gap: 40,
         textAlign: 'center',
       }}>
         {/* Title — compact, centered */}
         <div style={{
           fontSize: 40, fontWeight: 900, color: textColor, lineHeight: 1.2,
-          maxHeight: 200, overflow: 'hidden',
-          display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical' as const,
+          maxHeight: 180, overflow: 'hidden',
+          display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as const,
         }}>
           <RichText text={displayTitle} />
         </div>
 
-        {/* Media — balanced height */}
-        <MediaBlock height={320} />
+        {/* Media — reduced height to leave breathing room for body text */}
+        <MediaBlock height={260} />
 
-        {/* Body — short, muted */}
+        {/* Body — short, muted, with extra top breathing room */}
         {displayBody && (
           <div style={{
             fontSize: 28, lineHeight: 1.5, color: subTextColor, fontWeight: 400,
             maxHeight: 130, overflow: 'hidden',
             display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as const,
+            marginTop: 8,
           }}>
             <RichText text={displayBody} />
           </div>
@@ -1059,10 +1060,10 @@ function drawSlideFrameWithVideo(
     const titleFont = `900 ${titleFontSize}px system-ui, -apple-system, sans-serif`;
     const titleLineH = titleFontSize * 1.25;
     ctx.font = titleFont;
-    const titleLines = Math.min(measureWrappedLines(ctx, displayTitle, contentW), 4);
+    const titleLines = Math.min(measureWrappedLines(ctx, displayTitle, contentW), 3);
     const titleH = titleLines * titleLineH;
 
-    const imgH = 320;
+    const imgH = 260;
 
     const bodyFontSize = 28;
     const bodyFont = `400 ${bodyFontSize}px system-ui, -apple-system, sans-serif`;
@@ -1094,9 +1095,10 @@ function drawSlideFrameWithVideo(
     const btnPadY = 20;
     const btnH = texts.cta_label ? ctaLinesArr.length * ctaLineH + btnPadY * 2 : 0;
 
-    const gap = 24;
+    const gap = 40;
+    const bottomReserve = 140;
     const totalH = titleH + gap + imgH + gap + (bodyH > 0 ? bodyH + gap : 0) + btnH;
-    let curY = Math.max(pad, (H - totalH) / 2);
+    let curY = Math.max(pad, Math.min((H - totalH) / 2, H - bottomReserve - totalH));
 
     // --- Draw title ---
     ctx.textAlign = 'left';
