@@ -1531,11 +1531,66 @@ export async function generateEngagementSlideVideo(
     cleanup();
     throw new Error('Canvas tainted (CORS): ' + ((taintErr as Error)?.message ?? 'unknown'));
   }
+  // Clear the raw-video frame left by the taint test so it is not captured by MediaRecorder.
+  ctx.clearRect(0, 0, W, H);
+
+  // STEP 5.5 — Preload logos BEFORE recorder.start() so the very first composed frame includes them.
+  const loadImg = (url?: string): Promise<HTMLImageElement | null> =>
+    new Promise(async (resolve) => {
+      if (!url) return resolve(null);
+      try {
+        const dataUrl = /^data:/.test(url) ? url : await fetchAsDataUrl(url);
+        const im = new Image();
+        im.onload = () => resolve(im);
+        im.onerror = () => resolve(null);
+        im.src = dataUrl;
+      } catch { resolve(null); }
+    });
+  const [companyLogoImg, productLogoImg] = await Promise.all([
+    loadImg(texts.companyLogoUrl),
+    loadImg(texts.productLogoUrl),
+  ]);
+  const companyScale = (Number(texts.companyLogoScale) || 100) / 100;
+  const productScale = (Number(texts.productLogoScale) || 100) / 100;
+  const LOGO_BASE = 140;
+  const drawLogos = () => {
+    if (companyLogoImg) {
+      const h = LOGO_BASE * companyScale;
+      const w = h * (companyLogoImg.naturalWidth / companyLogoImg.naturalHeight);
+      ctx.drawImage(companyLogoImg, W - 32 - w, 32, w, h);
+    }
+    if (productLogoImg) {
+      const h = LOGO_BASE * productScale;
+      const w = h * (productLogoImg.naturalWidth / productLogoImg.naturalHeight);
+      ctx.drawImage(productLogoImg, 32, H - 32 - h, w, h);
+    }
+  };
+
+  // STEP 5.6 — Seek to frame 0 and await it, so first composed frame matches the video start.
+  try {
+    if (videoEl.currentTime !== 0) {
+      await Promise.race([
+        new Promise<void>((resolve) => {
+          videoEl.addEventListener('seeked', () => resolve(), { once: true });
+          videoEl.currentTime = 0;
+        }),
+        new Promise<void>((resolve) => setTimeout(resolve, 1500)),
+      ]);
+    }
+  } catch { /* noop — fallback to whatever frame is loaded */ }
+
+  // STEP 5.7 — Draw the FIRST composed frame (template + logos) onto the canvas
+  // BEFORE starting the recorder. Otherwise MediaRecorder captures ~1-5 blank/raw frames.
+  try {
+    drawSlideFrameWithVideo(ctx, slideNum, videoEl, texts, primaryColor, accentColor);
+    drawLogos();
+  } catch (preErr) {
+    console.warn('[VIDEO_RENDER_FAIL]', { phase: 'prime_first_frame', slideNum, error: (preErr as Error)?.message });
+  }
 
   // STEP 6 — Play and record
   try {
     recorder.start();
-    videoEl.currentTime = 0;
     await videoEl.play();
   } catch (playErr) {
     console.error('[VIDEO_RENDER_FAIL]', { phase: 'play', slideNum, error: (playErr as Error)?.message });
