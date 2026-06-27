@@ -956,20 +956,25 @@ function Slide3Technical({ image, primaryColor, productData, texts }: { image: s
   const imageScale3 = Number(texts?.imageScale) || 100;
   const bgColor3 = texts?.bgColor || '#0f0f14';
 
+  const sideStripVisible = (texts?.sideStripVisible ?? 'true') !== 'false';
+  const headlineVisible = (texts?.headlineVisible ?? 'true') !== 'false';
+
   return (
     <div style={{ width: SLIDE_W, height: SLIDE_H, background: bgColor3, fontFamily: 'system-ui, -apple-system, sans-serif', display: 'flex', position: 'relative', overflow: 'hidden' }}>
       <div style={{ position: 'absolute', top: 60, left: 60, width: 70, height: 70, borderRadius: '50%', background: primaryColor, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
         <span style={{ color: textOnPrimary, fontWeight: 900, fontSize: 30 }}>3</span>
       </div>
-      <div style={{ width: '42%', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.03)' }}>
-        {image ? (
-          <img src={image} alt="produto" style={{ maxWidth: '100%', maxHeight: '70%', width: 'auto', height: 'auto', objectFit: 'contain', transform: `scale(${imageScale3 / 100})`, transformOrigin: 'center center' }} />
-        ) : (
-          <div style={{ width: '100%', height: '100%', background: '#1a1a2e' }} />
-        )}
-        <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: 120, background: `linear-gradient(to right, transparent, ${bgColor3})`, pointerEvents: 'none' }} />
-      </div>
-      <div style={{ flex: 1, padding: '100px 60px 80px 40px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+      {sideStripVisible && (
+        <div style={{ width: '42%', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.03)' }}>
+          {image ? (
+            <img src={image} alt="produto" style={{ maxWidth: '100%', maxHeight: '70%', width: 'auto', height: 'auto', objectFit: 'contain', transform: `scale(${imageScale3 / 100})`, transformOrigin: 'center center' }} />
+          ) : (
+            <div style={{ width: '100%', height: '100%', background: '#1a1a2e' }} />
+          )}
+          <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: 120, background: `linear-gradient(to right, transparent, ${bgColor3})`, pointerEvents: 'none' }} />
+        </div>
+      )}
+      <div style={{ flex: 1, padding: sideStripVisible ? '100px 60px 80px 40px' : '100px 80px 80px 140px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
         <h2 style={{ color: '#ffffff', fontSize: 52, fontWeight: 900, margin: '0 0 40px 0', lineHeight: 1.2 }}>{title}</h2>
         {/* Divider accent */}
         <div style={{ width: 56, height: 3, background: primaryColor, borderRadius: 2, marginBottom: 36, flexShrink: 0 }} />
@@ -978,8 +983,8 @@ function Slide3Technical({ image, primaryColor, productData, texts }: { image: s
         {(benefitsHeadline || benefitsBullets.length > 0) ? (
           // ESTRUTURADO: Headline + Corpo + Tabela/Bullets (IA/editado ou feedCopyBenefits)
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            {/* Headline em destaque */}
-            {benefitsHeadline && (
+            {/* Headline em destaque (bloco colorido) */}
+            {benefitsHeadline && headlineVisible && (
               <p style={{ color: primaryColor, fontSize: 36, fontWeight: 800, margin: 0, lineHeight: 1.25 }}>
                 {benefitsHeadline}
               </p>
