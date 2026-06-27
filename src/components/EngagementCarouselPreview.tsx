@@ -312,6 +312,98 @@ const EDITOR_FIELDS: Record<number, EditorField[]> = {
   ],
 };
 
+// ===== Logo overlay (rendered inside scaled 1080x1350 area, so it shows in PNG + preview) =====
+function LogoOverlay({ texts }: { texts?: EngagementSlideTexts }) {
+  if (!texts) return null;
+  const companyUrl = texts.companyLogoUrl;
+  const productUrl = texts.productLogoUrl;
+  if (!companyUrl && !productUrl) return null;
+  const companyScale = Number(texts.companyLogoScale) || 100;
+  const productScale = Number(texts.productLogoScale) || 100;
+  const baseSize = 140; // px in 1080-wide canvas
+  return (
+    <>
+      {companyUrl && (
+        <img
+          src={companyUrl}
+          alt="Logo empresa"
+          crossOrigin="anonymous"
+          style={{
+            position: 'absolute', top: 32, right: 32,
+            width: baseSize * (companyScale / 100),
+            height: 'auto', maxHeight: baseSize * (companyScale / 100),
+            objectFit: 'contain', zIndex: 50, pointerEvents: 'none',
+            filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.35))',
+          }}
+        />
+      )}
+      {productUrl && (
+        <img
+          src={productUrl}
+          alt="Logo produto"
+          crossOrigin="anonymous"
+          style={{
+            position: 'absolute', bottom: 32, left: 32,
+            width: baseSize * (productScale / 100),
+            height: 'auto', maxHeight: baseSize * (productScale / 100),
+            objectFit: 'contain', zIndex: 50, pointerEvents: 'none',
+            filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.35))',
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+// ===== Logo upload control (editor field) =====
+function LogoUploadControl({
+  slideNum, fieldKey, currentUrl, onUpload, onSlideTextChange,
+}: {
+  slideNum: number;
+  fieldKey: string;
+  currentUrl?: string;
+  onUpload?: (slideNum: number, file: File, kind?: LogoUploadKind) => void;
+  onSlideTextChange?: (key: string, value: string) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const kind: LogoUploadKind = fieldKey === 'companyLogoUrl' ? 'logo-company' : 'logo-product';
+  const handlePick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (onUpload) onUpload(slideNum, file, kind);
+    e.target.value = '';
+  };
+  return (
+    <div className="flex items-center gap-2">
+      {currentUrl ? (
+        <img src={currentUrl} alt="logo" className="w-10 h-10 rounded border bg-white object-contain" />
+      ) : (
+        <div className="w-10 h-10 rounded border border-dashed bg-muted/30 flex items-center justify-center text-[10px] text-muted-foreground">
+          sem logo
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        className="flex items-center gap-1 text-xs px-2 py-1 rounded border border-border bg-background hover:bg-muted cursor-pointer"
+      >
+        <Upload style={{ width: 12, height: 12 }} />
+        <span>Upload</span>
+      </button>
+      {currentUrl && (
+        <button
+          type="button"
+          onClick={() => onSlideTextChange?.(fieldKey, '')}
+          className="text-xs px-2 py-1 rounded border border-border bg-background hover:bg-muted cursor-pointer text-destructive"
+        >
+          Remover
+        </button>
+      )}
+      <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="hidden" onChange={handlePick} />
+    </div>
+  );
+}
+
 function SlideWrapper({ slideNum, children, productImages, currentImage, onImageChange, onImageFileUpload, primaryColor, slideTexts, onSlideTextChange, mediaType, onMediaTypeChange }: SlideWrapperProps) {
   const containerW = SLIDE_W * SLIDE_SCALE;
   const containerH = SLIDE_H * SLIDE_SCALE;
