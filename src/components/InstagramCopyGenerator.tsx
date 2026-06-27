@@ -914,12 +914,12 @@ ${slide.text}`;
           // CORS fix: convert image to safe data: URL before drawing on canvas
           const safeDataUrl = await fetchAsDataUrl(slideImageMap[i] || '');
           const textsForSlide = (slideTexts[i as keyof SlideTextsType] as unknown as Record<string, string>) || {};
-          const pngBlob = await generateSlidePNG(i, safeDataUrl, primaryColor, accentColor, productData, textsForSlide);
+          const pngBlob = await generateSlidePNG(i, safeDataUrl, primaryColor, accentColor, productData, textsForSlide, { companyUrl: companyLogoUrl, productUrl: productLogoUrl, companyScale: companyLogoScale, productScale: productLogoScale });
           zip.file(`${SLIDE_FILE_NAMES[i]}.png`, pngBlob);
         } catch (slideErr) {
           console.warn(`Slide ${i} gerado sem imagem (fallback):`, slideErr);
           const textsForSlide = (slideTexts[i as keyof SlideTextsType] as unknown as Record<string, string>) || {};
-          const pngBlob = await generateSlidePNG(i, '', primaryColor, accentColor, productData, textsForSlide);
+          const pngBlob = await generateSlidePNG(i, '', primaryColor, accentColor, productData, textsForSlide, { companyUrl: companyLogoUrl, productUrl: productLogoUrl, companyScale: companyLogoScale, productScale: productLogoScale });
           zip.file(`${SLIDE_FILE_NAMES[i]}.png`, pngBlob);
         }
       }
