@@ -1601,27 +1601,30 @@ export interface StrategicSlideRenderProps {
   accentColor: string;
   productData: ProductData;
   texts?: Partial<SlideTextsType>;
+  logos?: CarouselLogos;
 }
 
-export function StrategicSlideRender({ slideNum, image, primaryColor, accentColor, productData, texts }: StrategicSlideRenderProps) {
+export function StrategicSlideRender({ slideNum, image, primaryColor, accentColor, productData, texts, logos }: StrategicSlideRenderProps) {
   const t: any = texts || {};
-  if (slideNum === 1) return <Slide1Hook image={image} primaryColor={primaryColor} productData={productData} texts={t[1]} />;
-  if (slideNum === 2) return <Slide2Solution image={image} primaryColor={primaryColor} accentColor={accentColor} productData={productData} texts={t[2]} />;
-  if (slideNum === 3) return <Slide3Technical image={image} primaryColor={primaryColor} accentColor={accentColor} productData={productData} texts={t[3]} />;
-  if (slideNum === 4) return <Slide4Experience image={image} primaryColor={primaryColor} productData={productData} texts={t[4]} />;
-  if (slideNum === 5) return <Slide5Security image={image} primaryColor={primaryColor} productData={productData} texts={t[5]} />;
-  if (slideNum === 6) return <Slide6CTA image={image} primaryColor={primaryColor} accentColor={accentColor} productData={productData} texts={t[6]} />;
-  return null;
+  let body: React.ReactNode = null;
+  if (slideNum === 1) body = <Slide1Hook image={image} primaryColor={primaryColor} productData={productData} texts={t[1]} />;
+  else if (slideNum === 2) body = <Slide2Solution image={image} primaryColor={primaryColor} accentColor={accentColor} productData={productData} texts={t[2]} />;
+  else if (slideNum === 3) body = <Slide3Technical image={image} primaryColor={primaryColor} accentColor={accentColor} productData={productData} texts={t[3]} />;
+  else if (slideNum === 4) body = <Slide4Experience image={image} primaryColor={primaryColor} productData={productData} texts={t[4]} />;
+  else if (slideNum === 5) body = <Slide5Security image={image} primaryColor={primaryColor} productData={productData} texts={t[5]} />;
+  else if (slideNum === 6) body = <Slide6CTA image={image} primaryColor={primaryColor} accentColor={accentColor} productData={productData} texts={t[6]} />;
+  return (
+    <div style={{ position: 'relative', width: SLIDE_W, height: SLIDE_H }}>
+      {body}
+      <CarouselLogosOverlay logos={logos} />
+    </div>
+  );
 }
 
 /**
  * PNG export — renders the SAME JSX used in the preview (StrategicSlideRender)
  * into an off-screen container and snapshots it via html2canvas.
  * Guarantees pixel parity between editor preview and exported file.
- *
- * The `texts` argument keeps the legacy flat shape (Record<string,string>) used
- * by InstagramCopyGenerator, where each call already passes the texts for the
- * specific slide being exported. We forward it under the proper slide key.
  */
 export async function generateSlidePNG(
   slideNum: number,
@@ -1629,7 +1632,8 @@ export async function generateSlidePNG(
   primaryColor: string,
   accentColor: string,
   productData: ProductData,
-  texts?: Record<string, string>
+  texts?: Record<string, string>,
+  logos?: CarouselLogos,
 ): Promise<Blob> {
   // 1. Pre-fetch image as data URL to avoid CORS tainting in html2canvas
   let imgDataUrl = '';
@@ -1640,6 +1644,16 @@ export async function generateSlidePNG(
       console.warn('[STRATEGIC_PNG] Failed to prefetch image, using original URL:', err);
       imgDataUrl = imageUrl;
     }
+  }
+
+  // 1b. Pre-fetch logos as data URLs so html2canvas can paint them.
+  let resolvedLogos: CarouselLogos | undefined = logos;
+  if (logos && (logos.companyUrl || logos.productUrl)) {
+    const [companyData, productData2] = await Promise.all([
+      logos.companyUrl ? fetchAsDataUrl(logos.companyUrl).catch(() => logos.companyUrl) : Promise.resolve(undefined),
+      logos.productUrl ? fetchAsDataUrl(logos.productUrl).catch(() => logos.productUrl) : Promise.resolve(undefined),
+    ]);
+    resolvedLogos = { ...logos, companyUrl: companyData, productUrl: productData2 };
   }
 
   // 2. Wrap flat texts under the proper slide key expected by StrategicSlideRender
@@ -1672,6 +1686,7 @@ export async function generateSlidePNG(
         accentColor,
         productData,
         texts: slideTexts,
+        logos: resolvedLogos,
       })
     );
     // Wait for React commit + image decode
