@@ -436,6 +436,7 @@ export function EngagementCarouselSection({
                       slideNum: i,
                       error: (e as Error)?.message,
                     });
+                      throw e;
                   }
                 }
                 const blob = await generateEngagementSlidePNG(i, imgUrl, texts, primaryColor, accentColor, brandName, handleName);
@@ -454,6 +455,7 @@ export function EngagementCarouselSection({
           console.error('[CAROUSEL_ZIP_EXPORT_FAIL]', { phase: 'slide_outer', slideNum: i, error: msg });
           skippedSlides.push(i);
           skipReasons[i] = msg;
+          throw err;
         }
       }
 
