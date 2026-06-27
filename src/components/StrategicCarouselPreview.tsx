@@ -1965,7 +1965,14 @@ export function StrategicSlideRender({ slideNum, image, primaryColor, accentColo
   // underlying <video> shows through when composited on a canvas.
   const renderImage = videoMode ? '' : image;
   const slotForRender = videoMode
-    ? { ...slot, bgColor: 'transparent', overlayOpacity: '0' }
+    ? {
+        ...slot,
+        bgColor: 'transparent',
+        overlayOpacity: '0',
+        sideStripVisible: 'false',
+        imageVisible: 'false',
+        mediaType: 'video',
+      }
     : slot;
   const renderTexts = { ...t, [slideNum]: slotForRender };
 
