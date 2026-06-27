@@ -157,6 +157,8 @@ const SLIDE_EDITOR_FIELDS: Record<number, Array<EditorField>> = {
   3: [
     { key: 'title',    label: 'Título da seção',      type: 'textarea' },
     { key: 'headline', label: 'Headline em destaque',  type: 'textarea' },
+    { key: 'headlineVisible', label: 'Mostrar bloco colorido (headline)', type: 'toggle' },
+    { key: 'sideStripVisible', label: 'Mostrar faixa lateral (imagem)', type: 'toggle' },
     { key: 'body',     label: 'Texto de apoio',        type: 'textarea' },
     { key: 'bullet1',  label: 'Bullet técnico 1',      type: 'textarea' },
     { key: 'bullet2',  label: 'Bullet técnico 2',      type: 'textarea' },
