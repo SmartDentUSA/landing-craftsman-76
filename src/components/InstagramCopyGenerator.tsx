@@ -901,6 +901,15 @@ ${slide.text}`;
     return feedCarousels.find(c => c.variation === variationNum);
   };
 
+  // A exportação precisa usar a MESMA fonte de vídeo que o preview está exibindo.
+  // No editor visual o preview prioriza o blob local (videoSrc) e só cai para a URL
+  // persistida quando não existe blob (ex.: após reload). Inverter essa ordem na
+  // exportação era uma das causas de “vejo uma coisa e exporta outra”.
+  const getStrategicPreviewVideoUrl = (texts: Record<string, string>) => {
+    if (texts.mediaType !== 'video') return '';
+    return String(texts.videoSrc || texts.videoStorageUrl || '');
+  };
+
   // === Export ZIP — Carrossel Visual (PNGs 1080×1350px) ===
   const handleExportZip = async () => {
     setIsExportingZip(true);
@@ -919,19 +928,19 @@ ${slide.text}`;
 
       for (let i = 1; i <= 6; i++) {
         const textsForSlide = (slideTexts[i as keyof SlideTextsType] as unknown as Record<string, string>) || {};
-        const isVideo = textsForSlide.mediaType === 'video' && (textsForSlide.videoStorageUrl || textsForSlide.videoSrc);
+        const videoUrl = getStrategicPreviewVideoUrl(textsForSlide);
+        const isVideo = !!videoUrl;
         const logos = { companyUrl: companyLogoUrl, productUrl: productLogoUrl, companyScale: companyLogoScale, productScale: productLogoScale };
 
         if (isVideo) {
           try {
-            const videoUrl = String(textsForSlide.videoStorageUrl || textsForSlide.videoSrc);
             const productData2 = productData;
             const videoBlob = await generateStrategicSlideVideo(i, videoUrl, primaryColor, accentColor, productData2, textsForSlide, logos);
             zip.file(`${SLIDE_FILE_NAMES[i]}.webm`, videoBlob);
             continue;
           } catch (vErr) {
-            console.error(`[ZIP] Falha vídeo slide ${i}, fallback para PNG:`, vErr);
-            // fall through to PNG fallback below
+            console.error(`[ZIP] Falha vídeo slide ${i}; exportação abortada para não gerar arquivo diferente do preview:`, vErr);
+            throw vErr;
           }
         }
 
@@ -956,7 +965,7 @@ ${slide.text}`;
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      toast({ title: "📦 ZIP gerado!", description: "6 PNGs de 1080×1350px baixados com sucesso." });
+      toast({ title: "📦 ZIP gerado!", description: "6 slides exportados exatamente do preview." });
     } catch (error) {
       console.error('Erro ao gerar ZIP:', error);
       toast({ title: "Erro", description: "Não foi possível gerar o ZIP.", variant: "destructive" });
@@ -976,12 +985,12 @@ ${slide.text}`;
       const logos = { companyUrl: companyLogoUrl, productUrl: productLogoUrl, companyScale: companyLogoScale, productScale: productLogoScale };
       for (let i = 1; i <= 6; i++) {
         const textsForSlide = (slideTexts[i as keyof SlideTextsType] as unknown as Record<string, string>) || {};
-        const isVideo = textsForSlide.mediaType === 'video' && (textsForSlide.videoStorageUrl || textsForSlide.videoSrc);
+        const videoUrl = getStrategicPreviewVideoUrl(textsForSlide);
+        const isVideo = !!videoUrl;
         console.log(`[SMARTOPS_VISUAL] preparando slide ${i}/6 (${isVideo ? 'VIDEO' : 'PNG'})`);
 
         if (isVideo) {
           try {
-            const videoUrl = String(textsForSlide.videoStorageUrl || textsForSlide.videoSrc);
             const videoBlob = await Promise.race<Blob>([
               generateStrategicSlideVideo(i, videoUrl, primaryColor, accentColor, productData, textsForSlide, logos),
               new Promise<Blob>((_, reject) => setTimeout(() => reject(new Error(`Timeout (10min) renderizando vídeo slide ${i}`)), 600_000)),
@@ -990,7 +999,8 @@ ${slide.text}`;
             slidesPayload.push({ blob: videoBlob, ext: 'webm', contentType: 'video/webm' });
             continue;
           } catch (e) {
-            console.error(`[SMARTOPS_VISUAL] vídeo slide ${i} falhou, fallback PNG:`, e);
+            console.error(`[SMARTOPS_VISUAL] vídeo slide ${i} falhou; envio abortado para não enviar PNG diferente do preview:`, e);
+            throw e;
           }
         }
 
