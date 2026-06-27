@@ -85,6 +85,17 @@ interface StrategicCarouselPreviewProps {
   fontSize?: number; // escala percentual 60–150
   onFontFamilyChange?: (v: string) => void;
   onFontSizeChange?: (v: number) => void;
+  // ===== Logos overlay (carousel-level) =====
+  companyLogoUrl?: string;
+  productLogoUrl?: string;
+  companyLogoScale?: number; // % 40–200
+  productLogoScale?: number; // % 40–200
+  onCompanyLogoUpload?: (file: File) => void;
+  onProductLogoUpload?: (file: File) => void;
+  onCompanyLogoScaleChange?: (v: number) => void;
+  onProductLogoScaleChange?: (v: number) => void;
+  onCompanyLogoRemove?: () => void;
+  onProductLogoRemove?: () => void;
 }
 
 function getLuminance(hex: string): number {
@@ -188,6 +199,72 @@ const SLIDE_EDITOR_FIELDS: Record<number, Array<EditorField>> = {
   ],
 };
 
+// ===== Carousel-level logos (overlay rendered on every slide) =====
+export interface CarouselLogos {
+  companyUrl?: string;
+  productUrl?: string;
+  companyScale?: number; // % 40-200
+  productScale?: number; // % 40-200
+}
+
+/**
+ * Overlay rendered inside the 1080x1350 canvas so it is captured by html2canvas
+ * during PNG export AND visible in the on-screen preview.
+ * - Company logo: top-right
+ * - Product logo: bottom-left
+ */
+export function CarouselLogosOverlay({ logos }: { logos?: CarouselLogos }) {
+  if (!logos) return null;
+  const { companyUrl, productUrl, companyScale = 100, productScale = 100 } = logos;
+  if (!companyUrl && !productUrl) return null;
+  // Base height in slide-pixels (the slide is 1080x1350).
+  const BASE_H = 90; // px @ 1080 width
+  const cH = Math.round(BASE_H * (companyScale / 100));
+  const pH = Math.round(BASE_H * (productScale / 100));
+  return (
+    <>
+      {companyUrl && (
+        <img
+          src={companyUrl}
+          alt="Logo da empresa"
+          crossOrigin="anonymous"
+          style={{
+            position: 'absolute',
+            top: 36,
+            right: 36,
+            height: cH,
+            width: 'auto',
+            maxWidth: '45%',
+            objectFit: 'contain',
+            zIndex: 50,
+            pointerEvents: 'none',
+            filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.35))',
+          }}
+        />
+      )}
+      {productUrl && (
+        <img
+          src={productUrl}
+          alt="Logo do produto"
+          crossOrigin="anonymous"
+          style={{
+            position: 'absolute',
+            bottom: 36,
+            left: 36,
+            height: pH,
+            width: 'auto',
+            maxWidth: '45%',
+            objectFit: 'contain',
+            zIndex: 50,
+            pointerEvents: 'none',
+            filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.35))',
+          }}
+        />
+      )}
+    </>
+  );
+}
+
 interface SlideWrapperProps {
   slideNum: number;
   children: React.ReactNode;
@@ -199,9 +276,10 @@ interface SlideWrapperProps {
   primaryColor: string;
   slideTexts?: Record<string, string>;
   onSlideTextChange?: (key: string, value: string) => void;
+  logos?: CarouselLogos;
 }
 
-function SlideWrapper({ slideNum, children, productImages, currentImage, onImageChange, onImageFileUpload, primaryColor, slideTexts, onSlideTextChange }: SlideWrapperProps) {
+function SlideWrapper({ slideNum, children, productImages, currentImage, onImageChange, onImageFileUpload, primaryColor, slideTexts, onSlideTextChange, logos }: SlideWrapperProps) {
   const containerW = SLIDE_W * SLIDE_SCALE;
   const containerH = SLIDE_H * SLIDE_SCALE;
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -354,6 +432,8 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
               }}
             />
           )}
+          {/* Carousel-level logos overlay (top-right + bottom-left) */}
+          <CarouselLogosOverlay logos={logos} />
         </div>
       </div>
 
@@ -1248,6 +1328,16 @@ export function StrategicCarouselPreview({
   fontSize = 100,
   onFontFamilyChange,
   onFontSizeChange,
+  companyLogoUrl,
+  productLogoUrl,
+  companyLogoScale = 100,
+  productLogoScale = 100,
+  onCompanyLogoUpload,
+  onProductLogoUpload,
+  onCompanyLogoScaleChange,
+  onProductLogoScaleChange,
+  onCompanyLogoRemove,
+  onProductLogoRemove,
 }: StrategicCarouselPreviewProps) {
   const FONT_OPTIONS = [
     { label: 'Sistema (Padrão)', value: 'system-ui, -apple-system, sans-serif' },
@@ -1257,6 +1347,16 @@ export function StrategicCarouselPreview({
     { label: 'Courier (Técnico)', value: "'Courier New', Courier, monospace" },
   ];
 
+  const companyLogoInputRef = useRef<HTMLInputElement>(null);
+  const productLogoInputRef = useRef<HTMLInputElement>(null);
+
+  const logos: CarouselLogos = {
+    companyUrl: companyLogoUrl,
+    productUrl: productLogoUrl,
+    companyScale: companyLogoScale,
+    productScale: productLogoScale,
+  };
+
   const slides = [
     { num: 1, label: '🎣 Hook / Gancho', component: <Slide1Hook image={slideImageMap[1] || ''} primaryColor={primaryColor} productData={productData} texts={slideTexts?.[1]} /> },
     { num: 2, label: '✨ Apresentação', component: <Slide2Solution image={slideImageMap[2] || ''} primaryColor={primaryColor} accentColor={accentColor} productData={productData} texts={slideTexts?.[2]} /> },
@@ -1265,6 +1365,92 @@ export function StrategicCarouselPreview({
     { num: 5, label: '🛡️ Segurança', component: <Slide5Security image={slideImageMap[5] || ''} primaryColor={primaryColor} productData={productData} texts={slideTexts?.[5]} /> },
     { num: 6, label: '🛒 CTA', component: <Slide6CTA image={slideImageMap[6] || ''} primaryColor={primaryColor} accentColor={accentColor} productData={productData} texts={slideTexts?.[6]} /> },
   ];
+
+  const LogoControl = ({
+    title,
+    url,
+    scale,
+    onUpload,
+    onScale,
+    onRemove,
+    inputRef,
+    positionHint,
+  }: {
+    title: string;
+    url?: string;
+    scale: number;
+    onUpload?: (file: File) => void;
+    onScale?: (v: number) => void;
+    onRemove?: () => void;
+    inputRef: React.RefObject<HTMLInputElement>;
+    positionHint: string;
+  }) => (
+    <div className="flex items-center gap-3 p-2 rounded border border-border bg-background">
+      <div
+        className="flex items-center justify-center rounded border border-dashed border-border bg-muted overflow-hidden shrink-0"
+        style={{ width: 56, height: 40 }}
+      >
+        {url ? (
+          <img src={url} alt={title} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+        ) : (
+          <span className="text-[10px] text-muted-foreground">Sem logo</span>
+        )}
+      </div>
+      <div className="flex flex-col gap-1 flex-1 min-w-[180px]">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold">{title}</span>
+          <span className="text-[10px] text-muted-foreground">{positionHint}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            className="text-xs px-2 py-1 rounded border border-border bg-background hover:bg-muted cursor-pointer flex items-center gap-1"
+            style={{ fontSize: 11 }}
+          >
+            <Upload style={{ width: 10, height: 10 }} />
+            {url ? 'Trocar' : 'Enviar'}
+          </button>
+          {url && onRemove && (
+            <button
+              type="button"
+              onClick={onRemove}
+              className="text-xs px-2 py-1 rounded border border-border bg-background hover:bg-muted cursor-pointer"
+              style={{ fontSize: 11 }}
+            >
+              Remover
+            </button>
+          )}
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/svg+xml"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f && onUpload) onUpload(f);
+              e.target.value = '';
+            }}
+          />
+        </div>
+        {onScale && (
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-muted-foreground whitespace-nowrap">Tamanho:</span>
+            <input
+              type="range"
+              min={40}
+              max={200}
+              step={5}
+              value={scale}
+              onChange={(e) => onScale(Number(e.target.value))}
+              className="flex-1 h-2 rounded cursor-pointer accent-primary"
+            />
+            <span className="text-[10px] font-mono text-muted-foreground w-9 text-right">{scale}%</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-4">
@@ -1304,6 +1490,32 @@ export function StrategicCarouselPreview({
         </div>
       )}
 
+      {/* Logos da empresa + produto (aplicam em todos os slides) */}
+      {(onCompanyLogoUpload || onProductLogoUpload) && (
+        <div className="grid sm:grid-cols-2 gap-3 p-3 bg-muted/30 rounded-lg border border-border">
+          <LogoControl
+            title="Logo da empresa"
+            url={companyLogoUrl}
+            scale={companyLogoScale}
+            onUpload={onCompanyLogoUpload}
+            onScale={onCompanyLogoScaleChange}
+            onRemove={onCompanyLogoRemove}
+            inputRef={companyLogoInputRef}
+            positionHint="Topo direito"
+          />
+          <LogoControl
+            title="Logo do produto"
+            url={productLogoUrl}
+            scale={productLogoScale}
+            onUpload={onProductLogoUpload}
+            onScale={onProductLogoScaleChange}
+            onRemove={onProductLogoRemove}
+            inputRef={productLogoInputRef}
+            positionHint="Base esquerda"
+          />
+        </div>
+      )}
+
       {/* Slides grid */}
       <div className="flex flex-wrap gap-6 justify-center">
         {slides.map((slide) => (
@@ -1318,6 +1530,7 @@ export function StrategicCarouselPreview({
               primaryColor={primaryColor}
               slideTexts={slideTexts?.[slide.num as keyof SlideTextsType] as unknown as Record<string, string>}
               onSlideTextChange={onSlideTextChange ? (key, value) => onSlideTextChange(slide.num, key, value) : undefined}
+              logos={logos}
             >
               {slide.component}
             </SlideWrapper>
@@ -1388,27 +1601,30 @@ export interface StrategicSlideRenderProps {
   accentColor: string;
   productData: ProductData;
   texts?: Partial<SlideTextsType>;
+  logos?: CarouselLogos;
 }
 
-export function StrategicSlideRender({ slideNum, image, primaryColor, accentColor, productData, texts }: StrategicSlideRenderProps) {
+export function StrategicSlideRender({ slideNum, image, primaryColor, accentColor, productData, texts, logos }: StrategicSlideRenderProps) {
   const t: any = texts || {};
-  if (slideNum === 1) return <Slide1Hook image={image} primaryColor={primaryColor} productData={productData} texts={t[1]} />;
-  if (slideNum === 2) return <Slide2Solution image={image} primaryColor={primaryColor} accentColor={accentColor} productData={productData} texts={t[2]} />;
-  if (slideNum === 3) return <Slide3Technical image={image} primaryColor={primaryColor} accentColor={accentColor} productData={productData} texts={t[3]} />;
-  if (slideNum === 4) return <Slide4Experience image={image} primaryColor={primaryColor} productData={productData} texts={t[4]} />;
-  if (slideNum === 5) return <Slide5Security image={image} primaryColor={primaryColor} productData={productData} texts={t[5]} />;
-  if (slideNum === 6) return <Slide6CTA image={image} primaryColor={primaryColor} accentColor={accentColor} productData={productData} texts={t[6]} />;
-  return null;
+  let body: React.ReactNode = null;
+  if (slideNum === 1) body = <Slide1Hook image={image} primaryColor={primaryColor} productData={productData} texts={t[1]} />;
+  else if (slideNum === 2) body = <Slide2Solution image={image} primaryColor={primaryColor} accentColor={accentColor} productData={productData} texts={t[2]} />;
+  else if (slideNum === 3) body = <Slide3Technical image={image} primaryColor={primaryColor} accentColor={accentColor} productData={productData} texts={t[3]} />;
+  else if (slideNum === 4) body = <Slide4Experience image={image} primaryColor={primaryColor} productData={productData} texts={t[4]} />;
+  else if (slideNum === 5) body = <Slide5Security image={image} primaryColor={primaryColor} productData={productData} texts={t[5]} />;
+  else if (slideNum === 6) body = <Slide6CTA image={image} primaryColor={primaryColor} accentColor={accentColor} productData={productData} texts={t[6]} />;
+  return (
+    <div style={{ position: 'relative', width: SLIDE_W, height: SLIDE_H }}>
+      {body}
+      <CarouselLogosOverlay logos={logos} />
+    </div>
+  );
 }
 
 /**
  * PNG export — renders the SAME JSX used in the preview (StrategicSlideRender)
  * into an off-screen container and snapshots it via html2canvas.
  * Guarantees pixel parity between editor preview and exported file.
- *
- * The `texts` argument keeps the legacy flat shape (Record<string,string>) used
- * by InstagramCopyGenerator, where each call already passes the texts for the
- * specific slide being exported. We forward it under the proper slide key.
  */
 export async function generateSlidePNG(
   slideNum: number,
@@ -1416,7 +1632,8 @@ export async function generateSlidePNG(
   primaryColor: string,
   accentColor: string,
   productData: ProductData,
-  texts?: Record<string, string>
+  texts?: Record<string, string>,
+  logos?: CarouselLogos,
 ): Promise<Blob> {
   // 1. Pre-fetch image as data URL to avoid CORS tainting in html2canvas
   let imgDataUrl = '';
@@ -1427,6 +1644,16 @@ export async function generateSlidePNG(
       console.warn('[STRATEGIC_PNG] Failed to prefetch image, using original URL:', err);
       imgDataUrl = imageUrl;
     }
+  }
+
+  // 1b. Pre-fetch logos as data URLs so html2canvas can paint them.
+  let resolvedLogos: CarouselLogos | undefined = logos;
+  if (logos && (logos.companyUrl || logos.productUrl)) {
+    const [companyData, productData2] = await Promise.all([
+      logos.companyUrl ? fetchAsDataUrl(logos.companyUrl).catch(() => logos.companyUrl) : Promise.resolve(undefined),
+      logos.productUrl ? fetchAsDataUrl(logos.productUrl).catch(() => logos.productUrl) : Promise.resolve(undefined),
+    ]);
+    resolvedLogos = { ...logos, companyUrl: companyData, productUrl: productData2 };
   }
 
   // 2. Wrap flat texts under the proper slide key expected by StrategicSlideRender
@@ -1459,6 +1686,7 @@ export async function generateSlidePNG(
         accentColor,
         productData,
         texts: slideTexts,
+        logos: resolvedLogos,
       })
     );
     // Wait for React commit + image decode

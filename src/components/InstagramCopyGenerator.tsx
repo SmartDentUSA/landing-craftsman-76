@@ -236,6 +236,39 @@ export function InstagramCopyGenerator({ productId, productName, productPrice, p
       toast({ title: '✅ Imagem enviada', description: `Slide ${slideNum} atualizado.`, duration: 3000 });
     }
   };
+
+  // === Logos (empresa + produto) — aplicam em todos os slides do Carrossel Visual ===
+  const [companyLogoUrl, setCompanyLogoUrl] = useState<string>('');
+  const [productLogoUrl, setProductLogoUrl] = useState<string>('');
+  const [companyLogoScale, setCompanyLogoScale] = useState<number>(100);
+  const [productLogoScale, setProductLogoScale] = useState<number>(100);
+
+  const handleLogoUpload = async (kind: 'company' | 'product', file: File) => {
+    const ALLOWED = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'];
+    if (!ALLOWED.includes(file.type)) {
+      toast({ title: 'Formato não suportado', description: 'Use PNG, JPEG, WEBP ou SVG.', variant: 'destructive' });
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      toast({ title: 'Logo muito grande', description: 'Limite de 8 MB.', variant: 'destructive' });
+      return;
+    }
+    const ext = file.name.split('.').pop() || 'png';
+    const path = `visual-carousel/${productId}/logo_${kind}_${Date.now()}.${ext}`;
+    const { error } = await supabase.storage
+      .from('product-images')
+      .upload(path, file, { upsert: true, contentType: file.type });
+    if (error) {
+      toast({ title: 'Erro no upload do logo', description: error.message, variant: 'destructive' });
+      return;
+    }
+    const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(path);
+    if (!urlData?.publicUrl) return;
+    if (kind === 'company') setCompanyLogoUrl(urlData.publicUrl);
+    else setProductLogoUrl(urlData.publicUrl);
+    toast({ title: `✅ Logo ${kind === 'company' ? 'da empresa' : 'do produto'} atualizado` });
+  };
+
   const [fontFamily, setFontFamily] = useState<string>('system-ui, -apple-system, sans-serif');
   const [fontSize, setFontSize] = useState<number>(100);
   const [savingVisualCarousel, setSavingVisualCarousel] = useState(false);
@@ -881,12 +914,12 @@ ${slide.text}`;
           // CORS fix: convert image to safe data: URL before drawing on canvas
           const safeDataUrl = await fetchAsDataUrl(slideImageMap[i] || '');
           const textsForSlide = (slideTexts[i as keyof SlideTextsType] as unknown as Record<string, string>) || {};
-          const pngBlob = await generateSlidePNG(i, safeDataUrl, primaryColor, accentColor, productData, textsForSlide);
+          const pngBlob = await generateSlidePNG(i, safeDataUrl, primaryColor, accentColor, productData, textsForSlide, { companyUrl: companyLogoUrl, productUrl: productLogoUrl, companyScale: companyLogoScale, productScale: productLogoScale });
           zip.file(`${SLIDE_FILE_NAMES[i]}.png`, pngBlob);
         } catch (slideErr) {
           console.warn(`Slide ${i} gerado sem imagem (fallback):`, slideErr);
           const textsForSlide = (slideTexts[i as keyof SlideTextsType] as unknown as Record<string, string>) || {};
-          const pngBlob = await generateSlidePNG(i, '', primaryColor, accentColor, productData, textsForSlide);
+          const pngBlob = await generateSlidePNG(i, '', primaryColor, accentColor, productData, textsForSlide, { companyUrl: companyLogoUrl, productUrl: productLogoUrl, companyScale: companyLogoScale, productScale: productLogoScale });
           zip.file(`${SLIDE_FILE_NAMES[i]}.png`, pngBlob);
         }
       }
@@ -941,7 +974,7 @@ ${slide.text}`;
         let pngBlob: Blob;
         try {
           pngBlob = await Promise.race<Blob>([
-            generateSlidePNG(i, safeDataUrl, primaryColor, accentColor, productData, textsForSlide),
+            generateSlidePNG(i, safeDataUrl, primaryColor, accentColor, productData, textsForSlide, { companyUrl: companyLogoUrl, productUrl: productLogoUrl, companyScale: companyLogoScale, productScale: productLogoScale }),
             new Promise<Blob>((_, reject) =>
               setTimeout(() => reject(new Error(`Timeout (45s) renderizando slide ${i}`)), 45_000)
             ),
@@ -2286,6 +2319,16 @@ ${slide.text}`;
                       fontSize={fontSize}
                       onFontFamilyChange={setFontFamily}
                       onFontSizeChange={setFontSize}
+                      companyLogoUrl={companyLogoUrl}
+                      productLogoUrl={productLogoUrl}
+                      companyLogoScale={companyLogoScale}
+                      productLogoScale={productLogoScale}
+                      onCompanyLogoUpload={(f) => handleLogoUpload('company', f)}
+                      onProductLogoUpload={(f) => handleLogoUpload('product', f)}
+                      onCompanyLogoScaleChange={setCompanyLogoScale}
+                      onProductLogoScaleChange={setProductLogoScale}
+                      onCompanyLogoRemove={() => setCompanyLogoUrl('')}
+                      onProductLogoRemove={() => setProductLogoUrl('')}
                     />
                   </div>
 
