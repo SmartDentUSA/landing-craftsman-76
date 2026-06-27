@@ -1610,37 +1610,9 @@ export async function generateEngagementSlideVideo(
     try { recorder.stop(); } catch { /* noop */ }
   };
 
-  // Preload logos once for overlay drawing on every frame
-  const loadImg = (url?: string): Promise<HTMLImageElement | null> =>
-    new Promise(async (resolve) => {
-      if (!url) return resolve(null);
-      try {
-        const dataUrl = /^data:/.test(url) ? url : await fetchAsDataUrl(url);
-        const im = new Image();
-        im.onload = () => resolve(im);
-        im.onerror = () => resolve(null);
-        im.src = dataUrl;
-      } catch { resolve(null); }
-    });
-  const [companyLogoImg, productLogoImg] = await Promise.all([
-    loadImg(texts.companyLogoUrl),
-    loadImg(texts.productLogoUrl),
-  ]);
-  const companyScale = (Number(texts.companyLogoScale) || 100) / 100;
-  const productScale = (Number(texts.productLogoScale) || 100) / 100;
-  const LOGO_BASE = 140;
-  const drawLogos = () => {
-    if (companyLogoImg) {
-      const h = LOGO_BASE * companyScale;
-      const w = h * (companyLogoImg.naturalWidth / companyLogoImg.naturalHeight);
-      ctx.drawImage(companyLogoImg, W - 32 - w, 32, w, h);
-    }
-    if (productLogoImg) {
-      const h = LOGO_BASE * productScale;
-      const w = h * (productLogoImg.naturalWidth / productLogoImg.naturalHeight);
-      ctx.drawImage(productLogoImg, 32, H - 32 - h, w, h);
-    }
-  };
+  // (logos preloaded earlier, before recorder.start())
+
+
 
   await new Promise<void>((resolve) => {
     let frame = 0;
