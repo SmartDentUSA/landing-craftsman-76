@@ -702,7 +702,8 @@ function Slide1Hook({ image, primaryColor, productData, texts }: { image: string
 
       {/* Overlay escuro geral sutil para dar profundidade */}
       {(() => {
-        const ov = Number(texts?.overlayOpacity) || (hasCustomBg ? 10 : 28);
+        const rawOv = texts?.overlayOpacity;
+        const ov = rawOv !== undefined && rawOv !== '' ? Math.max(0, Math.min(100, Number(rawOv))) : (hasCustomBg ? 10 : 28);
         return <div style={{ position: 'absolute', inset: 0, background: `rgba(0,0,0,${ov / 100})` }} />;
       })()}
 
@@ -1754,7 +1755,7 @@ export async function generateDomCompositedVideo({
   slotSelector,
   drawOrder,
   logPrefix = 'DOM_VIDEO',
-  durationCapSeconds = 120,
+  durationCapSeconds = 3600,
 }: {
   videoUrl: string;
   overlayElement: React.ReactElement;
@@ -2173,7 +2174,7 @@ export async function generateStrategicSlideVideo(
     slotSelector: '[data-strategic-video-slot="true"]',
     drawOrder: 'video-under-overlay',
     logPrefix: `STRATEGIC_VIDEO_${slideNum}`,
-    durationCapSeconds: 120,
+    durationCapSeconds: 3600,
   });
 }
 
