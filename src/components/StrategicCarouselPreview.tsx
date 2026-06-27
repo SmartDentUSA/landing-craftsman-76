@@ -1678,17 +1678,53 @@ export interface StrategicSlideRenderProps {
 
 export function StrategicSlideRender({ slideNum, image, primaryColor, accentColor, productData, texts, logos }: StrategicSlideRenderProps) {
   const t: any = texts || {};
+  const slot = t[slideNum] || {};
+  const videoMode = slot.mediaType === 'video' && (slot.videoSrc || slot.videoStorageUrl);
+  // In video mode (export overlay), suppress slide's own background/image so the
+  // underlying <video> shows through when composited on a canvas.
+  const renderImage = videoMode ? '' : image;
+  const slotForRender = videoMode
+    ? { ...slot, bgColor: 'transparent', overlayOpacity: '0' }
+    : slot;
+  const renderTexts = { ...t, [slideNum]: slotForRender };
+
+  const maskOpacityNum = Math.min(90, Math.max(0, Number(slot.maskOpacity ?? 0)));
+  const maskColor = slot.maskColor || '#000000';
+  const textColorOverride = slot.textColor || '';
+  const contentClass = `strategic-export-content-${slideNum}`;
+
   let body: React.ReactNode = null;
-  if (slideNum === 1) body = <Slide1Hook image={image} primaryColor={primaryColor} productData={productData} texts={t[1]} />;
-  else if (slideNum === 2) body = <Slide2Solution image={image} primaryColor={primaryColor} accentColor={accentColor} productData={productData} texts={t[2]} />;
-  else if (slideNum === 3) body = <Slide3Technical image={image} primaryColor={primaryColor} accentColor={accentColor} productData={productData} texts={t[3]} />;
-  else if (slideNum === 4) body = <Slide4Experience image={image} primaryColor={primaryColor} productData={productData} texts={t[4]} />;
-  else if (slideNum === 5) body = <Slide5Security image={image} primaryColor={primaryColor} productData={productData} texts={t[5]} />;
-  else if (slideNum === 6) body = <Slide6CTA image={image} primaryColor={primaryColor} accentColor={accentColor} productData={productData} texts={t[6]} />;
+  if (slideNum === 1) body = <Slide1Hook image={renderImage} primaryColor={primaryColor} productData={productData} texts={renderTexts[1]} />;
+  else if (slideNum === 2) body = <Slide2Solution image={renderImage} primaryColor={primaryColor} accentColor={accentColor} productData={productData} texts={renderTexts[2]} />;
+  else if (slideNum === 3) body = <Slide3Technical image={renderImage} primaryColor={primaryColor} accentColor={accentColor} productData={productData} texts={renderTexts[3]} />;
+  else if (slideNum === 4) body = <Slide4Experience image={renderImage} primaryColor={primaryColor} productData={productData} texts={renderTexts[4]} />;
+  else if (slideNum === 5) body = <Slide5Security image={renderImage} primaryColor={primaryColor} productData={productData} texts={renderTexts[5]} />;
+  else if (slideNum === 6) body = <Slide6CTA image={renderImage} primaryColor={primaryColor} accentColor={accentColor} productData={productData} texts={renderTexts[6]} />;
+
   return (
-    <div style={{ position: 'relative', width: SLIDE_W, height: SLIDE_H }}>
-      {body}
-      <CarouselLogosOverlay logos={logos} />
+    <div style={{ position: 'relative', width: SLIDE_W, height: SLIDE_H, background: videoMode ? 'transparent' : undefined }}>
+      {textColorOverride && (
+        <style>{`.${contentClass} :is(p, span, h1, h2, h3, h4, h5, h6, div, li, a, button) { color: ${textColorOverride} !important; }`}</style>
+      )}
+      <div className={contentClass} style={{ position: 'absolute', inset: 0, zIndex: 3 }}>
+        {body}
+      </div>
+      {maskOpacityNum > 0 && (
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: maskColor,
+            opacity: maskOpacityNum / 100,
+            zIndex: 4,
+            pointerEvents: 'none',
+          }}
+        />
+      )}
+      <div style={{ position: 'absolute', inset: 0, zIndex: 50, pointerEvents: 'none' }}>
+        <CarouselLogosOverlay logos={logos} />
+      </div>
     </div>
   );
 }
@@ -1808,6 +1844,206 @@ export async function generateSlidePNG(
 
   if (!blob) throw new Error('html2canvas snapshot failed (toBlob returned null)');
   return blob;
+}
+
+/**
+ * Generate a WEBM video for a Strategic slide, with the slide template
+ * (text, mask, logos) composited over the source video.
+ *
+ * Strategy: render the template DOM via html2canvas (with the slide in
+ * "videoMode" so its background is transparent) to obtain a single PNG
+ * overlay. Then draw the playing <video> + overlay on a canvas frame loop
+ * and capture via MediaRecorder until the video ends.
+ */
+export async function generateStrategicSlideVideo(
+  slideNum: number,
+  videoUrl: string,
+  primaryColor: string,
+  accentColor: string,
+  productData: ProductData,
+  texts: Record<string, string>,
+  logos?: CarouselLogos,
+): Promise<Blob> {
+  const W = SLIDE_W;
+  const H = SLIDE_H;
+
+  // 1) Build overlay PNG with template + mask + text + logos (video area transparent).
+  //    We force mediaType:'video' so StrategicSlideRender drops the bg/image.
+  const overlayTexts: Record<string, string> = { ...texts, mediaType: 'video' };
+  const overlayBlob = await generateSlidePNG(
+    slideNum,
+    '', // no image — video is the media
+    primaryColor,
+    accentColor,
+    productData,
+    overlayTexts,
+    logos,
+  );
+  const overlayUrl = URL.createObjectURL(overlayBlob);
+  const overlayImg: HTMLImageElement = await new Promise((resolve, reject) => {
+    const im = new Image();
+    im.onload = () => resolve(im);
+    im.onerror = () => reject(new Error('overlay image load failed'));
+    im.src = overlayUrl;
+  });
+
+  // 2) Prefetch video as blob URL to avoid CORS taint of the canvas.
+  let blobVideoUrl: string | null = null;
+  let usingBlobUrl = false;
+  try {
+    if (/^https?:\/\//i.test(videoUrl)) {
+      const resp = await Promise.race([
+        fetch(videoUrl, { mode: 'cors', credentials: 'omit' }),
+        new Promise<Response>((_, reject) => setTimeout(() => reject(new Error('Video fetch timeout (20s)')), 20_000)),
+      ]);
+      if (!resp.ok) throw new Error(`Video fetch HTTP ${resp.status}`);
+      const b = await resp.blob();
+      blobVideoUrl = URL.createObjectURL(b);
+      usingBlobUrl = true;
+    }
+  } catch (e) {
+    console.warn('[STRATEGIC_VIDEO] prefetch failed, using raw URL', e);
+  }
+
+  const cleanup = () => {
+    try { URL.revokeObjectURL(overlayUrl); } catch {}
+    if (blobVideoUrl) { try { URL.revokeObjectURL(blobVideoUrl); } catch {} }
+  };
+
+  // 3) Load video element
+  const videoEl = document.createElement('video');
+  if (!usingBlobUrl) videoEl.crossOrigin = 'anonymous';
+  videoEl.muted = true;
+  videoEl.playsInline = true;
+  videoEl.preload = 'auto';
+  videoEl.src = blobVideoUrl ?? videoUrl;
+
+  try {
+    await Promise.race([
+      new Promise<void>((resolve, reject) => {
+        videoEl.onloadeddata = () => resolve();
+        videoEl.onerror = () => reject(new Error('video load failed'));
+        videoEl.load();
+      }),
+      new Promise<void>((_, reject) => setTimeout(() => reject(new Error('video load timeout (15s)')), 15_000)),
+    ]);
+  } catch (e) {
+    cleanup();
+    throw e;
+  }
+
+  let duration = videoEl.duration;
+  if (!isFinite(duration) || isNaN(duration) || duration <= 0) duration = 10;
+  duration = Math.min(duration, 120);
+
+  // 4) Canvas + recorder
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d')!;
+
+  // Object-fit cover math for the video
+  const drawVideoCover = () => {
+    const vw = videoEl.videoWidth || W;
+    const vh = videoEl.videoHeight || H;
+    const scale = Math.max(W / vw, H / vh);
+    const dw = vw * scale;
+    const dh = vh * scale;
+    const dx = (W - dw) / 2;
+    const dy = (H - dh) / 2;
+    ctx.drawImage(videoEl, dx, dy, dw, dh);
+  };
+
+  const stream = canvas.captureStream(30);
+  const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+    ? 'video/webm;codecs=vp9'
+    : 'video/webm';
+  let recorder: MediaRecorder;
+  try {
+    recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 });
+  } catch (e) {
+    cleanup();
+    throw e;
+  }
+  const chunks: Blob[] = [];
+  recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+  const recordingDone = new Promise<Blob>((resolve, reject) => {
+    recorder.onstop = () => resolve(new Blob(chunks, { type: mimeType }));
+    recorder.onerror = () => reject(new Error('MediaRecorder error'));
+  });
+
+  // Taint test
+  try {
+    drawVideoCover();
+    ctx.getImageData(0, 0, 1, 1);
+  } catch (e) {
+    cleanup();
+    throw new Error('Canvas tainted (CORS) on video draw: ' + ((e as Error)?.message ?? ''));
+  }
+  ctx.clearRect(0, 0, W, H);
+
+  // Seek to 0
+  try {
+    if (videoEl.currentTime !== 0) {
+      await Promise.race([
+        new Promise<void>((resolve) => {
+          videoEl.addEventListener('seeked', () => resolve(), { once: true });
+          videoEl.currentTime = 0;
+        }),
+        new Promise<void>((resolve) => setTimeout(resolve, 1500)),
+      ]);
+    }
+  } catch { /* noop */ }
+
+  // Prime first composed frame
+  try {
+    drawVideoCover();
+    ctx.drawImage(overlayImg, 0, 0, W, H);
+  } catch {}
+
+  try {
+    recorder.start();
+    await videoEl.play();
+  } catch (e) {
+    cleanup();
+    throw e;
+  }
+
+  const startedAt = performance.now();
+  const durationMs = duration * 1000;
+  let stopped = false;
+  const stopRecorder = () => { if (!stopped) { stopped = true; try { recorder.stop(); } catch {} } };
+
+  await new Promise<void>((resolve) => {
+    videoEl.addEventListener('ended', () => { stopRecorder(); resolve(); }, { once: true });
+    const fallback = window.setTimeout(() => { stopRecorder(); resolve(); }, durationMs + 500);
+    const tick = () => {
+      if (stopped) return;
+      const elapsed = performance.now() - startedAt;
+      if (videoEl.ended || elapsed >= durationMs) {
+        window.clearTimeout(fallback);
+        stopRecorder();
+        resolve();
+        return;
+      }
+      try {
+        drawVideoCover();
+        ctx.drawImage(overlayImg, 0, 0, W, H);
+      } catch (err) {
+        console.error('[STRATEGIC_VIDEO] draw fail', err);
+        window.clearTimeout(fallback);
+        stopRecorder();
+        resolve();
+        return;
+      }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
+
+  const result = await recordingDone;
+  cleanup();
+  return result;
 }
 
 // ==================== HTML EXPORT HELPERS (legado) ====================

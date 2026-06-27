@@ -11,7 +11,7 @@ import { uploadCarouselToSmartOps, buildSocialPublisherUrl, slugify } from "@/li
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { StrategicCarouselPreview, generateSlidePNG, fetchAsDataUrl } from "./StrategicCarouselPreview";
+import { StrategicCarouselPreview, generateSlidePNG, generateStrategicSlideVideo, fetchAsDataUrl } from "./StrategicCarouselPreview";
 import type { SlideTextsType } from "./StrategicCarouselPreview";
 import { EngagementCarouselSection } from "./EngagementCarouselSection";
 import JSZip from "jszip";
@@ -910,16 +910,30 @@ ${slide.text}`;
       };
 
       for (let i = 1; i <= 6; i++) {
+        const textsForSlide = (slideTexts[i as keyof SlideTextsType] as unknown as Record<string, string>) || {};
+        const isVideo = textsForSlide.mediaType === 'video' && (textsForSlide.videoStorageUrl || textsForSlide.videoSrc);
+        const logos = { companyUrl: companyLogoUrl, productUrl: productLogoUrl, companyScale: companyLogoScale, productScale: productLogoScale };
+
+        if (isVideo) {
+          try {
+            const videoUrl = String(textsForSlide.videoStorageUrl || textsForSlide.videoSrc);
+            const productData2 = productData;
+            const videoBlob = await generateStrategicSlideVideo(i, videoUrl, primaryColor, accentColor, productData2, textsForSlide, logos);
+            zip.file(`${SLIDE_FILE_NAMES[i]}.webm`, videoBlob);
+            continue;
+          } catch (vErr) {
+            console.error(`[ZIP] Falha vídeo slide ${i}, fallback para PNG:`, vErr);
+            // fall through to PNG fallback below
+          }
+        }
+
         try {
-          // CORS fix: convert image to safe data: URL before drawing on canvas
           const safeDataUrl = await fetchAsDataUrl(slideImageMap[i] || '');
-          const textsForSlide = (slideTexts[i as keyof SlideTextsType] as unknown as Record<string, string>) || {};
-          const pngBlob = await generateSlidePNG(i, safeDataUrl, primaryColor, accentColor, productData, textsForSlide, { companyUrl: companyLogoUrl, productUrl: productLogoUrl, companyScale: companyLogoScale, productScale: productLogoScale });
+          const pngBlob = await generateSlidePNG(i, safeDataUrl, primaryColor, accentColor, productData, textsForSlide, logos);
           zip.file(`${SLIDE_FILE_NAMES[i]}.png`, pngBlob);
         } catch (slideErr) {
           console.warn(`Slide ${i} gerado sem imagem (fallback):`, slideErr);
-          const textsForSlide = (slideTexts[i as keyof SlideTextsType] as unknown as Record<string, string>) || {};
-          const pngBlob = await generateSlidePNG(i, '', primaryColor, accentColor, productData, textsForSlide, { companyUrl: companyLogoUrl, productUrl: productLogoUrl, companyScale: companyLogoScale, productScale: productLogoScale });
+          const pngBlob = await generateSlidePNG(i, '', primaryColor, accentColor, productData, textsForSlide, logos);
           zip.file(`${SLIDE_FILE_NAMES[i]}.png`, pngBlob);
         }
       }
@@ -960,37 +974,44 @@ ${slide.text}`;
         competitorComparison: competitorComparison,
       };
 
-      toast({ title: 'Gerando carrossel...', description: 'Renderizando 6 slides em PNG.' });
-      const blobs: Blob[] = [];
+      toast({ title: 'Gerando carrossel...', description: 'Renderizando 6 slides (PNG/vídeo).' });
+      const slidesPayload: Array<{ blob: Blob; ext: string; contentType: string }> = [];
+      const logos = { companyUrl: companyLogoUrl, productUrl: productLogoUrl, companyScale: companyLogoScale, productScale: productLogoScale };
       for (let i = 1; i <= 6; i++) {
-        console.log(`[SMARTOPS_VISUAL] preparando slide ${i}/6`);
         const textsForSlide = (slideTexts[i as keyof SlideTextsType] as unknown as Record<string, string>) || {};
+        const isVideo = textsForSlide.mediaType === 'video' && (textsForSlide.videoStorageUrl || textsForSlide.videoSrc);
+        console.log(`[SMARTOPS_VISUAL] preparando slide ${i}/6 (${isVideo ? 'VIDEO' : 'PNG'})`);
+
+        if (isVideo) {
+          try {
+            const videoUrl = String(textsForSlide.videoStorageUrl || textsForSlide.videoSrc);
+            const videoBlob = await Promise.race<Blob>([
+              generateStrategicSlideVideo(i, videoUrl, primaryColor, accentColor, productData, textsForSlide, logos),
+              new Promise<Blob>((_, reject) => setTimeout(() => reject(new Error(`Timeout (150s) renderizando vídeo slide ${i}`)), 150_000)),
+            ]);
+            console.log(`[SMARTOPS_VISUAL] slide ${i} vídeo pronto (${videoBlob.size} bytes)`);
+            slidesPayload.push({ blob: videoBlob, ext: 'webm', contentType: 'video/webm' });
+            continue;
+          } catch (e) {
+            console.error(`[SMARTOPS_VISUAL] vídeo slide ${i} falhou, fallback PNG:`, e);
+          }
+        }
+
         let safeDataUrl = '';
-        try {
-          safeDataUrl = await fetchAsDataUrl(slideImageMap[i] || '');
-        } catch (e) {
-          console.warn(`SmartOps slide ${i} sem imagem (fallback):`, e);
-        }
-        let pngBlob: Blob;
-        try {
-          pngBlob = await Promise.race<Blob>([
-            generateSlidePNG(i, safeDataUrl, primaryColor, accentColor, productData, textsForSlide, { companyUrl: companyLogoUrl, productUrl: productLogoUrl, companyScale: companyLogoScale, productScale: productLogoScale }),
-            new Promise<Blob>((_, reject) =>
-              setTimeout(() => reject(new Error(`Timeout (45s) renderizando slide ${i}`)), 45_000)
-            ),
-          ]);
-        } catch (e) {
-          console.error(`[SMARTOPS_VISUAL] falha slide ${i}:`, e);
-          throw e;
-        }
-        console.log(`[SMARTOPS_VISUAL] slide ${i} pronto (${pngBlob.size} bytes)`);
-        blobs.push(pngBlob);
+        try { safeDataUrl = await fetchAsDataUrl(slideImageMap[i] || ''); }
+        catch (e) { console.warn(`SmartOps slide ${i} sem imagem (fallback):`, e); }
+        const pngBlob = await Promise.race<Blob>([
+          generateSlidePNG(i, safeDataUrl, primaryColor, accentColor, productData, textsForSlide, logos),
+          new Promise<Blob>((_, reject) => setTimeout(() => reject(new Error(`Timeout (45s) renderizando slide ${i}`)), 45_000)),
+        ]);
+        console.log(`[SMARTOPS_VISUAL] slide ${i} PNG pronto (${pngBlob.size} bytes)`);
+        slidesPayload.push({ blob: pngBlob, ext: 'png', contentType: 'image/png' });
       }
 
       toast({ title: 'Enviando para SmartOps...', description: '6 slides → bucket wa-media.' });
       const produtoSlug = slugify(productName);
       const { ref, total } = await uploadCarouselToSmartOps({
-        slides: blobs,
+        slides: slidesPayload,
         produtoSlug,
         tipo: 'visual',
       });
