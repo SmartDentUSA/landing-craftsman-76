@@ -239,7 +239,7 @@ export function CarouselLogosOverlay({ logos }: { logos?: CarouselLogos }) {
             objectFit: 'contain',
             zIndex: 50,
             pointerEvents: 'none',
-            filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.35))',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.35)',
           }}
         />
       )}
@@ -258,7 +258,7 @@ export function CarouselLogosOverlay({ logos }: { logos?: CarouselLogos }) {
             objectFit: 'contain',
             zIndex: 50,
             pointerEvents: 'none',
-            filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.35))',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.35)',
           }}
         />
       )}
@@ -1985,9 +1985,11 @@ export interface StrategicSlideRenderProps {
   productData: ProductData;
   texts?: Partial<SlideTextsType>;
   logos?: CarouselLogos;
+  fontFamily?: string;
+  fontSize?: number;
 }
 
-export function StrategicSlideRender({ slideNum, image, primaryColor, accentColor, productData, texts, logos }: StrategicSlideRenderProps) {
+export function StrategicSlideRender({ slideNum, image, primaryColor, accentColor, productData, texts, logos, fontFamily, fontSize }: StrategicSlideRenderProps) {
   const t: any = texts || {};
   const slot = t[slideNum] || {};
   const videoMode = slot.mediaType === 'video' && (slot.videoSrc || slot.videoStorageUrl);
@@ -2020,7 +2022,13 @@ export function StrategicSlideRender({ slideNum, image, primaryColor, accentColo
   else if (slideNum === 6) body = <Slide6CTA image={renderImage} primaryColor={primaryColor} accentColor={accentColor} productData={productData} texts={renderTexts[6]} />;
 
   return (
-    <div style={{ position: 'relative', width: SLIDE_W, height: SLIDE_H, background: videoMode ? 'transparent' : undefined }}>
+    <div style={{
+      position: 'relative', width: SLIDE_W, height: SLIDE_H,
+      background: videoMode ? 'transparent' : undefined,
+      fontFamily: fontFamily || undefined,
+      fontSize: typeof fontSize === 'number' ? `${fontSize}%` : undefined,
+    }}>
+
       {textColorOverride && (
         <style>{`.${contentClass} :is(p, span, h1, h2, h3, h4, h5, h6, div, li, a, button) { color: ${textColorOverride} !important; }`}</style>
       )}
@@ -2069,6 +2077,8 @@ export async function generateSlidePNG(
   productData: ProductData,
   texts?: Record<string, string>,
   logos?: CarouselLogos,
+  fontFamily?: string,
+  fontSize?: number,
 ): Promise<Blob> {
   // 1. Pre-fetch image as data URL to avoid CORS tainting in html2canvas
   let imgDataUrl = '';
@@ -2121,6 +2131,8 @@ export async function generateSlidePNG(
       productData,
       texts: slideTexts,
       logos: resolvedLogos,
+      fontFamily,
+      fontSize,
     })
   );
   await waitForDomMedia(container, `STRATEGIC_PNG_${slideNum}`);
@@ -2170,6 +2182,8 @@ export async function generateStrategicSlideVideo(
   productData: ProductData,
   texts: Record<string, string>,
   logos?: CarouselLogos,
+  fontFamily?: string,
+  fontSize?: number,
 ): Promise<Blob> {
   let resolvedLogos: CarouselLogos | undefined = logos;
   if (logos && (logos.companyUrl || logos.productUrl)) {
@@ -2199,6 +2213,8 @@ export async function generateStrategicSlideVideo(
       productData,
       texts: overlayTexts,
       logos: resolvedLogos,
+      fontFamily,
+      fontSize,
     }),
     slotSelector: '[data-strategic-video-slot="true"]',
     drawOrder: 'video-under-overlay',
