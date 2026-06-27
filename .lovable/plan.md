@@ -1,75 +1,63 @@
-## Objetivo
-Trazer para o **🎨 Carrossel Visual** (`StrategicCarouselPreview.tsx`) o mesmo nível de customização do **🎯 Carrossel Engajamento**: upload de vídeo, mídia (vídeo/imagem) cobrindo todo o card, máscara com transparência ajustável, posição de texto, cor de fonte, slider para escalar o bloco de texto. No slide **✨ Apresentação** (Slide 2), permitir que a imagem cubra toda a área do card via um modo "cover".
+# Plano — Carrossel Engajamento (Slide 6 CTA + Logos por slide)
 
-## Arquivos afetados
-- `src/components/StrategicCarouselPreview.tsx` (mudanças principais)
-- `src/components/EngagementCarouselSection.tsx` (passar `onImageFileUpload` para o `StrategicCarouselPreview` — mesma rota de upload já usada no engajamento)
+Escopo: APENAS o `🎯 Carrossel Engajamento`. Não tocar no Visual/Estratégico.
 
-Sem mudanças em Sistema B, edge functions, `smartops-upload.ts`, `company_profile`, SEO/JSON-LD, ou no fluxo de export PNG/MP4 já existente.
+## 1. Corrigir corte do texto no Slide 6 (CTA)
 
-## Mudanças
+Arquivo: `src/components/EngagementCarouselPreview.tsx`
 
-### 1. Tipos `SlideTextsType` — campos novos opcionais (backward compatible)
-Adicionar em cada slide (1–6):
-- `mediaType?: 'image' | 'video'`
-- `videoSrc?: string` (blob URL local para preview)
-- `videoStorageUrl?: string` (URL persistida no Storage)
-- `coverMode?: 'contain' | 'cover'` (default: `cover` em 1/5/6, `contain` em 2/3/4)
-- `maskOpacity?: string` (0–90, % de escurecimento sobre a mídia)
-- `maskColor?: string` (default `#000000`)
-- `textColor?: string` (cor das fontes do slide; sobrescreve o cálculo por luminância)
-- `textPosition?: 'top' | 'center' | 'bottom'`
-- `textBlockScale?: string` (60–140, escala do bloco de textos)
+**Causa:** o container do Slide 6 usa `justifyContent: 'center'` + padding assimétrico `60px 60px 140px` + `overflow: hidden`. Quando título + mídia(260) + corpo + botão CTA somam mais que a área útil, o flex centraliza e **corta a parte superior** (o título "Tempo de impressão" some no topo).
 
-O `overlayOpacity` e `faixaColor` atuais do slide 1 continuam funcionando como estão.
+**Correções (render HTML, ~linhas 703-778):**
+- Trocar `justifyContent: 'center'` por `justifyContent: 'flex-start'`.
+- Padding equilibrado: `padding: '90px 60px 110px'` (mais respiro no topo).
+- Reduzir `gap` de 40 → 28.
+- Reduzir `MediaBlock height` de 260 → 230.
+- Título: `maxHeight: 180` → `maxHeight: 160` e `WebkitLineClamp: 3` → `2` (evita estouro vertical e mantém legibilidade).
+- Corpo: `maxHeight: 130` → `110`, `WebkitLineClamp: 3` → `2`.
+- Badge "6": mover de `bottom: 40` para `bottom: 24` para não competir com o CTA.
 
-### 2. `SLIDE_EDITOR_FIELDS` — controles novos por slide
-Adicionar em todos os 6 slides:
-- `coverMode` (toggle "Imagem cobre todo o card")
-- `maskOpacity` (slider 0–90)
-- `maskColor` (color)
-- `textColor` (color)
-- `textPosition` (select: topo / centro / rodapé)
-- `textBlockScale` (slider 60–140)
+**Render Canvas/Vídeo (~linhas 1050-1160, Slide 6):** aplicar as mesmas reservas — topo 90, fundo 110, altura de mídia 230, gap 28, máx 2 linhas em título/corpo — para manter paridade com o PNG/MP4 exportado.
 
-Acrescentar o tipo `'select'` ao renderer do editor inline (hoje só há `input | textarea | slider | color | toggle`).
+## 2. Upload de Logo da Empresa + Logo do Produto por slide (com slider)
 
-### 3. Upload de vídeo no `SlideWrapper`
-Replicar o `handleFileUpload` do `EngagementCarouselPreview`:
-- `accept="image/*,video/*"`
-- Se `file.type.startsWith('video/')`: gerar `URL.createObjectURL(file)`, gravar `mediaType='video'` + `videoSrc=blobUrl`, e chamar `onImageFileUpload(slideNum, file)` para subir o arquivo no Storage.
-- Se imagem: `mediaType='image'` + comportamento atual.
-- Adicionar prop `onImageFileUpload?: (slideNum, file) => void` em `SlideWrapper` e em `StrategicCarouselPreviewProps`.
-- Botão troca ícone `ImageIcon` / `Video` conforme `mediaType`.
+Arquivo: `src/components/EngagementCarouselPreview.tsx` (+ persistência em `src/components/InstagramCopyGenerator.tsx`).
 
-### 4. Renderer compartilhado `<SlideMedia />`
-Helper único reutilizado nos 6 slides:
-- Se `mediaType === 'video'` e tem `videoSrc`/`videoStorageUrl` → `<video autoplay muted loop playsinline>` com `object-fit` controlado por `coverMode`.
-- Caso contrário → `<img>` com `object-fit` por `coverMode`.
-- Aplica `transform: scale(imageScale/100)`.
-- Renderiza máscara logo acima: `<div style={{position:'absolute',inset:0,background:rgba(maskColor, maskOpacity/100)}} />`.
+**Modelo de dados** — estender `EngagementSlideTexts`:
+```ts
+companyLogoUrl?: string;     // URL persistida em Storage
+productLogoUrl?: string;
+companyLogoScale?: string;   // "40".."200" (default "100")
+productLogoScale?: string;
+```
 
-### 5. Aplicar nos 6 slides
-- **Slide 1 (Hook)**: já full-bleed → trocar `<img>` por `<SlideMedia>`; a máscara nova é usada quando `maskOpacity` é definido (mantém `overlayOpacity` como fallback retrocompat).
-- **Slide 2 (✨ Apresentação)**:
-  - Se `coverMode === 'cover'` (opt-in): `<SlideMedia>` cobre todo o card como fundo absoluto; textos viram overlay com máscara.
-  - Se `'contain'` (default atual): mantém layout atual (imagem centralizada com fundo bgColor).
-- **Slides 3, 4, 5, 6**: trocar `<img>` por `<SlideMedia>`. Default mantém o comportamento atual (3/4 `contain`, 5/6 `cover`), mas `coverMode` permite alternar.
+**Editor (✏️) de cada um dos 6 slides** — adicionar em `SLIDE_EDITOR_FIELDS` (slides 1-6):
+- `companyLogoUrl` → tipo novo `logo-upload` (botão Upload + Remover + preview 48px).
+- `companyLogoScale` → `slider` (40-200%, default 100).
+- `productLogoUrl` → `logo-upload`.
+- `productLogoScale` → `slider` (40-200%).
 
-### 6. Posição e escala dos textos
-Envolver o bloco principal de cada slide num wrapper que respeita:
-- `textPosition` → topo (`top: 8%`), centro (`top:50%; translateY(-50%)`), rodapé (`bottom: 8%`).
-- `textBlockScale` → `transform: scale(textBlockScale/100)` com `transform-origin` coerente com a posição.
-- `textColor` → sobrescreve a cor calculada por luminância quando definido (caso contrário mantém auto).
+O handler `handleFileUpload` ganha um modo `'logo-company' | 'logo-product'` que sobe o arquivo via `onImageFileUpload` (estender assinatura para aceitar um `kind` opcional) e grava a URL no campo correspondente via `onSlideTextChange`.
 
-### 7. Integração externa
-Em `EngagementCarouselSection.tsx`, no ponto onde `StrategicCarouselPreview` é renderizado, passar a mesma função `onImageFileUpload` já usada pelo carrossel de engajamento. Sem mudanças no roteamento de Storage.
+**Overlay no slide (render HTML e Canvas)** — novo componente `LogoOverlay` renderizado dentro do shell 1080×1350 de **todos** os 6 slides:
+- Logo da empresa: `top: 36, right: 36`, altura base 90px × `companyLogoScale/100`.
+- Logo do produto: `bottom: 36, left: 36`, altura base 90px × `productLogoScale/100`.
+- `z-index: 50`, `pointer-events: none`, `drop-shadow` leve, `object-fit: contain`, `maxWidth: 45%`.
+- No Slide 6, posicionar o badge "6" para não colidir (já reposicionado em #1).
 
-## Fora de escopo
-- Lógica de export PNG/MP4 do Visual segue como está (sem mudanças no engine de captura agora — vídeo no preview funcionará; export do `.webm` por slide pode ser tratado em pedido separado, igual fizemos para Engajamento).
-- Não mexer em Sistema B / edge functions / SEO / JSON-LD / `company_profile`.
-- Não alterar layout, fonte ou copy do engajamento.
+**Paridade na exportação:**
+- HTML preview: render direto via `<img crossOrigin="anonymous">`.
+- Canvas (vídeo/PNG): pré-buscar cada logo com `fetchAsDataUrl()` (já existe, importado de `StrategicCarouselPreview`) e desenhar no canvas com `ctx.drawImage` nas mesmas coordenadas, antes de finalizar o frame/encerrar a gravação.
 
-## Verificação
-- Typecheck do projeto.
-- Smoke visual no preview `/repository`: subir vídeo em cada um dos 6 slides, alternar `coverMode` no slide 2, mover slider de máscara, mudar cor da fonte, alternar posição do texto, ajustar slider de tamanho do bloco.
+**Persistência (Storage):**
+- `src/components/InstagramCopyGenerator.tsx`: no handler `onImageFileUpload` do Engajamento, detectar `kind === 'logo-company' | 'logo-product'` e salvar em `product-images/engagement-carousel/{productId}/logo_company_<ts>.<ext>` (ou `logo_product_...`), atualizando o `slideTexts` do slide alvo com a URL pública retornada.
+
+## 3. Verificação
+
+- Abrir o Carrossel Engajamento, Slide 6: o título "Tempo de impressão" deve aparecer inteiro, sem corte no topo, com botão CTA visível e badge "6" sem sobreposição.
+- Em qualquer slide, abrir ✏️ → conferir 4 novos campos (2 uploads + 2 sliders 40-200%).
+- Upload de PNG do logo deve aparecer imediatamente no preview e ser mantido após "💾 Salvar".
+- Baixar ZIP: os PNGs e o vídeo (Slide 1, quando houver) precisam conter os logos nas mesmas posições.
+- Enviar para SmartOps: idem (arquivos no Sistema B contêm os logos).
+
+Sem alterações no Visual/Estratégico, sem migrations, sem mudanças em outros componentes.
