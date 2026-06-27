@@ -496,15 +496,23 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
               ) : field.type === 'slider' ? (
                 <div className="flex items-center gap-2">
                   <Slider
-                    min={50}
-                    max={150}
-                    step={5}
-                    value={[Number(slideTexts?.[field.key]) || 100]}
+                    min={field.min ?? 50}
+                    max={field.max ?? 150}
+                    step={field.step ?? 5}
+                    value={[Number(slideTexts?.[field.key]) || (field.defaultValue ?? 100)]}
                     onValueChange={([v]) => onSlideTextChange(field.key, String(v))}
                     className="flex-1"
                   />
-                  <span className="text-xs text-muted-foreground w-8">{slideTexts?.[field.key] || '100'}%</span>
+                  <span className="text-xs text-muted-foreground w-10 text-right">{slideTexts?.[field.key] || String(field.defaultValue ?? 100)}%</span>
                 </div>
+              ) : field.type === 'logo' ? (
+                <LogoUploadControl
+                  slideNum={slideNum}
+                  fieldKey={field.key}
+                  currentUrl={slideTexts?.[field.key]}
+                  onUpload={onImageFileUpload}
+                  onSlideTextChange={onSlideTextChange}
+                />
               ) : (
                 <Input
                   value={slideTexts?.[field.key] || ''}
