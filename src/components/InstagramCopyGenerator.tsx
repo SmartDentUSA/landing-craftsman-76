@@ -236,6 +236,39 @@ export function InstagramCopyGenerator({ productId, productName, productPrice, p
       toast({ title: '✅ Imagem enviada', description: `Slide ${slideNum} atualizado.`, duration: 3000 });
     }
   };
+
+  // === Logos (empresa + produto) — aplicam em todos os slides do Carrossel Visual ===
+  const [companyLogoUrl, setCompanyLogoUrl] = useState<string>('');
+  const [productLogoUrl, setProductLogoUrl] = useState<string>('');
+  const [companyLogoScale, setCompanyLogoScale] = useState<number>(100);
+  const [productLogoScale, setProductLogoScale] = useState<number>(100);
+
+  const handleLogoUpload = async (kind: 'company' | 'product', file: File) => {
+    const ALLOWED = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'];
+    if (!ALLOWED.includes(file.type)) {
+      toast({ title: 'Formato não suportado', description: 'Use PNG, JPEG, WEBP ou SVG.', variant: 'destructive' });
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      toast({ title: 'Logo muito grande', description: 'Limite de 8 MB.', variant: 'destructive' });
+      return;
+    }
+    const ext = file.name.split('.').pop() || 'png';
+    const path = `visual-carousel/${productId}/logo_${kind}_${Date.now()}.${ext}`;
+    const { error } = await supabase.storage
+      .from('product-images')
+      .upload(path, file, { upsert: true, contentType: file.type });
+    if (error) {
+      toast({ title: 'Erro no upload do logo', description: error.message, variant: 'destructive' });
+      return;
+    }
+    const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(path);
+    if (!urlData?.publicUrl) return;
+    if (kind === 'company') setCompanyLogoUrl(urlData.publicUrl);
+    else setProductLogoUrl(urlData.publicUrl);
+    toast({ title: `✅ Logo ${kind === 'company' ? 'da empresa' : 'do produto'} atualizado` });
+  };
+
   const [fontFamily, setFontFamily] = useState<string>('system-ui, -apple-system, sans-serif');
   const [fontSize, setFontSize] = useState<number>(100);
   const [savingVisualCarousel, setSavingVisualCarousel] = useState(false);
