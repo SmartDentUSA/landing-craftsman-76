@@ -85,6 +85,17 @@ interface StrategicCarouselPreviewProps {
   fontSize?: number; // escala percentual 60–150
   onFontFamilyChange?: (v: string) => void;
   onFontSizeChange?: (v: number) => void;
+  // ===== Logos overlay (carousel-level) =====
+  companyLogoUrl?: string;
+  productLogoUrl?: string;
+  companyLogoScale?: number; // % 40–200
+  productLogoScale?: number; // % 40–200
+  onCompanyLogoUpload?: (file: File) => void;
+  onProductLogoUpload?: (file: File) => void;
+  onCompanyLogoScaleChange?: (v: number) => void;
+  onProductLogoScaleChange?: (v: number) => void;
+  onCompanyLogoRemove?: () => void;
+  onProductLogoRemove?: () => void;
 }
 
 function getLuminance(hex: string): number {
