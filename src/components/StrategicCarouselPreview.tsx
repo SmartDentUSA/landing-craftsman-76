@@ -1292,7 +1292,7 @@ function Slide4Experience({ image, primaryColor, productData, texts }: { image: 
 
 
 // ==================== SLIDE 5 — SEGURANÇA ====================
-function Slide5Security({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; productData: ProductData; texts?: { title?: string; badge1?: string; badge2?: string; badge3?: string; imageScale?: string; bgColor?: string } }) {
+function Slide5Security({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; productData: ProductData; texts?: { title?: string; badge1?: string; badge2?: string; badge3?: string; imageScale?: string; bgColor?: string; headlineVisible?: string; sideStripVisible?: string } }) {
   const features = productData.features || [];
   const benefits = productData.benefits || [];
   const title = texts?.title || 'Você pode confiar';
@@ -1303,24 +1303,41 @@ function Slide5Security({ image, primaryColor, productData, texts }: { image: st
   ];
   const imageScale5 = Number(texts?.imageScale) || 100;
   const bgColor5 = texts?.bgColor || '';
+  const sideStripVisible = (texts?.sideStripVisible ?? 'true') !== 'false';
+  const headlineVisible = (texts?.headlineVisible ?? 'true') !== 'false';
+
+  // Quando o "side strip" (imagem de fundo + overlay) é desligado, o fundo
+  // vira sólido — recalculamos a cor de textos/badges via luminância para legibilidade.
+  const solidBg = bgColor5 || '#0f0f14';
+  const lightOnDark = !sideStripVisible ? (getLuminance(solidBg) <= 0.5) : true;
+  const textColor = lightOnDark ? '#ffffff' : '#111111';
+  const badgeBg = lightOnDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.06)';
+  const badgeBorder = lightOnDark ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(0,0,0,0.12)';
+  const numberBg = lightOnDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)';
 
   return (
     <div style={{ width: SLIDE_W, height: SLIDE_H, position: 'relative', overflow: 'hidden', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-      {bgColor5 && <div style={{ position: 'absolute', inset: 0, background: bgColor5 }} />}
-      {image ? (
-        <img src={image} alt="segurança" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(8px)', transform: `scale(${imageScale5 / 100 * 1.1})` }} />
-      ) : (
-        <div style={{ position: 'absolute', inset: 0, background: '#222' }} />
+      {(!sideStripVisible || bgColor5) && <div style={{ position: 'absolute', inset: 0, background: solidBg }} />}
+      {sideStripVisible && (
+        <>
+          {image ? (
+            <img src={image} alt="segurança" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(8px)', transform: `scale(${imageScale5 / 100 * 1.1})` }} />
+          ) : (
+            <div style={{ position: 'absolute', inset: 0, background: '#222' }} />
+          )}
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.65)' }} />
+        </>
       )}
-      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.65)' }} />
-      <div style={{ position: 'absolute', top: 60, left: 60, width: 70, height: 70, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
-        <span style={{ color: '#fff', fontWeight: 900, fontSize: 30 }}>5</span>
+      <div style={{ position: 'absolute', top: 60, left: 60, width: 70, height: 70, borderRadius: '50%', background: numberBg, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
+        <span style={{ color: textColor, fontWeight: 900, fontSize: 30 }}>5</span>
       </div>
       <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', padding: '120px 80px 80px', gap: 32, zIndex: 2 }}>
-        <h2 style={{ color: '#ffffff', fontSize: 64, fontWeight: 900, margin: 0, textAlign: 'center', lineHeight: 1.1, wordBreak: 'break-word' as const, overflowWrap: 'anywhere' as const, maxWidth: '100%', flexShrink: 0 }}>{title}</h2>
+        {headlineVisible && (
+          <h2 style={{ color: textColor, fontSize: 64, fontWeight: 900, margin: 0, textAlign: 'center', lineHeight: 1.1, wordBreak: 'break-word' as const, overflowWrap: 'anywhere' as const, maxWidth: '100%', flexShrink: 0 }}>{title}</h2>
+        )}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24, width: '100%' }}>
           {badges.map((badge, idx) => (
-            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 32, background: 'rgba(255,255,255,0.12)', borderRadius: 20, padding: '18px 36px', minHeight: 96, backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.2)', flexShrink: 0 }}>
+            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 32, background: badgeBg, borderRadius: 20, padding: '18px 36px', minHeight: 96, backdropFilter: 'blur(10px)', border: badgeBorder, flexShrink: 0 }}>
               <div style={{ width: 64, height: 64, borderRadius: '50%', background: primaryColor, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" width="32" height="32">
                   {badge.icon === 'shield' && <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>}
@@ -1328,7 +1345,7 @@ function Slide5Security({ image, primaryColor, productData, texts }: { image: st
                   {badge.icon === 'check' && <><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>}
                 </svg>
               </div>
-              <span style={{ color: '#ffffff', fontSize: 34, fontWeight: 700, display: 'block', wordBreak: 'break-word' as const, overflowWrap: 'anywhere' as const, lineHeight: 1.3, flex: 1, minWidth: 0 }}>{badge.label}</span>
+              <span style={{ color: textColor, fontSize: 34, fontWeight: 700, display: 'block', wordBreak: 'break-word' as const, overflowWrap: 'anywhere' as const, lineHeight: 1.3, flex: 1, minWidth: 0 }}>{badge.label}</span>
             </div>
           ))}
         </div>
