@@ -1678,17 +1678,53 @@ export interface StrategicSlideRenderProps {
 
 export function StrategicSlideRender({ slideNum, image, primaryColor, accentColor, productData, texts, logos }: StrategicSlideRenderProps) {
   const t: any = texts || {};
+  const slot = t[slideNum] || {};
+  const videoMode = slot.mediaType === 'video' && (slot.videoSrc || slot.videoStorageUrl);
+  // In video mode (export overlay), suppress slide's own background/image so the
+  // underlying <video> shows through when composited on a canvas.
+  const renderImage = videoMode ? '' : image;
+  const slotForRender = videoMode
+    ? { ...slot, bgColor: 'transparent', overlayOpacity: '0' }
+    : slot;
+  const renderTexts = { ...t, [slideNum]: slotForRender };
+
+  const maskOpacityNum = Math.min(90, Math.max(0, Number(slot.maskOpacity ?? 0)));
+  const maskColor = slot.maskColor || '#000000';
+  const textColorOverride = slot.textColor || '';
+  const contentClass = `strategic-export-content-${slideNum}`;
+
   let body: React.ReactNode = null;
-  if (slideNum === 1) body = <Slide1Hook image={image} primaryColor={primaryColor} productData={productData} texts={t[1]} />;
-  else if (slideNum === 2) body = <Slide2Solution image={image} primaryColor={primaryColor} accentColor={accentColor} productData={productData} texts={t[2]} />;
-  else if (slideNum === 3) body = <Slide3Technical image={image} primaryColor={primaryColor} accentColor={accentColor} productData={productData} texts={t[3]} />;
-  else if (slideNum === 4) body = <Slide4Experience image={image} primaryColor={primaryColor} productData={productData} texts={t[4]} />;
-  else if (slideNum === 5) body = <Slide5Security image={image} primaryColor={primaryColor} productData={productData} texts={t[5]} />;
-  else if (slideNum === 6) body = <Slide6CTA image={image} primaryColor={primaryColor} accentColor={accentColor} productData={productData} texts={t[6]} />;
+  if (slideNum === 1) body = <Slide1Hook image={renderImage} primaryColor={primaryColor} productData={productData} texts={renderTexts[1]} />;
+  else if (slideNum === 2) body = <Slide2Solution image={renderImage} primaryColor={primaryColor} accentColor={accentColor} productData={productData} texts={renderTexts[2]} />;
+  else if (slideNum === 3) body = <Slide3Technical image={renderImage} primaryColor={primaryColor} accentColor={accentColor} productData={productData} texts={renderTexts[3]} />;
+  else if (slideNum === 4) body = <Slide4Experience image={renderImage} primaryColor={primaryColor} productData={productData} texts={renderTexts[4]} />;
+  else if (slideNum === 5) body = <Slide5Security image={renderImage} primaryColor={primaryColor} productData={productData} texts={renderTexts[5]} />;
+  else if (slideNum === 6) body = <Slide6CTA image={renderImage} primaryColor={primaryColor} accentColor={accentColor} productData={productData} texts={renderTexts[6]} />;
+
   return (
-    <div style={{ position: 'relative', width: SLIDE_W, height: SLIDE_H }}>
-      {body}
-      <CarouselLogosOverlay logos={logos} />
+    <div style={{ position: 'relative', width: SLIDE_W, height: SLIDE_H, background: videoMode ? 'transparent' : undefined }}>
+      {textColorOverride && (
+        <style>{`.${contentClass} :is(p, span, h1, h2, h3, h4, h5, h6, div, li, a, button) { color: ${textColorOverride} !important; }`}</style>
+      )}
+      <div className={contentClass} style={{ position: 'absolute', inset: 0, zIndex: 3 }}>
+        {body}
+      </div>
+      {maskOpacityNum > 0 && (
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: maskColor,
+            opacity: maskOpacityNum / 100,
+            zIndex: 4,
+            pointerEvents: 'none',
+          }}
+        />
+      )}
+      <div style={{ position: 'absolute', inset: 0, zIndex: 50, pointerEvents: 'none' }}>
+        <CarouselLogosOverlay logos={logos} />
+      </div>
     </div>
   );
 }
