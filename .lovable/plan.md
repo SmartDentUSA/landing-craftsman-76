@@ -1,38 +1,35 @@
-## Problema
+Objetivo: garantir que ZIP e Upload SmartOps exportem os 6 slides do Carrossel Engajamento e do Carrossel Visual exatamente como aparecem no preview do editor.
 
-No **🎯 Carrossel Engajamento**, mesmo definindo a mesma escala (ex.: 100%) do logo em todos os cards, o tamanho exportado varia entre slides — principalmente quando se mistura slides de imagem (exportados como PNG via `html2canvas`) com slides de vídeo (exportados via `canvas.drawImage` em MP4).
+Plano de correção:
 
-## Causa
+1. Unificar a fonte visual do preview e export
+- Fazer o export usar o mesmo componente/renderização JSX do preview, sem redesenhar layouts manualmente em canvas quando houver vídeo.
+- Remover/contornar os caminhos que recriam texto, posições, tamanhos e mídias em funções separadas, porque hoje isso gera diferença visual.
 
-Existem duas convenções diferentes de sizing para o mesmo logo, no mesmo arquivo `src/components/EngagementCarouselPreview.tsx`:
+2. Corrigir Carrossel Engajamento
+- Substituir a renderização manual de vídeo em `drawSlideFrameWithVideo` por captura/composição baseada no mesmo DOM do `EngagementSlideRender`.
+- Garantir que slides com vídeo exportem com o mesmo enquadramento, escala, logos, textos, CTA, cores e posições do preview.
+- Manter PNG de slides com imagem via `EngagementSlideRender`/html2canvas, com espera real por imagens/logos carregados.
 
-1. **PNG (LogoOverlay, linhas 316–356)** dimensiona pela **largura**:
-   ```ts
-   width: baseSize * (scale/100), height: 'auto', maxHeight: baseSize * (scale/100)
-   ```
-   Logos largos ficam achatados; logos quadrados ocupam 140×140; logos altos são clampados pelo `maxHeight`.
+3. Corrigir Carrossel Visual
+- Ajustar `StrategicSlideRender` para reproduzir exatamente a ordem visual do preview: vídeo no fundo, conteúdo na frente e máscara na mesma camada/ordem vista no editor.
+- Fazer `generateStrategicSlideVideo` capturar o overlay a partir da mesma estrutura visual do preview, sem mudar fundo, máscara, logos ou texto no export.
+- Garantir que `generateSlidePNG`, ZIP e SmartOps recebam os textos/customizações atuais: vídeos, máscaras, cores, toggles, uploads, logos e escalas.
 
-2. **Vídeo (`drawLogos`, linhas 1556–1565)** dimensiona pela **altura**:
-   ```ts
-   h = LOGO_BASE * scale; w = h * (naturalWidth / naturalHeight);
-   ```
-   A altura é constante; a largura varia conforme a proporção natural.
+4. Eliminar divergências conhecidas
+- Corrigir diferenças entre preview e export em: ordem da máscara, vídeo cobrindo card, texto sobre vídeo, logos, escala da mídia, CTA e slides 1–6.
+- Evitar fallback silencioso para PNG quando vídeo falha sem aviso claro; se falhar, mostrar erro específico em vez de exportar algo diferente sem o usuário perceber.
 
-Resultado: para o mesmo arquivo de logo e o mesmo slider, um slide-imagem exporta com dimensão visível diferente de um slide-vídeo. Também explica por que logos com proporções diferentes "parecem" tamanhos diferentes mesmo com a mesma escala.
+5. Validar no navegador
+- Testar no preview com Playwright a existência dos controles e a renderização DOM dos carrosséis.
+- Exportar pelo fluxo real quando possível e verificar que os arquivos gerados usam a mesma composição visual do preview.
 
-## Correção (mínima, só apresentação)
+Arquivos principais a alterar:
+- `src/components/EngagementCarouselPreview.tsx`
+- `src/components/StrategicCarouselPreview.tsx`
+- `src/components/EngagementCarouselSection.tsx`
+- `src/components/InstagramCopyGenerator.tsx`
 
-Padronizar o `LogoOverlay` para usar **altura constante** (igual ao `drawLogos` do vídeo e à convenção do `CarouselLogosOverlay` do Strategic):
-
-Em `LogoOverlay` (linhas 316–356) trocar para cada logo:
-```ts
-height: baseSize * (scale/100),
-width: 'auto',
-// remover maxHeight
-```
-
-Com isso:
-- Preview, PNG e MP4 passam a usar a mesma referência (altura = 140·scale).
-- A largura segue a proporção natural do arquivo automaticamente — mesma escala = mesma altura visual em todos os 6 slides, independente de imagem ou vídeo.
-
-Nenhuma outra lógica é alterada (uploads, persistência, posições top/right e bottom/left permanecem iguais).
+Critério de aceite:
+- Cada slide exportado deve ser uma captura fiel do slide visto no editor, incluindo vídeo, imagem, texto, máscara, logo, cores e posições.
+- ZIP e Upload SmartOps devem usar a mesma lógica de renderização, sem resultados diferentes entre baixar e enviar.

@@ -545,7 +545,7 @@ export function EngagementCarouselSection({
               const videoBlob = await Promise.race<Blob>([
                 generateEngagementSlideVideo(i, src, texts, primaryColor, accentColor, brandName, handleName),
                 new Promise<Blob>((_, reject) =>
-                  setTimeout(() => reject(new Error(`Timeout (90s) renderizando vídeo slide ${i}`)), 90_000)
+                  setTimeout(() => reject(new Error(`Timeout (150s) renderizando vídeo slide ${i}`)), 150_000)
                 ),
               ]);
               console.log(`[SMARTOPS_ENGAJ] slide ${i} vídeo pronto (${videoBlob.size} bytes)`);

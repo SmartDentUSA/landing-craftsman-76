@@ -180,6 +180,25 @@ export function InstagramCopyGenerator({ productId, productName, productPrice, p
   const [generatingSecurity, setGeneratingSecurity] = useState(false);
   const [slideTexts, setSlideTexts] = useState<Partial<SlideTextsType>>({});
 
+  const buildStrategicProductData = () => ({
+    name: productName,
+    price: productPrice,
+    category: productCategory,
+    description: productDescription,
+    benefits: productBenefits,
+    features: productFeatures,
+    technicalSpecs: technicalSpecs,
+    productUrl: productUrl,
+    salesPitch: productSalesPitch,
+    targetAudience: productTargetAudience,
+    applications: productApplications,
+    faq: productFaq,
+    ecommerceHtmlText: productEcommerceHtml ? stripHtmlToText(productEcommerceHtml).slice(0, 300) : undefined,
+    feedCopyBenefits: feedCopies.find(v => v.approach === 'benefits')?.copy || undefined,
+    feedCopyProblemSolution: feedCopies.find(v => v.approach === 'problem_solution')?.copy || undefined,
+    competitorComparison: competitorComparison,
+  });
+
   // === Visual Carousel: image/video file upload (delegated by StrategicCarouselPreview) ===
   const handleVisualSlideFileUpload = async (slideNum: number, file: File) => {
     const MAX_BYTES = 100 * 1024 * 1024;
@@ -887,18 +906,7 @@ ${slide.text}`;
     setIsExportingZip(true);
     try {
       const zip = new JSZip();
-      const productData = {
-        name: productName,
-        price: productPrice,
-        category: productCategory,
-        benefits: productBenefits,
-        features: productFeatures,
-        technicalSpecs: technicalSpecs,
-        productUrl: productUrl,
-        feedCopyBenefits: feedCopies.find(v => v.approach === 'benefits')?.copy || undefined,
-        feedCopyProblemSolution: feedCopies.find(v => v.approach === 'problem_solution')?.copy || undefined,
-        competitorComparison: competitorComparison,
-      };
+      const productData = buildStrategicProductData();
 
       const SLIDE_FILE_NAMES: Record<number, string> = {
         1: 'slide-1-hook',
@@ -961,18 +969,7 @@ ${slide.text}`;
   const handleSendSmartOpsVisual = async () => {
     setSendingSmartOps(true);
     try {
-      const productData = {
-        name: productName,
-        price: productPrice,
-        category: productCategory,
-        benefits: productBenefits,
-        features: productFeatures,
-        technicalSpecs: technicalSpecs,
-        productUrl: productUrl,
-        feedCopyBenefits: feedCopies.find(v => v.approach === 'benefits')?.copy || undefined,
-        feedCopyProblemSolution: feedCopies.find(v => v.approach === 'problem_solution')?.copy || undefined,
-        competitorComparison: competitorComparison,
-      };
+      const productData = buildStrategicProductData();
 
       toast({ title: 'Gerando carrossel...', description: 'Renderizando 6 slides (PNG/vídeo).' });
       const slidesPayload: Array<{ blob: Blob; ext: string; contentType: string }> = [];
