@@ -1228,19 +1228,23 @@ function Slide4Experience({ image, primaryColor, productData, texts }: { image: 
   const impactFontSize = finalImpact.length > 180 ? 20 : finalImpact.length > 120 ? 22 : finalImpact.length > 70 ? 25 : 28;
   const imageScale4 = Number(texts?.imageScale) || 100;
   const bgColor4 = texts?.bgColor || '#0f0f14';
+  const sideStripVisible = (texts?.sideStripVisible ?? 'true') !== 'false';
+  const headlineVisible = (texts?.headlineVisible ?? 'true') !== 'false';
 
   return (
     <div style={{ width: SLIDE_W, height: SLIDE_H, fontFamily: 'system-ui, -apple-system, sans-serif', position: 'relative', overflow: 'hidden', background: bgColor4, display: 'flex' }}>
       {/* Imagem à esquerda — 42% */}
-      <div style={{ width: '42%', flexShrink: 0, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.03)' }}>
-        {image ? (
-          <img src={image} alt="produto em uso" style={{ maxWidth: '100%', maxHeight: '70%', width: 'auto', height: 'auto', objectFit: 'contain', transform: `scale(${imageScale4 / 100})`, transformOrigin: 'center center' }} />
-        ) : (
-          <div style={{ width: '100%', height: '100%', background: '#1a1a2e' }} />
-        )}
-        {/* Feather borda direita */}
-        <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: 140, background: `linear-gradient(to right, transparent, ${bgColor4})`, pointerEvents: 'none' }} />
-      </div>
+      {sideStripVisible && (
+        <div style={{ width: '42%', flexShrink: 0, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.03)' }}>
+          {image ? (
+            <img src={image} alt="produto em uso" style={{ maxWidth: '100%', maxHeight: '70%', width: 'auto', height: 'auto', objectFit: 'contain', transform: `scale(${imageScale4 / 100})`, transformOrigin: 'center center' }} />
+          ) : (
+            <div style={{ width: '100%', height: '100%', background: '#1a1a2e' }} />
+          )}
+          {/* Feather borda direita */}
+          <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: 140, background: `linear-gradient(to right, transparent, ${bgColor4})`, pointerEvents: 'none' }} />
+        </div>
+      )}
 
 
       {/* Número do slide */}
@@ -1248,21 +1252,24 @@ function Slide4Experience({ image, primaryColor, productData, texts }: { image: 
         <span style={{ color: '#fff', fontWeight: 900, fontSize: 30 }}>4</span>
       </div>
 
-      {/* Painel direito — textos (58%) */}
+      {/* Painel direito — textos */}
       <div style={{
-        flex: 1, minWidth: 0, maxWidth: '58%',
+        flex: 1, minWidth: 0, maxWidth: sideStripVisible ? '58%' : '100%',
         display: 'flex', flexDirection: 'column', justifyContent: 'center',
-        padding: '80px 60px 80px 48px', gap: 18, background: '#0f0f14',
+        padding: sideStripVisible ? '80px 60px 80px 48px' : '80px 80px',
+        gap: 18, background: bgColor4,
         overflow: 'hidden',
       }}>
         {/* Label contextual */}
         <p style={{ color: '#fff', opacity: 0.65, fontSize: labelFontSize, fontWeight: 700, margin: 0, textTransform: 'uppercase' as const, letterSpacing: 3, wordBreak: 'break-word' as const, overflowWrap: 'anywhere' as const, maxWidth: '100%' }}>{finalLabel}</p>
 
         {/* Divider accent */}
-        <div style={{ width: 56, height: 3, background: primaryColor, borderRadius: 2, flexShrink: 0 }} />
+        {headlineVisible && <div style={{ width: 56, height: 3, background: primaryColor, borderRadius: 2, flexShrink: 0 }} />}
 
         {/* Headline — benefício principal */}
-        <h2 style={{ color: '#ffffff', fontSize: kwFontSize, fontWeight: 900, margin: 0, lineHeight: 1.05, wordBreak: 'break-word' as const, overflowWrap: 'anywhere' as const, maxWidth: '100%', hyphens: 'auto' as const }}>{finalKeyword}</h2>
+        {headlineVisible && (
+          <h2 style={{ color: '#ffffff', fontSize: kwFontSize, fontWeight: 900, margin: 0, lineHeight: 1.05, wordBreak: 'break-word' as const, overflowWrap: 'anywhere' as const, maxWidth: '100%', hyphens: 'auto' as const }}>{finalKeyword}</h2>
+        )}
 
         {/* Texto de impacto — síntese dor → resolução */}
         <p style={{ color: '#d8d8d8', fontSize: impactFontSize, lineHeight: 1.55, margin: 0, fontWeight: 400, wordBreak: 'break-word' as const, overflowWrap: 'anywhere' as const, maxWidth: '100%' }}>{finalImpact}</p>
