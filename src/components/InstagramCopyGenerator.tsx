@@ -974,37 +974,44 @@ ${slide.text}`;
         competitorComparison: competitorComparison,
       };
 
-      toast({ title: 'Gerando carrossel...', description: 'Renderizando 6 slides em PNG.' });
-      const blobs: Blob[] = [];
+      toast({ title: 'Gerando carrossel...', description: 'Renderizando 6 slides (PNG/vídeo).' });
+      const slidesPayload: Array<{ blob: Blob; ext: string; contentType: string }> = [];
+      const logos = { companyUrl: companyLogoUrl, productUrl: productLogoUrl, companyScale: companyLogoScale, productScale: productLogoScale };
       for (let i = 1; i <= 6; i++) {
-        console.log(`[SMARTOPS_VISUAL] preparando slide ${i}/6`);
         const textsForSlide = (slideTexts[i as keyof SlideTextsType] as unknown as Record<string, string>) || {};
+        const isVideo = textsForSlide.mediaType === 'video' && (textsForSlide.videoStorageUrl || textsForSlide.videoSrc);
+        console.log(`[SMARTOPS_VISUAL] preparando slide ${i}/6 (${isVideo ? 'VIDEO' : 'PNG'})`);
+
+        if (isVideo) {
+          try {
+            const videoUrl = String(textsForSlide.videoStorageUrl || textsForSlide.videoSrc);
+            const videoBlob = await Promise.race<Blob>([
+              generateStrategicSlideVideo(i, videoUrl, primaryColor, accentColor, productData, textsForSlide, logos),
+              new Promise<Blob>((_, reject) => setTimeout(() => reject(new Error(`Timeout (150s) renderizando vídeo slide ${i}`)), 150_000)),
+            ]);
+            console.log(`[SMARTOPS_VISUAL] slide ${i} vídeo pronto (${videoBlob.size} bytes)`);
+            slidesPayload.push({ blob: videoBlob, ext: 'webm', contentType: 'video/webm' });
+            continue;
+          } catch (e) {
+            console.error(`[SMARTOPS_VISUAL] vídeo slide ${i} falhou, fallback PNG:`, e);
+          }
+        }
+
         let safeDataUrl = '';
-        try {
-          safeDataUrl = await fetchAsDataUrl(slideImageMap[i] || '');
-        } catch (e) {
-          console.warn(`SmartOps slide ${i} sem imagem (fallback):`, e);
-        }
-        let pngBlob: Blob;
-        try {
-          pngBlob = await Promise.race<Blob>([
-            generateSlidePNG(i, safeDataUrl, primaryColor, accentColor, productData, textsForSlide, { companyUrl: companyLogoUrl, productUrl: productLogoUrl, companyScale: companyLogoScale, productScale: productLogoScale }),
-            new Promise<Blob>((_, reject) =>
-              setTimeout(() => reject(new Error(`Timeout (45s) renderizando slide ${i}`)), 45_000)
-            ),
-          ]);
-        } catch (e) {
-          console.error(`[SMARTOPS_VISUAL] falha slide ${i}:`, e);
-          throw e;
-        }
-        console.log(`[SMARTOPS_VISUAL] slide ${i} pronto (${pngBlob.size} bytes)`);
-        blobs.push(pngBlob);
+        try { safeDataUrl = await fetchAsDataUrl(slideImageMap[i] || ''); }
+        catch (e) { console.warn(`SmartOps slide ${i} sem imagem (fallback):`, e); }
+        const pngBlob = await Promise.race<Blob>([
+          generateSlidePNG(i, safeDataUrl, primaryColor, accentColor, productData, textsForSlide, logos),
+          new Promise<Blob>((_, reject) => setTimeout(() => reject(new Error(`Timeout (45s) renderizando slide ${i}`)), 45_000)),
+        ]);
+        console.log(`[SMARTOPS_VISUAL] slide ${i} PNG pronto (${pngBlob.size} bytes)`);
+        slidesPayload.push({ blob: pngBlob, ext: 'png', contentType: 'image/png' });
       }
 
       toast({ title: 'Enviando para SmartOps...', description: '6 slides → bucket wa-media.' });
       const produtoSlug = slugify(productName);
       const { ref, total } = await uploadCarouselToSmartOps({
-        slides: blobs,
+        slides: slidesPayload,
         produtoSlug,
         tipo: 'visual',
       });
