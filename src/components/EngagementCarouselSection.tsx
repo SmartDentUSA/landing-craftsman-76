@@ -181,7 +181,43 @@ export function EngagementCarouselSection({
     debouncedPersist();
   };
 
-  const handleImageFileUpload = async (slideNum: number, file: File) => {
+  const handleImageFileUpload = async (slideNum: number, file: File, kind?: 'image' | 'logo-company' | 'logo-product') => {
+    // ===== Logo uploads (company / product) — image only, persisted to Storage =====
+    if (kind === 'logo-company' || kind === 'logo-product') {
+      const ALLOWED = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'];
+      if (!ALLOWED.includes(file.type)) {
+        toast({ title: 'Formato inválido', description: 'Use PNG, JPEG, WEBP ou SVG para a logo.', variant: 'destructive' });
+        return;
+      }
+      if (file.size > 8 * 1024 * 1024) {
+        toast({ title: 'Logo muito grande', description: 'Limite de 8 MB.', variant: 'destructive' });
+        return;
+      }
+      try {
+        const ext = file.name.split('.').pop() || 'png';
+        const subdir = kind === 'logo-company' ? 'logo_company' : 'logo_product';
+        const path = `engagement-carousel/${productId}/${subdir}_slide_${slideNum}_${Date.now()}.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from('product-images')
+          .upload(path, file, { upsert: true, contentType: file.type });
+        if (upErr) {
+          toast({ title: 'Erro no upload da logo', description: upErr.message, variant: 'destructive' });
+          return;
+        }
+        const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(path);
+        if (urlData?.publicUrl) {
+          const fieldKey = kind === 'logo-company' ? 'companyLogoUrl' : 'productLogoUrl';
+          handleSlideTextChange(slideNum, fieldKey, urlData.publicUrl);
+          toast({ title: '✅ Logo enviada', description: `Slide ${slideNum} atualizado.` });
+        }
+      } catch (err) {
+        console.error('logo upload error', err);
+        toast({ title: 'Erro no upload da logo', variant: 'destructive' });
+      }
+      return;
+    }
+
+
     const MAX_BYTES = 100 * 1024 * 1024; // 100 MB (alinhado ao bucket)
     const ALLOWED_VIDEO_MIME = ['video/mp4', 'video/quicktime', 'video/webm', 'video/x-m4v'];
     const ALLOWED_IMAGE_MIME = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];

@@ -20,7 +20,14 @@ export interface EngagementSlideTexts {
   mediaType?: 'image' | 'video';
   videoSrc?: string; // blob URL for video preview
   videoStorageUrl?: string; // persisted Supabase Storage URL for video
+  // ===== Logo overlays (per slide) =====
+  companyLogoUrl?: string;     // persisted Storage URL of the company logo
+  productLogoUrl?: string;     // persisted Storage URL of the product logo
+  companyLogoScale?: string;   // "40".."200" (default "100")
+  productLogoScale?: string;   // "40".."200" (default "100")
 }
+
+export type LogoUploadKind = 'image' | 'logo-company' | 'logo-product';
 
 export type EngagementSlideTextsMap = Record<number, EngagementSlideTexts>;
 
@@ -37,7 +44,7 @@ export function resolveVideoSource(texts: EngagementSlideTexts): string | null {
 interface EngagementCarouselPreviewProps {
   slideImageMap: Record<number, string>;
   onImageChange: (slideNum: number, url: string) => void;
-  onImageFileUpload?: (slideNum: number, file: File) => void;
+  onImageFileUpload?: (slideNum: number, file: File, kind?: LogoUploadKind) => void;
   productImages: Array<{ url: string; alt?: string }>;
   primaryColor: string;
   accentColor: string;
@@ -234,7 +241,7 @@ interface SlideWrapperProps {
   productImages: Array<{ url: string; alt?: string }>;
   currentImage: string;
   onImageChange: (slideNum: number, url: string) => void;
-  onImageFileUpload?: (slideNum: number, file: File) => void;
+  onImageFileUpload?: (slideNum: number, file: File, kind?: LogoUploadKind) => void;
   primaryColor: string;
   slideTexts?: Record<string, string>;
   onSlideTextChange?: (key: string, value: string) => void;
@@ -242,13 +249,25 @@ interface SlideWrapperProps {
   onMediaTypeChange?: (type: 'image' | 'video') => void;
 }
 
-const EDITOR_FIELDS: Record<number, Array<{ key: string; label: string; type: 'input' | 'textarea' | 'slider' | 'color' }>> = {
+type EditorFieldType = 'input' | 'textarea' | 'slider' | 'color' | 'logo';
+interface EditorField { key: string; label: string; type: EditorFieldType; min?: number; max?: number; step?: number; defaultValue?: number; }
+
+// Logo fields shared by all 6 slides
+const LOGO_FIELDS: EditorField[] = [
+  { key: 'companyLogoUrl',   label: '🏢 Logo da Empresa',        type: 'logo' },
+  { key: 'companyLogoScale', label: 'Tamanho da Logo (Empresa)', type: 'slider', min: 40, max: 200, step: 5, defaultValue: 100 },
+  { key: 'productLogoUrl',   label: '📦 Logo do Produto',        type: 'logo' },
+  { key: 'productLogoScale', label: 'Tamanho da Logo (Produto)', type: 'slider', min: 40, max: 200, step: 5, defaultValue: 100 },
+];
+
+const EDITOR_FIELDS: Record<number, EditorField[]> = {
   1: [
     { key: 'title', label: 'Título (gancho)', type: 'textarea' },
     { key: 'text', label: 'Subtítulo', type: 'textarea' },
     { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
     { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
     { key: 'accentColor', label: 'Cor de destaque', type: 'color' },
+    ...LOGO_FIELDS,
   ],
   2: [
     { key: 'title', label: 'Título', type: 'textarea' },
@@ -256,6 +275,7 @@ const EDITOR_FIELDS: Record<number, Array<{ key: string; label: string; type: 'i
     { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
     { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
     { key: 'accentColor', label: 'Cor de destaque', type: 'color' },
+    ...LOGO_FIELDS,
   ],
   3: [
     { key: 'title', label: 'Título', type: 'textarea' },
@@ -263,6 +283,7 @@ const EDITOR_FIELDS: Record<number, Array<{ key: string; label: string; type: 'i
     { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
     { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
     { key: 'accentColor', label: 'Cor de destaque', type: 'color' },
+    ...LOGO_FIELDS,
   ],
   4: [
     { key: 'title', label: 'Título', type: 'textarea' },
@@ -270,6 +291,7 @@ const EDITOR_FIELDS: Record<number, Array<{ key: string; label: string; type: 'i
     { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
     { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
     { key: 'accentColor', label: 'Cor de destaque', type: 'color' },
+    ...LOGO_FIELDS,
   ],
   5: [
     { key: 'title', label: 'Título', type: 'textarea' },
@@ -277,6 +299,7 @@ const EDITOR_FIELDS: Record<number, Array<{ key: string; label: string; type: 'i
     { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
     { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
     { key: 'accentColor', label: 'Cor de destaque', type: 'color' },
+    ...LOGO_FIELDS,
   ],
   6: [
     { key: 'title', label: 'Título CTA', type: 'textarea' },
@@ -285,8 +308,101 @@ const EDITOR_FIELDS: Record<number, Array<{ key: string; label: string; type: 'i
     { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
     { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
     { key: 'accentColor', label: 'Cor de destaque', type: 'color' },
+    ...LOGO_FIELDS,
   ],
 };
+
+// ===== Logo overlay (rendered inside scaled 1080x1350 area, so it shows in PNG + preview) =====
+function LogoOverlay({ texts }: { texts?: EngagementSlideTexts }) {
+  if (!texts) return null;
+  const companyUrl = texts.companyLogoUrl;
+  const productUrl = texts.productLogoUrl;
+  if (!companyUrl && !productUrl) return null;
+  const companyScale = Number(texts.companyLogoScale) || 100;
+  const productScale = Number(texts.productLogoScale) || 100;
+  const baseSize = 140; // px in 1080-wide canvas
+  return (
+    <>
+      {companyUrl && (
+        <img
+          src={companyUrl}
+          alt="Logo empresa"
+          crossOrigin="anonymous"
+          style={{
+            position: 'absolute', top: 32, right: 32,
+            width: baseSize * (companyScale / 100),
+            height: 'auto', maxHeight: baseSize * (companyScale / 100),
+            objectFit: 'contain', zIndex: 50, pointerEvents: 'none',
+            filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.35))',
+          }}
+        />
+      )}
+      {productUrl && (
+        <img
+          src={productUrl}
+          alt="Logo produto"
+          crossOrigin="anonymous"
+          style={{
+            position: 'absolute', bottom: 32, left: 32,
+            width: baseSize * (productScale / 100),
+            height: 'auto', maxHeight: baseSize * (productScale / 100),
+            objectFit: 'contain', zIndex: 50, pointerEvents: 'none',
+            filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.35))',
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+// ===== Logo upload control (editor field) =====
+function LogoUploadControl({
+  slideNum, fieldKey, currentUrl, onUpload, onSlideTextChange,
+}: {
+  slideNum: number;
+  fieldKey: string;
+  currentUrl?: string;
+  onUpload?: (slideNum: number, file: File, kind?: LogoUploadKind) => void;
+  onSlideTextChange?: (key: string, value: string) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const kind: LogoUploadKind = fieldKey === 'companyLogoUrl' ? 'logo-company' : 'logo-product';
+  const handlePick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (onUpload) onUpload(slideNum, file, kind);
+    e.target.value = '';
+  };
+  return (
+    <div className="flex items-center gap-2">
+      {currentUrl ? (
+        <img src={currentUrl} alt="logo" className="w-10 h-10 rounded border bg-white object-contain" />
+      ) : (
+        <div className="w-10 h-10 rounded border border-dashed bg-muted/30 flex items-center justify-center text-[10px] text-muted-foreground">
+          sem logo
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        className="flex items-center gap-1 text-xs px-2 py-1 rounded border border-border bg-background hover:bg-muted cursor-pointer"
+      >
+        <Upload style={{ width: 12, height: 12 }} />
+        <span>Upload</span>
+      </button>
+      {currentUrl && (
+        <button
+          type="button"
+          onClick={() => onSlideTextChange?.(fieldKey, '')}
+          className="text-xs px-2 py-1 rounded border border-border bg-background hover:bg-muted cursor-pointer text-destructive"
+        >
+          Remover
+        </button>
+      )}
+      <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="hidden" onChange={handlePick} />
+    </div>
+  );
+}
 
 function SlideWrapper({ slideNum, children, productImages, currentImage, onImageChange, onImageFileUpload, primaryColor, slideTexts, onSlideTextChange, mediaType, onMediaTypeChange }: SlideWrapperProps) {
   const containerW = SLIDE_W * SLIDE_SCALE;
@@ -383,6 +499,7 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
           }}
         >
           {children}
+          <LogoOverlay texts={slideTexts as unknown as EngagementSlideTexts | undefined} />
         </div>
       </div>
 
@@ -471,15 +588,23 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
               ) : field.type === 'slider' ? (
                 <div className="flex items-center gap-2">
                   <Slider
-                    min={50}
-                    max={150}
-                    step={5}
-                    value={[Number(slideTexts?.[field.key]) || 100]}
+                    min={field.min ?? 50}
+                    max={field.max ?? 150}
+                    step={field.step ?? 5}
+                    value={[Number(slideTexts?.[field.key]) || (field.defaultValue ?? 100)]}
                     onValueChange={([v]) => onSlideTextChange(field.key, String(v))}
                     className="flex-1"
                   />
-                  <span className="text-xs text-muted-foreground w-8">{slideTexts?.[field.key] || '100'}%</span>
+                  <span className="text-xs text-muted-foreground w-10 text-right">{slideTexts?.[field.key] || String(field.defaultValue ?? 100)}%</span>
                 </div>
+              ) : field.type === 'logo' ? (
+                <LogoUploadControl
+                  slideNum={slideNum}
+                  fieldKey={field.key}
+                  currentUrl={slideTexts?.[field.key]}
+                  onUpload={onImageFileUpload}
+                  onSlideTextChange={onSlideTextChange}
+                />
               ) : (
                 <Input
                   value={slideTexts?.[field.key] || ''}
@@ -513,7 +638,12 @@ export interface EngagementSlideRenderProps {
 
 export function EngagementSlideRender(props: EngagementSlideRenderProps) {
   const { slideNum, texts, imageUrl, primaryColor, accentColor, brandName, handleName } = props;
-  return renderSlideContent(slideNum, texts, imageUrl, primaryColor, accentColor, brandName, handleName);
+  return (
+    <div style={{ position: 'relative', width: SLIDE_W, height: SLIDE_H }}>
+      {renderSlideContent(slideNum, texts, imageUrl, primaryColor, accentColor, brandName, handleName)}
+      <LogoOverlay texts={texts} />
+    </div>
+  );
 }
 
 function renderSlideContent(
@@ -714,44 +844,44 @@ function renderSlideContent(
         fontFamily: 'system-ui, -apple-system, sans-serif',
         overflow: 'hidden',
         position: 'relative',
-        justifyContent: 'center',
+        justifyContent: 'flex-start',
         alignItems: 'center',
-        padding: '60px 60px 140px',
-        gap: 40,
+        padding: '90px 60px 120px',
+        gap: 36,
         textAlign: 'center',
       }}>
-        {/* Title — compact, centered */}
+        {/* Title — full height, no clamp, sits at the top */}
         <div style={{
-          fontSize: 40, fontWeight: 900, color: textColor, lineHeight: 1.2,
-          maxHeight: 180, overflow: 'hidden',
-          display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as const,
+          fontSize: 44, fontWeight: 900, color: textColor, lineHeight: 1.2,
+          width: '100%', wordBreak: 'break-word' as const,
+          flexShrink: 0,
         }}>
           <RichText text={displayTitle} />
         </div>
 
         {/* Media — reduced height to leave breathing room for body text */}
-        <MediaBlock height={260} />
+        <MediaBlock height={240} />
 
-        {/* Body — short, muted, with extra top breathing room */}
+        {/* Body — short, muted */}
         {displayBody && (
           <div style={{
-            fontSize: 28, lineHeight: 1.5, color: subTextColor, fontWeight: 400,
-            maxHeight: 130, overflow: 'hidden',
+            fontSize: 26, lineHeight: 1.45, color: subTextColor, fontWeight: 400,
+            maxHeight: 120, overflow: 'hidden',
             display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as const,
-            marginTop: 8,
+            width: '100%',
           }}>
             <RichText text={displayBody} />
           </div>
         )}
 
-        {/* CTA button — full width, word-wrap safe */}
+        {/* CTA button */}
         {ctaLabel && (
           <div style={{
             background: accent,
             color: getLuminance(accent) > 0.5 ? '#000' : '#fff',
             padding: '20px 40px',
             borderRadius: 20,
-            fontSize: 32,
+            fontSize: 30,
             fontWeight: 900,
             textAlign: 'center',
             width: '100%',
