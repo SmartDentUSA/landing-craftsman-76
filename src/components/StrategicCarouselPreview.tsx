@@ -287,6 +287,14 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
 
   const fields = SLIDE_EDITOR_FIELDS[slideNum] || [];
 
+  // CSS variables consumed by slide bodies (opt-in via data-slide-text-zone / data-slide-bg)
+  const shellStyleVars: React.CSSProperties = {
+    // Used by [data-slide-text-zone] children: override text color + scale + vertical alignment.
+    ['--slide-text-color' as any]: textColorOverride || 'inherit',
+    ['--slide-text-scale' as any]: String(textBlockScale / 100),
+    ['--slide-text-justify' as any]: textPosition === 'top' ? 'flex-start' : textPosition === 'bottom' ? 'flex-end' : textPosition === 'center' ? 'center' : 'inherit',
+  };
+
   return (
     <div className="flex flex-col items-center gap-2" style={{ maxWidth: containerW + 40 }}>
       {/* Slide preview */}
@@ -309,11 +317,46 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
             position: 'absolute',
             top: 0,
             left: 0,
+            ...shellStyleVars,
           }}
         >
           {children}
+          {/* Full-bleed video overlay (when mediaType === 'video') */}
+          {mediaType === 'video' && videoUrl && (
+            <video
+              src={videoUrl}
+              autoPlay
+              muted
+              loop
+              playsInline
+              style={{
+                position: 'absolute',
+                inset: 0,
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                zIndex: 1,
+                pointerEvents: 'none',
+              }}
+            />
+          )}
+          {/* Mask overlay */}
+          {maskOpacityNum > 0 && (
+            <div
+              aria-hidden
+              style={{
+                position: 'absolute',
+                inset: 0,
+                background: maskColor,
+                opacity: maskOpacityNum / 100,
+                zIndex: 2,
+                pointerEvents: 'none',
+              }}
+            />
+          )}
         </div>
       </div>
+
 
       {/* Swipe hint — only on Slide 1 */}
       {slideNum === 1 && (
