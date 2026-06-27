@@ -180,6 +180,25 @@ export function InstagramCopyGenerator({ productId, productName, productPrice, p
   const [generatingSecurity, setGeneratingSecurity] = useState(false);
   const [slideTexts, setSlideTexts] = useState<Partial<SlideTextsType>>({});
 
+  const buildStrategicProductData = () => ({
+    name: productName,
+    price: productPrice,
+    category: productCategory,
+    description: productDescription,
+    benefits: productBenefits,
+    features: productFeatures,
+    technicalSpecs: technicalSpecs,
+    productUrl: productUrl,
+    salesPitch: productSalesPitch,
+    targetAudience: productTargetAudience,
+    applications: productApplications,
+    faq: productFaq,
+    ecommerceHtmlText: productEcommerceHtml ? stripHtmlToText(productEcommerceHtml).slice(0, 300) : undefined,
+    feedCopyBenefits: feedCopies.find(v => v.approach === 'benefits')?.copy || undefined,
+    feedCopyProblemSolution: feedCopies.find(v => v.approach === 'problem_solution')?.copy || undefined,
+    competitorComparison: competitorComparison,
+  });
+
   // === Visual Carousel: image/video file upload (delegated by StrategicCarouselPreview) ===
   const handleVisualSlideFileUpload = async (slideNum: number, file: File) => {
     const MAX_BYTES = 100 * 1024 * 1024;
@@ -882,23 +901,21 @@ ${slide.text}`;
     return feedCarousels.find(c => c.variation === variationNum);
   };
 
+  // A exportação precisa usar a MESMA fonte de vídeo que o preview está exibindo.
+  // No editor visual o preview prioriza o blob local (videoSrc) e só cai para a URL
+  // persistida quando não existe blob (ex.: após reload). Inverter essa ordem na
+  // exportação era uma das causas de “vejo uma coisa e exporta outra”.
+  const getStrategicPreviewVideoUrl = (texts: Record<string, string>) => {
+    if (texts.mediaType !== 'video') return '';
+    return String(texts.videoSrc || texts.videoStorageUrl || '');
+  };
+
   // === Export ZIP — Carrossel Visual (PNGs 1080×1350px) ===
   const handleExportZip = async () => {
     setIsExportingZip(true);
     try {
       const zip = new JSZip();
-      const productData = {
-        name: productName,
-        price: productPrice,
-        category: productCategory,
-        benefits: productBenefits,
-        features: productFeatures,
-        technicalSpecs: technicalSpecs,
-        productUrl: productUrl,
-        feedCopyBenefits: feedCopies.find(v => v.approach === 'benefits')?.copy || undefined,
-        feedCopyProblemSolution: feedCopies.find(v => v.approach === 'problem_solution')?.copy || undefined,
-        competitorComparison: competitorComparison,
-      };
+      const productData = buildStrategicProductData();
 
       const SLIDE_FILE_NAMES: Record<number, string> = {
         1: 'slide-1-hook',
@@ -911,19 +928,19 @@ ${slide.text}`;
 
       for (let i = 1; i <= 6; i++) {
         const textsForSlide = (slideTexts[i as keyof SlideTextsType] as unknown as Record<string, string>) || {};
-        const isVideo = textsForSlide.mediaType === 'video' && (textsForSlide.videoStorageUrl || textsForSlide.videoSrc);
+        const videoUrl = getStrategicPreviewVideoUrl(textsForSlide);
+        const isVideo = !!videoUrl;
         const logos = { companyUrl: companyLogoUrl, productUrl: productLogoUrl, companyScale: companyLogoScale, productScale: productLogoScale };
 
         if (isVideo) {
           try {
-            const videoUrl = String(textsForSlide.videoStorageUrl || textsForSlide.videoSrc);
             const productData2 = productData;
             const videoBlob = await generateStrategicSlideVideo(i, videoUrl, primaryColor, accentColor, productData2, textsForSlide, logos);
             zip.file(`${SLIDE_FILE_NAMES[i]}.webm`, videoBlob);
             continue;
           } catch (vErr) {
-            console.error(`[ZIP] Falha vídeo slide ${i}, fallback para PNG:`, vErr);
-            // fall through to PNG fallback below
+            console.error(`[ZIP] Falha vídeo slide ${i}; exportação abortada para não gerar arquivo diferente do preview:`, vErr);
+            throw vErr;
           }
         }
 
@@ -932,9 +949,8 @@ ${slide.text}`;
           const pngBlob = await generateSlidePNG(i, safeDataUrl, primaryColor, accentColor, productData, textsForSlide, logos);
           zip.file(`${SLIDE_FILE_NAMES[i]}.png`, pngBlob);
         } catch (slideErr) {
-          console.warn(`Slide ${i} gerado sem imagem (fallback):`, slideErr);
-          const pngBlob = await generateSlidePNG(i, '', primaryColor, accentColor, productData, textsForSlide, logos);
-          zip.file(`${SLIDE_FILE_NAMES[i]}.png`, pngBlob);
+          console.error(`Slide ${i} falhou; exportação abortada para não gerar arquivo diferente do preview:`, slideErr);
+          throw slideErr;
         }
       }
 
@@ -948,7 +964,7 @@ ${slide.text}`;
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      toast({ title: "📦 ZIP gerado!", description: "6 PNGs de 1080×1350px baixados com sucesso." });
+      toast({ title: "📦 ZIP gerado!", description: "6 slides exportados exatamente do preview." });
     } catch (error) {
       console.error('Erro ao gerar ZIP:', error);
       toast({ title: "Erro", description: "Não foi possível gerar o ZIP.", variant: "destructive" });
@@ -961,45 +977,38 @@ ${slide.text}`;
   const handleSendSmartOpsVisual = async () => {
     setSendingSmartOps(true);
     try {
-      const productData = {
-        name: productName,
-        price: productPrice,
-        category: productCategory,
-        benefits: productBenefits,
-        features: productFeatures,
-        technicalSpecs: technicalSpecs,
-        productUrl: productUrl,
-        feedCopyBenefits: feedCopies.find(v => v.approach === 'benefits')?.copy || undefined,
-        feedCopyProblemSolution: feedCopies.find(v => v.approach === 'problem_solution')?.copy || undefined,
-        competitorComparison: competitorComparison,
-      };
+      const productData = buildStrategicProductData();
 
       toast({ title: 'Gerando carrossel...', description: 'Renderizando 6 slides (PNG/vídeo).' });
       const slidesPayload: Array<{ blob: Blob; ext: string; contentType: string }> = [];
       const logos = { companyUrl: companyLogoUrl, productUrl: productLogoUrl, companyScale: companyLogoScale, productScale: productLogoScale };
       for (let i = 1; i <= 6; i++) {
         const textsForSlide = (slideTexts[i as keyof SlideTextsType] as unknown as Record<string, string>) || {};
-        const isVideo = textsForSlide.mediaType === 'video' && (textsForSlide.videoStorageUrl || textsForSlide.videoSrc);
+        const videoUrl = getStrategicPreviewVideoUrl(textsForSlide);
+        const isVideo = !!videoUrl;
         console.log(`[SMARTOPS_VISUAL] preparando slide ${i}/6 (${isVideo ? 'VIDEO' : 'PNG'})`);
 
         if (isVideo) {
           try {
-            const videoUrl = String(textsForSlide.videoStorageUrl || textsForSlide.videoSrc);
             const videoBlob = await Promise.race<Blob>([
               generateStrategicSlideVideo(i, videoUrl, primaryColor, accentColor, productData, textsForSlide, logos),
-              new Promise<Blob>((_, reject) => setTimeout(() => reject(new Error(`Timeout (150s) renderizando vídeo slide ${i}`)), 150_000)),
+              new Promise<Blob>((_, reject) => setTimeout(() => reject(new Error(`Timeout (10min) renderizando vídeo slide ${i}`)), 600_000)),
             ]);
             console.log(`[SMARTOPS_VISUAL] slide ${i} vídeo pronto (${videoBlob.size} bytes)`);
             slidesPayload.push({ blob: videoBlob, ext: 'webm', contentType: 'video/webm' });
             continue;
           } catch (e) {
-            console.error(`[SMARTOPS_VISUAL] vídeo slide ${i} falhou, fallback PNG:`, e);
+            console.error(`[SMARTOPS_VISUAL] vídeo slide ${i} falhou; envio abortado para não enviar PNG diferente do preview:`, e);
+            throw e;
           }
         }
 
         let safeDataUrl = '';
         try { safeDataUrl = await fetchAsDataUrl(slideImageMap[i] || ''); }
-        catch (e) { console.warn(`SmartOps slide ${i} sem imagem (fallback):`, e); }
+        catch (e) {
+          console.error(`SmartOps slide ${i} falhou ao preparar imagem; envio abortado para não enviar diferente do preview:`, e);
+          throw e;
+        }
         const pngBlob = await Promise.race<Blob>([
           generateSlidePNG(i, safeDataUrl, primaryColor, accentColor, productData, textsForSlide, logos),
           new Promise<Blob>((_, reject) => setTimeout(() => reject(new Error(`Timeout (45s) renderizando slide ${i}`)), 45_000)),

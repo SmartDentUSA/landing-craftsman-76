@@ -376,7 +376,16 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
   const renderedChildren = React.useMemo(() => {
     if (mediaType !== 'video' || !videoUrl || !React.isValidElement(children)) return children;
     const childProps = (children as React.ReactElement<any>).props || {};
-    const mergedTexts = { ...(childProps.texts || {}), bgColor: 'transparent', overlayOpacity: '0' };
+    const mergedTexts = {
+      ...(childProps.texts || {}),
+      bgColor: 'transparent',
+      overlayOpacity: '0',
+      // In video-background mode the slide-specific media placeholders/side strips
+      // must not paint opaque blocks above the video. Text, masks and logos remain.
+      sideStripVisible: 'false',
+      imageVisible: 'false',
+      mediaType: 'video',
+    };
     return React.cloneElement(children as React.ReactElement<any>, { image: '', texts: mergedTexts });
   }, [children, mediaType, videoUrl]);
 
@@ -414,22 +423,21 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
           )}
           {/* Full-bleed video overlay (BACKGROUND — sits behind slide content) */}
           {mediaType === 'video' && videoUrl && (
-            <video
-              src={videoUrl}
-              autoPlay
-              muted
-              loop
-              playsInline
-              style={{
-                position: 'absolute',
-                inset: 0,
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                zIndex: 1,
-                pointerEvents: 'none',
-              }}
-            />
+            <div data-strategic-video-slot="true" data-video-scale="100" data-video-radius="0" style={{ position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none' }}>
+              <video
+                src={videoUrl}
+                autoPlay
+                muted
+                loop
+                playsInline
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  pointerEvents: 'none',
+                }}
+              />
+            </div>
           )}
           {/* Mask overlay (between video and text) */}
           {maskOpacityNum > 0 && (
@@ -694,7 +702,8 @@ function Slide1Hook({ image, primaryColor, productData, texts }: { image: string
 
       {/* Overlay escuro geral sutil para dar profundidade */}
       {(() => {
-        const ov = Number(texts?.overlayOpacity) || (hasCustomBg ? 10 : 28);
+        const rawOv = texts?.overlayOpacity;
+        const ov = rawOv !== undefined && rawOv !== '' ? Math.max(0, Math.min(100, Number(rawOv))) : (hasCustomBg ? 10 : 28);
         return <div style={{ position: 'absolute', inset: 0, background: `rgba(0,0,0,${ov / 100})` }} />;
       })()}
 
@@ -1355,7 +1364,7 @@ function Slide5Security({ image, primaryColor, productData, texts }: { image: st
 }
 
 // ==================== SLIDE 6 — CTA ====================
-function Slide6CTA({ image, primaryColor, accentColor, productData, texts }: { image: string; primaryColor: string; accentColor: string; productData: ProductData; texts?: { productName?: string; ctaButton?: string; linkLabel?: string; footer?: string; imageScale?: string; bgColor?: string } }) {
+function Slide6CTA({ image, primaryColor, accentColor, productData, texts }: { image: string; primaryColor: string; accentColor: string; productData: ProductData; texts?: { productName?: string; ctaButton?: string; linkLabel?: string; footer?: string; imageScale?: string; bgColor?: string; imageVisible?: string; mediaType?: 'image' | 'video' } }) {
   const textOnPrimary = getLuminance(primaryColor) > 0.5 ? '#000000' : '#ffffff';
   const textOnAccent = getLuminance(accentColor) > 0.5 ? '#000000' : '#ffffff';
   const name = texts?.productName || productData.name;
@@ -1364,15 +1373,18 @@ function Slide6CTA({ image, primaryColor, accentColor, productData, texts }: { i
   const footer = texts?.footer || 'Direct para mais informações';
   const imageScale6 = Number(texts?.imageScale) || 100;
   const bgColor6 = texts?.bgColor || primaryColor;
+  const showImageBox = (texts?.imageVisible ?? 'true') !== 'false' && (texts?.mediaType !== 'video' || !!image);
 
   return (
     <div style={{ width: SLIDE_W, height: SLIDE_H, background: bgColor6, fontFamily: 'system-ui, -apple-system, sans-serif', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 80, gap: 60, position: 'relative' }}>
       <div style={{ alignSelf: 'flex-start', width: 70, height: 70, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'absolute', top: 60, left: 60 }}>
         <span style={{ color: textOnPrimary, fontWeight: 900, fontSize: 30 }}>6</span>
       </div>
-      <div style={{ width: 240, height: 240, borderRadius: 24, overflow: 'hidden', border: '4px solid rgba(255,255,255,0.8)', boxShadow: '0 20px 60px rgba(0,0,0,0.3)', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {image ? <img src={image} alt="produto" style={{ width: '100%', height: '100%', objectFit: 'cover', transform: `scale(${imageScale6 / 100})`, transformOrigin: 'center center' }} /> : <div style={{ width: '100%', height: '100%', background: '#eee' }} />}
-      </div>
+      {showImageBox && (
+        <div style={{ width: 240, height: 240, borderRadius: 24, overflow: 'hidden', border: '4px solid rgba(255,255,255,0.8)', boxShadow: '0 20px 60px rgba(0,0,0,0.3)', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {image ? <img src={image} alt="produto" style={{ width: '100%', height: '100%', objectFit: 'cover', transform: `scale(${imageScale6 / 100})`, transformOrigin: 'center center' }} /> : <div style={{ width: '100%', height: '100%', background: '#eee' }} />}
+        </div>
+      )}
       <h2 style={{ color: textOnPrimary, fontSize: 68, fontWeight: 900, margin: 0, textAlign: 'center', lineHeight: 1.1 }}>{name}</h2>
       <div style={{ background: accentColor, color: textOnAccent, borderRadius: 24, padding: '36px 72px', fontSize: 52, fontWeight: 900, textAlign: 'center', boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}>
         {ctaButton}
@@ -1663,6 +1675,276 @@ export async function fetchAsDataUrl(url: string): Promise<string> {
   return url;
 }
 
+type DomVideoDrawOrder = 'video-under-overlay' | 'video-over-overlay';
+
+interface DomVideoSlot {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  radius: number;
+  scale: number;
+}
+
+function roundedRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  const radius = Math.max(0, Math.min(r, w / 2, h / 2));
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + w - radius, y);
+  ctx.arcTo(x + w, y, x + w, y + radius, radius);
+  ctx.lineTo(x + w, y + h - radius);
+  ctx.arcTo(x + w, y + h, x + w - radius, y + h, radius);
+  ctx.lineTo(x + radius, y + h);
+  ctx.arcTo(x, y + h, x, y + h - radius, radius);
+  ctx.lineTo(x, y + radius);
+  ctx.arcTo(x, y, x + radius, y, radius);
+  ctx.closePath();
+}
+
+function drawVideoCoverInSlot(ctx: CanvasRenderingContext2D, video: HTMLVideoElement, slot: DomVideoSlot) {
+  const vw = video.videoWidth || SLIDE_W;
+  const vh = video.videoHeight || SLIDE_H;
+  const baseScale = Math.max(slot.w / vw, slot.h / vh) * slot.scale;
+  const dw = vw * baseScale;
+  const dh = vh * baseScale;
+  const dx = slot.x + (slot.w - dw) / 2;
+  const dy = slot.y + (slot.h - dh) / 2;
+
+  ctx.save();
+  roundedRectPath(ctx, slot.x, slot.y, slot.w, slot.h, slot.radius);
+  ctx.clip();
+  ctx.drawImage(video, dx, dy, dw, dh);
+  ctx.restore();
+}
+
+async function waitForDomMedia(container: HTMLElement, label: string) {
+  await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+  const imgs = Array.from(container.querySelectorAll('img'));
+  await Promise.all(
+    imgs.map((img) => Promise.race<void>([
+      (async () => {
+        try { await img.decode(); }
+        catch (err) { console.warn(`[${label}] image decode failed`, { src: img.src?.slice(0, 80), err }); }
+      })(),
+      new Promise<void>((resolve) => setTimeout(resolve, 5000)),
+    ]))
+  );
+  await new Promise<void>((resolve) => requestAnimationFrame(() => setTimeout(resolve, 80)));
+}
+
+async function resolveVideoUrlForCanvas(videoUrl: string, logPrefix: string): Promise<{ src: string; revoke?: () => void; usingBlobUrl: boolean }> {
+  if (!/^https?:\/\//i.test(videoUrl)) return { src: videoUrl, usingBlobUrl: videoUrl.startsWith('blob:') };
+  try {
+    const resp = await Promise.race([
+      fetch(videoUrl, { mode: 'cors', credentials: 'omit' }),
+      new Promise<Response>((_, reject) => setTimeout(() => reject(new Error('Video fetch timeout (20s)')), 20_000)),
+    ]);
+    if (!resp.ok) throw new Error(`Video fetch HTTP ${resp.status}`);
+    const blob = await resp.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    return { src: blobUrl, usingBlobUrl: true, revoke: () => URL.revokeObjectURL(blobUrl) };
+  } catch (err) {
+    console.warn(`[${logPrefix}] video prefetch failed, using original URL`, err);
+    return { src: videoUrl, usingBlobUrl: false };
+  }
+}
+
+export async function generateDomCompositedVideo({
+  videoUrl,
+  overlayElement,
+  slotSelector,
+  drawOrder,
+  logPrefix = 'DOM_VIDEO',
+  durationCapSeconds = 3600,
+}: {
+  videoUrl: string;
+  overlayElement: React.ReactElement;
+  slotSelector: string;
+  drawOrder: DomVideoDrawOrder;
+  logPrefix?: string;
+  durationCapSeconds?: number;
+}): Promise<Blob> {
+  const container = document.createElement('div');
+  container.style.cssText = [
+    'position:fixed',
+    'left:-99999px',
+    'top:0',
+    `width:${SLIDE_W}px`,
+    `height:${SLIDE_H}px`,
+    'pointer-events:none',
+    'z-index:-1',
+    'overflow:hidden',
+  ].join(';');
+  document.body.appendChild(container);
+  const root = createRoot(container);
+
+  let overlayUrl = '';
+  let videoRevoke: (() => void) | undefined;
+
+  try {
+    root.render(overlayElement);
+    await waitForDomMedia(container, logPrefix);
+
+    const containerRect = container.getBoundingClientRect();
+    let slots: DomVideoSlot[] = Array.from(container.querySelectorAll<HTMLElement>(slotSelector)).map((el) => {
+      const rect = el.getBoundingClientRect();
+      const computed = window.getComputedStyle(el);
+      const radiusAttr = Number(el.dataset.videoRadius);
+      const radius = Number.isFinite(radiusAttr) && radiusAttr >= 0
+        ? radiusAttr
+        : parseFloat(computed.borderTopLeftRadius || '0') || 0;
+      const scaleAttr = Number(el.dataset.videoScale);
+      const scale = Number.isFinite(scaleAttr) && scaleAttr > 0 ? scaleAttr / 100 : 1;
+      return {
+        x: rect.left - containerRect.left,
+        y: rect.top - containerRect.top,
+        w: rect.width,
+        h: rect.height,
+        radius,
+        scale,
+      };
+    }).filter((slot) => slot.w > 0 && slot.h > 0);
+
+    if (slots.length === 0) {
+      slots = [{ x: 0, y: 0, w: SLIDE_W, h: SLIDE_H, radius: 0, scale: 1 }];
+    }
+
+    const overlayCanvas = await html2canvas(container, {
+      width: SLIDE_W,
+      height: SLIDE_H,
+      windowWidth: SLIDE_W,
+      windowHeight: SLIDE_H,
+      scale: 1,
+      useCORS: true,
+      allowTaint: false,
+      backgroundColor: null,
+      logging: false,
+      imageTimeout: 8000,
+    });
+    const overlayBlob = await new Promise<Blob | null>((resolve) => overlayCanvas.toBlob((b) => resolve(b), 'image/png'));
+    if (!overlayBlob) throw new Error('Overlay snapshot failed');
+    overlayUrl = URL.createObjectURL(overlayBlob);
+    const overlayImg = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('Overlay image load failed'));
+      img.src = overlayUrl;
+    });
+
+    const resolvedVideo = await resolveVideoUrlForCanvas(videoUrl, logPrefix);
+    videoRevoke = resolvedVideo.revoke;
+    const videoEl = document.createElement('video');
+    if (!resolvedVideo.usingBlobUrl) videoEl.crossOrigin = 'anonymous';
+    videoEl.muted = true;
+    videoEl.playsInline = true;
+    videoEl.preload = 'auto';
+    videoEl.src = resolvedVideo.src;
+
+    await Promise.race([
+      new Promise<void>((resolve, reject) => {
+        videoEl.onloadeddata = () => resolve();
+        videoEl.onerror = () => reject(new Error('video load failed'));
+        videoEl.load();
+      }),
+      new Promise<void>((_, reject) => setTimeout(() => reject(new Error('video load timeout (15s)')), 15_000)),
+    ]);
+
+    let duration = videoEl.duration;
+    if (!isFinite(duration) || isNaN(duration) || duration <= 0) duration = 10;
+    duration = Math.min(duration, durationCapSeconds);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = SLIDE_W;
+    canvas.height = SLIDE_H;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Canvas context unavailable');
+
+    const drawVideoSlots = () => slots.forEach((slot) => drawVideoCoverInSlot(ctx, videoEl, slot));
+    const drawFrame = () => {
+      ctx.clearRect(0, 0, SLIDE_W, SLIDE_H);
+      if (drawOrder === 'video-under-overlay') {
+        drawVideoSlots();
+        ctx.drawImage(overlayImg, 0, 0, SLIDE_W, SLIDE_H);
+      } else {
+        ctx.drawImage(overlayImg, 0, 0, SLIDE_W, SLIDE_H);
+        drawVideoSlots();
+      }
+    };
+
+    drawFrame();
+    ctx.getImageData(0, 0, 1, 1);
+
+    try {
+      if (videoEl.currentTime !== 0) {
+        await Promise.race([
+          new Promise<void>((resolve) => {
+            videoEl.addEventListener('seeked', () => resolve(), { once: true });
+            videoEl.currentTime = 0;
+          }),
+          new Promise<void>((resolve) => setTimeout(resolve, 1500)),
+        ]);
+      }
+    } catch { /* keep currently loaded frame */ }
+
+    drawFrame();
+
+    const stream = canvas.captureStream(30);
+    const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm';
+    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 });
+    const chunks: Blob[] = [];
+    recorder.ondataavailable = (event) => { if (event.data.size > 0) chunks.push(event.data); };
+    const recordingDone = new Promise<Blob>((resolve, reject) => {
+      recorder.onstop = () => resolve(new Blob(chunks, { type: mimeType }));
+      recorder.onerror = () => reject(new Error('MediaRecorder error'));
+    });
+
+    recorder.start();
+    await videoEl.play();
+
+    const startedAt = performance.now();
+    const durationMs = duration * 1000;
+    let stopped = false;
+    const stopRecorder = () => {
+      if (stopped) return;
+      stopped = true;
+      try { recorder.stop(); } catch { /* noop */ }
+    };
+
+    await new Promise<void>((resolve) => {
+      const onEnded = () => { stopRecorder(); resolve(); };
+      videoEl.addEventListener('ended', onEnded, { once: true });
+      const fallbackTimer = window.setTimeout(() => { stopRecorder(); resolve(); }, durationMs + 500);
+      const tick = () => {
+        if (stopped) return;
+        const elapsed = performance.now() - startedAt;
+        if (videoEl.ended || elapsed >= durationMs) {
+          window.clearTimeout(fallbackTimer);
+          stopRecorder();
+          resolve();
+          return;
+        }
+        try {
+          drawFrame();
+          requestAnimationFrame(tick);
+        } catch (err) {
+          console.error(`[${logPrefix}] frame draw failed`, err);
+          window.clearTimeout(fallbackTimer);
+          stopRecorder();
+          resolve();
+        }
+      };
+      requestAnimationFrame(tick);
+    });
+
+    return await recordingDone;
+  } finally {
+    try { root.unmount(); } catch { /* noop */ }
+    try { container.remove(); } catch { /* noop */ }
+    if (overlayUrl) { try { URL.revokeObjectURL(overlayUrl); } catch { /* noop */ } }
+    if (videoRevoke) { try { videoRevoke(); } catch { /* noop */ } }
+  }
+}
+
 // ==================== StrategicSlideRender — single source of truth ====================
 // Renders the same JSX as the editor preview, used both for the in-app preview wrappers
 // and for the off-screen html2canvas snapshot during PNG export.
@@ -1684,7 +1966,14 @@ export function StrategicSlideRender({ slideNum, image, primaryColor, accentColo
   // underlying <video> shows through when composited on a canvas.
   const renderImage = videoMode ? '' : image;
   const slotForRender = videoMode
-    ? { ...slot, bgColor: 'transparent', overlayOpacity: '0' }
+    ? {
+        ...slot,
+        bgColor: 'transparent',
+        overlayOpacity: '0',
+        sideStripVisible: 'false',
+        imageVisible: 'false',
+        mediaType: 'video',
+      }
     : slot;
   const renderTexts = { ...t, [slideNum]: slotForRender };
 
@@ -1706,9 +1995,15 @@ export function StrategicSlideRender({ slideNum, image, primaryColor, accentColo
       {textColorOverride && (
         <style>{`.${contentClass} :is(p, span, h1, h2, h3, h4, h5, h6, div, li, a, button) { color: ${textColorOverride} !important; }`}</style>
       )}
-      <div className={contentClass} style={{ position: 'absolute', inset: 0, zIndex: 3 }}>
-        {body}
-      </div>
+      {videoMode && (
+        <div
+          data-strategic-video-slot="true"
+          data-video-scale="100"
+          data-video-radius="0"
+          aria-hidden
+          style={{ position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none' }}
+        />
+      )}
       {maskOpacityNum > 0 && (
         <div
           aria-hidden
@@ -1717,11 +2012,14 @@ export function StrategicSlideRender({ slideNum, image, primaryColor, accentColo
             inset: 0,
             background: maskColor,
             opacity: maskOpacityNum / 100,
-            zIndex: 4,
+            zIndex: 2,
             pointerEvents: 'none',
           }}
         />
       )}
+      <div className={contentClass} style={{ position: 'absolute', inset: 0, zIndex: 3 }}>
+        {body}
+      </div>
       <div style={{ position: 'absolute', inset: 0, zIndex: 50, pointerEvents: 'none' }}>
         <CarouselLogosOverlay logos={logos} />
       </div>
@@ -1785,38 +2083,18 @@ export async function generateSlidePNG(
 
   // 4. Render React component into the container
   const root = createRoot(container);
-  await new Promise<void>((resolve) => {
-    root.render(
-      React.createElement(StrategicSlideRender, {
-        slideNum,
-        image: imgDataUrl,
-        primaryColor,
-        accentColor,
-        productData,
-        texts: slideTexts,
-        logos: resolvedLogos,
-      })
-    );
-    // Wait for React commit + image decode
-    requestAnimationFrame(() => {
-      const imgs = container.querySelectorAll('img');
-      if (imgs.length === 0) {
-        setTimeout(resolve, 50);
-        return;
-      }
-      Promise.all(
-        Array.from(imgs).map(
-          (i) =>
-            new Promise<void>((res) => {
-              if (i.complete && i.naturalWidth > 0) return res();
-              i.onload = () => res();
-              i.onerror = () => res();
-              setTimeout(res, 3000); // hard timeout per image
-            })
-        )
-      ).then(() => setTimeout(resolve, 80));
-    });
-  });
+  root.render(
+    React.createElement(StrategicSlideRender, {
+      slideNum,
+      image: imgDataUrl,
+      primaryColor,
+      accentColor,
+      productData,
+      texts: slideTexts,
+      logos: resolvedLogos,
+    })
+  );
+  await waitForDomMedia(container, `STRATEGIC_PNG_${slideNum}`);
 
   let blob: Blob | null = null;
   try {
@@ -1831,7 +2109,7 @@ export async function generateSlidePNG(
       allowTaint: false,
       backgroundColor: null,
       logging: false,
-      imageTimeout: 4000,
+      imageTimeout: 8000,
     });
 
     blob = await new Promise<Blob | null>((resolve) => {
@@ -1864,186 +2142,40 @@ export async function generateStrategicSlideVideo(
   texts: Record<string, string>,
   logos?: CarouselLogos,
 ): Promise<Blob> {
-  const W = SLIDE_W;
-  const H = SLIDE_H;
-
-  // 1) Build overlay PNG with template + mask + text + logos (video area transparent).
-  //    We force mediaType:'video' so StrategicSlideRender drops the bg/image.
-  const overlayTexts: Record<string, string> = { ...texts, mediaType: 'video' };
-  const overlayBlob = await generateSlidePNG(
-    slideNum,
-    '', // no image — video is the media
-    primaryColor,
-    accentColor,
-    productData,
-    overlayTexts,
-    logos,
-  );
-  const overlayUrl = URL.createObjectURL(overlayBlob);
-  const overlayImg: HTMLImageElement = await new Promise((resolve, reject) => {
-    const im = new Image();
-    im.onload = () => resolve(im);
-    im.onerror = () => reject(new Error('overlay image load failed'));
-    im.src = overlayUrl;
-  });
-
-  // 2) Prefetch video as blob URL to avoid CORS taint of the canvas.
-  let blobVideoUrl: string | null = null;
-  let usingBlobUrl = false;
-  try {
-    if (/^https?:\/\//i.test(videoUrl)) {
-      const resp = await Promise.race([
-        fetch(videoUrl, { mode: 'cors', credentials: 'omit' }),
-        new Promise<Response>((_, reject) => setTimeout(() => reject(new Error('Video fetch timeout (20s)')), 20_000)),
-      ]);
-      if (!resp.ok) throw new Error(`Video fetch HTTP ${resp.status}`);
-      const b = await resp.blob();
-      blobVideoUrl = URL.createObjectURL(b);
-      usingBlobUrl = true;
-    }
-  } catch (e) {
-    console.warn('[STRATEGIC_VIDEO] prefetch failed, using raw URL', e);
-  }
-
-  const cleanup = () => {
-    try { URL.revokeObjectURL(overlayUrl); } catch {}
-    if (blobVideoUrl) { try { URL.revokeObjectURL(blobVideoUrl); } catch {} }
-  };
-
-  // 3) Load video element
-  const videoEl = document.createElement('video');
-  if (!usingBlobUrl) videoEl.crossOrigin = 'anonymous';
-  videoEl.muted = true;
-  videoEl.playsInline = true;
-  videoEl.preload = 'auto';
-  videoEl.src = blobVideoUrl ?? videoUrl;
-
-  try {
-    await Promise.race([
-      new Promise<void>((resolve, reject) => {
-        videoEl.onloadeddata = () => resolve();
-        videoEl.onerror = () => reject(new Error('video load failed'));
-        videoEl.load();
-      }),
-      new Promise<void>((_, reject) => setTimeout(() => reject(new Error('video load timeout (15s)')), 15_000)),
+  let resolvedLogos: CarouselLogos | undefined = logos;
+  if (logos && (logos.companyUrl || logos.productUrl)) {
+    const [companyData, productData2] = await Promise.all([
+      logos.companyUrl ? fetchAsDataUrl(logos.companyUrl).catch(() => logos.companyUrl) : Promise.resolve(undefined),
+      logos.productUrl ? fetchAsDataUrl(logos.productUrl).catch(() => logos.productUrl) : Promise.resolve(undefined),
     ]);
-  } catch (e) {
-    cleanup();
-    throw e;
+    resolvedLogos = { ...logos, companyUrl: companyData, productUrl: productData2 };
   }
 
-  let duration = videoEl.duration;
-  if (!isFinite(duration) || isNaN(duration) || duration <= 0) duration = 10;
-  duration = Math.min(duration, 120);
+  const overlayTexts = ({
+    [slideNum]: {
+      ...texts,
+      mediaType: 'video',
+      videoSrc: videoUrl,
+      videoStorageUrl: videoUrl,
+    } as any,
+  } as unknown as Partial<SlideTextsType>);
 
-  // 4) Canvas + recorder
-  const canvas = document.createElement('canvas');
-  canvas.width = W;
-  canvas.height = H;
-  const ctx = canvas.getContext('2d')!;
-
-  // Object-fit cover math for the video
-  const drawVideoCover = () => {
-    const vw = videoEl.videoWidth || W;
-    const vh = videoEl.videoHeight || H;
-    const scale = Math.max(W / vw, H / vh);
-    const dw = vw * scale;
-    const dh = vh * scale;
-    const dx = (W - dw) / 2;
-    const dy = (H - dh) / 2;
-    ctx.drawImage(videoEl, dx, dy, dw, dh);
-  };
-
-  const stream = canvas.captureStream(30);
-  const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
-    ? 'video/webm;codecs=vp9'
-    : 'video/webm';
-  let recorder: MediaRecorder;
-  try {
-    recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 });
-  } catch (e) {
-    cleanup();
-    throw e;
-  }
-  const chunks: Blob[] = [];
-  recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
-  const recordingDone = new Promise<Blob>((resolve, reject) => {
-    recorder.onstop = () => resolve(new Blob(chunks, { type: mimeType }));
-    recorder.onerror = () => reject(new Error('MediaRecorder error'));
+  return generateDomCompositedVideo({
+    videoUrl,
+    overlayElement: React.createElement(StrategicSlideRender, {
+      slideNum,
+      image: '',
+      primaryColor,
+      accentColor,
+      productData,
+      texts: overlayTexts,
+      logos: resolvedLogos,
+    }),
+    slotSelector: '[data-strategic-video-slot="true"]',
+    drawOrder: 'video-under-overlay',
+    logPrefix: `STRATEGIC_VIDEO_${slideNum}`,
+    durationCapSeconds: 3600,
   });
-
-  // Taint test
-  try {
-    drawVideoCover();
-    ctx.getImageData(0, 0, 1, 1);
-  } catch (e) {
-    cleanup();
-    throw new Error('Canvas tainted (CORS) on video draw: ' + ((e as Error)?.message ?? ''));
-  }
-  ctx.clearRect(0, 0, W, H);
-
-  // Seek to 0
-  try {
-    if (videoEl.currentTime !== 0) {
-      await Promise.race([
-        new Promise<void>((resolve) => {
-          videoEl.addEventListener('seeked', () => resolve(), { once: true });
-          videoEl.currentTime = 0;
-        }),
-        new Promise<void>((resolve) => setTimeout(resolve, 1500)),
-      ]);
-    }
-  } catch { /* noop */ }
-
-  // Prime first composed frame
-  try {
-    drawVideoCover();
-    ctx.drawImage(overlayImg, 0, 0, W, H);
-  } catch {}
-
-  try {
-    recorder.start();
-    await videoEl.play();
-  } catch (e) {
-    cleanup();
-    throw e;
-  }
-
-  const startedAt = performance.now();
-  const durationMs = duration * 1000;
-  let stopped = false;
-  const stopRecorder = () => { if (!stopped) { stopped = true; try { recorder.stop(); } catch {} } };
-
-  await new Promise<void>((resolve) => {
-    videoEl.addEventListener('ended', () => { stopRecorder(); resolve(); }, { once: true });
-    const fallback = window.setTimeout(() => { stopRecorder(); resolve(); }, durationMs + 500);
-    const tick = () => {
-      if (stopped) return;
-      const elapsed = performance.now() - startedAt;
-      if (videoEl.ended || elapsed >= durationMs) {
-        window.clearTimeout(fallback);
-        stopRecorder();
-        resolve();
-        return;
-      }
-      try {
-        drawVideoCover();
-        ctx.drawImage(overlayImg, 0, 0, W, H);
-      } catch (err) {
-        console.error('[STRATEGIC_VIDEO] draw fail', err);
-        window.clearTimeout(fallback);
-        stopRecorder();
-        resolve();
-        return;
-      }
-      requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-  });
-
-  const result = await recordingDone;
-  cleanup();
-  return result;
 }
 
 // ==================== HTML EXPORT HELPERS (legado) ====================

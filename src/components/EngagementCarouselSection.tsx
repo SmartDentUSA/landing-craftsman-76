@@ -384,7 +384,7 @@ export function EngagementCarouselSection({
 
         try {
           const hasVideoForSlide = !!resolveVideoSource(slideTexts[i]);
-          const slideTimeoutMs = hasVideoForSlide ? 150_000 : 45_000;
+          const slideTimeoutMs = hasVideoForSlide ? 600_000 : 45_000;
           await Promise.race([
             (async () => {
               const texts = slideTexts[i];
@@ -417,26 +417,13 @@ export function EngagementCarouselSection({
                 }
 
                 if (!videoRendered) {
-                  console.warn(`All video sources failed for slide ${i}, falling back to PNG (${lastVideoErr})`);
+                  console.error(`All video sources failed for slide ${i}; exportação abortada para não gerar PNG diferente do preview (${lastVideoErr})`);
                   toast({
-                    title: `⚠️ Slide ${i}: vídeo falhou, exportando como imagem`,
+                    title: `❌ Slide ${i}: vídeo falhou`,
                     description: lastVideoErr,
                     duration: 6000,
                   });
-                  let imgUrl = slideImageMap[i] || '';
-                  if (imgUrl && !imgUrl.startsWith('data:')) {
-                    try {
-                      imgUrl = await fetchAsDataUrl(imgUrl);
-                    } catch (e) {
-                      console.error('[CAROUSEL_ZIP_EXPORT_FAIL]', {
-                        phase: 'img_fetch',
-                        slideNum: i,
-                        error: (e as Error)?.message,
-                      });
-                    }
-                  }
-                  const blob = await generateEngagementSlidePNG(i, imgUrl, texts, primaryColor, accentColor, brandName, handleName);
-                  zip.file(`slide_${i}.png`, blob);
+                  throw new Error(`Slide ${i}: vídeo não renderizou igual ao preview. ${lastVideoErr}`);
                 }
               } else {
                 let imgUrl = slideImageMap[i] || '';
@@ -449,6 +436,7 @@ export function EngagementCarouselSection({
                       slideNum: i,
                       error: (e as Error)?.message,
                     });
+                      throw e;
                   }
                 }
                 const blob = await generateEngagementSlidePNG(i, imgUrl, texts, primaryColor, accentColor, brandName, handleName);
@@ -467,6 +455,7 @@ export function EngagementCarouselSection({
           console.error('[CAROUSEL_ZIP_EXPORT_FAIL]', { phase: 'slide_outer', slideNum: i, error: msg });
           skippedSlides.push(i);
           skipReasons[i] = msg;
+          throw err;
         }
       }
 
@@ -545,7 +534,7 @@ export function EngagementCarouselSection({
               const videoBlob = await Promise.race<Blob>([
                 generateEngagementSlideVideo(i, src, texts, primaryColor, accentColor, brandName, handleName),
                 new Promise<Blob>((_, reject) =>
-                  setTimeout(() => reject(new Error(`Timeout (90s) renderizando vídeo slide ${i}`)), 90_000)
+                  setTimeout(() => reject(new Error(`Timeout (10min) renderizando vídeo slide ${i}`)), 600_000)
                 ),
               ]);
               console.log(`[SMARTOPS_ENGAJ] slide ${i} vídeo pronto (${videoBlob.size} bytes)`);
@@ -559,12 +548,13 @@ export function EngagementCarouselSection({
             }
           }
           if (rendered) continue;
-          console.warn(`[SMARTOPS_ENGAJ] slide ${i}: vídeo falhou (${lastErr}), enviando PNG.`);
+          console.error(`[SMARTOPS_ENGAJ] slide ${i}: vídeo falhou; envio abortado para não enviar PNG diferente do preview (${lastErr}).`);
           toast({
-            title: `⚠️ Slide ${i}: vídeo falhou, enviando como imagem`,
+            title: `❌ Slide ${i}: vídeo falhou`,
             description: lastErr,
             duration: 6000,
           });
+          throw new Error(`Slide ${i}: vídeo não renderizou igual ao preview. ${lastErr}`);
         }
 
         // PNG fallback / default

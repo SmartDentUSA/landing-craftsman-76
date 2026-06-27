@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import html2canvas from 'html2canvas';
-import { fetchAsDataUrl } from './StrategicCarouselPreview';
+import { fetchAsDataUrl, generateDomCompositedVideo } from './StrategicCarouselPreview';
 import { Upload, Pencil, ChevronDown, ChevronUp, Video, ImageIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -634,13 +634,14 @@ export interface EngagementSlideRenderProps {
   accentColor: string;
   brandName: string;
   handleName: string;
+  videoRenderMode?: 'normal' | 'overlay';
 }
 
 export function EngagementSlideRender(props: EngagementSlideRenderProps) {
-  const { slideNum, texts, imageUrl, primaryColor, accentColor, brandName, handleName } = props;
+  const { slideNum, texts, imageUrl, primaryColor, accentColor, brandName, handleName, videoRenderMode = 'normal' } = props;
   return (
     <div style={{ position: 'relative', width: SLIDE_W, height: SLIDE_H }}>
-      {renderSlideContent(slideNum, texts, imageUrl, primaryColor, accentColor, brandName, handleName)}
+      {renderSlideContent(slideNum, texts, imageUrl, primaryColor, accentColor, brandName, handleName, videoRenderMode)}
       <LogoOverlay texts={texts} />
     </div>
   );
@@ -654,6 +655,7 @@ function renderSlideContent(
   accentColor: string,
   brandName: string,
   handleName: string,
+  videoRenderMode: 'normal' | 'overlay' = 'normal',
 ) {
   const bg = texts.bgColor || DEFAULT_BG[slideNum] || '#1a1a1a';
   const accent = texts.accentColor || accentColor || '#FF6B35';
@@ -661,6 +663,8 @@ function renderSlideContent(
   const textColor = isDark ? '#ffffff' : '#111111';
   const subTextColor = isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)';
   const imageScale = Number(texts.imageScale) || 100;
+  const videoSource = resolveVideoSource(texts);
+  const overlayVideoMode = videoRenderMode === 'overlay' && !!videoSource;
 
   // Rich text renderer for JSX
   const RichText = ({ text, className, style }: { text: string; className?: string; style?: React.CSSProperties }) => {
@@ -680,22 +684,24 @@ function renderSlideContent(
 
   // Media block (image or video)
   const MediaBlock = ({ height = 440 }: { height?: number }) => {
-    const videoSource = resolveVideoSource(texts);
     if (videoSource) {
       return (
-        <div style={{
+        <div data-engagement-video-slot="true" data-video-scale={String(imageScale)} data-video-radius="16" style={{
           width: '100%', height, overflow: 'hidden',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
+          borderRadius: 16,
         }}>
-          <video
-            src={videoSource}
-            autoPlay muted loop playsInline
-            style={{
-              width: '100%', height: '100%', objectFit: 'cover',
-              transform: `scale(${imageScale / 100})`,
-              borderRadius: 16,
-            }}
-          />
+          {!overlayVideoMode && (
+            <video
+              src={videoSource}
+              autoPlay muted loop playsInline
+              style={{
+                width: '100%', height: '100%', objectFit: 'cover',
+                transform: `scale(${imageScale / 100})`,
+                borderRadius: 16,
+              }}
+            />
+          )}
         </div>
       );
     }
@@ -739,21 +745,30 @@ function renderSlideContent(
   if (slideNum === 1) {
     return (
       <div style={{
-        width: SLIDE_W, height: SLIDE_H, background: bg,
+        width: SLIDE_W, height: SLIDE_H, background: overlayVideoMode ? 'transparent' : bg,
         position: 'relative', overflow: 'hidden',
         fontFamily: 'system-ui, -apple-system, sans-serif',
       }}>
         {/* Full-bleed media */}
-        {resolveVideoSource(texts) ? (
-          <video
-            src={resolveVideoSource(texts)!}
-            autoPlay muted loop playsInline
-            style={{
-              position: 'absolute', top: 0, left: 0,
-              width: '100%', height: '100%', objectFit: 'cover',
-              transform: `scale(${imageScale / 100})`,
-            }}
-          />
+        {videoSource ? (
+          overlayVideoMode ? (
+            <div
+              data-engagement-video-slot="true"
+              data-video-scale={String(imageScale)}
+              data-video-radius="0"
+              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+            />
+          ) : (
+            <video
+              src={videoSource}
+              autoPlay muted loop playsInline
+              style={{
+                position: 'absolute', top: 0, left: 0,
+                width: '100%', height: '100%', objectFit: 'cover',
+                transform: `scale(${imageScale / 100})`,
+              }}
+            />
+          )
         ) : imageUrl ? (
           <>
             <div
@@ -1422,233 +1437,43 @@ export async function generateEngagementSlideVideo(
   brandName: string,
   handleName: string,
 ): Promise<Blob> {
-  const W = SLIDE_W;
-  const H = SLIDE_H;
-  const urlPreview = videoUrl.substring(0, 80);
-
-  // STEP 1 — Pre-fetch the video as a Blob to bypass CORS / canvas tainting.
-  // Blob URLs are always treated as same-origin, so MediaRecorder won't throw SecurityError.
-  let blobUrl: string | null = null;
-  let usingBlobUrl = false;
-  try {
-    if (/^https?:\/\//i.test(videoUrl)) {
-      const resp = await Promise.race([
-        fetch(videoUrl, { mode: 'cors', credentials: 'omit' }),
-        new Promise<Response>((_, reject) =>
-          setTimeout(() => reject(new Error('Video fetch timeout (20s)')), 20_000),
-        ),
-      ]);
-      if (!resp.ok) throw new Error(`Video fetch HTTP ${resp.status}`);
-      const blob = await resp.blob();
-      blobUrl = URL.createObjectURL(blob);
-      usingBlobUrl = true;
-    }
-  } catch (fetchErr) {
-    console.warn('[VIDEO_RENDER_FAIL]', { phase: 'prefetch', slideNum, urlPreview, error: (fetchErr as Error)?.message });
-    // Continue with raw URL as fallback — may still work if CORS headers are present.
-    blobUrl = null;
+  let companyLogoData = texts.companyLogoUrl;
+  let productLogoData = texts.productLogoUrl;
+  if (companyLogoData) {
+    try { companyLogoData = await fetchAsDataUrl(companyLogoData); }
+    catch (err) { console.warn('[ENGAGEMENT_VIDEO] companyLogo prefetch failed', err); }
+  }
+  if (productLogoData) {
+    try { productLogoData = await fetchAsDataUrl(productLogoData); }
+    catch (err) { console.warn('[ENGAGEMENT_VIDEO] productLogo prefetch failed', err); }
   }
 
-  // STEP 2 — Load the video element
-  const videoEl = document.createElement('video');
-  if (!usingBlobUrl) {
-    // Only set crossOrigin when using a remote URL; blob URLs are same-origin.
-    videoEl.crossOrigin = 'anonymous';
-  }
-  videoEl.muted = true;
-  videoEl.playsInline = true;
-  videoEl.preload = 'auto';
-  videoEl.src = blobUrl ?? videoUrl;
-
-  const cleanup = () => {
-    if (blobUrl) {
-      try { URL.revokeObjectURL(blobUrl); } catch { /* noop */ }
-    }
+  const exportTexts: EngagementSlideTexts = {
+    ...texts,
+    mediaType: 'video',
+    videoSrc: videoUrl,
+    videoStorageUrl: videoUrl,
+    companyLogoUrl: companyLogoData,
+    productLogoUrl: productLogoData,
   };
 
-  try {
-    await Promise.race([
-      new Promise<void>((resolve, reject) => {
-        videoEl.onloadeddata = () => resolve();
-        videoEl.onerror = () => reject(new Error('Failed to load video for export'));
-        videoEl.load();
-      }),
-      new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Video load timeout (15s)')), 15_000)),
-    ]);
-  } catch (loadErr) {
-    console.error('[VIDEO_RENDER_FAIL]', { phase: 'load', slideNum, urlPreview, usingBlobUrl, error: (loadErr as Error)?.message });
-    cleanup();
-    throw loadErr;
-  }
-
-  // STEP 3 — Validate duration (Infinity / NaN / 0 → fallback to 10s)
-  let duration = videoEl.duration;
-  if (!isFinite(duration) || isNaN(duration) || duration <= 0) {
-    console.warn('[VIDEO_RENDER_FAIL]', { phase: 'duration_invalid', slideNum, raw: videoEl.duration });
-    duration = 10;
-  }
-  duration = Math.min(duration, 120); // safety cap at 120s (against corrupted metadata)
-
-  // STEP 4 — Setup canvas + recorder
-  const canvas = document.createElement('canvas');
-  canvas.width = W;
-  canvas.height = H;
-  const ctx = canvas.getContext('2d')!;
-
-  const stream = canvas.captureStream(30); // 30fps
-  const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
-    ? 'video/webm;codecs=vp9'
-    : 'video/webm';
-  let recorder: MediaRecorder;
-  try {
-    recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 });
-  } catch (recErr) {
-    console.error('[VIDEO_RENDER_FAIL]', { phase: 'recorder_init', slideNum, error: (recErr as Error)?.message });
-    cleanup();
-    throw recErr;
-  }
-  const chunks: Blob[] = [];
-  recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
-
-  const recordingDone = new Promise<Blob>((resolve, reject) => {
-    recorder.onstop = () => {
-      const blob = new Blob(chunks, { type: mimeType });
-      resolve(blob);
-    };
-    recorder.onerror = (e) => {
-      console.error('[VIDEO_RENDER_FAIL]', { phase: 'recorder_error', slideNum, error: e });
-      reject(new Error('MediaRecorder failed (likely SecurityError from tainted canvas)'));
-    };
+  return generateDomCompositedVideo({
+    videoUrl,
+    overlayElement: React.createElement(EngagementSlideRender, {
+      slideNum,
+      texts: exportTexts,
+      imageUrl: '',
+      primaryColor,
+      accentColor,
+      brandName,
+      handleName,
+      videoRenderMode: 'overlay',
+    }),
+    slotSelector: '[data-engagement-video-slot="true"]',
+    drawOrder: slideNum === 1 ? 'video-under-overlay' : 'video-over-overlay',
+    logPrefix: `ENGAGEMENT_VIDEO_${slideNum}`,
+    durationCapSeconds: 3600,
   });
-
-  // STEP 5 — Test draw to detect canvas tainting BEFORE recorder.start()
-  try {
-    ctx.drawImage(videoEl, 0, 0, W, H);
-    // Touching pixel data triggers SecurityError if tainted
-    ctx.getImageData(0, 0, 1, 1);
-  } catch (taintErr) {
-    console.error('[VIDEO_RENDER_FAIL]', { phase: 'canvas_tainted', slideNum, urlPreview, usingBlobUrl, error: (taintErr as Error)?.message });
-    cleanup();
-    throw new Error('Canvas tainted (CORS): ' + ((taintErr as Error)?.message ?? 'unknown'));
-  }
-  // Clear the raw-video frame left by the taint test so it is not captured by MediaRecorder.
-  ctx.clearRect(0, 0, W, H);
-
-  // STEP 5.5 — Preload logos BEFORE recorder.start() so the very first composed frame includes them.
-  const loadImg = (url?: string): Promise<HTMLImageElement | null> =>
-    new Promise(async (resolve) => {
-      if (!url) return resolve(null);
-      try {
-        const dataUrl = /^data:/.test(url) ? url : await fetchAsDataUrl(url);
-        const im = new Image();
-        im.onload = () => resolve(im);
-        im.onerror = () => resolve(null);
-        im.src = dataUrl;
-      } catch { resolve(null); }
-    });
-  const [companyLogoImg, productLogoImg] = await Promise.all([
-    loadImg(texts.companyLogoUrl),
-    loadImg(texts.productLogoUrl),
-  ]);
-  const companyScale = (Number(texts.companyLogoScale) || 100) / 100;
-  const productScale = (Number(texts.productLogoScale) || 100) / 100;
-  const LOGO_BASE = 140;
-  const drawLogos = () => {
-    if (companyLogoImg) {
-      const h = LOGO_BASE * companyScale;
-      const w = h * (companyLogoImg.naturalWidth / companyLogoImg.naturalHeight);
-      ctx.drawImage(companyLogoImg, W - 32 - w, 32, w, h);
-    }
-    if (productLogoImg) {
-      const h = LOGO_BASE * productScale;
-      const w = h * (productLogoImg.naturalWidth / productLogoImg.naturalHeight);
-      ctx.drawImage(productLogoImg, 32, H - 32 - h, w, h);
-    }
-  };
-
-  // STEP 5.6 — Seek to frame 0 and await it, so first composed frame matches the video start.
-  try {
-    if (videoEl.currentTime !== 0) {
-      await Promise.race([
-        new Promise<void>((resolve) => {
-          videoEl.addEventListener('seeked', () => resolve(), { once: true });
-          videoEl.currentTime = 0;
-        }),
-        new Promise<void>((resolve) => setTimeout(resolve, 1500)),
-      ]);
-    }
-  } catch { /* noop — fallback to whatever frame is loaded */ }
-
-  // STEP 5.7 — Draw the FIRST composed frame (template + logos) onto the canvas
-  // BEFORE starting the recorder. Otherwise MediaRecorder captures ~1-5 blank/raw frames.
-  try {
-    drawSlideFrameWithVideo(ctx, slideNum, videoEl, texts, primaryColor, accentColor);
-    drawLogos();
-  } catch (preErr) {
-    console.warn('[VIDEO_RENDER_FAIL]', { phase: 'prime_first_frame', slideNum, error: (preErr as Error)?.message });
-  }
-
-  // STEP 6 — Play and record
-  try {
-    recorder.start();
-    await videoEl.play();
-  } catch (playErr) {
-    console.error('[VIDEO_RENDER_FAIL]', { phase: 'play', slideNum, error: (playErr as Error)?.message });
-    cleanup();
-    throw playErr;
-  }
-
-  // Wall-clock based stop: record exactly the video's duration regardless of rAF rate.
-  // Previously we stopped after N rAF ticks treating rAF as 30fps, but rAF runs at 60–120Hz,
-  // which truncated MediaRecorder output to half (or a quarter) of the real duration.
-  const startedAt = performance.now();
-  const durationMs = duration * 1000;
-  let stopped = false;
-  const stopRecorder = () => {
-    if (stopped) return;
-    stopped = true;
-    try { recorder.stop(); } catch { /* noop */ }
-  };
-
-  // (logos preloaded earlier, before recorder.start())
-
-
-
-  await new Promise<void>((resolve) => {
-    let frame = 0;
-    const onEnded = () => { stopRecorder(); resolve(); };
-    videoEl.addEventListener('ended', onEnded, { once: true });
-    // Hard fallback in case rAF is throttled (tab in background) or 'ended' never fires.
-    const fallbackTimer = window.setTimeout(() => { stopRecorder(); resolve(); }, durationMs + 500);
-
-    const drawFrame = () => {
-      if (stopped) return;
-      const elapsed = performance.now() - startedAt;
-      if (videoEl.ended || elapsed >= durationMs) {
-        window.clearTimeout(fallbackTimer);
-        stopRecorder();
-        resolve();
-        return;
-      }
-      try {
-        drawSlideFrameWithVideo(ctx, slideNum, videoEl, texts, primaryColor, accentColor);
-        drawLogos();
-      } catch (drawErr) {
-        console.error('[VIDEO_RENDER_FAIL]', { phase: 'draw_frame', slideNum, frame, error: (drawErr as Error)?.message });
-        window.clearTimeout(fallbackTimer);
-        stopRecorder();
-        resolve();
-        return;
-      }
-      frame++;
-      requestAnimationFrame(drawFrame);
-    };
-    requestAnimationFrame(drawFrame);
-  });
-
-  const result = await recordingDone;
-  cleanup();
-  return result;
 }
 
 // Reuse fetchAsDataUrl from Strategic (imported above for internal use too)
