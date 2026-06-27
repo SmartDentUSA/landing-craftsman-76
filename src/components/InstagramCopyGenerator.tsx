@@ -974,7 +974,7 @@ ${slide.text}`;
         let pngBlob: Blob;
         try {
           pngBlob = await Promise.race<Blob>([
-            generateSlidePNG(i, safeDataUrl, primaryColor, accentColor, productData, textsForSlide),
+            generateSlidePNG(i, safeDataUrl, primaryColor, accentColor, productData, textsForSlide, { companyUrl: companyLogoUrl, productUrl: productLogoUrl, companyScale: companyLogoScale, productScale: productLogoScale }),
             new Promise<Blob>((_, reject) =>
               setTimeout(() => reject(new Error(`Timeout (45s) renderizando slide ${i}`)), 45_000)
             ),
