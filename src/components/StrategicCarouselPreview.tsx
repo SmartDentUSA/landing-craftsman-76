@@ -432,6 +432,8 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
               }}
             />
           )}
+          {/* Carousel-level logos overlay (top-right + bottom-left) */}
+          <CarouselLogosOverlay logos={logos} />
         </div>
       </div>
 
