@@ -1,35 +1,62 @@
-Objetivo: garantir que ZIP e Upload SmartOps exportem os 6 slides do Carrossel Engajamento e do Carrossel Visual exatamente como aparecem no preview do editor.
+## Diagnóstico
 
-Plano de correção:
+Auditoria confirmou exatamente o que o usuário descreveu: o preview (React/JSX) e o export (canvas/html2canvas) usam **duas camadas de renderização diferentes** com layout duplicado e sem fonte única de verdade.
 
-1. Unificar a fonte visual do preview e export
-- Fazer o export usar o mesmo componente/renderização JSX do preview, sem redesenhar layouts manualmente em canvas quando houver vídeo.
-- Remover/contornar os caminhos que recriam texto, posições, tamanhos e mídias em funções separadas, porque hoje isso gera diferença visual.
+### Carrossel Engajamento — divergências mapeadas
+- **DIV-01** Slide 1: badge no topo (preview) vs rodapé (vídeo).
+- **DIV-02/03** Slide 6: fontes 44/26 (preview) vs 40/28 (vídeo).
+- **DIV-04** Slide 1: gradiente 70% (preview) vs 60% (vídeo).
+- **DIV-05** Slide 1: posição vertical do texto fixa no canvas vs dinâmica no preview.
+- **DIV-06** `filter: drop-shadow` dos logos ignorado pelo html2canvas.
+- **DIV-07** `backgroundImage` em `<div>` falha intermitente no html2canvas.
+- **DIV-08** `-webkit-line-clamp` ignorado → overflow de texto no PNG.
+- **DIV-09** Slide 6 padding-top 90 (preview) vs 60 (canvas).
 
-2. Corrigir Carrossel Engajamento
-- Substituir a renderização manual de vídeo em `drawSlideFrameWithVideo` por captura/composição baseada no mesmo DOM do `EngagementSlideRender`.
-- Garantir que slides com vídeo exportem com o mesmo enquadramento, escala, logos, textos, CTA, cores e posições do preview.
-- Manter PNG de slides com imagem via `EngagementSlideRender`/html2canvas, com espera real por imagens/logos carregados.
+### Carrossel Visual — divergências mapeadas
+- **#1 CRÍTICO** Z-index invertido: máscara cobre o texto no export.
+- **#2 CRÍTICO** `productData` no ZIP/SmartOps sem `salesPitch/description/targetAudience/applications/faq` → Slide 1 usa fallback errado.
+- **#3 CRÍTICO** `fontFamily`/`fontSize` props aceitos mas nunca propagados aos slides.
+- **#4 ALTO** `<style>` injetado para `textColor` não processado por html2canvas off-screen.
+- **#5 ALTO** Ordem `videoSrc` vs `videoStorageUrl` invertida entre preview/export + blob pode estar revogado.
+- **#6 MÉDIO** Espera de 80ms insuficiente após decode de imagens grandes.
+- **#7 MÉDIO** Logos SVG via `readAsDataURL` falham em alguns browsers.
 
-3. Corrigir Carrossel Visual
-- Ajustar `StrategicSlideRender` para reproduzir exatamente a ordem visual do preview: vídeo no fundo, conteúdo na frente e máscara na mesma camada/ordem vista no editor.
-- Fazer `generateStrategicSlideVideo` capturar o overlay a partir da mesma estrutura visual do preview, sem mudar fundo, máscara, logos ou texto no export.
-- Garantir que `generateSlidePNG`, ZIP e SmartOps recebam os textos/customizações atuais: vídeos, máscaras, cores, toggles, uploads, logos e escalas.
+## Plano de correção
 
-4. Eliminar divergências conhecidas
-- Corrigir diferenças entre preview e export em: ordem da máscara, vídeo cobrindo card, texto sobre vídeo, logos, escala da mídia, CTA e slides 1–6.
-- Evitar fallback silencioso para PNG quando vídeo falha sem aviso claro; se falhar, mostrar erro específico em vez de exportar algo diferente sem o usuário perceber.
+### Fase 1 — Carrossel Visual (`StrategicCarouselPreview.tsx` + `InstagramCopyGenerator.tsx`)
+1. Corrigir z-index em `StrategicSlideRender`: máscara passa para `zIndex: 2` (igual ao `SlideWrapper` do preview).
+2. Completar `productData` nos blocos de ZIP e SmartOps incluindo `salesPitch`, `description`, `targetAudience`, `applications`, `faq`.
+3. Substituir `<style>` de `textColorOverride` por CSS Variable inline (`--slide-text-color`) lida em cada slide via `color: var(--slide-text-color, ...)`.
+4. Unificar prioridade de mídia: `videoStorageUrl || videoSrc` em preview e export; limpar `videoSrc` blob após upload bem-sucedido.
+5. Aumentar wait pós-decode para 250ms + duplo `requestAnimationFrame` antes do `html2canvas`.
+6. Propagar `fontFamily`/`fontSize` por todos os Slide components, `StrategicSlideRender`, `generateSlidePNG`, `generateStrategicSlideVideo` e callers em `InstagramCopyGenerator`.
+7. Em `fetchAsDataUrl`, detectar SVG e rasterizar para PNG via canvas antes de devolver o data URL.
 
-5. Validar no navegador
-- Testar no preview com Playwright a existência dos controles e a renderização DOM dos carrosséis.
-- Exportar pelo fluxo real quando possível e verificar que os arquivos gerados usam a mesma composição visual do preview.
+### Fase 2 — Carrossel Engajamento (`EngagementCarouselPreview.tsx`)
+1. Extrair constantes de layout (`TITLE_FONT_SIZE`, `BODY_FONT_SIZE`, `BADGE_TOP/RIGHT`, `GRADIENT_START_PCT`, `SLIDE6_TOP_PAD`) para um único objeto compartilhado por JSX e canvas.
+2. Corrigir no `drawSlideFrameWithVideo`:
+   - Slide 1 badge: y do topo (não rodapé).
+   - Slide 6: `titleFontSize = 44`, `bodyFontSize = 26`.
+   - Slide 1: gradiente a partir de `H*0.30`.
+   - Slide 1: cálculo dinâmico de `startY` igual ao `bottom: 200` do JSX.
+   - Slide 6: `topPad = 90`.
+3. No JSX, trocar `filter: drop-shadow` dos logos por `box-shadow` (suportado por html2canvas). No canvas do vídeo, emular sombra via `ctx.shadow*`.
+4. Substituir o `<div backgroundImage>` do `MediaBlock` por `<img>` real com `object-fit: cover` + `transform: scale()` para garantir render no html2canvas.
+5. Adicionar `overflow: hidden` + `maxHeight` calculado nos blocos com `-webkit-line-clamp` como fallback garantido.
+6. Propagar `fontFamily`/`fontSize` props em `renderSlideContent`, `EngagementSlideRender`, `generateEngagementSlidePNG` e `drawSlideFrameWithVideo`.
 
-Arquivos principais a alterar:
-- `src/components/EngagementCarouselPreview.tsx`
+### Fase 3 — Validação
+- Rodar export de PNG e WebM dos 6 slides de cada carrossel via Playwright contra o preview real.
+- Comparar visualmente preview ↔ PNG ↔ frame de vídeo nos pontos críticos: posição do badge, tamanho de fontes, gradiente, máscara, texto sobre vídeo, logos, cor de fonte customizada.
+- Confirmar que ZIP e Upload SmartOps produzem o mesmo arquivo binário (mesma pipeline).
+
+## Critério de aceite
+- Toda customização visível no editor (textos, cores, fontes, máscara, vídeo, logos, escala, posição) aparece **idêntica** no arquivo exportado, tanto no ZIP quanto no envio para SmartOps.
+- Nenhum fallback silencioso: se o render falhar, erro explícito, nunca arquivo divergente.
+- Layout constants existem em um único lugar por carrossel; JSX e canvas leem da mesma fonte.
+
+## Arquivos afetados
 - `src/components/StrategicCarouselPreview.tsx`
-- `src/components/EngagementCarouselSection.tsx`
+- `src/components/EngagementCarouselPreview.tsx`
 - `src/components/InstagramCopyGenerator.tsx`
-
-Critério de aceite:
-- Cada slide exportado deve ser uma captura fiel do slide visto no editor, incluindo vídeo, imagem, texto, máscara, logo, cores e posições.
-- ZIP e Upload SmartOps devem usar a mesma lógica de renderização, sem resultados diferentes entre baixar e enviar.
+- `src/components/EngagementCarouselSection.tsx` (apenas se necessário para passar props novos)
