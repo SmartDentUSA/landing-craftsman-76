@@ -199,6 +199,72 @@ const SLIDE_EDITOR_FIELDS: Record<number, Array<EditorField>> = {
   ],
 };
 
+// ===== Carousel-level logos (overlay rendered on every slide) =====
+export interface CarouselLogos {
+  companyUrl?: string;
+  productUrl?: string;
+  companyScale?: number; // % 40-200
+  productScale?: number; // % 40-200
+}
+
+/**
+ * Overlay rendered inside the 1080x1350 canvas so it is captured by html2canvas
+ * during PNG export AND visible in the on-screen preview.
+ * - Company logo: top-right
+ * - Product logo: bottom-left
+ */
+export function CarouselLogosOverlay({ logos }: { logos?: CarouselLogos }) {
+  if (!logos) return null;
+  const { companyUrl, productUrl, companyScale = 100, productScale = 100 } = logos;
+  if (!companyUrl && !productUrl) return null;
+  // Base height in slide-pixels (the slide is 1080x1350).
+  const BASE_H = 90; // px @ 1080 width
+  const cH = Math.round(BASE_H * (companyScale / 100));
+  const pH = Math.round(BASE_H * (productScale / 100));
+  return (
+    <>
+      {companyUrl && (
+        <img
+          src={companyUrl}
+          alt="Logo da empresa"
+          crossOrigin="anonymous"
+          style={{
+            position: 'absolute',
+            top: 36,
+            right: 36,
+            height: cH,
+            width: 'auto',
+            maxWidth: '45%',
+            objectFit: 'contain',
+            zIndex: 50,
+            pointerEvents: 'none',
+            filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.35))',
+          }}
+        />
+      )}
+      {productUrl && (
+        <img
+          src={productUrl}
+          alt="Logo do produto"
+          crossOrigin="anonymous"
+          style={{
+            position: 'absolute',
+            bottom: 36,
+            left: 36,
+            height: pH,
+            width: 'auto',
+            maxWidth: '45%',
+            objectFit: 'contain',
+            zIndex: 50,
+            pointerEvents: 'none',
+            filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.35))',
+          }}
+        />
+      )}
+    </>
+  );
+}
+
 interface SlideWrapperProps {
   slideNum: number;
   children: React.ReactNode;
@@ -210,9 +276,10 @@ interface SlideWrapperProps {
   primaryColor: string;
   slideTexts?: Record<string, string>;
   onSlideTextChange?: (key: string, value: string) => void;
+  logos?: CarouselLogos;
 }
 
-function SlideWrapper({ slideNum, children, productImages, currentImage, onImageChange, onImageFileUpload, primaryColor, slideTexts, onSlideTextChange }: SlideWrapperProps) {
+function SlideWrapper({ slideNum, children, productImages, currentImage, onImageChange, onImageFileUpload, primaryColor, slideTexts, onSlideTextChange, logos }: SlideWrapperProps) {
   const containerW = SLIDE_W * SLIDE_SCALE;
   const containerH = SLIDE_H * SLIDE_SCALE;
   const fileInputRef = useRef<HTMLInputElement>(null);
