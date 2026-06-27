@@ -2319,6 +2319,16 @@ ${slide.text}`;
                       fontSize={fontSize}
                       onFontFamilyChange={setFontFamily}
                       onFontSizeChange={setFontSize}
+                      companyLogoUrl={companyLogoUrl}
+                      productLogoUrl={productLogoUrl}
+                      companyLogoScale={companyLogoScale}
+                      productLogoScale={productLogoScale}
+                      onCompanyLogoUpload={(f) => handleLogoUpload('company', f)}
+                      onProductLogoUpload={(f) => handleLogoUpload('product', f)}
+                      onCompanyLogoScaleChange={setCompanyLogoScale}
+                      onProductLogoScaleChange={setProductLogoScale}
+                      onCompanyLogoRemove={() => setCompanyLogoUrl('')}
+                      onProductLogoRemove={() => setProductLogoUrl('')}
                     />
                   </div>
 
