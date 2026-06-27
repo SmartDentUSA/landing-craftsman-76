@@ -827,9 +827,7 @@ function Slide2Solution({ image, primaryColor, accentColor, productData, texts }
               transition: 'transform 0.2s ease',
             }}
           />
-        ) : (
-          <div style={{ width: 500, height: 500, background: '#e0e0e0', borderRadius: 20 }} />
-        )}
+        ) : null}
       </div>
       <div style={{ textAlign: 'center', marginTop: 40 }}>
         {introLabel && (
