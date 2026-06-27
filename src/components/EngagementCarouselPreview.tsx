@@ -44,7 +44,7 @@ export function resolveVideoSource(texts: EngagementSlideTexts): string | null {
 interface EngagementCarouselPreviewProps {
   slideImageMap: Record<number, string>;
   onImageChange: (slideNum: number, url: string) => void;
-  onImageFileUpload?: (slideNum: number, file: File) => void;
+  onImageFileUpload?: (slideNum: number, file: File, kind?: LogoUploadKind) => void;
   productImages: Array<{ url: string; alt?: string }>;
   primaryColor: string;
   accentColor: string;
