@@ -286,8 +286,7 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
   const maskOpacityNum = Math.min(90, Math.max(0, Number(slideTexts?.maskOpacity ?? 0)));
   const maskColor = slideTexts?.maskColor || '#000000';
   const textColorOverride = slideTexts?.textColor || '';
-  const textPosition = (slideTexts?.textPosition as 'top' | 'center' | 'bottom') || '';
-  const textBlockScale = Number(slideTexts?.textBlockScale ?? 100);
+  // textPosition / textBlockScale were removed from the editor (non-functional with absolute layouts).
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
