@@ -11,7 +11,7 @@ import { uploadCarouselToSmartOps, buildSocialPublisherUrl, slugify } from "@/li
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { StrategicCarouselPreview, generateSlidePNG, fetchAsDataUrl } from "./StrategicCarouselPreview";
+import { StrategicCarouselPreview, generateSlidePNG, generateStrategicSlideVideo, fetchAsDataUrl } from "./StrategicCarouselPreview";
 import type { SlideTextsType } from "./StrategicCarouselPreview";
 import { EngagementCarouselSection } from "./EngagementCarouselSection";
 import JSZip from "jszip";
