@@ -65,8 +65,8 @@ export interface SlideTextsType {
   1: { hook: string; productName: string; imageScale?: string; bgColor?: string; overlayOpacity?: string; faixaVisible?: string; faixaColor?: string; faixaOpacity?: string; hookVisible?: string; nameVisible?: string; badgeVisible?: string } & CommonSlideMediaFields;
   2: { category: string; introLabel?: string; productName: string; imageScale?: string; bgColor?: string; badgeVisible?: string; categoryVisible?: string; introLabelVisible?: string; nameVisible?: string } & CommonSlideMediaFields;
   3: { title: string; headline?: string; body?: string; bullet1?: string; bullet2?: string; bullet3?: string; bullet4?: string; imageScale?: string; bgColor?: string; headlineVisible?: string; sideStripVisible?: string; badgeVisible?: string; titleVisible?: string } & CommonSlideMediaFields;
-  4: { label: string; keyword: string; benefit: string; imageScale?: string; bgColor?: string; badgeVisible?: string; labelVisible?: string; keywordVisible?: string; benefitVisible?: string } & CommonSlideMediaFields;
-  5: { title: string; badge1: string; badge2: string; badge3: string; imageScale?: string; bgColor?: string; badgeVisible?: string; titleVisible?: string; badge1Visible?: string; badge2Visible?: string; badge3Visible?: string } & CommonSlideMediaFields;
+  4: { label: string; keyword: string; benefit: string; imageScale?: string; bgColor?: string; badgeVisible?: string; labelVisible?: string; keywordVisible?: string; benefitVisible?: string; headlineVisible?: string; sideStripVisible?: string } & CommonSlideMediaFields;
+  5: { title: string; badge1: string; badge2: string; badge3: string; imageScale?: string; bgColor?: string; badgeVisible?: string; titleVisible?: string; badge1Visible?: string; badge2Visible?: string; badge3Visible?: string; headlineVisible?: string; sideStripVisible?: string } & CommonSlideMediaFields;
   6: { productName: string; ctaButton: string; linkLabel: string; footer: string; imageScale?: string; bgColor?: string; badgeVisible?: string; productNameVisible?: string; ctaButtonVisible?: string; linkLabelVisible?: string; footerVisible?: string; imageVisible?: string } & CommonSlideMediaFields;
 }
 
@@ -171,6 +171,8 @@ const SLIDE_EDITOR_FIELDS: Record<number, Array<EditorField>> = {
   4: [
     { key: 'label', label: 'Label topo (ex: EXPERIÊNCIA)', type: 'input' },
     { key: 'keyword', label: 'Palavra-chave', type: 'input' },
+    { key: 'headlineVisible', label: 'Mostrar bloco colorido (headline)', type: 'toggle' },
+    { key: 'sideStripVisible', label: 'Mostrar faixa lateral (imagem)', type: 'toggle' },
     { key: 'benefit', label: 'Benefício', type: 'textarea' },
     { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
     { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
@@ -178,6 +180,8 @@ const SLIDE_EDITOR_FIELDS: Record<number, Array<EditorField>> = {
   ],
   5: [
     { key: 'title', label: 'Título', type: 'textarea' },
+    { key: 'headlineVisible', label: 'Mostrar bloco colorido (headline)', type: 'toggle' },
+    { key: 'sideStripVisible', label: 'Mostrar faixa lateral (imagem)', type: 'toggle' },
     { key: 'badge1', label: 'Badge 1', type: 'textarea' },
     { key: 'badge2', label: 'Badge 2', type: 'textarea' },
     { key: 'badge3', label: 'Badge 3', type: 'textarea' },
@@ -1209,7 +1213,7 @@ function buildImpactNarrative(productData: ProductData): {
 }
 
 // ==================== SLIDE 4 — EXPERIÊNCIA ====================
-function Slide4Experience({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; productData: ProductData; texts?: { label?: string; keyword?: string; benefit?: string; imageScale?: string; bgColor?: string } }) {
+function Slide4Experience({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; productData: ProductData; texts?: { label?: string; keyword?: string; benefit?: string; imageScale?: string; bgColor?: string; headlineVisible?: string; sideStripVisible?: string } }) {
   const { headline, impactText, proofBullets, label } = buildImpactNarrative(productData);
 
   // Respeitar edições manuais do usuário
@@ -1224,19 +1228,23 @@ function Slide4Experience({ image, primaryColor, productData, texts }: { image: 
   const impactFontSize = finalImpact.length > 180 ? 20 : finalImpact.length > 120 ? 22 : finalImpact.length > 70 ? 25 : 28;
   const imageScale4 = Number(texts?.imageScale) || 100;
   const bgColor4 = texts?.bgColor || '#0f0f14';
+  const sideStripVisible = (texts?.sideStripVisible ?? 'true') !== 'false';
+  const headlineVisible = (texts?.headlineVisible ?? 'true') !== 'false';
 
   return (
     <div style={{ width: SLIDE_W, height: SLIDE_H, fontFamily: 'system-ui, -apple-system, sans-serif', position: 'relative', overflow: 'hidden', background: bgColor4, display: 'flex' }}>
       {/* Imagem à esquerda — 42% */}
-      <div style={{ width: '42%', flexShrink: 0, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.03)' }}>
-        {image ? (
-          <img src={image} alt="produto em uso" style={{ maxWidth: '100%', maxHeight: '70%', width: 'auto', height: 'auto', objectFit: 'contain', transform: `scale(${imageScale4 / 100})`, transformOrigin: 'center center' }} />
-        ) : (
-          <div style={{ width: '100%', height: '100%', background: '#1a1a2e' }} />
-        )}
-        {/* Feather borda direita */}
-        <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: 140, background: `linear-gradient(to right, transparent, ${bgColor4})`, pointerEvents: 'none' }} />
-      </div>
+      {sideStripVisible && (
+        <div style={{ width: '42%', flexShrink: 0, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.03)' }}>
+          {image ? (
+            <img src={image} alt="produto em uso" style={{ maxWidth: '100%', maxHeight: '70%', width: 'auto', height: 'auto', objectFit: 'contain', transform: `scale(${imageScale4 / 100})`, transformOrigin: 'center center' }} />
+          ) : (
+            <div style={{ width: '100%', height: '100%', background: '#1a1a2e' }} />
+          )}
+          {/* Feather borda direita */}
+          <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: 140, background: `linear-gradient(to right, transparent, ${bgColor4})`, pointerEvents: 'none' }} />
+        </div>
+      )}
 
 
       {/* Número do slide */}
@@ -1244,21 +1252,24 @@ function Slide4Experience({ image, primaryColor, productData, texts }: { image: 
         <span style={{ color: '#fff', fontWeight: 900, fontSize: 30 }}>4</span>
       </div>
 
-      {/* Painel direito — textos (58%) */}
+      {/* Painel direito — textos */}
       <div style={{
-        flex: 1, minWidth: 0, maxWidth: '58%',
+        flex: 1, minWidth: 0, maxWidth: sideStripVisible ? '58%' : '100%',
         display: 'flex', flexDirection: 'column', justifyContent: 'center',
-        padding: '80px 60px 80px 48px', gap: 18, background: '#0f0f14',
+        padding: sideStripVisible ? '80px 60px 80px 48px' : '80px 80px',
+        gap: 18, background: bgColor4,
         overflow: 'hidden',
       }}>
         {/* Label contextual */}
         <p style={{ color: '#fff', opacity: 0.65, fontSize: labelFontSize, fontWeight: 700, margin: 0, textTransform: 'uppercase' as const, letterSpacing: 3, wordBreak: 'break-word' as const, overflowWrap: 'anywhere' as const, maxWidth: '100%' }}>{finalLabel}</p>
 
         {/* Divider accent */}
-        <div style={{ width: 56, height: 3, background: primaryColor, borderRadius: 2, flexShrink: 0 }} />
+        {headlineVisible && <div style={{ width: 56, height: 3, background: primaryColor, borderRadius: 2, flexShrink: 0 }} />}
 
         {/* Headline — benefício principal */}
-        <h2 style={{ color: '#ffffff', fontSize: kwFontSize, fontWeight: 900, margin: 0, lineHeight: 1.05, wordBreak: 'break-word' as const, overflowWrap: 'anywhere' as const, maxWidth: '100%', hyphens: 'auto' as const }}>{finalKeyword}</h2>
+        {headlineVisible && (
+          <h2 style={{ color: '#ffffff', fontSize: kwFontSize, fontWeight: 900, margin: 0, lineHeight: 1.05, wordBreak: 'break-word' as const, overflowWrap: 'anywhere' as const, maxWidth: '100%', hyphens: 'auto' as const }}>{finalKeyword}</h2>
+        )}
 
         {/* Texto de impacto — síntese dor → resolução */}
         <p style={{ color: '#d8d8d8', fontSize: impactFontSize, lineHeight: 1.55, margin: 0, fontWeight: 400, wordBreak: 'break-word' as const, overflowWrap: 'anywhere' as const, maxWidth: '100%' }}>{finalImpact}</p>
@@ -1281,7 +1292,7 @@ function Slide4Experience({ image, primaryColor, productData, texts }: { image: 
 
 
 // ==================== SLIDE 5 — SEGURANÇA ====================
-function Slide5Security({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; productData: ProductData; texts?: { title?: string; badge1?: string; badge2?: string; badge3?: string; imageScale?: string; bgColor?: string } }) {
+function Slide5Security({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; productData: ProductData; texts?: { title?: string; badge1?: string; badge2?: string; badge3?: string; imageScale?: string; bgColor?: string; headlineVisible?: string; sideStripVisible?: string } }) {
   const features = productData.features || [];
   const benefits = productData.benefits || [];
   const title = texts?.title || 'Você pode confiar';
@@ -1292,24 +1303,41 @@ function Slide5Security({ image, primaryColor, productData, texts }: { image: st
   ];
   const imageScale5 = Number(texts?.imageScale) || 100;
   const bgColor5 = texts?.bgColor || '';
+  const sideStripVisible = (texts?.sideStripVisible ?? 'true') !== 'false';
+  const headlineVisible = (texts?.headlineVisible ?? 'true') !== 'false';
+
+  // Quando o "side strip" (imagem de fundo + overlay) é desligado, o fundo
+  // vira sólido — recalculamos a cor de textos/badges via luminância para legibilidade.
+  const solidBg = bgColor5 || '#0f0f14';
+  const lightOnDark = !sideStripVisible ? (getLuminance(solidBg) <= 0.5) : true;
+  const textColor = lightOnDark ? '#ffffff' : '#111111';
+  const badgeBg = lightOnDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.06)';
+  const badgeBorder = lightOnDark ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(0,0,0,0.12)';
+  const numberBg = lightOnDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)';
 
   return (
     <div style={{ width: SLIDE_W, height: SLIDE_H, position: 'relative', overflow: 'hidden', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-      {bgColor5 && <div style={{ position: 'absolute', inset: 0, background: bgColor5 }} />}
-      {image ? (
-        <img src={image} alt="segurança" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(8px)', transform: `scale(${imageScale5 / 100 * 1.1})` }} />
-      ) : (
-        <div style={{ position: 'absolute', inset: 0, background: '#222' }} />
+      {(!sideStripVisible || bgColor5) && <div style={{ position: 'absolute', inset: 0, background: solidBg }} />}
+      {sideStripVisible && (
+        <>
+          {image ? (
+            <img src={image} alt="segurança" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(8px)', transform: `scale(${imageScale5 / 100 * 1.1})` }} />
+          ) : (
+            <div style={{ position: 'absolute', inset: 0, background: '#222' }} />
+          )}
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.65)' }} />
+        </>
       )}
-      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.65)' }} />
-      <div style={{ position: 'absolute', top: 60, left: 60, width: 70, height: 70, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
-        <span style={{ color: '#fff', fontWeight: 900, fontSize: 30 }}>5</span>
+      <div style={{ position: 'absolute', top: 60, left: 60, width: 70, height: 70, borderRadius: '50%', background: numberBg, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
+        <span style={{ color: textColor, fontWeight: 900, fontSize: 30 }}>5</span>
       </div>
       <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', padding: '120px 80px 80px', gap: 32, zIndex: 2 }}>
-        <h2 style={{ color: '#ffffff', fontSize: 64, fontWeight: 900, margin: 0, textAlign: 'center', lineHeight: 1.1, wordBreak: 'break-word' as const, overflowWrap: 'anywhere' as const, maxWidth: '100%', flexShrink: 0 }}>{title}</h2>
+        {headlineVisible && (
+          <h2 style={{ color: textColor, fontSize: 64, fontWeight: 900, margin: 0, textAlign: 'center', lineHeight: 1.1, wordBreak: 'break-word' as const, overflowWrap: 'anywhere' as const, maxWidth: '100%', flexShrink: 0 }}>{title}</h2>
+        )}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24, width: '100%' }}>
           {badges.map((badge, idx) => (
-            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 32, background: 'rgba(255,255,255,0.12)', borderRadius: 20, padding: '18px 36px', minHeight: 96, backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.2)', flexShrink: 0 }}>
+            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 32, background: badgeBg, borderRadius: 20, padding: '18px 36px', minHeight: 96, backdropFilter: 'blur(10px)', border: badgeBorder, flexShrink: 0 }}>
               <div style={{ width: 64, height: 64, borderRadius: '50%', background: primaryColor, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" width="32" height="32">
                   {badge.icon === 'shield' && <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>}
@@ -1317,7 +1345,7 @@ function Slide5Security({ image, primaryColor, productData, texts }: { image: st
                   {badge.icon === 'check' && <><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>}
                 </svg>
               </div>
-              <span style={{ color: '#ffffff', fontSize: 34, fontWeight: 700, display: 'block', wordBreak: 'break-word' as const, overflowWrap: 'anywhere' as const, lineHeight: 1.3, flex: 1, minWidth: 0 }}>{badge.label}</span>
+              <span style={{ color: textColor, fontSize: 34, fontWeight: 700, display: 'block', wordBreak: 'break-word' as const, overflowWrap: 'anywhere' as const, lineHeight: 1.3, flex: 1, minWidth: 0 }}>{badge.label}</span>
             </div>
           ))}
         </div>
