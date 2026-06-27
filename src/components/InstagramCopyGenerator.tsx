@@ -942,7 +942,7 @@ ${slide.text}`;
         if (isVideo) {
           try {
             const productData2 = productData;
-            const videoBlob = await generateStrategicSlideVideo(i, videoUrl, primaryColor, accentColor, productData2, textsForSlide, logos);
+            const videoBlob = await generateStrategicSlideVideo(i, videoUrl, primaryColor, accentColor, productData2, textsForSlide, logos, fontFamily, fontSize);
             zip.file(`${SLIDE_FILE_NAMES[i]}.webm`, videoBlob);
             continue;
           } catch (vErr) {
@@ -953,7 +953,7 @@ ${slide.text}`;
 
         try {
           const safeDataUrl = await fetchAsDataUrl(slideImageMap[i] || '');
-          const pngBlob = await generateSlidePNG(i, safeDataUrl, primaryColor, accentColor, productData, textsForSlide, logos);
+          const pngBlob = await generateSlidePNG(i, safeDataUrl, primaryColor, accentColor, productData, textsForSlide, logos, fontFamily, fontSize);
           zip.file(`${SLIDE_FILE_NAMES[i]}.png`, pngBlob);
         } catch (slideErr) {
           console.error(`Slide ${i} falhou; exportação abortada para não gerar arquivo diferente do preview:`, slideErr);
@@ -998,7 +998,7 @@ ${slide.text}`;
         if (isVideo) {
           try {
             const videoBlob = await Promise.race<Blob>([
-              generateStrategicSlideVideo(i, videoUrl, primaryColor, accentColor, productData, textsForSlide, logos),
+              generateStrategicSlideVideo(i, videoUrl, primaryColor, accentColor, productData, textsForSlide, logos, fontFamily, fontSize),
               new Promise<Blob>((_, reject) => setTimeout(() => reject(new Error(`Timeout (10min) renderizando vídeo slide ${i}`)), 600_000)),
             ]);
             console.log(`[SMARTOPS_VISUAL] slide ${i} vídeo pronto (${videoBlob.size} bytes)`);
@@ -1017,7 +1017,7 @@ ${slide.text}`;
           throw e;
         }
         const pngBlob = await Promise.race<Blob>([
-          generateSlidePNG(i, safeDataUrl, primaryColor, accentColor, productData, textsForSlide, logos),
+          generateSlidePNG(i, safeDataUrl, primaryColor, accentColor, productData, textsForSlide, logos, fontFamily, fontSize),
           new Promise<Blob>((_, reject) => setTimeout(() => reject(new Error(`Timeout (45s) renderizando slide ${i}`)), 45_000)),
         ]);
         console.log(`[SMARTOPS_VISUAL] slide ${i} PNG pronto (${pngBlob.size} bytes)`);
