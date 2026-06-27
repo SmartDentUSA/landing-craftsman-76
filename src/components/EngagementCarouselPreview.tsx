@@ -333,7 +333,8 @@ function LogoOverlay({ texts }: { texts?: EngagementSlideTexts }) {
             width: baseSize * (companyScale / 100),
             height: 'auto', maxHeight: baseSize * (companyScale / 100),
             objectFit: 'contain', zIndex: 50, pointerEvents: 'none',
-            filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.35))',
+            // filter:drop-shadow é ignorado por html2canvas → removido para manter paridade preview↔export
+
           }}
         />
       )}
