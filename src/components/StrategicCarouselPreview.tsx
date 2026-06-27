@@ -239,7 +239,7 @@ export function CarouselLogosOverlay({ logos }: { logos?: CarouselLogos }) {
             objectFit: 'contain',
             zIndex: 50,
             pointerEvents: 'none',
-            filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.35))',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.35)',
           }}
         />
       )}
@@ -258,7 +258,7 @@ export function CarouselLogosOverlay({ logos }: { logos?: CarouselLogos }) {
             objectFit: 'contain',
             zIndex: 50,
             pointerEvents: 'none',
-            filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.35))',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.35)',
           }}
         />
       )}
@@ -1985,9 +1985,11 @@ export interface StrategicSlideRenderProps {
   productData: ProductData;
   texts?: Partial<SlideTextsType>;
   logos?: CarouselLogos;
+  fontFamily?: string;
+  fontSize?: number;
 }
 
-export function StrategicSlideRender({ slideNum, image, primaryColor, accentColor, productData, texts, logos }: StrategicSlideRenderProps) {
+export function StrategicSlideRender({ slideNum, image, primaryColor, accentColor, productData, texts, logos, fontFamily, fontSize }: StrategicSlideRenderProps) {
   const t: any = texts || {};
   const slot = t[slideNum] || {};
   const videoMode = slot.mediaType === 'video' && (slot.videoSrc || slot.videoStorageUrl);
@@ -2020,7 +2022,13 @@ export function StrategicSlideRender({ slideNum, image, primaryColor, accentColo
   else if (slideNum === 6) body = <Slide6CTA image={renderImage} primaryColor={primaryColor} accentColor={accentColor} productData={productData} texts={renderTexts[6]} />;
 
   return (
-    <div style={{ position: 'relative', width: SLIDE_W, height: SLIDE_H, background: videoMode ? 'transparent' : undefined }}>
+    <div style={{
+      position: 'relative', width: SLIDE_W, height: SLIDE_H,
+      background: videoMode ? 'transparent' : undefined,
+      fontFamily: fontFamily || undefined,
+      fontSize: typeof fontSize === 'number' ? `${fontSize}%` : undefined,
+    }}>
+
       {textColorOverride && (
         <style>{`.${contentClass} :is(p, span, h1, h2, h3, h4, h5, h6, div, li, a, button) { color: ${textColorOverride} !important; }`}</style>
       )}
