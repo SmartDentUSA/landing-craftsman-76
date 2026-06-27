@@ -2253,6 +2253,7 @@ ${slide.text}`;
                       onImageChange={(slideNum, url) =>
                         setSlideImageMap((prev) => ({ ...prev, [slideNum]: url }))
                       }
+                      onImageFileUpload={handleVisualSlideFileUpload}
                       productImages={allProductImages}
                       primaryColor={primaryColor}
                       accentColor={accentColor}
