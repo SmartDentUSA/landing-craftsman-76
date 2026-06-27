@@ -398,8 +398,7 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
             ...shellStyleVars,
           }}
         >
-          {children}
-          {/* Full-bleed video overlay (when mediaType === 'video') */}
+          {/* Full-bleed video overlay (BACKGROUND — sits behind slide content) */}
           {mediaType === 'video' && videoUrl && (
             <video
               src={videoUrl}
@@ -418,7 +417,7 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
               }}
             />
           )}
-          {/* Mask overlay */}
+          {/* Mask overlay (between video and text) */}
           {maskOpacityNum > 0 && (
             <div
               aria-hidden
@@ -432,10 +431,15 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
               }}
             />
           )}
+          {/* Slide content (text + graphics) — forced ABOVE the video/mask */}
+          <div style={{ position: 'absolute', inset: 0, zIndex: 3 }}>
+            {children}
+          </div>
           {/* Carousel-level logos overlay (top-right + bottom-left) */}
           <CarouselLogosOverlay logos={logos} />
         </div>
       </div>
+
 
 
       {/* Swipe hint — only on Slide 1 */}
