@@ -241,10 +241,17 @@ export function InstagramCopyGenerator({ productId, productName, productPrice, p
     if (!urlData?.publicUrl) return;
 
     if (isVideo) {
-      setSlideTexts(prev => ({
-        ...prev,
-        [slideNum]: { ...((prev[slideNum as keyof SlideTextsType] as any) || {}), mediaType: 'video', videoStorageUrl: urlData.publicUrl },
-      }));
+      setSlideTexts(prev => {
+        const existing = (prev[slideNum as keyof SlideTextsType] as any) || {};
+        // Revoga blob anterior se existir, para liberar memória e forçar uso da URL persistida.
+        if (existing.videoSrc && typeof existing.videoSrc === 'string' && existing.videoSrc.startsWith('blob:')) {
+          try { URL.revokeObjectURL(existing.videoSrc); } catch {}
+        }
+        return {
+          ...prev,
+          [slideNum]: { ...existing, mediaType: 'video', videoStorageUrl: urlData.publicUrl, videoSrc: '' },
+        };
+      });
       toast({ title: '✅ Vídeo enviado', description: `Slide ${slideNum} atualizado (${fileSizeMB} MB).`, duration: 4000 });
     } else {
       setSlideImageMap(prev => ({ ...prev, [slideNum]: urlData.publicUrl }));
