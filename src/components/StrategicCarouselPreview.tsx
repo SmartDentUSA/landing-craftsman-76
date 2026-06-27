@@ -1731,7 +1731,7 @@ async function waitForDomMedia(container: HTMLElement, label: string) {
       new Promise<void>((resolve) => setTimeout(resolve, 5000)),
     ]))
   );
-  await new Promise<void>((resolve) => requestAnimationFrame(() => setTimeout(resolve, 80)));
+  await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(resolve, 250))));
 }
 
 async function resolveVideoUrlForCanvas(videoUrl: string, logPrefix: string): Promise<{ src: string; revoke?: () => void; usingBlobUrl: boolean }> {
