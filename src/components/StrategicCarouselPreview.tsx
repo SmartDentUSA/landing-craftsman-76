@@ -1328,6 +1328,16 @@ export function StrategicCarouselPreview({
   fontSize = 100,
   onFontFamilyChange,
   onFontSizeChange,
+  companyLogoUrl,
+  productLogoUrl,
+  companyLogoScale = 100,
+  productLogoScale = 100,
+  onCompanyLogoUpload,
+  onProductLogoUpload,
+  onCompanyLogoScaleChange,
+  onProductLogoScaleChange,
+  onCompanyLogoRemove,
+  onProductLogoRemove,
 }: StrategicCarouselPreviewProps) {
   const FONT_OPTIONS = [
     { label: 'Sistema (Padrão)', value: 'system-ui, -apple-system, sans-serif' },
@@ -1337,6 +1347,16 @@ export function StrategicCarouselPreview({
     { label: 'Courier (Técnico)', value: "'Courier New', Courier, monospace" },
   ];
 
+  const companyLogoInputRef = useRef<HTMLInputElement>(null);
+  const productLogoInputRef = useRef<HTMLInputElement>(null);
+
+  const logos: CarouselLogos = {
+    companyUrl: companyLogoUrl,
+    productUrl: productLogoUrl,
+    companyScale: companyLogoScale,
+    productScale: productLogoScale,
+  };
+
   const slides = [
     { num: 1, label: '🎣 Hook / Gancho', component: <Slide1Hook image={slideImageMap[1] || ''} primaryColor={primaryColor} productData={productData} texts={slideTexts?.[1]} /> },
     { num: 2, label: '✨ Apresentação', component: <Slide2Solution image={slideImageMap[2] || ''} primaryColor={primaryColor} accentColor={accentColor} productData={productData} texts={slideTexts?.[2]} /> },
@@ -1345,6 +1365,92 @@ export function StrategicCarouselPreview({
     { num: 5, label: '🛡️ Segurança', component: <Slide5Security image={slideImageMap[5] || ''} primaryColor={primaryColor} productData={productData} texts={slideTexts?.[5]} /> },
     { num: 6, label: '🛒 CTA', component: <Slide6CTA image={slideImageMap[6] || ''} primaryColor={primaryColor} accentColor={accentColor} productData={productData} texts={slideTexts?.[6]} /> },
   ];
+
+  const LogoControl = ({
+    title,
+    url,
+    scale,
+    onUpload,
+    onScale,
+    onRemove,
+    inputRef,
+    positionHint,
+  }: {
+    title: string;
+    url?: string;
+    scale: number;
+    onUpload?: (file: File) => void;
+    onScale?: (v: number) => void;
+    onRemove?: () => void;
+    inputRef: React.RefObject<HTMLInputElement>;
+    positionHint: string;
+  }) => (
+    <div className="flex items-center gap-3 p-2 rounded border border-border bg-background">
+      <div
+        className="flex items-center justify-center rounded border border-dashed border-border bg-muted overflow-hidden shrink-0"
+        style={{ width: 56, height: 40 }}
+      >
+        {url ? (
+          <img src={url} alt={title} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+        ) : (
+          <span className="text-[10px] text-muted-foreground">Sem logo</span>
+        )}
+      </div>
+      <div className="flex flex-col gap-1 flex-1 min-w-[180px]">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold">{title}</span>
+          <span className="text-[10px] text-muted-foreground">{positionHint}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            className="text-xs px-2 py-1 rounded border border-border bg-background hover:bg-muted cursor-pointer flex items-center gap-1"
+            style={{ fontSize: 11 }}
+          >
+            <Upload style={{ width: 10, height: 10 }} />
+            {url ? 'Trocar' : 'Enviar'}
+          </button>
+          {url && onRemove && (
+            <button
+              type="button"
+              onClick={onRemove}
+              className="text-xs px-2 py-1 rounded border border-border bg-background hover:bg-muted cursor-pointer"
+              style={{ fontSize: 11 }}
+            >
+              Remover
+            </button>
+          )}
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/svg+xml"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f && onUpload) onUpload(f);
+              e.target.value = '';
+            }}
+          />
+        </div>
+        {onScale && (
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-muted-foreground whitespace-nowrap">Tamanho:</span>
+            <input
+              type="range"
+              min={40}
+              max={200}
+              step={5}
+              value={scale}
+              onChange={(e) => onScale(Number(e.target.value))}
+              className="flex-1 h-2 rounded cursor-pointer accent-primary"
+            />
+            <span className="text-[10px] font-mono text-muted-foreground w-9 text-right">{scale}%</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-4">
@@ -1384,6 +1490,32 @@ export function StrategicCarouselPreview({
         </div>
       )}
 
+      {/* Logos da empresa + produto (aplicam em todos os slides) */}
+      {(onCompanyLogoUpload || onProductLogoUpload) && (
+        <div className="grid sm:grid-cols-2 gap-3 p-3 bg-muted/30 rounded-lg border border-border">
+          <LogoControl
+            title="Logo da empresa"
+            url={companyLogoUrl}
+            scale={companyLogoScale}
+            onUpload={onCompanyLogoUpload}
+            onScale={onCompanyLogoScaleChange}
+            onRemove={onCompanyLogoRemove}
+            inputRef={companyLogoInputRef}
+            positionHint="Topo direito"
+          />
+          <LogoControl
+            title="Logo do produto"
+            url={productLogoUrl}
+            scale={productLogoScale}
+            onUpload={onProductLogoUpload}
+            onScale={onProductLogoScaleChange}
+            onRemove={onProductLogoRemove}
+            inputRef={productLogoInputRef}
+            positionHint="Base esquerda"
+          />
+        </div>
+      )}
+
       {/* Slides grid */}
       <div className="flex flex-wrap gap-6 justify-center">
         {slides.map((slide) => (
@@ -1398,6 +1530,7 @@ export function StrategicCarouselPreview({
               primaryColor={primaryColor}
               slideTexts={slideTexts?.[slide.num as keyof SlideTextsType] as unknown as Record<string, string>}
               onSlideTextChange={onSlideTextChange ? (key, value) => onSlideTextChange(slide.num, key, value) : undefined}
+              logos={logos}
             >
               {slide.component}
             </SlideWrapper>
