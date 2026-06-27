@@ -1664,6 +1664,28 @@ export async function fetchAsDataUrl(url: string): Promise<string> {
   try {
     const res = await withTimeout(fetch(url, { mode: 'cors' }), 10_000, 'direct fetch');
     const blob = await res.blob();
+    // SVG → rasterizar para PNG: html2canvas/canvas falham em alguns SVGs servidos via data URL.
+    if (blob.type === 'image/svg+xml' || /\.svg(\?|$)/i.test(url)) {
+      try {
+        const svgUrl = URL.createObjectURL(blob);
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => resolve();
+          img.onerror = () => reject(new Error('SVG load failed'));
+          img.src = svgUrl;
+        });
+        const w = img.naturalWidth || 512;
+        const h = img.naturalHeight || 512;
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
+        URL.revokeObjectURL(svgUrl);
+        return canvas.toDataURL('image/png');
+      } catch (svgErr) {
+        console.warn('[fetchAsDataUrl] SVG rasterize failed, falling back to data URL:', svgErr);
+      }
+    }
     return await new Promise<string>((resolve) => {
       const reader = new FileReader();
       reader.onloadend = () => resolve(reader.result as string);
