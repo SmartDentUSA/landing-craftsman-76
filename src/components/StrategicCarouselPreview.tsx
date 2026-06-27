@@ -1139,7 +1139,7 @@ export function StrategicCarouselPreview({
               currentImage={slideImageMap[slide.num] || ''}
               onImageChange={onImageChange}
               primaryColor={primaryColor}
-              slideTexts={slideTexts?.[slide.num as keyof SlideTextsType] as Record<string, string>}
+              slideTexts={slideTexts?.[slide.num as keyof SlideTextsType] as unknown as Record<string, string>}
               onSlideTextChange={onSlideTextChange ? (key, value) => onSlideTextChange(slide.num, key, value) : undefined}
             >
               {slide.component}
