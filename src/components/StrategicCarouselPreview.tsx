@@ -171,6 +171,8 @@ const SLIDE_EDITOR_FIELDS: Record<number, Array<EditorField>> = {
   4: [
     { key: 'label', label: 'Label topo (ex: EXPERIÊNCIA)', type: 'input' },
     { key: 'keyword', label: 'Palavra-chave', type: 'input' },
+    { key: 'headlineVisible', label: 'Mostrar bloco colorido (headline)', type: 'toggle' },
+    { key: 'sideStripVisible', label: 'Mostrar faixa lateral (imagem)', type: 'toggle' },
     { key: 'benefit', label: 'Benefício', type: 'textarea' },
     { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
     { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
@@ -178,6 +180,8 @@ const SLIDE_EDITOR_FIELDS: Record<number, Array<EditorField>> = {
   ],
   5: [
     { key: 'title', label: 'Título', type: 'textarea' },
+    { key: 'headlineVisible', label: 'Mostrar bloco colorido (headline)', type: 'toggle' },
+    { key: 'sideStripVisible', label: 'Mostrar faixa lateral (imagem)', type: 'toggle' },
     { key: 'badge1', label: 'Badge 1', type: 'textarea' },
     { key: 'badge2', label: 'Badge 2', type: 'textarea' },
     { key: 'badge3', label: 'Badge 3', type: 'textarea' },
