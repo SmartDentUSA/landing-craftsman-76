@@ -1197,6 +1197,7 @@ function Slide6CTA({ image, primaryColor, accentColor, productData, texts }: { i
 export function StrategicCarouselPreview({
   slideImageMap,
   onImageChange,
+  onImageFileUpload,
   productImages,
   primaryColor,
   accentColor,
