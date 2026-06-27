@@ -1,62 +1,40 @@
-## Diagnóstico
+## Problema
 
-Auditoria confirmou exatamente o que o usuário descreveu: o preview (React/JSX) e o export (canvas/html2canvas) usam **duas camadas de renderização diferentes** com layout duplicado e sem fonte única de verdade.
+No 🎨 Carrossel Visual o upload de vídeo continua funcional, mas a UI por card mostra apenas um único botão "Upload" (que aceita imagem e vídeo no mesmo input). Não há toggle visível Imagem/Vídeo como no card 🎣 Hook do 🎯 Carrossel Engajamento, então parece que o vídeo foi removido.
 
-### Carrossel Engajamento — divergências mapeadas
-- **DIV-01** Slide 1: badge no topo (preview) vs rodapé (vídeo).
-- **DIV-02/03** Slide 6: fontes 44/26 (preview) vs 40/28 (vídeo).
-- **DIV-04** Slide 1: gradiente 70% (preview) vs 60% (vídeo).
-- **DIV-05** Slide 1: posição vertical do texto fixa no canvas vs dinâmica no preview.
-- **DIV-06** `filter: drop-shadow` dos logos ignorado pelo html2canvas.
-- **DIV-07** `backgroundImage` em `<div>` falha intermitente no html2canvas.
-- **DIV-08** `-webkit-line-clamp` ignorado → overflow de texto no PNG.
-- **DIV-09** Slide 6 padding-top 90 (preview) vs 60 (canvas).
+## Objetivo
 
-### Carrossel Visual — divergências mapeadas
-- **#1 CRÍTICO** Z-index invertido: máscara cobre o texto no export.
-- **#2 CRÍTICO** `productData` no ZIP/SmartOps sem `salesPitch/description/targetAudience/applications/faq` → Slide 1 usa fallback errado.
-- **#3 CRÍTICO** `fontFamily`/`fontSize` props aceitos mas nunca propagados aos slides.
-- **#4 ALTO** `<style>` injetado para `textColor` não processado por html2canvas off-screen.
-- **#5 ALTO** Ordem `videoSrc` vs `videoStorageUrl` invertida entre preview/export + blob pode estar revogado.
-- **#6 MÉDIO** Espera de 80ms insuficiente após decode de imagens grandes.
-- **#7 MÉDIO** Logos SVG via `readAsDataURL` falham em alguns browsers.
+Deixar a barra de ação de cada card do Carrossel Visual **idêntica** à do card Hook do Carrossel Engajamento.
 
-## Plano de correção
+## Referência (Engagement, `SlideWrapper` em `EngagementCarouselPreview.tsx`)
 
-### Fase 1 — Carrossel Visual (`StrategicCarouselPreview.tsx` + `InstagramCopyGenerator.tsx`)
-1. Corrigir z-index em `StrategicSlideRender`: máscara passa para `zIndex: 2` (igual ao `SlideWrapper` do preview).
-2. Completar `productData` nos blocos de ZIP e SmartOps incluindo `salesPitch`, `description`, `targetAudience`, `applications`, `faq`.
-3. Substituir `<style>` de `textColorOverride` por CSS Variable inline (`--slide-text-color`) lida em cada slide via `color: var(--slide-text-color, ...)`.
-4. Unificar prioridade de mídia: `videoStorageUrl || videoSrc` em preview e export; limpar `videoSrc` blob após upload bem-sucedido.
-5. Aumentar wait pós-decode para 250ms + duplo `requestAnimationFrame` antes do `html2canvas`.
-6. Propagar `fontFamily`/`fontSize` por todos os Slide components, `StrategicSlideRender`, `generateSlidePNG`, `generateStrategicSlideVideo` e callers em `InstagramCopyGenerator`.
-7. Em `fetchAsDataUrl`, detectar SVG e rasterizar para PNG via canvas antes de devolver o data URL.
+Barra abaixo do slide contém, nesta ordem:
+1. Thumbnails das imagens do produto
+2. Botão `Upload` (input `accept="image/*,video/*"`)
+3. Botão toggle `Vídeo` / `Imagem` (alterna `mediaType` entre `'video'` e `'image'`)
+4. Botão `Editar` (abre painel de edição)
 
-### Fase 2 — Carrossel Engajamento (`EngagementCarouselPreview.tsx`)
-1. Extrair constantes de layout (`TITLE_FONT_SIZE`, `BODY_FONT_SIZE`, `BADGE_TOP/RIGHT`, `GRADIENT_START_PCT`, `SLIDE6_TOP_PAD`) para um único objeto compartilhado por JSX e canvas.
-2. Corrigir no `drawSlideFrameWithVideo`:
-   - Slide 1 badge: y do topo (não rodapé).
-   - Slide 6: `titleFontSize = 44`, `bodyFontSize = 26`.
-   - Slide 1: gradiente a partir de `H*0.30`.
-   - Slide 1: cálculo dinâmico de `startY` igual ao `bottom: 200` do JSX.
-   - Slide 6: `topPad = 90`.
-3. No JSX, trocar `filter: drop-shadow` dos logos por `box-shadow` (suportado por html2canvas). No canvas do vídeo, emular sombra via `ctx.shadow*`.
-4. Substituir o `<div backgroundImage>` do `MediaBlock` por `<img>` real com `object-fit: cover` + `transform: scale()` para garantir render no html2canvas.
-5. Adicionar `overflow: hidden` + `maxHeight` calculado nos blocos com `-webkit-line-clamp` como fallback garantido.
-6. Propagar `fontFamily`/`fontSize` props em `renderSlideContent`, `EngagementSlideRender`, `generateEngagementSlidePNG` e `drawSlideFrameWithVideo`.
+## Mudanças
 
-### Fase 3 — Validação
-- Rodar export de PNG e WebM dos 6 slides de cada carrossel via Playwright contra o preview real.
-- Comparar visualmente preview ↔ PNG ↔ frame de vídeo nos pontos críticos: posição do badge, tamanho de fontes, gradiente, máscara, texto sobre vídeo, logos, cor de fonte customizada.
-- Confirmar que ZIP e Upload SmartOps produzem o mesmo arquivo binário (mesma pipeline).
+### `src/components/StrategicCarouselPreview.tsx` (componente `SlideContainer`, linhas ~481–535)
+
+1. Manter o botão único "Upload" que já existe, mas:
+   - Rótulo fixo "Upload" (parar de trocar para "Vídeo" após upload — esse estado vira responsabilidade do toggle).
+   - Ícone fixo `Upload`.
+2. Substituir o botão atual condicional "Imagem" (que só aparece quando `mediaType === 'video'`) por um **toggle persistente Vídeo/Imagem** sempre visível, igual ao Engagement:
+   - Quando `mediaType === 'video'` → mostra ícone `Video` + label "Vídeo".
+   - Quando `mediaType === 'image'` → mostra ícone `ImageIcon` + label "Imagem".
+   - `onClick` alterna `mediaType` via `onSlideTextChange?.('mediaType', next)`. Ao voltar para `'image'`, limpa `videoSrc` e `videoStorageUrl` (preservar comportamento atual de remoção).
+3. Manter ordem visual: thumbnails → Upload → toggle Vídeo/Imagem → (botão Editar existente).
+4. Não mexer em nenhuma lógica de captura/exportação/handlers de upload — apenas a UI dos dois botões muda.
+
+## Fora de escopo
+
+- Comportamento de exportação, máscaras, fontes, logos e layout dos slides.
+- `EngagementCarouselPreview.tsx` (já está correto, serve só de referência).
+- `InstagramCopyGenerator.tsx` (handler `handleVisualSlideFileUpload` já aceita vídeo).
 
 ## Critério de aceite
-- Toda customização visível no editor (textos, cores, fontes, máscara, vídeo, logos, escala, posição) aparece **idêntica** no arquivo exportado, tanto no ZIP quanto no envio para SmartOps.
-- Nenhum fallback silencioso: se o render falhar, erro explícito, nunca arquivo divergente.
-- Layout constants existem em um único lugar por carrossel; JSX e canvas leem da mesma fonte.
 
-## Arquivos afetados
-- `src/components/StrategicCarouselPreview.tsx`
-- `src/components/EngagementCarouselPreview.tsx`
-- `src/components/InstagramCopyGenerator.tsx`
-- `src/components/EngagementCarouselSection.tsx` (apenas se necessário para passar props novos)
+- Em todo card do 🎨 Carrossel Visual aparece, sempre visível, o botão "Upload" + o toggle "Vídeo/Imagem", visualmente equivalente ao card 🎣 Hook do 🎯 Carrossel Engajamento.
+- Upload de arquivo `.mp4/.webm/.mov` continua funcionando e o vídeo aparece no preview e na exportação como hoje.

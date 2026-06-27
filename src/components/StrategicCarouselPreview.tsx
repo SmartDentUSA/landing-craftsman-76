@@ -511,8 +511,8 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
           className="flex items-center gap-1 text-xs px-2 py-1 rounded border border-border bg-background hover:bg-muted cursor-pointer"
           style={{ fontSize: 10, height: 26, flexShrink: 0 }}
         >
-          {mediaType === 'video' ? <Video style={{ width: 10, height: 10 }} /> : <Upload style={{ width: 10, height: 10 }} />}
-          <span>{mediaType === 'video' ? 'Vídeo' : 'Upload'}</span>
+          <Upload style={{ width: 10, height: 10 }} />
+          <span>Upload</span>
         </button>
         <input
           ref={fileInputRef}
@@ -521,17 +521,22 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
           className="hidden"
           onChange={handleFileUpload}
         />
-        {mediaType === 'video' && (
-          <button
-            onClick={() => { onSlideTextChange?.('mediaType', 'image'); onSlideTextChange?.('videoSrc', ''); onSlideTextChange?.('videoStorageUrl', ''); }}
-            title="Remover vídeo e voltar para imagem"
-            className="flex items-center gap-1 text-xs px-2 py-1 rounded border border-border bg-background hover:bg-muted cursor-pointer"
-            style={{ fontSize: 10, height: 26, flexShrink: 0 }}
-          >
-            <ImageIcon style={{ width: 10, height: 10 }} />
-            <span>Imagem</span>
-          </button>
-        )}
+        <button
+          onClick={() => {
+            const next = mediaType === 'video' ? 'image' : 'video';
+            onSlideTextChange?.('mediaType', next);
+            if (next === 'image') {
+              onSlideTextChange?.('videoSrc', '');
+              onSlideTextChange?.('videoStorageUrl', '');
+            }
+          }}
+          title={mediaType === 'video' ? 'Modo Vídeo ativo (clique para voltar a Imagem)' : 'Modo Imagem ativo (clique para usar Vídeo)'}
+          className="flex items-center gap-1 text-xs px-2 py-1 rounded border border-border bg-background hover:bg-muted cursor-pointer"
+          style={{ fontSize: 10, height: 26, flexShrink: 0 }}
+        >
+          {mediaType === 'video' ? <Video style={{ width: 10, height: 10 }} /> : <ImageIcon style={{ width: 10, height: 10 }} />}
+          <span>{mediaType === 'video' ? 'Vídeo' : 'Imagem'}</span>
+        </button>
 
         {onSlideTextChange && (
           <button
