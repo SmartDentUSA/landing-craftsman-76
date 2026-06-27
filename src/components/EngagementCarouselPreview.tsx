@@ -1060,10 +1060,10 @@ function drawSlideFrameWithVideo(
     const titleFont = `900 ${titleFontSize}px system-ui, -apple-system, sans-serif`;
     const titleLineH = titleFontSize * 1.25;
     ctx.font = titleFont;
-    const titleLines = Math.min(measureWrappedLines(ctx, displayTitle, contentW), 4);
+    const titleLines = Math.min(measureWrappedLines(ctx, displayTitle, contentW), 3);
     const titleH = titleLines * titleLineH;
 
-    const imgH = 320;
+    const imgH = 260;
 
     const bodyFontSize = 28;
     const bodyFont = `400 ${bodyFontSize}px system-ui, -apple-system, sans-serif`;
@@ -1095,9 +1095,10 @@ function drawSlideFrameWithVideo(
     const btnPadY = 20;
     const btnH = texts.cta_label ? ctaLinesArr.length * ctaLineH + btnPadY * 2 : 0;
 
-    const gap = 24;
+    const gap = 40;
+    const bottomReserve = 140;
     const totalH = titleH + gap + imgH + gap + (bodyH > 0 ? bodyH + gap : 0) + btnH;
-    let curY = Math.max(pad, (H - totalH) / 2);
+    let curY = Math.max(pad, Math.min((H - totalH) / 2, H - bottomReserve - totalH));
 
     // --- Draw title ---
     ctx.textAlign = 'left';
