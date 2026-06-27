@@ -1342,7 +1342,7 @@ export async function generateEngagementSlideVideo(
     console.warn('[VIDEO_RENDER_FAIL]', { phase: 'duration_invalid', slideNum, raw: videoEl.duration });
     duration = 10;
   }
-  duration = Math.min(duration, 60); // cap at 60s
+  duration = Math.min(duration, 120); // safety cap at 120s (against corrupted metadata)
 
   // STEP 4 — Setup canvas + recorder
   const canvas = document.createElement('canvas');
@@ -1398,14 +1398,31 @@ export async function generateEngagementSlideVideo(
     throw playErr;
   }
 
-  const fps = 30;
-  const totalFrames = Math.ceil(duration * fps);
-  let frame = 0;
+  // Wall-clock based stop: record exactly the video's duration regardless of rAF rate.
+  // Previously we stopped after N rAF ticks treating rAF as 30fps, but rAF runs at 60–120Hz,
+  // which truncated MediaRecorder output to half (or a quarter) of the real duration.
+  const startedAt = performance.now();
+  const durationMs = duration * 1000;
+  let stopped = false;
+  const stopRecorder = () => {
+    if (stopped) return;
+    stopped = true;
+    try { recorder.stop(); } catch { /* noop */ }
+  };
 
   await new Promise<void>((resolve) => {
+    let frame = 0;
+    const onEnded = () => { stopRecorder(); resolve(); };
+    videoEl.addEventListener('ended', onEnded, { once: true });
+    // Hard fallback in case rAF is throttled (tab in background) or 'ended' never fires.
+    const fallbackTimer = window.setTimeout(() => { stopRecorder(); resolve(); }, durationMs + 500);
+
     const drawFrame = () => {
-      if (videoEl.ended || videoEl.paused || frame >= totalFrames) {
-        try { recorder.stop(); } catch { /* noop */ }
+      if (stopped) return;
+      const elapsed = performance.now() - startedAt;
+      if (videoEl.ended || elapsed >= durationMs) {
+        window.clearTimeout(fallbackTimer);
+        stopRecorder();
         resolve();
         return;
       }
@@ -1413,7 +1430,8 @@ export async function generateEngagementSlideVideo(
         drawSlideFrameWithVideo(ctx, slideNum, videoEl, texts, primaryColor, accentColor);
       } catch (drawErr) {
         console.error('[VIDEO_RENDER_FAIL]', { phase: 'draw_frame', slideNum, frame, error: (drawErr as Error)?.message });
-        try { recorder.stop(); } catch { /* noop */ }
+        window.clearTimeout(fallbackTimer);
+        stopRecorder();
         resolve();
         return;
       }

@@ -1,33 +1,42 @@
+## Problema
+Ao baixar o ZIP do **🎯 Carrossel Engajamento**, os vídeos saem com duração menor do que o vídeo original inserido no card.
+
 ## Causa raiz
+Em `src/components/EngagementCarouselPreview.tsx`, dentro de `generateEngagementSlideVideo` (linhas ~1339–1424), o loop de gravação tem dois bugs que cortam o tempo:
 
-O produto **Resina 3D Smart Print Bio Vitality** tem 6 especificações técnicas salvas corretamente no banco (`products_repository.technical_specifications`). Confirmado via API.
+1. **`requestAnimationFrame` está sendo tratado como se rodasse a 30 fps**, mas o navegador despacha rAF na taxa de atualização do display (60 Hz típico, podendo chegar a 120 Hz). O código faz:
+   ```
+   const fps = 30;
+   const totalFrames = Math.ceil(duration * fps);
+   // ... rAF loop incrementa frame++ a cada tick
+   if (frame >= totalFrames) recorder.stop();
+   ```
+   Como rAF dispara ~60×/s e `totalFrames` é calculado a 30 fps, o loop para em `duration / 2` segundos de tempo real. O `MediaRecorder` grava em tempo de parede → o `.webm` resultante fica com metade (ou menos) da duração original. Em telas 120 Hz fica 1/4.
 
-O bloco de preview já foi restaurado em `ModernProductCard.tsx` (linhas 705-712) e renderiza condicionalmente quando `product.technical_specifications.length > 0`.
+2. **Cap rígido de 60 s** (`duration = Math.min(duration, 60)`) — corta vídeos mais longos sem aviso.
 
-O problema está em `src/components/RepositoryPanel.tsx`: a query de listagem (`PRODUCT_REPOSITORY_LIST_COLUMNS`, linha 114-120) — propositalmente "leve", sem JSONBs pesados — **não inclui** a coluna `technical_specifications`. Resultado: o `data.technical_specifications` chega `undefined` no mapeamento (linha 465), vira `[]`, e o card esconde o preview para todos os 92 produtos que têm specs.
+## Correção (somente lógica de captura, sem mexer em UI)
 
-## Correção
+Arquivo: `src/components/EngagementCarouselPreview.tsx`, função `generateEngagementSlideVideo`.
 
-Adicionar `'technical_specifications'` ao array `PRODUCT_REPOSITORY_LIST_COLUMNS` em `src/components/RepositoryPanel.tsx` (linha 114-120).
+1. **Trocar o critério de parada de "contagem de frames" para "tempo de parede / fim do vídeo"**, de modo que o recorder grave exatamente o tempo do vídeo:
+   - Marcar `startedAt = performance.now()` logo após `videoEl.play()`.
+   - No loop de rAF, parar quando `videoEl.ended === true` **ou** `(performance.now() - startedAt) >= duration * 1000`.
+   - Remover `totalFrames` / `frame++` como condição de parada (o rAF apenas redesenha o frame atual do `<video>` — cada rAF chama `drawSlideFrameWithVideo` com o `videoEl` no instante corrente, então a taxa real de desenho é irrelevante para a duração).
 
-```ts
-const PRODUCT_REPOSITORY_LIST_COLUMNS = [
-  'id', 'name', 'description', 'price', 'promo_price', 'currency',
-  'category', 'subcategory', 'image_url', 'product_url',
-  'use_in_ai_generation', 'approved', 'display_order',
-  'show_in_resources', 'selected', 'brand', 'gtin', 'ean', 'mpn',
-  'wikidata_item_id',
-  'technical_specifications', // ← adicionar
-].join(', ');
-```
+2. **Aumentar o cap** de `60s` para `120s` (ou remover) — vídeos do Instagram chegam a 90 s; manter um teto apenas como guarda de segurança contra metadata corrompido (`Infinity`).
 
-Nenhuma outra mudança necessária:
-- Mapeamento (linhas 465-467) já trata o campo corretamente.
-- Card já renderiza o preview condicionalmente.
-- Modal de edição, schema, save handler — intactos.
+3. **Pequeno hardening**: usar `videoEl.addEventListener('ended', …)` como caminho primário de parada, com `setTimeout(stop, duration*1000 + 500)` como fallback, para garantir que o `recorder.stop()` aconteça mesmo se rAF for pausado (aba em background).
 
-## Impacto
+4. Manter:
+   - `cleanup()`, validação de duração `Infinity/NaN/0 → 10s`, detecção de canvas tainted, logs `[VIDEO_RENDER_FAIL]`.
+   - Toda a UI, layout, `MediaBlock`, captura de imagens (`html2canvas`), upload para SmartOps, fluxo do ZIP em `EngagementCarouselSection.tsx`.
 
-- Os 92 produtos com especificações passam a mostrar o preview no card.
-- Os 28 produtos sem especificações continuam sem renderizar nada (comportamento existente).
-- Custo: 1 coluna JSONB a mais no SELECT da lista; tolerável dado o filtro `approved` e a ordenação já existentes. Nenhum risco de timeout esperado (a coluna é pequena — média de ~6 entradas label/value por produto).
+## Fora de escopo
+- Nenhuma mudança em `StrategicCarouselPreview`, `smartops-upload.ts`, Sistema B, edge functions, layout dos slides, máscara, fontes, posição de texto.
+- Sem mudanças no áudio (o `.webm` segue sem trilha — `canvas.captureStream` não captura áudio do `<video>`; isso é outro assunto e o usuário não pediu).
+
+## Verificação
+- Subir um vídeo de ~30 s em um slide, exportar ZIP e confirmar que o `.webm` baixado tem ~30 s (`ffprobe` ou player).
+- Confirmar que o frame final ainda contém os textos/overlays do slide.
+- Conferir console: nenhum `[VIDEO_RENDER_FAIL]` novo.
