@@ -910,7 +910,7 @@ function isVisualDescriptionLine(line: string): boolean {
 // ==================== SLIDE 3 — CIENTIFICIDADE ====================
 const SLIDE3_UNICODE_ICONS = ['⚡', '🛡', '⭐', '✅', '🔬'];
 
-function Slide3Technical({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; accentColor: string; productData: ProductData; texts?: { title?: string; headline?: string; body?: string; bullet1?: string; bullet2?: string; bullet3?: string; bullet4?: string; imageScale?: string; bgColor?: string } }) {
+function Slide3Technical({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; accentColor: string; productData: ProductData; texts?: { title?: string; headline?: string; body?: string; bullet1?: string; bullet2?: string; bullet3?: string; bullet4?: string; imageScale?: string; bgColor?: string; headlineVisible?: string; sideStripVisible?: string } }) {
   const specs = productData.technicalSpecs?.slice(0, 5) || [];
   const features = productData.features?.slice(0, 5) || [];
   const items = specs.length > 0 ? specs.map(s => ({ label: s.label, value: s.value })) : features.map(f => ({ label: f, value: '' }));
