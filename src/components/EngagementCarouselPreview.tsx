@@ -716,28 +716,29 @@ function renderSlideContent(
         position: 'relative',
         justifyContent: 'center',
         alignItems: 'center',
-        padding: '60px',
-        gap: 32,
+        padding: '60px 60px 140px',
+        gap: 40,
         textAlign: 'center',
       }}>
         {/* Title — compact, centered */}
         <div style={{
           fontSize: 40, fontWeight: 900, color: textColor, lineHeight: 1.2,
-          maxHeight: 200, overflow: 'hidden',
-          display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical' as const,
+          maxHeight: 180, overflow: 'hidden',
+          display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as const,
         }}>
           <RichText text={displayTitle} />
         </div>
 
-        {/* Media — balanced height */}
-        <MediaBlock height={320} />
+        {/* Media — reduced height to leave breathing room for body text */}
+        <MediaBlock height={260} />
 
-        {/* Body — short, muted */}
+        {/* Body — short, muted, with extra top breathing room */}
         {displayBody && (
           <div style={{
             fontSize: 28, lineHeight: 1.5, color: subTextColor, fontWeight: 400,
             maxHeight: 130, overflow: 'hidden',
             display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as const,
+            marginTop: 8,
           }}>
             <RichText text={displayBody} />
           </div>
