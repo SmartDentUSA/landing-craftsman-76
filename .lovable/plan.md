@@ -1,40 +1,35 @@
-## Problema
+## Correções cirúrgicas — paridade preview/export
 
-No 🎨 Carrossel Visual o upload de vídeo continua funcional, mas a UI por card mostra apenas um único botão "Upload" (que aceita imagem e vídeo no mesmo input). Não há toggle visível Imagem/Vídeo como no card 🎣 Hook do 🎯 Carrossel Engajamento, então parece que o vídeo foi removido.
+Aplicar exatamente as alterações solicitadas, sem mexer em nada além disso.
 
-## Objetivo
+### 1. `src/components/StrategicCarouselPreview.tsx`
+- `StrategicSlideRender`: máscara recebe `zIndex: 2` para parar de cobrir o conteúdo.
+- Adicionar props `fontFamily` e `fontSize` em `Slide1Hook` … `Slide6CTA`, em `generateSlidePNG` e em `generateStrategicSlideVideo`; propagar até o shell do slide (style do container).
+- `CarouselLogosOverlay`: substituir `filter: drop-shadow(...)` por `boxShadow` equivalente nos logos.
+- `SlideWrapper`: resolver vídeo na ordem `videoStorageUrl || videoSrc`.
+- `waitForDomMedia`: trocar timeout interno de `80ms` para `250ms`.
 
-Deixar a barra de ação de cada card do Carrossel Visual **idêntica** à do card Hook do Carrossel Engajamento.
+### 2. `src/components/EngagementCarouselPreview.tsx`
+- Em `drawSlideFrameWithVideo`:
+  - Slide 1: badge no topo (`top: 40`, `right: 48`).
+  - Slide 6: `titleFontSize = 44`, `bodyFontSize = 26`.
+  - Slide 1: gradiente começa em `H * 0.30`; bloco de texto posicionado a partir de `bottom: 340`.
+  - `drawOrder` fixado em `'video-under-overlay'` para todos os slides com vídeo.
+- `LogoOverlay`: trocar `filter: drop-shadow(...)` por `boxShadow`.
+- Slides 2–5: aplicar `overflow: hidden` no card e `maxHeight` no body.
+- Trocar `setTimeout(resolve, 80)` por `setTimeout(resolve, 250)`.
 
-## Referência (Engagement, `SlideWrapper` em `EngagementCarouselPreview.tsx`)
+### 3. `src/components/InstagramCopyGenerator.tsx`
+- Passar `fontFamily` e `fontSize` (já existem no state) nas 4 chamadas de export:
+  - ZIP → `generateSlidePNG` e `generateStrategicSlideVideo`.
+  - SmartOps → `generateSlidePNG` e `generateStrategicSlideVideo`.
 
-Barra abaixo do slide contém, nesta ordem:
-1. Thumbnails das imagens do produto
-2. Botão `Upload` (input `accept="image/*,video/*"`)
-3. Botão toggle `Vídeo` / `Imagem` (alterna `mediaType` entre `'video'` e `'image'`)
-4. Botão `Editar` (abre painel de edição)
+### Verificação
+- Reler os 3 arquivos antes de cada edição para localizar os trechos exatos.
+- Aplicar as edições com `line_replace`.
+- Confirmar que o build/typecheck automático passa sem erros.
 
-## Mudanças
-
-### `src/components/StrategicCarouselPreview.tsx` (componente `SlideContainer`, linhas ~481–535)
-
-1. Manter o botão único "Upload" que já existe, mas:
-   - Rótulo fixo "Upload" (parar de trocar para "Vídeo" após upload — esse estado vira responsabilidade do toggle).
-   - Ícone fixo `Upload`.
-2. Substituir o botão atual condicional "Imagem" (que só aparece quando `mediaType === 'video'`) por um **toggle persistente Vídeo/Imagem** sempre visível, igual ao Engagement:
-   - Quando `mediaType === 'video'` → mostra ícone `Video` + label "Vídeo".
-   - Quando `mediaType === 'image'` → mostra ícone `ImageIcon` + label "Imagem".
-   - `onClick` alterna `mediaType` via `onSlideTextChange?.('mediaType', next)`. Ao voltar para `'image'`, limpa `videoSrc` e `videoStorageUrl` (preservar comportamento atual de remoção).
-3. Manter ordem visual: thumbnails → Upload → toggle Vídeo/Imagem → (botão Editar existente).
-4. Não mexer em nenhuma lógica de captura/exportação/handlers de upload — apenas a UI dos dois botões muda.
-
-## Fora de escopo
-
-- Comportamento de exportação, máscaras, fontes, logos e layout dos slides.
-- `EngagementCarouselPreview.tsx` (já está correto, serve só de referência).
-- `InstagramCopyGenerator.tsx` (handler `handleVisualSlideFileUpload` já aceita vídeo).
-
-## Critério de aceite
-
-- Em todo card do 🎨 Carrossel Visual aparece, sempre visível, o botão "Upload" + o toggle "Vídeo/Imagem", visualmente equivalente ao card 🎣 Hook do 🎯 Carrossel Engajamento.
-- Upload de arquivo `.mp4/.webm/.mov` continua funcionando e o vídeo aparece no preview e na exportação como hoje.
+### Fora de escopo
+- Não alterar copy/IA, edge functions, banco, SmartOps backend.
+- Não mexer em layouts além do listado acima.
+- Manter comportamento de abortar export se não houver paridade (já existente).
