@@ -984,7 +984,7 @@ ${slide.text}`;
             const videoUrl = String(textsForSlide.videoStorageUrl || textsForSlide.videoSrc);
             const videoBlob = await Promise.race<Blob>([
               generateStrategicSlideVideo(i, videoUrl, primaryColor, accentColor, productData, textsForSlide, logos),
-              new Promise<Blob>((_, reject) => setTimeout(() => reject(new Error(`Timeout (150s) renderizando vídeo slide ${i}`)), 150_000)),
+              new Promise<Blob>((_, reject) => setTimeout(() => reject(new Error(`Timeout (10min) renderizando vídeo slide ${i}`)), 600_000)),
             ]);
             console.log(`[SMARTOPS_VISUAL] slide ${i} vídeo pronto (${videoBlob.size} bytes)`);
             slidesPayload.push({ blob: videoBlob, ext: 'webm', contentType: 'video/webm' });

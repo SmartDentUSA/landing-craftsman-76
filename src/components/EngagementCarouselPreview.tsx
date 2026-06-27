@@ -1472,7 +1472,7 @@ export async function generateEngagementSlideVideo(
     slotSelector: '[data-engagement-video-slot="true"]',
     drawOrder: slideNum === 1 ? 'video-under-overlay' : 'video-over-overlay',
     logPrefix: `ENGAGEMENT_VIDEO_${slideNum}`,
-    durationCapSeconds: 120,
+    durationCapSeconds: 3600,
   });
 }
 
