@@ -179,6 +179,63 @@ export function InstagramCopyGenerator({ productId, productName, productPrice, p
   const [generatingExperience, setGeneratingExperience] = useState(false);
   const [generatingSecurity, setGeneratingSecurity] = useState(false);
   const [slideTexts, setSlideTexts] = useState<Partial<SlideTextsType>>({});
+
+  // === Visual Carousel: image/video file upload (delegated by StrategicCarouselPreview) ===
+  const handleVisualSlideFileUpload = async (slideNum: number, file: File) => {
+    const MAX_BYTES = 100 * 1024 * 1024;
+    const ALLOWED_VIDEO_MIME = ['video/mp4', 'video/quicktime', 'video/webm', 'video/x-m4v'];
+    const ALLOWED_IMAGE_MIME = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+    const fileSizeMB = (file.size / 1024 / 1024).toFixed(1);
+
+    if (file.size > MAX_BYTES) {
+      toast({ title: 'Arquivo muito grande', description: `${fileSizeMB} MB excede o limite de 100 MB.`, variant: 'destructive', duration: 8000 });
+      return;
+    }
+
+    const isVideo = file.type.startsWith('video/');
+    if (isVideo && !ALLOWED_VIDEO_MIME.includes(file.type)) {
+      toast({ title: 'Formato de vídeo não suportado', description: `Use MP4, MOV, WebM ou M4V.`, variant: 'destructive' });
+      return;
+    }
+    if (!isVideo && file.type.startsWith('image/') && !ALLOWED_IMAGE_MIME.includes(file.type)) {
+      toast({ title: 'Formato de imagem não suportado', description: 'Use PNG, JPEG, WEBP ou GIF.', variant: 'destructive' });
+      return;
+    }
+
+    const folder = isVideo ? 'video' : 'image';
+    const ext = file.name.split('.').pop() || (isVideo ? 'mp4' : 'png');
+    const path = `visual-carousel/${productId}/slide_${slideNum}_${folder}_${Date.now()}.${ext}`;
+
+    console.log('[VISUAL_CAROUSEL_UPLOAD_START]', { slideNum, isVideo, fileSizeMB, path });
+
+    const { error: uploadError } = await supabase.storage
+      .from('product-images')
+      .upload(path, file, { upsert: true, contentType: file.type });
+
+    if (uploadError) {
+      console.error('[VISUAL_CAROUSEL_UPLOAD_FAIL]', { slideNum, error: uploadError });
+      toast({ title: 'Erro no upload', description: `${uploadError.message} (${fileSizeMB} MB)`, variant: 'destructive', duration: 8000 });
+      return;
+    }
+
+    const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(path);
+    if (!urlData?.publicUrl) return;
+
+    if (isVideo) {
+      setSlideTexts(prev => ({
+        ...prev,
+        [slideNum]: { ...((prev[slideNum as keyof SlideTextsType] as any) || {}), mediaType: 'video', videoStorageUrl: urlData.publicUrl },
+      }));
+      toast({ title: '✅ Vídeo enviado', description: `Slide ${slideNum} atualizado (${fileSizeMB} MB).`, duration: 4000 });
+    } else {
+      setSlideImageMap(prev => ({ ...prev, [slideNum]: urlData.publicUrl }));
+      setSlideTexts(prev => ({
+        ...prev,
+        [slideNum]: { ...((prev[slideNum as keyof SlideTextsType] as any) || {}), mediaType: 'image' },
+      }));
+      toast({ title: '✅ Imagem enviada', description: `Slide ${slideNum} atualizado.`, duration: 3000 });
+    }
+  };
   const [fontFamily, setFontFamily] = useState<string>('system-ui, -apple-system, sans-serif');
   const [fontSize, setFontSize] = useState<number>(100);
   const [savingVisualCarousel, setSavingVisualCarousel] = useState(false);
