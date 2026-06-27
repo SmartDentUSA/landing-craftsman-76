@@ -359,13 +359,23 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
 
   const fields = SLIDE_EDITOR_FIELDS[slideNum] || [];
 
-  // CSS variables consumed by slide bodies (opt-in via data-slide-text-zone / data-slide-bg)
+  // CSS variables kept for backwards-compat; only textColor is actually consumed (via scoped <style> below).
   const shellStyleVars: React.CSSProperties = {
-    // Used by [data-slide-text-zone] children: override text color + scale + vertical alignment.
     ['--slide-text-color' as any]: textColorOverride || 'inherit',
-    ['--slide-text-scale' as any]: String(textBlockScale / 100),
-    ['--slide-text-justify' as any]: textPosition === 'top' ? 'flex-start' : textPosition === 'bottom' ? 'flex-end' : textPosition === 'center' ? 'center' : 'inherit',
   };
+
+  // When a video is active, suppress the slide's own background image/color so the
+  // <video> at zIndex 1 becomes visible. We clone the slide element and inject
+  // image="" + texts.bgColor='transparent' + overlayOpacity='0'.
+  const renderedChildren = React.useMemo(() => {
+    if (mediaType !== 'video' || !videoUrl || !React.isValidElement(children)) return children;
+    const childProps = (children as React.ReactElement<any>).props || {};
+    const mergedTexts = { ...(childProps.texts || {}), bgColor: 'transparent', overlayOpacity: '0' };
+    return React.cloneElement(children as React.ReactElement<any>, { image: '', texts: mergedTexts });
+  }, [children, mediaType, videoUrl]);
+
+  // Unique class so the scoped <style> only affects this slide instance.
+  const slideContentClass = `visual-slide-content-${slideNum}-${React.useId().replace(/:/g, '')}`;
 
   return (
     <div className="flex flex-col items-center gap-2" style={{ maxWidth: containerW + 40 }}>
@@ -392,6 +402,10 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
             ...shellStyleVars,
           }}
         >
+          {/* Scoped text-color override (forces all text descendants to user-picked color) */}
+          {textColorOverride && (
+            <style>{`.${slideContentClass} :is(p, span, h1, h2, h3, h4, h5, h6, div, li, a, button) { color: ${textColorOverride} !important; }`}</style>
+          )}
           {/* Full-bleed video overlay (BACKGROUND — sits behind slide content) */}
           {mediaType === 'video' && videoUrl && (
             <video
@@ -426,8 +440,8 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
             />
           )}
           {/* Slide content (text + graphics) — forced ABOVE the video/mask */}
-          <div style={{ position: 'absolute', inset: 0, zIndex: 3 }}>
-            {children}
+          <div className={slideContentClass} style={{ position: 'absolute', inset: 0, zIndex: 3 }}>
+            {renderedChildren}
           </div>
           {/* Carousel-level logos overlay (top-right + bottom-left) */}
           <CarouselLogosOverlay logos={logos} />
