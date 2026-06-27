@@ -2077,6 +2077,8 @@ export async function generateSlidePNG(
   productData: ProductData,
   texts?: Record<string, string>,
   logos?: CarouselLogos,
+  fontFamily?: string,
+  fontSize?: number,
 ): Promise<Blob> {
   // 1. Pre-fetch image as data URL to avoid CORS tainting in html2canvas
   let imgDataUrl = '';
@@ -2129,6 +2131,8 @@ export async function generateSlidePNG(
       productData,
       texts: slideTexts,
       logos: resolvedLogos,
+      fontFamily,
+      fontSize,
     })
   );
   await waitForDomMedia(container, `STRATEGIC_PNG_${slideNum}`);
@@ -2178,6 +2182,8 @@ export async function generateStrategicSlideVideo(
   productData: ProductData,
   texts: Record<string, string>,
   logos?: CarouselLogos,
+  fontFamily?: string,
+  fontSize?: number,
 ): Promise<Blob> {
   let resolvedLogos: CarouselLogos | undefined = logos;
   if (logos && (logos.companyUrl || logos.productUrl)) {
@@ -2207,6 +2213,8 @@ export async function generateStrategicSlideVideo(
       productData,
       texts: overlayTexts,
       logos: resolvedLogos,
+      fontFamily,
+      fontSize,
     }),
     slotSelector: '[data-strategic-video-slot="true"]',
     drawOrder: 'video-under-overlay',
