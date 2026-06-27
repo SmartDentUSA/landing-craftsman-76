@@ -949,9 +949,8 @@ ${slide.text}`;
           const pngBlob = await generateSlidePNG(i, safeDataUrl, primaryColor, accentColor, productData, textsForSlide, logos);
           zip.file(`${SLIDE_FILE_NAMES[i]}.png`, pngBlob);
         } catch (slideErr) {
-          console.warn(`Slide ${i} gerado sem imagem (fallback):`, slideErr);
-          const pngBlob = await generateSlidePNG(i, '', primaryColor, accentColor, productData, textsForSlide, logos);
-          zip.file(`${SLIDE_FILE_NAMES[i]}.png`, pngBlob);
+          console.error(`Slide ${i} falhou; exportação abortada para não gerar arquivo diferente do preview:`, slideErr);
+          throw slideErr;
         }
       }
 
@@ -1006,7 +1005,10 @@ ${slide.text}`;
 
         let safeDataUrl = '';
         try { safeDataUrl = await fetchAsDataUrl(slideImageMap[i] || ''); }
-        catch (e) { console.warn(`SmartOps slide ${i} sem imagem (fallback):`, e); }
+        catch (e) {
+          console.error(`SmartOps slide ${i} falhou ao preparar imagem; envio abortado para não enviar diferente do preview:`, e);
+          throw e;
+        }
         const pngBlob = await Promise.race<Blob>([
           generateSlidePNG(i, safeDataUrl, primaryColor, accentColor, productData, textsForSlide, logos),
           new Promise<Blob>((_, reject) => setTimeout(() => reject(new Error(`Timeout (45s) renderizando slide ${i}`)), 45_000)),
