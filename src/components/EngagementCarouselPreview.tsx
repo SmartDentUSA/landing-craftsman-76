@@ -638,7 +638,12 @@ export interface EngagementSlideRenderProps {
 
 export function EngagementSlideRender(props: EngagementSlideRenderProps) {
   const { slideNum, texts, imageUrl, primaryColor, accentColor, brandName, handleName } = props;
-  return renderSlideContent(slideNum, texts, imageUrl, primaryColor, accentColor, brandName, handleName);
+  return (
+    <div style={{ position: 'relative', width: SLIDE_W, height: SLIDE_H }}>
+      {renderSlideContent(slideNum, texts, imageUrl, primaryColor, accentColor, brandName, handleName)}
+      <LogoOverlay texts={texts} />
+    </div>
+  );
 }
 
 function renderSlideContent(
