@@ -44,18 +44,37 @@ interface ProductData {
 }
 
 // ========================= SlideTexts Types =========================
+// Common fields supported by ALL slides (added Nov 2026 — backward compatible).
+// They are merged into each slide's typed shape so callers can keep using the
+// existing per-slide keys without changes.
+export interface CommonSlideMediaFields {
+  // Media (video support — same model as the Engagement carousel)
+  mediaType?: 'image' | 'video';
+  videoSrc?: string;          // blob: URL for instant preview
+  videoStorageUrl?: string;   // persisted Supabase Storage HTTPS URL
+  // Layout / styling
+  coverMode?: 'contain' | 'cover'; // Slide 2 default 'contain'; other slides default to their existing behavior
+  maskOpacity?: string;       // 0–90 (% darkening over media)
+  maskColor?: string;         // hex, default #000000
+  textColor?: string;         // hex; overrides per-slide auto-luminance color when set
+  textPosition?: 'top' | 'center' | 'bottom';
+  textBlockScale?: string;    // 60–140 (text block scale %)
+}
+
 export interface SlideTextsType {
-  1: { hook: string; productName: string; imageScale?: string; bgColor?: string; overlayOpacity?: string; faixaVisible?: string; faixaColor?: string };
-  2: { category: string; introLabel?: string; productName: string; imageScale?: string; bgColor?: string };
-  3: { title: string; headline?: string; body?: string; bullet1?: string; bullet2?: string; bullet3?: string; bullet4?: string; imageScale?: string; bgColor?: string };
-  4: { label: string; keyword: string; benefit: string; imageScale?: string; bgColor?: string };
-  5: { title: string; badge1: string; badge2: string; badge3: string; imageScale?: string; bgColor?: string };
-  6: { productName: string; ctaButton: string; linkLabel: string; footer: string; imageScale?: string; bgColor?: string };
+  1: { hook: string; productName: string; imageScale?: string; bgColor?: string; overlayOpacity?: string; faixaVisible?: string; faixaColor?: string } & CommonSlideMediaFields;
+  2: { category: string; introLabel?: string; productName: string; imageScale?: string; bgColor?: string } & CommonSlideMediaFields;
+  3: { title: string; headline?: string; body?: string; bullet1?: string; bullet2?: string; bullet3?: string; bullet4?: string; imageScale?: string; bgColor?: string } & CommonSlideMediaFields;
+  4: { label: string; keyword: string; benefit: string; imageScale?: string; bgColor?: string } & CommonSlideMediaFields;
+  5: { title: string; badge1: string; badge2: string; badge3: string; imageScale?: string; bgColor?: string } & CommonSlideMediaFields;
+  6: { productName: string; ctaButton: string; linkLabel: string; footer: string; imageScale?: string; bgColor?: string } & CommonSlideMediaFields;
 }
 
 interface StrategicCarouselPreviewProps {
   slideImageMap: Record<number, string>;
   onImageChange: (slideNum: number, url: string) => void;
+  /** Optional: upload an image OR video file for a specific slide. Mirrors the Engagement flow. */
+  onImageFileUpload?: (slideNum: number, file: File) => void;
   productImages: Array<{ url: string; alt?: string }>;
   primaryColor: string;
   accentColor: string;
