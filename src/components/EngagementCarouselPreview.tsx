@@ -710,22 +710,19 @@ function renderSlideContent(
         position: 'relative',
         width: '100%', height, overflow: 'hidden', borderRadius: 16,
       }}>
-        <div style={{
-          width: '100%', height: '100%',
-          backgroundImage: `url("${imageUrl}")`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-          transform: `scale(${imageScale / 100})`,
-          transformOrigin: 'center center',
-        }} />
-        {/* Ghost img — keeps generateEngagementSlidePNG.img.decode() awaiting before snapshot */}
+        {/* <img> real: html2canvas renderiza muito melhor que background-image em div */}
         <img
           src={imageUrl}
           alt=""
-          aria-hidden
-          style={{ position: 'absolute', top: 0, left: 0, width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}
-          onError={(e) => { console.warn('[ENGAGEMENT_RENDER] img onError (slide non-1)', { src: (e.target as HTMLImageElement).src?.slice(0, 80) }); }}
+          crossOrigin="anonymous"
+          style={{
+            position: 'absolute', inset: 0,
+            width: '100%', height: '100%',
+            objectFit: 'cover',
+            transform: `scale(${imageScale / 100})`,
+            transformOrigin: 'center center',
+          }}
+          onError={(e) => { console.warn('[ENGAGEMENT_RENDER] MediaBlock img onError', { src: (e.target as HTMLImageElement).src?.slice(0, 80) }); }}
         />
       </div>
     ) : (
