@@ -628,7 +628,7 @@ function Slide1Hook({ image, primaryColor, productData, texts }: { image: string
 }
 
 // ==================== SLIDE 2 — SOLUÇÃO ====================
-function Slide2Solution({ image, primaryColor, accentColor, productData, texts }: { image: string; primaryColor: string; accentColor: string; productData: ProductData; texts?: { category?: string; introLabel?: string; productName?: string; imageScale?: string; bgColor?: string } }) {
+function Slide2Solution({ image, primaryColor, accentColor, productData, texts }: { image: string; primaryColor: string; accentColor: string; productData: ProductData; texts?: { category?: string; introLabel?: string; productName?: string; imageScale?: string; bgColor?: string; coverMode?: string } }) {
   const textOnPrimary = getLuminance(primaryColor) > 0.5 ? '#000000' : '#ffffff';
   const category = texts?.category !== undefined ? texts.category : (productData.category || '');
   const introLabel = texts?.introLabel !== undefined ? texts.introLabel : 'Apresentando';
@@ -638,6 +638,46 @@ function Slide2Solution({ image, primaryColor, accentColor, productData, texts }
   const bgLuminance = getLuminance(bgColor.replace('#', '').length === 6 ? bgColor : '#f8f8f8');
   const textColor = bgLuminance > 0.5 ? '#111111' : '#ffffff';
   const subTextColor = bgLuminance > 0.5 ? '#888888' : 'rgba(255,255,255,0.7)';
+  const isCover = (texts?.coverMode || 'contain') === 'cover';
+
+  // === COVER MODE: image fills the entire card; texts overlay on top ===
+  if (isCover && image) {
+    return (
+      <div style={{ width: SLIDE_W, height: SLIDE_H, position: 'relative', overflow: 'hidden', background: bgColor, fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundImage: `url(${image})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            transform: `scale(${imageScale / 100})`,
+            transformOrigin: 'center center',
+          }}
+        />
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '80px 80px 100px', zIndex: 3 }}>
+          <div style={{ alignSelf: 'flex-start', width: 70, height: 70, borderRadius: '50%', background: primaryColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ color: textOnPrimary, fontWeight: 900, fontSize: 30 }}>2</span>
+          </div>
+          {category && (
+            <div style={{ alignSelf: 'center', background: primaryColor, color: textOnPrimary, borderRadius: 50, padding: '16px 48px', fontSize: 36, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase' as const }}>
+              {category}
+            </div>
+          )}
+          <div style={{ textAlign: 'center' }}>
+            {introLabel && (
+              <div style={{ marginBottom: 12 }}>
+                <span style={{ fontSize: 32, fontWeight: 400, color: '#ffffff', letterSpacing: 3, textTransform: 'uppercase' as const, textShadow: '0 2px 12px rgba(0,0,0,0.6)' }}>
+                  {introLabel}
+                </span>
+              </div>
+            )}
+            <h2 style={{ margin: 0, fontSize: 68, fontWeight: 900, color: '#ffffff', lineHeight: 1.1, textShadow: '0 4px 24px rgba(0,0,0,0.7)' }}>{name}</h2>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ width: SLIDE_W, height: SLIDE_H, background: bgColor, fontFamily: 'system-ui, -apple-system, sans-serif', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', padding: '80px 80px 100px' }}>
