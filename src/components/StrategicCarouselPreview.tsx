@@ -1274,6 +1274,7 @@ export function StrategicCarouselPreview({
               productImages={productImages}
               currentImage={slideImageMap[slide.num] || ''}
               onImageChange={onImageChange}
+              onImageFileUpload={onImageFileUpload}
               primaryColor={primaryColor}
               slideTexts={slideTexts?.[slide.num as keyof SlideTextsType] as unknown as Record<string, string>}
               onSlideTextChange={onSlideTextChange ? (key, value) => onSlideTextChange(slide.num, key, value) : undefined}
