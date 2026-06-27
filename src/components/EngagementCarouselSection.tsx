@@ -417,26 +417,13 @@ export function EngagementCarouselSection({
                 }
 
                 if (!videoRendered) {
-                  console.warn(`All video sources failed for slide ${i}, falling back to PNG (${lastVideoErr})`);
+                  console.error(`All video sources failed for slide ${i}; exportação abortada para não gerar PNG diferente do preview (${lastVideoErr})`);
                   toast({
-                    title: `⚠️ Slide ${i}: vídeo falhou, exportando como imagem`,
+                    title: `❌ Slide ${i}: vídeo falhou`,
                     description: lastVideoErr,
                     duration: 6000,
                   });
-                  let imgUrl = slideImageMap[i] || '';
-                  if (imgUrl && !imgUrl.startsWith('data:')) {
-                    try {
-                      imgUrl = await fetchAsDataUrl(imgUrl);
-                    } catch (e) {
-                      console.error('[CAROUSEL_ZIP_EXPORT_FAIL]', {
-                        phase: 'img_fetch',
-                        slideNum: i,
-                        error: (e as Error)?.message,
-                      });
-                    }
-                  }
-                  const blob = await generateEngagementSlidePNG(i, imgUrl, texts, primaryColor, accentColor, brandName, handleName);
-                  zip.file(`slide_${i}.png`, blob);
+                  throw new Error(`Slide ${i}: vídeo não renderizou igual ao preview. ${lastVideoErr}`);
                 }
               } else {
                 let imgUrl = slideImageMap[i] || '';
@@ -559,12 +546,13 @@ export function EngagementCarouselSection({
             }
           }
           if (rendered) continue;
-          console.warn(`[SMARTOPS_ENGAJ] slide ${i}: vídeo falhou (${lastErr}), enviando PNG.`);
+          console.error(`[SMARTOPS_ENGAJ] slide ${i}: vídeo falhou; envio abortado para não enviar PNG diferente do preview (${lastErr}).`);
           toast({
-            title: `⚠️ Slide ${i}: vídeo falhou, enviando como imagem`,
+            title: `❌ Slide ${i}: vídeo falhou`,
             description: lastErr,
             duration: 6000,
           });
+          throw new Error(`Slide ${i}: vídeo não renderizou igual ao preview. ${lastErr}`);
         }
 
         // PNG fallback / default
