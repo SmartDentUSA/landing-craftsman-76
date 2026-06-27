@@ -102,7 +102,34 @@ const SLIDE_W = 1080;
 const SLIDE_H = 1350;
 
 // ========================= Per-slide editor configs =========================
-const SLIDE_EDITOR_FIELDS: Record<number, Array<{ key: string; label: string; type: 'input' | 'textarea' | 'slider' | 'color' | 'toggle'; min?: number; max?: number }>> = {
+type EditorFieldType = 'input' | 'textarea' | 'slider' | 'color' | 'toggle' | 'select';
+interface EditorField {
+  key: string;
+  label: string;
+  type: EditorFieldType;
+  min?: number;
+  max?: number;
+  options?: Array<{ value: string; label: string }>;
+}
+
+// Common media + typography controls appended to EVERY slide.
+const COMMON_MEDIA_FIELDS: EditorField[] = [
+  { key: 'coverMode', label: 'Cobertura da mídia', type: 'select', options: [
+    { value: 'cover', label: 'Cobrir todo o card (cover)' },
+    { value: 'contain', label: 'Ajustar (contain / padrão)' },
+  ]},
+  { key: 'maskOpacity', label: 'Transparência da máscara (%)', type: 'slider', min: 0, max: 90 },
+  { key: 'maskColor',   label: 'Cor da máscara',                type: 'color' },
+  { key: 'textColor',   label: 'Cor das fontes',                type: 'color' },
+  { key: 'textPosition', label: 'Posição dos textos', type: 'select', options: [
+    { value: 'top',    label: 'Topo' },
+    { value: 'center', label: 'Centro' },
+    { value: 'bottom', label: 'Base' },
+  ]},
+  { key: 'textBlockScale', label: 'Escala do bloco de textos (%)', type: 'slider', min: 60, max: 140 },
+];
+
+const SLIDE_EDITOR_FIELDS: Record<number, Array<EditorField>> = {
   1: [
     { key: 'hook', label: 'Texto do Gancho', type: 'textarea' },
     { key: 'productName', label: 'Nome do produto', type: 'input' },
@@ -111,6 +138,7 @@ const SLIDE_EDITOR_FIELDS: Record<number, Array<{ key: string; label: string; ty
     { key: 'faixaVisible', label: 'Mostrar faixa central', type: 'toggle' },
     { key: 'faixaColor', label: 'Cor da faixa', type: 'color' },
     { key: 'overlayOpacity', label: 'Transparência do overlay (%)', type: 'slider', min: 0, max: 80 },
+    ...COMMON_MEDIA_FIELDS,
   ],
   2: [
     { key: 'category', label: 'Categoria', type: 'input' },
@@ -118,6 +146,7 @@ const SLIDE_EDITOR_FIELDS: Record<number, Array<{ key: string; label: string; ty
     { key: 'productName', label: 'Nome do produto', type: 'input' },
     { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
     { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
+    ...COMMON_MEDIA_FIELDS,
   ],
   3: [
     { key: 'title',    label: 'Título da seção',      type: 'textarea' },
@@ -129,6 +158,7 @@ const SLIDE_EDITOR_FIELDS: Record<number, Array<{ key: string; label: string; ty
     { key: 'bullet4',  label: 'Bullet técnico 4',      type: 'textarea' },
     { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
     { key: 'bgColor',    label: 'Cor de fundo',         type: 'color' },
+    ...COMMON_MEDIA_FIELDS,
   ],
   4: [
     { key: 'label', label: 'Label topo (ex: EXPERIÊNCIA)', type: 'input' },
@@ -136,6 +166,7 @@ const SLIDE_EDITOR_FIELDS: Record<number, Array<{ key: string; label: string; ty
     { key: 'benefit', label: 'Benefício', type: 'textarea' },
     { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
     { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
+    ...COMMON_MEDIA_FIELDS,
   ],
   5: [
     { key: 'title', label: 'Título', type: 'textarea' },
@@ -144,6 +175,7 @@ const SLIDE_EDITOR_FIELDS: Record<number, Array<{ key: string; label: string; ty
     { key: 'badge3', label: 'Badge 3', type: 'textarea' },
     { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
     { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
+    ...COMMON_MEDIA_FIELDS,
   ],
   6: [
     { key: 'productName', label: 'Nome exibido', type: 'input' },
@@ -152,6 +184,7 @@ const SLIDE_EDITOR_FIELDS: Record<number, Array<{ key: string; label: string; ty
     { key: 'footer', label: 'Texto de rodapé', type: 'textarea' },
     { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
     { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
+    ...COMMON_MEDIA_FIELDS,
   ],
 };
 
