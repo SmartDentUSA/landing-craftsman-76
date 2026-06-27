@@ -1203,14 +1203,17 @@ function drawSlideFrameWithVideo(
     ctx.textBaseline = 'middle';
     ctx.fillText('1', W - 78, H - 70);
   } else if (slideNum === 6) {
-    // ===== Slide 6 Video: dedicated CTA layout (vertically centered) =====
+    // ===== Slide 6 Video: text top, image center, CTA bottom =====
     const pad = 60;
     const contentW = W - pad * 2;
     const centerX = W / 2;
     const displayTitle = (texts.title || '').slice(0, 120);
     const displayBody = (texts.text || '').slice(0, 160);
 
-    // --- Pre-measure all blocks to center vertically ---
+    const topPad = 80;
+    const bottomPad = 100;
+
+    // --- Pre-measure blocks ---
     const titleFontSize = 40;
     const titleFont = `900 ${titleFontSize}px system-ui, -apple-system, sans-serif`;
     const titleLineH = titleFontSize * 1.25;
@@ -1218,7 +1221,7 @@ function drawSlideFrameWithVideo(
     const titleLines = Math.min(measureWrappedLines(ctx, displayTitle, contentW), 3);
     const titleH = titleLines * titleLineH;
 
-    const imgH = 260;
+    const imgH = 280;
 
     const bodyFontSize = 28;
     const bodyFont = `400 ${bodyFontSize}px system-ui, -apple-system, sans-serif`;
@@ -1250,51 +1253,48 @@ function drawSlideFrameWithVideo(
     const btnPadY = 20;
     const btnH = texts.cta_label ? ctaLinesArr.length * ctaLineH + btnPadY * 2 : 0;
 
-    const gap = 40;
-    const bottomReserve = 140;
-    const totalH = titleH + gap + imgH + gap + (bodyH > 0 ? bodyH + gap : 0) + btnH;
-    let curY = Math.max(pad, Math.min((H - totalH) / 2, H - bottomReserve - totalH));
+    const textGap = 16;
 
-    // --- Draw title ---
+    // --- Draw title (top) ---
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
+    let curY = topPad;
     curY = drawRichText(ctx, displayTitle, W / 2, curY, contentW, titleLineH, titleFont, titleFont, textColor, accent, 'center');
-    curY += gap;
 
-    // --- Draw video area ---
-    ctx.save();
-    const scaleF = imageScale / 100;
-    ctx.translate(centerX, curY + imgH / 2);
-    ctx.scale(scaleF, scaleF);
-    ctx.translate(-centerX, -(curY + imgH / 2));
-    ctx.beginPath();
-    const rr = 16;
-    ctx.moveTo(pad + rr, curY);
-    ctx.lineTo(W - pad - rr, curY);
-    ctx.arcTo(W - pad, curY, W - pad, curY + rr, rr);
-    ctx.lineTo(W - pad, curY + imgH - rr);
-    ctx.arcTo(W - pad, curY + imgH, W - pad - rr, curY + imgH, rr);
-    ctx.lineTo(pad + rr, curY + imgH);
-    ctx.arcTo(pad, curY + imgH, pad, curY + imgH - rr, rr);
-    ctx.lineTo(pad, curY + rr);
-    ctx.arcTo(pad, curY, pad + rr, curY, rr);
-    ctx.closePath();
-    ctx.clip();
-    drawImageCover(ctx, videoEl, pad, curY, contentW, imgH);
-    ctx.restore();
-    curY += imgH + gap;
-
-    // --- Draw body ---
+    // --- Draw body (below title) ---
     if (displayBody) {
+      curY += textGap;
       drawRichText(ctx, displayBody, W / 2, curY, contentW, bodyLineH, bodyFont, bodyFontBold, subTextColor, accent, 'center');
-      curY += bodyH + gap;
     }
 
-    // --- Draw CTA button ---
+    // --- Draw video area (center of slide) ---
+    const imgY = (H - imgH) / 2;
+    ctx.save();
+    const scaleF = imageScale / 100;
+    ctx.translate(centerX, imgY + imgH / 2);
+    ctx.scale(scaleF, scaleF);
+    ctx.translate(-centerX, -(imgY + imgH / 2));
+    ctx.beginPath();
+    const rr = 16;
+    ctx.moveTo(pad + rr, imgY);
+    ctx.lineTo(W - pad - rr, imgY);
+    ctx.arcTo(W - pad, imgY, W - pad, imgY + rr, rr);
+    ctx.lineTo(W - pad, imgY + imgH - rr);
+    ctx.arcTo(W - pad, imgY + imgH, W - pad - rr, imgY + imgH, rr);
+    ctx.lineTo(pad + rr, imgY + imgH);
+    ctx.arcTo(pad, imgY + imgH, pad, imgY + imgH - rr, rr);
+    ctx.lineTo(pad, imgY + rr);
+    ctx.arcTo(pad, imgY, pad + rr, imgY, rr);
+    ctx.closePath();
+    ctx.clip();
+    drawImageCover(ctx, videoEl, pad, imgY, contentW, imgH);
+    ctx.restore();
+
+    // --- Draw CTA button (bottom) ---
     if (texts.cta_label && ctaLinesArr.length > 0) {
       const btnX = pad;
       const btnW = contentW;
-      const btnY = curY;
+      const btnY = H - bottomPad - btnH;
 
       ctx.fillStyle = accent;
       ctx.beginPath();
