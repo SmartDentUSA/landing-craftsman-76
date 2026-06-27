@@ -513,6 +513,16 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
                     className="text-xs min-h-[50px] resize-none"
                   />
                 </div>
+              ) : field.type === 'select' ? (
+                <select
+                  value={slideTexts?.[field.key] || (field.options?.[0]?.value ?? '')}
+                  onChange={(e) => onSlideTextChange(field.key, e.target.value)}
+                  className="text-xs h-7 w-full rounded border border-border bg-background px-2 cursor-pointer"
+                >
+                  {(field.options || []).map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
               ) : (
                 <Input
                   value={slideTexts?.[field.key] || ''}
