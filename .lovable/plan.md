@@ -1,42 +1,75 @@
-## Problema
-Ao baixar o ZIP do **🎯 Carrossel Engajamento**, os vídeos saem com duração menor do que o vídeo original inserido no card.
+## Objetivo
+Trazer para o **🎨 Carrossel Visual** (`StrategicCarouselPreview.tsx`) o mesmo nível de customização do **🎯 Carrossel Engajamento**: upload de vídeo, mídia (vídeo/imagem) cobrindo todo o card, máscara com transparência ajustável, posição de texto, cor de fonte, slider para escalar o bloco de texto. No slide **✨ Apresentação** (Slide 2), permitir que a imagem cubra toda a área do card via um modo "cover".
 
-## Causa raiz
-Em `src/components/EngagementCarouselPreview.tsx`, dentro de `generateEngagementSlideVideo` (linhas ~1339–1424), o loop de gravação tem dois bugs que cortam o tempo:
+## Arquivos afetados
+- `src/components/StrategicCarouselPreview.tsx` (mudanças principais)
+- `src/components/EngagementCarouselSection.tsx` (passar `onImageFileUpload` para o `StrategicCarouselPreview` — mesma rota de upload já usada no engajamento)
 
-1. **`requestAnimationFrame` está sendo tratado como se rodasse a 30 fps**, mas o navegador despacha rAF na taxa de atualização do display (60 Hz típico, podendo chegar a 120 Hz). O código faz:
-   ```
-   const fps = 30;
-   const totalFrames = Math.ceil(duration * fps);
-   // ... rAF loop incrementa frame++ a cada tick
-   if (frame >= totalFrames) recorder.stop();
-   ```
-   Como rAF dispara ~60×/s e `totalFrames` é calculado a 30 fps, o loop para em `duration / 2` segundos de tempo real. O `MediaRecorder` grava em tempo de parede → o `.webm` resultante fica com metade (ou menos) da duração original. Em telas 120 Hz fica 1/4.
+Sem mudanças em Sistema B, edge functions, `smartops-upload.ts`, `company_profile`, SEO/JSON-LD, ou no fluxo de export PNG/MP4 já existente.
 
-2. **Cap rígido de 60 s** (`duration = Math.min(duration, 60)`) — corta vídeos mais longos sem aviso.
+## Mudanças
 
-## Correção (somente lógica de captura, sem mexer em UI)
+### 1. Tipos `SlideTextsType` — campos novos opcionais (backward compatible)
+Adicionar em cada slide (1–6):
+- `mediaType?: 'image' | 'video'`
+- `videoSrc?: string` (blob URL local para preview)
+- `videoStorageUrl?: string` (URL persistida no Storage)
+- `coverMode?: 'contain' | 'cover'` (default: `cover` em 1/5/6, `contain` em 2/3/4)
+- `maskOpacity?: string` (0–90, % de escurecimento sobre a mídia)
+- `maskColor?: string` (default `#000000`)
+- `textColor?: string` (cor das fontes do slide; sobrescreve o cálculo por luminância)
+- `textPosition?: 'top' | 'center' | 'bottom'`
+- `textBlockScale?: string` (60–140, escala do bloco de textos)
 
-Arquivo: `src/components/EngagementCarouselPreview.tsx`, função `generateEngagementSlideVideo`.
+O `overlayOpacity` e `faixaColor` atuais do slide 1 continuam funcionando como estão.
 
-1. **Trocar o critério de parada de "contagem de frames" para "tempo de parede / fim do vídeo"**, de modo que o recorder grave exatamente o tempo do vídeo:
-   - Marcar `startedAt = performance.now()` logo após `videoEl.play()`.
-   - No loop de rAF, parar quando `videoEl.ended === true` **ou** `(performance.now() - startedAt) >= duration * 1000`.
-   - Remover `totalFrames` / `frame++` como condição de parada (o rAF apenas redesenha o frame atual do `<video>` — cada rAF chama `drawSlideFrameWithVideo` com o `videoEl` no instante corrente, então a taxa real de desenho é irrelevante para a duração).
+### 2. `SLIDE_EDITOR_FIELDS` — controles novos por slide
+Adicionar em todos os 6 slides:
+- `coverMode` (toggle "Imagem cobre todo o card")
+- `maskOpacity` (slider 0–90)
+- `maskColor` (color)
+- `textColor` (color)
+- `textPosition` (select: topo / centro / rodapé)
+- `textBlockScale` (slider 60–140)
 
-2. **Aumentar o cap** de `60s` para `120s` (ou remover) — vídeos do Instagram chegam a 90 s; manter um teto apenas como guarda de segurança contra metadata corrompido (`Infinity`).
+Acrescentar o tipo `'select'` ao renderer do editor inline (hoje só há `input | textarea | slider | color | toggle`).
 
-3. **Pequeno hardening**: usar `videoEl.addEventListener('ended', …)` como caminho primário de parada, com `setTimeout(stop, duration*1000 + 500)` como fallback, para garantir que o `recorder.stop()` aconteça mesmo se rAF for pausado (aba em background).
+### 3. Upload de vídeo no `SlideWrapper`
+Replicar o `handleFileUpload` do `EngagementCarouselPreview`:
+- `accept="image/*,video/*"`
+- Se `file.type.startsWith('video/')`: gerar `URL.createObjectURL(file)`, gravar `mediaType='video'` + `videoSrc=blobUrl`, e chamar `onImageFileUpload(slideNum, file)` para subir o arquivo no Storage.
+- Se imagem: `mediaType='image'` + comportamento atual.
+- Adicionar prop `onImageFileUpload?: (slideNum, file) => void` em `SlideWrapper` e em `StrategicCarouselPreviewProps`.
+- Botão troca ícone `ImageIcon` / `Video` conforme `mediaType`.
 
-4. Manter:
-   - `cleanup()`, validação de duração `Infinity/NaN/0 → 10s`, detecção de canvas tainted, logs `[VIDEO_RENDER_FAIL]`.
-   - Toda a UI, layout, `MediaBlock`, captura de imagens (`html2canvas`), upload para SmartOps, fluxo do ZIP em `EngagementCarouselSection.tsx`.
+### 4. Renderer compartilhado `<SlideMedia />`
+Helper único reutilizado nos 6 slides:
+- Se `mediaType === 'video'` e tem `videoSrc`/`videoStorageUrl` → `<video autoplay muted loop playsinline>` com `object-fit` controlado por `coverMode`.
+- Caso contrário → `<img>` com `object-fit` por `coverMode`.
+- Aplica `transform: scale(imageScale/100)`.
+- Renderiza máscara logo acima: `<div style={{position:'absolute',inset:0,background:rgba(maskColor, maskOpacity/100)}} />`.
+
+### 5. Aplicar nos 6 slides
+- **Slide 1 (Hook)**: já full-bleed → trocar `<img>` por `<SlideMedia>`; a máscara nova é usada quando `maskOpacity` é definido (mantém `overlayOpacity` como fallback retrocompat).
+- **Slide 2 (✨ Apresentação)**:
+  - Se `coverMode === 'cover'` (opt-in): `<SlideMedia>` cobre todo o card como fundo absoluto; textos viram overlay com máscara.
+  - Se `'contain'` (default atual): mantém layout atual (imagem centralizada com fundo bgColor).
+- **Slides 3, 4, 5, 6**: trocar `<img>` por `<SlideMedia>`. Default mantém o comportamento atual (3/4 `contain`, 5/6 `cover`), mas `coverMode` permite alternar.
+
+### 6. Posição e escala dos textos
+Envolver o bloco principal de cada slide num wrapper que respeita:
+- `textPosition` → topo (`top: 8%`), centro (`top:50%; translateY(-50%)`), rodapé (`bottom: 8%`).
+- `textBlockScale` → `transform: scale(textBlockScale/100)` com `transform-origin` coerente com a posição.
+- `textColor` → sobrescreve a cor calculada por luminância quando definido (caso contrário mantém auto).
+
+### 7. Integração externa
+Em `EngagementCarouselSection.tsx`, no ponto onde `StrategicCarouselPreview` é renderizado, passar a mesma função `onImageFileUpload` já usada pelo carrossel de engajamento. Sem mudanças no roteamento de Storage.
 
 ## Fora de escopo
-- Nenhuma mudança em `StrategicCarouselPreview`, `smartops-upload.ts`, Sistema B, edge functions, layout dos slides, máscara, fontes, posição de texto.
-- Sem mudanças no áudio (o `.webm` segue sem trilha — `canvas.captureStream` não captura áudio do `<video>`; isso é outro assunto e o usuário não pediu).
+- Lógica de export PNG/MP4 do Visual segue como está (sem mudanças no engine de captura agora — vídeo no preview funcionará; export do `.webm` por slide pode ser tratado em pedido separado, igual fizemos para Engajamento).
+- Não mexer em Sistema B / edge functions / SEO / JSON-LD / `company_profile`.
+- Não alterar layout, fonte ou copy do engajamento.
 
 ## Verificação
-- Subir um vídeo de ~30 s em um slide, exportar ZIP e confirmar que o `.webm` baixado tem ~30 s (`ffprobe` ou player).
-- Confirmar que o frame final ainda contém os textos/overlays do slide.
-- Conferir console: nenhum `[VIDEO_RENDER_FAIL]` novo.
+- Typecheck do projeto.
+- Smoke visual no preview `/repository`: subir vídeo em cada um dos 6 slides, alternar `coverMode` no slide 2, mover slider de máscara, mudar cor da fonte, alternar posição do texto, ajustar slider de tamanho do bloco.
