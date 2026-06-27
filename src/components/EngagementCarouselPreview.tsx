@@ -20,7 +20,14 @@ export interface EngagementSlideTexts {
   mediaType?: 'image' | 'video';
   videoSrc?: string; // blob URL for video preview
   videoStorageUrl?: string; // persisted Supabase Storage URL for video
+  // ===== Logo overlays (per slide) =====
+  companyLogoUrl?: string;     // persisted Storage URL of the company logo
+  productLogoUrl?: string;     // persisted Storage URL of the product logo
+  companyLogoScale?: string;   // "40".."200" (default "100")
+  productLogoScale?: string;   // "40".."200" (default "100")
 }
+
+export type LogoUploadKind = 'image' | 'logo-company' | 'logo-product';
 
 export type EngagementSlideTextsMap = Record<number, EngagementSlideTexts>;
 
