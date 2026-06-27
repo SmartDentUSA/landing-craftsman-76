@@ -132,12 +132,6 @@ const COMMON_MEDIA_FIELDS: EditorField[] = [
   { key: 'maskOpacity', label: 'Transparência da máscara (%)', type: 'slider', min: 0, max: 90 },
   { key: 'maskColor',   label: 'Cor da máscara',                type: 'color' },
   { key: 'textColor',   label: 'Cor das fontes',                type: 'color' },
-  { key: 'textPosition', label: 'Posição dos textos', type: 'select', options: [
-    { value: 'top',    label: 'Topo' },
-    { value: 'center', label: 'Centro' },
-    { value: 'bottom', label: 'Base' },
-  ]},
-  { key: 'textBlockScale', label: 'Escala do bloco de textos (%)', type: 'slider', min: 60, max: 140 },
 ];
 
 const SLIDE_EDITOR_FIELDS: Record<number, Array<EditorField>> = {
