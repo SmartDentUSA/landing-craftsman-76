@@ -1033,11 +1033,24 @@ export async function generateEngagementSlidePNG(
   document.body.appendChild(container);
 
   // 3. Render React component into the container — strip video so html2canvas can snapshot a static frame
+  // Pre-fetch logos as data URLs so html2canvas can paint them without CORS taint
+  let companyLogoData = texts.companyLogoUrl;
+  let productLogoData = texts.productLogoUrl;
+  if (companyLogoData) {
+    try { companyLogoData = await fetchAsDataUrl(companyLogoData); }
+    catch (err) { console.warn('[ENGAGEMENT_PNG] companyLogo prefetch failed', err); }
+  }
+  if (productLogoData) {
+    try { productLogoData = await fetchAsDataUrl(productLogoData); }
+    catch (err) { console.warn('[ENGAGEMENT_PNG] productLogo prefetch failed', err); }
+  }
   const exportTexts: EngagementSlideTexts = {
     ...texts,
     mediaType: 'image', // Force image rendering (videos can't be captured by html2canvas)
     videoSrc: undefined,
     videoStorageUrl: undefined,
+    companyLogoUrl: companyLogoData,
+    productLogoUrl: productLogoData,
   };
 
   const root = createRoot(container);
