@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import html2canvas from 'html2canvas';
-import { Shield, Award, CheckCircle, Zap, Star, Layers, Upload, Pencil, ChevronDown, ChevronUp } from 'lucide-react';
+import { Shield, Award, CheckCircle, Zap, Star, Layers, Upload, Pencil, ChevronDown, ChevronUp, Video, ImageIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -44,18 +44,37 @@ interface ProductData {
 }
 
 // ========================= SlideTexts Types =========================
+// Common fields supported by ALL slides (added Nov 2026 — backward compatible).
+// They are merged into each slide's typed shape so callers can keep using the
+// existing per-slide keys without changes.
+export interface CommonSlideMediaFields {
+  // Media (video support — same model as the Engagement carousel)
+  mediaType?: 'image' | 'video';
+  videoSrc?: string;          // blob: URL for instant preview
+  videoStorageUrl?: string;   // persisted Supabase Storage HTTPS URL
+  // Layout / styling
+  coverMode?: 'contain' | 'cover'; // Slide 2 default 'contain'; other slides default to their existing behavior
+  maskOpacity?: string;       // 0–90 (% darkening over media)
+  maskColor?: string;         // hex, default #000000
+  textColor?: string;         // hex; overrides per-slide auto-luminance color when set
+  textPosition?: 'top' | 'center' | 'bottom';
+  textBlockScale?: string;    // 60–140 (text block scale %)
+}
+
 export interface SlideTextsType {
-  1: { hook: string; productName: string; imageScale?: string; bgColor?: string; overlayOpacity?: string; faixaVisible?: string; faixaColor?: string };
-  2: { category: string; introLabel?: string; productName: string; imageScale?: string; bgColor?: string };
-  3: { title: string; headline?: string; body?: string; bullet1?: string; bullet2?: string; bullet3?: string; bullet4?: string; imageScale?: string; bgColor?: string };
-  4: { label: string; keyword: string; benefit: string; imageScale?: string; bgColor?: string };
-  5: { title: string; badge1: string; badge2: string; badge3: string; imageScale?: string; bgColor?: string };
-  6: { productName: string; ctaButton: string; linkLabel: string; footer: string; imageScale?: string; bgColor?: string };
+  1: { hook: string; productName: string; imageScale?: string; bgColor?: string; overlayOpacity?: string; faixaVisible?: string; faixaColor?: string } & CommonSlideMediaFields;
+  2: { category: string; introLabel?: string; productName: string; imageScale?: string; bgColor?: string } & CommonSlideMediaFields;
+  3: { title: string; headline?: string; body?: string; bullet1?: string; bullet2?: string; bullet3?: string; bullet4?: string; imageScale?: string; bgColor?: string } & CommonSlideMediaFields;
+  4: { label: string; keyword: string; benefit: string; imageScale?: string; bgColor?: string } & CommonSlideMediaFields;
+  5: { title: string; badge1: string; badge2: string; badge3: string; imageScale?: string; bgColor?: string } & CommonSlideMediaFields;
+  6: { productName: string; ctaButton: string; linkLabel: string; footer: string; imageScale?: string; bgColor?: string } & CommonSlideMediaFields;
 }
 
 interface StrategicCarouselPreviewProps {
   slideImageMap: Record<number, string>;
   onImageChange: (slideNum: number, url: string) => void;
+  /** Optional: upload an image OR video file for a specific slide. Mirrors the Engagement flow. */
+  onImageFileUpload?: (slideNum: number, file: File) => void;
   productImages: Array<{ url: string; alt?: string }>;
   primaryColor: string;
   accentColor: string;
@@ -83,7 +102,34 @@ const SLIDE_W = 1080;
 const SLIDE_H = 1350;
 
 // ========================= Per-slide editor configs =========================
-const SLIDE_EDITOR_FIELDS: Record<number, Array<{ key: string; label: string; type: 'input' | 'textarea' | 'slider' | 'color' | 'toggle'; min?: number; max?: number }>> = {
+type EditorFieldType = 'input' | 'textarea' | 'slider' | 'color' | 'toggle' | 'select';
+interface EditorField {
+  key: string;
+  label: string;
+  type: EditorFieldType;
+  min?: number;
+  max?: number;
+  options?: Array<{ value: string; label: string }>;
+}
+
+// Common media + typography controls appended to EVERY slide.
+const COMMON_MEDIA_FIELDS: EditorField[] = [
+  { key: 'coverMode', label: 'Cobertura da mídia', type: 'select', options: [
+    { value: 'cover', label: 'Cobrir todo o card (cover)' },
+    { value: 'contain', label: 'Ajustar (contain / padrão)' },
+  ]},
+  { key: 'maskOpacity', label: 'Transparência da máscara (%)', type: 'slider', min: 0, max: 90 },
+  { key: 'maskColor',   label: 'Cor da máscara',                type: 'color' },
+  { key: 'textColor',   label: 'Cor das fontes',                type: 'color' },
+  { key: 'textPosition', label: 'Posição dos textos', type: 'select', options: [
+    { value: 'top',    label: 'Topo' },
+    { value: 'center', label: 'Centro' },
+    { value: 'bottom', label: 'Base' },
+  ]},
+  { key: 'textBlockScale', label: 'Escala do bloco de textos (%)', type: 'slider', min: 60, max: 140 },
+];
+
+const SLIDE_EDITOR_FIELDS: Record<number, Array<EditorField>> = {
   1: [
     { key: 'hook', label: 'Texto do Gancho', type: 'textarea' },
     { key: 'productName', label: 'Nome do produto', type: 'input' },
@@ -92,6 +138,7 @@ const SLIDE_EDITOR_FIELDS: Record<number, Array<{ key: string; label: string; ty
     { key: 'faixaVisible', label: 'Mostrar faixa central', type: 'toggle' },
     { key: 'faixaColor', label: 'Cor da faixa', type: 'color' },
     { key: 'overlayOpacity', label: 'Transparência do overlay (%)', type: 'slider', min: 0, max: 80 },
+    ...COMMON_MEDIA_FIELDS,
   ],
   2: [
     { key: 'category', label: 'Categoria', type: 'input' },
@@ -99,6 +146,7 @@ const SLIDE_EDITOR_FIELDS: Record<number, Array<{ key: string; label: string; ty
     { key: 'productName', label: 'Nome do produto', type: 'input' },
     { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
     { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
+    ...COMMON_MEDIA_FIELDS,
   ],
   3: [
     { key: 'title',    label: 'Título da seção',      type: 'textarea' },
@@ -110,6 +158,7 @@ const SLIDE_EDITOR_FIELDS: Record<number, Array<{ key: string; label: string; ty
     { key: 'bullet4',  label: 'Bullet técnico 4',      type: 'textarea' },
     { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
     { key: 'bgColor',    label: 'Cor de fundo',         type: 'color' },
+    ...COMMON_MEDIA_FIELDS,
   ],
   4: [
     { key: 'label', label: 'Label topo (ex: EXPERIÊNCIA)', type: 'input' },
@@ -117,6 +166,7 @@ const SLIDE_EDITOR_FIELDS: Record<number, Array<{ key: string; label: string; ty
     { key: 'benefit', label: 'Benefício', type: 'textarea' },
     { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
     { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
+    ...COMMON_MEDIA_FIELDS,
   ],
   5: [
     { key: 'title', label: 'Título', type: 'textarea' },
@@ -125,6 +175,7 @@ const SLIDE_EDITOR_FIELDS: Record<number, Array<{ key: string; label: string; ty
     { key: 'badge3', label: 'Badge 3', type: 'textarea' },
     { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
     { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
+    ...COMMON_MEDIA_FIELDS,
   ],
   6: [
     { key: 'productName', label: 'Nome exibido', type: 'input' },
@@ -133,6 +184,7 @@ const SLIDE_EDITOR_FIELDS: Record<number, Array<{ key: string; label: string; ty
     { key: 'footer', label: 'Texto de rodapé', type: 'textarea' },
     { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
     { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
+    ...COMMON_MEDIA_FIELDS,
   ],
 };
 
@@ -142,29 +194,61 @@ interface SlideWrapperProps {
   productImages: Array<{ url: string; alt?: string }>;
   currentImage: string;
   onImageChange: (slideNum: number, url: string) => void;
+  /** When provided, image AND video uploads are delegated to this handler (which can persist to Storage). */
+  onImageFileUpload?: (slideNum: number, file: File) => void;
   primaryColor: string;
   slideTexts?: Record<string, string>;
   onSlideTextChange?: (key: string, value: string) => void;
 }
 
-function SlideWrapper({ slideNum, children, productImages, currentImage, onImageChange, primaryColor, slideTexts, onSlideTextChange }: SlideWrapperProps) {
+function SlideWrapper({ slideNum, children, productImages, currentImage, onImageChange, onImageFileUpload, primaryColor, slideTexts, onSlideTextChange }: SlideWrapperProps) {
   const containerW = SLIDE_W * SLIDE_SCALE;
   const containerH = SLIDE_H * SLIDE_SCALE;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
   const [editorOpen, setEditorOpen] = useState(false);
 
+  // ===== Media customization (mask / video / text overrides) =====
+  const mediaType: 'image' | 'video' = (slideTexts?.mediaType as 'image' | 'video') || 'image';
+  const videoUrl: string = slideTexts?.videoSrc || slideTexts?.videoStorageUrl || '';
+  const maskOpacityNum = Math.min(90, Math.max(0, Number(slideTexts?.maskOpacity ?? 0)));
+  const maskColor = slideTexts?.maskColor || '#000000';
+  const textColorOverride = slideTexts?.textColor || '';
+  const textPosition = (slideTexts?.textPosition as 'top' | 'center' | 'bottom') || '';
+  const textBlockScale = Number(slideTexts?.textBlockScale ?? 100);
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const dataUrl = ev.target?.result as string;
-      onImageChange(slideNum, dataUrl);
-    };
-    reader.readAsDataURL(file);
+    // Video: must go through the parent handler (Storage upload). Otherwise reject gracefully.
+    if (file.type.startsWith('video/')) {
+      if (onImageFileUpload) {
+        onImageFileUpload(slideNum, file);
+        // Mark this slide as video media so the renderer overlays the <video>.
+        onSlideTextChange?.('mediaType', 'video');
+        const blobUrl = URL.createObjectURL(file);
+        onSlideTextChange?.('videoSrc', blobUrl);
+      } else {
+        console.warn('[CAROUSEL_VISUAL] Upload de vídeo requer onImageFileUpload no parent.');
+      }
+      e.target.value = '';
+      return;
+    }
+    // Image: delegate to parent if available (persists to Storage), else fallback to local dataURL.
+    if (onImageFileUpload) {
+      onImageFileUpload(slideNum, file);
+      onSlideTextChange?.('mediaType', 'image');
+    } else {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const dataUrl = ev.target?.result as string;
+        onImageChange(slideNum, dataUrl);
+      };
+      reader.readAsDataURL(file);
+    }
     e.target.value = '';
   };
+
 
   const insertFormat = (key: string, prefix: string, suffix: string) => {
     if (!onSlideTextChange) return;
@@ -203,6 +287,14 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
 
   const fields = SLIDE_EDITOR_FIELDS[slideNum] || [];
 
+  // CSS variables consumed by slide bodies (opt-in via data-slide-text-zone / data-slide-bg)
+  const shellStyleVars: React.CSSProperties = {
+    // Used by [data-slide-text-zone] children: override text color + scale + vertical alignment.
+    ['--slide-text-color' as any]: textColorOverride || 'inherit',
+    ['--slide-text-scale' as any]: String(textBlockScale / 100),
+    ['--slide-text-justify' as any]: textPosition === 'top' ? 'flex-start' : textPosition === 'bottom' ? 'flex-end' : textPosition === 'center' ? 'center' : 'inherit',
+  };
+
   return (
     <div className="flex flex-col items-center gap-2" style={{ maxWidth: containerW + 40 }}>
       {/* Slide preview */}
@@ -225,11 +317,46 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
             position: 'absolute',
             top: 0,
             left: 0,
+            ...shellStyleVars,
           }}
         >
           {children}
+          {/* Full-bleed video overlay (when mediaType === 'video') */}
+          {mediaType === 'video' && videoUrl && (
+            <video
+              src={videoUrl}
+              autoPlay
+              muted
+              loop
+              playsInline
+              style={{
+                position: 'absolute',
+                inset: 0,
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                zIndex: 1,
+                pointerEvents: 'none',
+              }}
+            />
+          )}
+          {/* Mask overlay */}
+          {maskOpacityNum > 0 && (
+            <div
+              aria-hidden
+              style={{
+                position: 'absolute',
+                inset: 0,
+                background: maskColor,
+                opacity: maskOpacityNum / 100,
+                zIndex: 2,
+                pointerEvents: 'none',
+              }}
+            />
+          )}
         </div>
       </div>
+
 
       {/* Swipe hint — only on Slide 1 */}
       {slideNum === 1 && (
@@ -272,14 +399,31 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
 
         <button
           onClick={() => fileInputRef.current?.click()}
-          title="Upload nova imagem"
+          title="Upload nova imagem ou vídeo"
           className="flex items-center gap-1 text-xs px-2 py-1 rounded border border-border bg-background hover:bg-muted cursor-pointer"
           style={{ fontSize: 10, height: 26, flexShrink: 0 }}
         >
-          <Upload style={{ width: 10, height: 10 }} />
-          <span>Upload</span>
+          {mediaType === 'video' ? <Video style={{ width: 10, height: 10 }} /> : <Upload style={{ width: 10, height: 10 }} />}
+          <span>{mediaType === 'video' ? 'Vídeo' : 'Upload'}</span>
         </button>
-        <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*,video/mp4,video/quicktime,video/webm,video/x-m4v"
+          className="hidden"
+          onChange={handleFileUpload}
+        />
+        {mediaType === 'video' && (
+          <button
+            onClick={() => { onSlideTextChange?.('mediaType', 'image'); onSlideTextChange?.('videoSrc', ''); onSlideTextChange?.('videoStorageUrl', ''); }}
+            title="Remover vídeo e voltar para imagem"
+            className="flex items-center gap-1 text-xs px-2 py-1 rounded border border-border bg-background hover:bg-muted cursor-pointer"
+            style={{ fontSize: 10, height: 26, flexShrink: 0 }}
+          >
+            <ImageIcon style={{ width: 10, height: 10 }} />
+            <span>Imagem</span>
+          </button>
+        )}
 
         {onSlideTextChange && (
           <button
@@ -369,6 +513,16 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
                     className="text-xs min-h-[50px] resize-none"
                   />
                 </div>
+              ) : field.type === 'select' ? (
+                <select
+                  value={slideTexts?.[field.key] || (field.options?.[0]?.value ?? '')}
+                  onChange={(e) => onSlideTextChange(field.key, e.target.value)}
+                  className="text-xs h-7 w-full rounded border border-border bg-background px-2 cursor-pointer"
+                >
+                  {(field.options || []).map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
               ) : (
                 <Input
                   value={slideTexts?.[field.key] || ''}
@@ -474,7 +628,7 @@ function Slide1Hook({ image, primaryColor, productData, texts }: { image: string
 }
 
 // ==================== SLIDE 2 — SOLUÇÃO ====================
-function Slide2Solution({ image, primaryColor, accentColor, productData, texts }: { image: string; primaryColor: string; accentColor: string; productData: ProductData; texts?: { category?: string; introLabel?: string; productName?: string; imageScale?: string; bgColor?: string } }) {
+function Slide2Solution({ image, primaryColor, accentColor, productData, texts }: { image: string; primaryColor: string; accentColor: string; productData: ProductData; texts?: { category?: string; introLabel?: string; productName?: string; imageScale?: string; bgColor?: string; coverMode?: string } }) {
   const textOnPrimary = getLuminance(primaryColor) > 0.5 ? '#000000' : '#ffffff';
   const category = texts?.category !== undefined ? texts.category : (productData.category || '');
   const introLabel = texts?.introLabel !== undefined ? texts.introLabel : 'Apresentando';
@@ -484,6 +638,46 @@ function Slide2Solution({ image, primaryColor, accentColor, productData, texts }
   const bgLuminance = getLuminance(bgColor.replace('#', '').length === 6 ? bgColor : '#f8f8f8');
   const textColor = bgLuminance > 0.5 ? '#111111' : '#ffffff';
   const subTextColor = bgLuminance > 0.5 ? '#888888' : 'rgba(255,255,255,0.7)';
+  const isCover = (texts?.coverMode || 'contain') === 'cover';
+
+  // === COVER MODE: image fills the entire card; texts overlay on top ===
+  if (isCover && image) {
+    return (
+      <div style={{ width: SLIDE_W, height: SLIDE_H, position: 'relative', overflow: 'hidden', background: bgColor, fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundImage: `url(${image})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            transform: `scale(${imageScale / 100})`,
+            transformOrigin: 'center center',
+          }}
+        />
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '80px 80px 100px', zIndex: 3 }}>
+          <div style={{ alignSelf: 'flex-start', width: 70, height: 70, borderRadius: '50%', background: primaryColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ color: textOnPrimary, fontWeight: 900, fontSize: 30 }}>2</span>
+          </div>
+          {category && (
+            <div style={{ alignSelf: 'center', background: primaryColor, color: textOnPrimary, borderRadius: 50, padding: '16px 48px', fontSize: 36, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase' as const }}>
+              {category}
+            </div>
+          )}
+          <div style={{ textAlign: 'center' }}>
+            {introLabel && (
+              <div style={{ marginBottom: 12 }}>
+                <span style={{ fontSize: 32, fontWeight: 400, color: '#ffffff', letterSpacing: 3, textTransform: 'uppercase' as const, textShadow: '0 2px 12px rgba(0,0,0,0.6)' }}>
+                  {introLabel}
+                </span>
+              </div>
+            )}
+            <h2 style={{ margin: 0, fontSize: 68, fontWeight: 900, color: '#ffffff', lineHeight: 1.1, textShadow: '0 4px 24px rgba(0,0,0,0.7)' }}>{name}</h2>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ width: SLIDE_W, height: SLIDE_H, background: bgColor, fontFamily: 'system-ui, -apple-system, sans-serif', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', padding: '80px 80px 100px' }}>
@@ -1043,6 +1237,7 @@ function Slide6CTA({ image, primaryColor, accentColor, productData, texts }: { i
 export function StrategicCarouselPreview({
   slideImageMap,
   onImageChange,
+  onImageFileUpload,
   productImages,
   primaryColor,
   accentColor,
@@ -1119,8 +1314,9 @@ export function StrategicCarouselPreview({
               productImages={productImages}
               currentImage={slideImageMap[slide.num] || ''}
               onImageChange={onImageChange}
+              onImageFileUpload={onImageFileUpload}
               primaryColor={primaryColor}
-              slideTexts={slideTexts?.[slide.num as keyof SlideTextsType] as Record<string, string>}
+              slideTexts={slideTexts?.[slide.num as keyof SlideTextsType] as unknown as Record<string, string>}
               onSlideTextChange={onSlideTextChange ? (key, value) => onSlideTextChange(slide.num, key, value) : undefined}
             >
               {slide.component}
