@@ -1,40 +1,38 @@
-## Objetivo
+## Problema
 
-Replicar no Slide 4 (💫 Experiência) e Slide 5 (🛡️ Segurança) os mesmos controles "slice" (toggles de visibilidade) que existem hoje no Slide 3 (🔬 Cientificidade): mostrar/ocultar bloco colorido e mostrar/ocultar faixa lateral de imagem. Quando ocultados, o conteúdo se adapta ao espaço cheio.
+No **🎯 Carrossel Engajamento**, mesmo definindo a mesma escala (ex.: 100%) do logo em todos os cards, o tamanho exportado varia entre slides — principalmente quando se mistura slides de imagem (exportados como PNG via `html2canvas`) com slides de vídeo (exportados via `canvas.drawImage` em MP4).
 
-## Mapeamento
+## Causa
 
-**Slide 3 (referência):**
-- `headlineVisible` → liga/desliga bloco colorido (headline)
-- `sideStripVisible` → liga/desliga faixa lateral com imagem (texto ocupa 100%)
+Existem duas convenções diferentes de sizing para o mesmo logo, no mesmo arquivo `src/components/EngagementCarouselPreview.tsx`:
 
-**Slide 4 (💫 Experiência) — equivalência:**
-- `headlineVisible` → liga/desliga o headline "keyword" (h2 principal) + divider accent
-- `sideStripVisible` → liga/desliga a faixa esquerda 42% com a imagem; quando desligada o painel direito ocupa 100%
+1. **PNG (LogoOverlay, linhas 316–356)** dimensiona pela **largura**:
+   ```ts
+   width: baseSize * (scale/100), height: 'auto', maxHeight: baseSize * (scale/100)
+   ```
+   Logos largos ficam achatados; logos quadrados ocupam 140×140; logos altos são clampados pelo `maxHeight`.
 
-**Slide 5 (🛡️ Segurança) — equivalência:**
-- `headlineVisible` → liga/desliga o `title` ("Você pode confiar")
-- `sideStripVisible` → liga/desliga a imagem de fundo (blur) + overlay escuro; quando desligada usa só `bgColor` sólido e ajusta cor dos badges/textos via luminância para manter legibilidade
+2. **Vídeo (`drawLogos`, linhas 1556–1565)** dimensiona pela **altura**:
+   ```ts
+   h = LOGO_BASE * scale; w = h * (naturalWidth / naturalHeight);
+   ```
+   A altura é constante; a largura varia conforme a proporção natural.
 
-## Mudanças (somente apresentação)
+Resultado: para o mesmo arquivo de logo e o mesmo slider, um slide-imagem exporta com dimensão visível diferente de um slide-vídeo. Também explica por que logos com proporções diferentes "parecem" tamanhos diferentes mesmo com a mesma escala.
 
-Arquivo: `src/components/StrategicCarouselPreview.tsx`
+## Correção (mínima, só apresentação)
 
-1. **Tipos** (linhas 65–75): adicionar `headlineVisible?: string; sideStripVisible?: string` nos tipos de `slideTexts[4]` e `slideTexts[5]`.
+Padronizar o `LogoOverlay` para usar **altura constante** (igual ao `drawLogos` do vídeo e à convenção do `CarouselLogosOverlay` do Strategic):
 
-2. **SLIDE_EDITOR_FIELDS[4] e [5]** (linhas 171–187): adicionar os dois toggles, exatamente com os mesmos labels do Slide 3:
-   - `{ key: 'headlineVisible', label: 'Mostrar bloco colorido (headline)', type: 'toggle' }`
-   - `{ key: 'sideStripVisible', label: 'Mostrar faixa lateral (imagem)', type: 'toggle' }`
+Em `LogoOverlay` (linhas 316–356) trocar para cada logo:
+```ts
+height: baseSize * (scale/100),
+width: 'auto',
+// remover maxHeight
+```
 
-3. **`Slide4Experience`** (linhas 1212–1280):
-   - Ler `sideStripVisible` e `headlineVisible` com default `'true'`.
-   - Envolver `<div style={{ width: '42%' ... }}>` em `{sideStripVisible && (...)}`.
-   - Quando `!sideStripVisible`: painel direito usa `maxWidth: '100%'` e padding simétrico.
-   - Envolver `<h2>` do `finalKeyword` + divider em `{headlineVisible && (...)}`.
+Com isso:
+- Preview, PNG e MP4 passam a usar a mesma referência (altura = 140·scale).
+- A largura segue a proporção natural do arquivo automaticamente — mesma escala = mesma altura visual em todos os 6 slides, independente de imagem ou vídeo.
 
-4. **`Slide5Security`** (linhas 1284–1327):
-   - Ler os dois toggles.
-   - Envolver `<img ... blur>` + overlay escuro em `{sideStripVisible && (...)}`. Quando off, apenas `bgColor5` (com fallback `#0f0f14`) e recalcular cor de textos/badges via `getLuminance` para legibilidade.
-   - Envolver o `<h2>` do `title` em `{headlineVisible && (...)}`.
-
-Nada mais é alterado — lógica de vídeo, logos, fontes e export permanecem intactos.
+Nenhuma outra lógica é alterada (uploads, persistência, posições top/right e bottom/left permanecem iguais).
