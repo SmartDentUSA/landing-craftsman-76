@@ -142,6 +142,7 @@ const SLIDE_EDITOR_FIELDS: Record<number, Array<EditorField>> = {
     { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
     { key: 'faixaVisible', label: 'Mostrar faixa central', type: 'toggle' },
     { key: 'faixaColor', label: 'Cor da faixa', type: 'color' },
+    { key: 'faixaOpacity', label: 'Transparência da faixa (%)', type: 'slider', min: 0, max: 100 },
     { key: 'overlayOpacity', label: 'Transparência do overlay (%)', type: 'slider', min: 0, max: 80 },
     ...COMMON_MEDIA_FIELDS,
   ],
