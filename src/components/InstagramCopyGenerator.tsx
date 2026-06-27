@@ -910,16 +910,30 @@ ${slide.text}`;
       };
 
       for (let i = 1; i <= 6; i++) {
+        const textsForSlide = (slideTexts[i as keyof SlideTextsType] as unknown as Record<string, string>) || {};
+        const isVideo = textsForSlide.mediaType === 'video' && (textsForSlide.videoStorageUrl || textsForSlide.videoSrc);
+        const logos = { companyUrl: companyLogoUrl, productUrl: productLogoUrl, companyScale: companyLogoScale, productScale: productLogoScale };
+
+        if (isVideo) {
+          try {
+            const videoUrl = String(textsForSlide.videoStorageUrl || textsForSlide.videoSrc);
+            const productData2 = productData;
+            const videoBlob = await generateStrategicSlideVideo(i, videoUrl, primaryColor, accentColor, productData2, textsForSlide, logos);
+            zip.file(`${SLIDE_FILE_NAMES[i]}.webm`, videoBlob);
+            continue;
+          } catch (vErr) {
+            console.error(`[ZIP] Falha vídeo slide ${i}, fallback para PNG:`, vErr);
+            // fall through to PNG fallback below
+          }
+        }
+
         try {
-          // CORS fix: convert image to safe data: URL before drawing on canvas
           const safeDataUrl = await fetchAsDataUrl(slideImageMap[i] || '');
-          const textsForSlide = (slideTexts[i as keyof SlideTextsType] as unknown as Record<string, string>) || {};
-          const pngBlob = await generateSlidePNG(i, safeDataUrl, primaryColor, accentColor, productData, textsForSlide, { companyUrl: companyLogoUrl, productUrl: productLogoUrl, companyScale: companyLogoScale, productScale: productLogoScale });
+          const pngBlob = await generateSlidePNG(i, safeDataUrl, primaryColor, accentColor, productData, textsForSlide, logos);
           zip.file(`${SLIDE_FILE_NAMES[i]}.png`, pngBlob);
         } catch (slideErr) {
           console.warn(`Slide ${i} gerado sem imagem (fallback):`, slideErr);
-          const textsForSlide = (slideTexts[i as keyof SlideTextsType] as unknown as Record<string, string>) || {};
-          const pngBlob = await generateSlidePNG(i, '', primaryColor, accentColor, productData, textsForSlide, { companyUrl: companyLogoUrl, productUrl: productLogoUrl, companyScale: companyLogoScale, productScale: productLogoScale });
+          const pngBlob = await generateSlidePNG(i, '', primaryColor, accentColor, productData, textsForSlide, logos);
           zip.file(`${SLIDE_FILE_NAMES[i]}.png`, pngBlob);
         }
       }
