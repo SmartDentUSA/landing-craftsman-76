@@ -289,7 +289,9 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
 
   // ===== Media customization (mask / video / text overrides) =====
   const mediaType: 'image' | 'video' = (slideTexts?.mediaType as 'image' | 'video') || 'image';
-  const videoUrl: string = slideTexts?.videoSrc || slideTexts?.videoStorageUrl || '';
+  // Unificar prioridade com o export: URL persistida primeiro, blob local só como fallback.
+  // Evita divergência preview↔export e blobs revogados após reload.
+  const videoUrl: string = slideTexts?.videoStorageUrl || slideTexts?.videoSrc || '';
   const maskOpacityNum = Math.min(90, Math.max(0, Number(slideTexts?.maskOpacity ?? 0)));
   const maskColor = slideTexts?.maskColor || '#000000';
   const textColorOverride = slideTexts?.textColor || '';
