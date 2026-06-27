@@ -1213,7 +1213,7 @@ function buildImpactNarrative(productData: ProductData): {
 }
 
 // ==================== SLIDE 4 — EXPERIÊNCIA ====================
-function Slide4Experience({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; productData: ProductData; texts?: { label?: string; keyword?: string; benefit?: string; imageScale?: string; bgColor?: string } }) {
+function Slide4Experience({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; productData: ProductData; texts?: { label?: string; keyword?: string; benefit?: string; imageScale?: string; bgColor?: string; headlineVisible?: string; sideStripVisible?: string } }) {
   const { headline, impactText, proofBullets, label } = buildImpactNarrative(productData);
 
   // Respeitar edições manuais do usuário
