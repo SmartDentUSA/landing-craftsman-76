@@ -333,8 +333,7 @@ function LogoOverlay({ texts }: { texts?: EngagementSlideTexts }) {
             width: baseSize * (companyScale / 100),
             height: 'auto', maxHeight: baseSize * (companyScale / 100),
             objectFit: 'contain', zIndex: 50, pointerEvents: 'none',
-            // filter:drop-shadow é ignorado por html2canvas → removido para manter paridade preview↔export
-
+            boxShadow: '0 2px 6px rgba(0,0,0,0.35)',
           }}
         />
       )}
@@ -348,7 +347,7 @@ function LogoOverlay({ texts }: { texts?: EngagementSlideTexts }) {
             width: baseSize * (productScale / 100),
             height: 'auto', maxHeight: baseSize * (productScale / 100),
             objectFit: 'contain', zIndex: 50, pointerEvents: 'none',
-            // filter:drop-shadow é ignorado por html2canvas → removido para manter paridade preview↔export
+            boxShadow: '0 2px 6px rgba(0,0,0,0.35)',
           }}
         />
       )}
@@ -918,9 +917,9 @@ function renderSlideContent(
       overflow: 'hidden',
       position: 'relative',
     }}>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '48px 60px 48px', gap: 28, justifyContent: 'center' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '48px 60px 48px', gap: 28, justifyContent: 'center', overflow: 'hidden' }}>
         {/* Title */}
-        <div style={{ fontSize: 56, fontWeight: 900, color: textColor, lineHeight: 1.15 }}>
+        <div style={{ fontSize: 56, fontWeight: 900, color: textColor, lineHeight: 1.15, maxHeight: 56 * 1.15 * 4, overflow: 'hidden' }}>
           <RichText text={texts.title || ''} />
         </div>
 
@@ -929,7 +928,7 @@ function renderSlideContent(
 
         {/* Body text */}
         {texts.text && (
-          <div style={{ fontSize: 36, lineHeight: 1.5, color: subTextColor, fontWeight: 400 }}>
+          <div style={{ fontSize: 36, lineHeight: 1.5, color: subTextColor, fontWeight: 400, maxHeight: 36 * 1.5 * 4, overflow: 'hidden' }}>
             <RichText text={texts.text} />
           </div>
         )}
@@ -1089,7 +1088,7 @@ export async function generateEngagementSlidePNG(
           )
         );
         // Extra frame + idle to let final pixels settle before snapshot
-        requestAnimationFrame(() => setTimeout(resolve, 80));
+        requestAnimationFrame(() => setTimeout(resolve, 250));
       });
     });
   });
@@ -1162,18 +1161,18 @@ function drawSlideFrameWithVideo(
     ctx.restore();
 
     // Gradient overlay
-    const grad = ctx.createLinearGradient(0, H * 0.4, 0, H);
+    const grad = ctx.createLinearGradient(0, H * 0.30, 0, H);
     grad.addColorStop(0, 'rgba(0,0,0,0)');
     grad.addColorStop(0.5, 'rgba(0,0,0,0.5)');
     grad.addColorStop(1, 'rgba(0,0,0,0.85)');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, H);
 
-    // Title (max 3 lines)
+    // Title (max 3 lines) — text block aligned to bottom:340
     const titleFont = '900 52px system-ui, -apple-system, sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    let titleEndY = drawRichText(ctx, (texts.title || '').slice(0, 150), 60, H - 260, W - 120, 62, titleFont, titleFont, '#ffffff', accent, 'left');
+    let titleEndY = drawRichText(ctx, (texts.title || '').slice(0, 150), 60, H - 340, W - 120, 62, titleFont, titleFont, '#ffffff', accent, 'left');
 
     // Subtitle (max 2 lines)
     if (texts.text) {
@@ -1183,15 +1182,16 @@ function drawSlideFrameWithVideo(
     }
 
     // Badge
+    // Badge (top:40, right:48 — matches React preview)
     ctx.beginPath();
-    ctx.arc(W - 78, H - 70, 30, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.arc(W - 48 - 30, 40 + 30, 30, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
     ctx.fill();
     ctx.font = '900 28px system-ui, -apple-system, sans-serif';
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('1', W - 78, H - 70);
+    ctx.fillText('1', W - 48 - 30, 40 + 30);
   } else if (slideNum === 6) {
     // ===== Slide 6 Video: text top, image center, CTA bottom =====
     const pad = 60;
@@ -1204,7 +1204,7 @@ function drawSlideFrameWithVideo(
     const bottomPad = 100;
 
     // --- Pre-measure blocks ---
-    const titleFontSize = 40;
+    const titleFontSize = 44;
     const titleFont = `900 ${titleFontSize}px system-ui, -apple-system, sans-serif`;
     const titleLineH = titleFontSize * 1.25;
     ctx.font = titleFont;
@@ -1213,7 +1213,7 @@ function drawSlideFrameWithVideo(
 
     const imgH = 280;
 
-    const bodyFontSize = 28;
+    const bodyFontSize = 26;
     const bodyFont = `400 ${bodyFontSize}px system-ui, -apple-system, sans-serif`;
     const bodyFontBold = `700 ${bodyFontSize}px system-ui, -apple-system, sans-serif`;
     const bodyLineH = bodyFontSize * 1.5;
@@ -1457,7 +1457,7 @@ export async function generateEngagementSlideVideo(
       videoRenderMode: 'overlay',
     }),
     slotSelector: '[data-engagement-video-slot="true"]',
-    drawOrder: slideNum === 1 ? 'video-under-overlay' : 'video-over-overlay',
+    drawOrder: 'video-under-overlay',
     logPrefix: `ENGAGEMENT_VIDEO_${slideNum}`,
     durationCapSeconds: 3600,
   });
