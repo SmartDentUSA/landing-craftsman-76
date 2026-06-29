@@ -26,7 +26,7 @@ const DEFAULT_SLIDE_TEXTS: EngagementSlideTextsMap = {
   3: { title: '', text: '', image_suggestion: '' },
   4: { title: '', text: '', image_suggestion: '' },
   5: { title: '', text: '', image_suggestion: '' },
-  6: { title: '', text: '', image_suggestion: '', cta_label: '' },
+  6: { title: '', text: '', image_suggestion: '', cta_label: '', cta_caption: '' },
 };
 
 export function EngagementCarouselSection({
