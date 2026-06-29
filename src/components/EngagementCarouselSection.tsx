@@ -295,15 +295,17 @@ export function EngagementCarouselSection({
 
       if (urlData?.publicUrl) {
         console.log('[CAROUSEL_VIDEO_UPLOAD_SUCCESS]', { slideNum, publicUrl: urlData.publicUrl });
-        setSlideTexts(prev => ({
-          ...prev,
+        const nextTexts: EngagementSlideTextsMap = {
+          ...slideTextsRef.current,
           [slideNum]: {
-            ...prev[slideNum],
+            ...slideTextsRef.current[slideNum],
             mediaType: 'video',
             videoStorageUrl: urlData.publicUrl,
           },
-        }));
-        debouncedPersist();
+        };
+        slideTextsRef.current = nextTexts;
+        setSlideTexts(nextTexts);
+        await persistData();
         toast({
           title: "✅ Vídeo enviado",
           description: `Slide ${slideNum} atualizado (${fileSizeMB} MB).`,
