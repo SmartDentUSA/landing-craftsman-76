@@ -264,6 +264,59 @@ function wrapText(ctx: CanvasRenderingContext2D, text: string, x: number, y: num
   return cy;
 }
 
+function plainText(input?: string | null): string {
+  return (input || '')
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/\{(.*?)\}/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function getEngagementLayoutMetrics(slideNum: number, texts: EngagementSlideTexts) {
+  const titleLen = plainText(texts.title).length;
+  const bodyLen = plainText(texts.text).length;
+  const ctaLen = plainText(texts.cta_label).length;
+
+  if (slideNum === 1) {
+    const veryLong = titleLen > 135 || bodyLen > 170;
+    const long = titleLen > 95 || bodyLen > 110;
+    return {
+      slide1TitleFont: veryLong ? 36 : long ? 40 : 46,
+      slide1BodyFont: veryLong ? 19 : long ? 20 : 22,
+      slide1Bottom: veryLong ? 420 : 430,
+      slide1Gap: veryLong ? 10 : 14,
+      mediaHeight: SLIDE_H,
+    };
+  }
+
+  if (slideNum === 6) {
+    const veryLong = titleLen > 115 || bodyLen > 170 || ctaLen > 70;
+    const long = titleLen > 80 || bodyLen > 120 || ctaLen > 45;
+    return {
+      ctaTitleFont: veryLong ? 34 : long ? 38 : 44,
+      ctaBodyFont: veryLong ? 20 : long ? 22 : 26,
+      ctaButtonFont: veryLong ? 24 : long ? 27 : 30,
+      ctaMediaHeight: veryLong ? 220 : long ? 250 : 280,
+      ctaTopPad: veryLong ? 56 : long ? 64 : 80,
+      ctaBottomPad: veryLong ? 72 : long ? 84 : 100,
+      ctaGap: veryLong ? 10 : 16,
+      mediaHeight: veryLong ? 220 : long ? 250 : 280,
+    };
+  }
+
+  const veryLong = titleLen > 125 || bodyLen > 280;
+  const long = titleLen > 82 || bodyLen > 175;
+  return {
+    cardTitleFont: veryLong ? 34 : long ? 40 : 48,
+    cardBodyFont: veryLong ? 23 : long ? 27 : 32,
+    cardMediaHeight: veryLong ? 300 : long ? 360 : 420,
+    cardGap: veryLong ? 16 : long ? 20 : 24,
+    cardPaddingTop: veryLong ? 50 : 56,
+    cardPaddingBottom: veryLong ? 72 : 80,
+    mediaHeight: veryLong ? 300 : long ? 360 : 420,
+  };
+}
+
 // ========================= SlideWrapper =========================
 interface SlideWrapperProps {
   slideNum: number;
