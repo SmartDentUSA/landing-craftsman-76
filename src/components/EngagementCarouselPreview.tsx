@@ -833,7 +833,7 @@ function renderSlideContent(
   if (slideNum === 1) {
     return (
       <div style={{
-        width: SLIDE_W, height: SLIDE_H, background: bg,
+        width: SLIDE_W, height: SLIDE_H, background: overlayVideoMode ? 'transparent' : bg,
         position: 'relative', overflow: 'hidden',
         fontFamily: 'system-ui, -apple-system, sans-serif',
       }}>
@@ -934,7 +934,7 @@ function renderSlideContent(
 
     return (
       <div style={{
-        width: SLIDE_W, height: SLIDE_H, background: overlayVideoMode ? 'transparent' : bg,
+        width: SLIDE_W, height: SLIDE_H, background: bg,
         display: 'flex', flexDirection: 'column',
         fontFamily: 'system-ui, -apple-system, sans-serif',
         overflow: 'hidden',
