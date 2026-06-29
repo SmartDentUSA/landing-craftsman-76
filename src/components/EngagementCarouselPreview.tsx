@@ -972,7 +972,7 @@ function renderSlideContent(
           <MediaBlock height={metrics.ctaMediaHeight} />
           {ctaCaption && (
             <div style={{
-              fontSize: metrics.ctaCaptionFont, lineHeight: 1.28, color: subTextColor, fontWeight: 500,
+              fontSize: metrics.ctaBodyFont, lineHeight: 1.28, color: subTextColor, fontWeight: 400,
               width: '100%', textAlign: 'center',
               wordBreak: 'normal' as const, overflowWrap: 'break-word' as const,
             }}>
@@ -1357,10 +1357,9 @@ function drawSlideFrameWithVideo(
     const bodyLines = displayBody ? Math.min(measureWrappedLines(ctx, displayBody, contentW), 3) : 0;
     const bodyH = bodyLines * bodyLineH;
 
-    const captionFontSize = 26;
-    const captionFont = `500 ${captionFontSize}px system-ui, -apple-system, sans-serif`;
-    const captionFontBold = `700 ${captionFontSize}px system-ui, -apple-system, sans-serif`;
-    const captionLineH = captionFontSize * 1.32;
+    const captionFont = bodyFont;
+    const captionFontBold = bodyFontBold;
+    const captionLineH = bodyLineH;
 
     const ctaFontSize = 32;
     const ctaFont = `900 ${ctaFontSize}px system-ui, -apple-system, sans-serif`;
