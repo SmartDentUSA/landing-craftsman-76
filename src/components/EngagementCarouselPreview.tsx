@@ -14,6 +14,7 @@ export interface EngagementSlideTexts {
   text: string;
   image_suggestion: string;
   cta_label?: string | null;
+  cta_caption?: string | null; // Texto abaixo da imagem, antes do botão CTA (slide 6)
   imageScale?: string;
   bgColor?: string;
   accentColor?: string;
@@ -290,14 +291,16 @@ function getEngagementLayoutMetrics(slideNum: number, texts: EngagementSlideText
   }
 
   if (slideNum === 6) {
-    const veryLong = titleLen > 115 || bodyLen > 170 || ctaLen > 70;
-    const long = titleLen > 80 || bodyLen > 120 || ctaLen > 45;
+    const captionLen = plainText(texts.cta_caption).length;
+    const veryLong = titleLen > 115 || bodyLen > 170 || ctaLen > 70 || captionLen > 120;
+    const long = titleLen > 80 || bodyLen > 120 || ctaLen > 45 || captionLen > 70;
     return {
       ctaTitleFont: veryLong ? 34 : long ? 38 : 44,
-      ctaBodyFont: veryLong ? 20 : long ? 22 : 26,
+      ctaBodyFont: veryLong ? 24 : long ? 28 : 32,
+      ctaCaptionFont: veryLong ? 20 : long ? 22 : 26,
       ctaButtonFont: veryLong ? 24 : long ? 27 : 30,
       ctaMediaHeight: veryLong ? 220 : long ? 250 : 280,
-      ctaTopPad: veryLong ? 56 : long ? 64 : 80,
+      ctaTopPad: veryLong ? 96 : long ? 108 : 120,
       ctaBottomPad: veryLong ? 72 : long ? 84 : 100,
       ctaGap: veryLong ? 10 : 16,
       mediaHeight: veryLong ? 220 : long ? 250 : 280,
@@ -393,6 +396,7 @@ const EDITOR_FIELDS: Record<number, EditorField[]> = {
   6: [
     { key: 'title', label: 'Título CTA', type: 'textarea' },
     { key: 'text', label: 'Corpo CTA', type: 'textarea' },
+    { key: 'cta_caption', label: 'Texto abaixo da imagem', type: 'textarea' },
     { key: 'cta_label', label: 'Botão CTA', type: 'input' },
     { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
     { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
@@ -930,6 +934,7 @@ function renderSlideContent(
     const displayTitle = texts.title || '';
     const displayBody = texts.text || '';
     const ctaLabel = texts.cta_label || '';
+    const ctaCaption = texts.cta_caption || '';
 
     return (
       <div style={{
@@ -953,7 +958,7 @@ function renderSlideContent(
           </div>
           {displayBody && (
             <div style={{
-              fontSize: metrics.ctaBodyFont, lineHeight: 1.26, color: subTextColor, fontWeight: 400,
+              fontSize: metrics.ctaBodyFont, lineHeight: 1.3, color: subTextColor, fontWeight: 500,
               overflow: 'visible',
               width: '100%',
             }}>
@@ -962,8 +967,19 @@ function renderSlideContent(
           )}
         </div>
 
-        {/* Center: Media */}
-        <MediaBlock height={metrics.ctaMediaHeight} />
+        {/* Center: Media + caption below */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', gap: 20 }}>
+          <MediaBlock height={metrics.ctaMediaHeight} />
+          {ctaCaption && (
+            <div style={{
+              fontSize: metrics.ctaCaptionFont, lineHeight: 1.28, color: subTextColor, fontWeight: 500,
+              width: '100%', textAlign: 'center',
+              wordBreak: 'normal' as const, overflowWrap: 'break-word' as const,
+            }}>
+              <RichText text={ctaCaption} />
+            </div>
+          )}
+        </div>
 
         {/* Bottom: CTA button */}
         {ctaLabel && (
@@ -1312,14 +1328,15 @@ function drawSlideFrameWithVideo(
     ctx.textBaseline = 'middle';
     ctx.fillText('1', W - 48 - 30, 40 + 30);
   } else if (slideNum === 6) {
-    // ===== Slide 6 Video: text top, image center, CTA bottom =====
+    // ===== Slide 6 Video: text top, image center (+ caption), CTA bottom =====
     const pad = 60;
     const contentW = W - pad * 2;
     const centerX = W / 2;
     const displayTitle = (texts.title || '').slice(0, 120);
     const displayBody = (texts.text || '').slice(0, 160);
+    const displayCaption = (texts.cta_caption || '').slice(0, 200);
 
-    const topPad = 80;
+    const topPad = 120;
     const bottomPad = 100;
 
     // --- Pre-measure blocks ---
@@ -1332,13 +1349,18 @@ function drawSlideFrameWithVideo(
 
     const imgH = 280;
 
-    const bodyFontSize = 26;
-    const bodyFont = `400 ${bodyFontSize}px system-ui, -apple-system, sans-serif`;
+    const bodyFontSize = 32;
+    const bodyFont = `500 ${bodyFontSize}px system-ui, -apple-system, sans-serif`;
     const bodyFontBold = `700 ${bodyFontSize}px system-ui, -apple-system, sans-serif`;
-    const bodyLineH = bodyFontSize * 1.5;
+    const bodyLineH = bodyFontSize * 1.4;
     ctx.font = bodyFont;
     const bodyLines = displayBody ? Math.min(measureWrappedLines(ctx, displayBody, contentW), 3) : 0;
     const bodyH = bodyLines * bodyLineH;
+
+    const captionFontSize = 26;
+    const captionFont = `500 ${captionFontSize}px system-ui, -apple-system, sans-serif`;
+    const captionFontBold = `700 ${captionFontSize}px system-ui, -apple-system, sans-serif`;
+    const captionLineH = captionFontSize * 1.32;
 
     const ctaFontSize = 32;
     const ctaFont = `900 ${ctaFontSize}px system-ui, -apple-system, sans-serif`;
@@ -1398,6 +1420,14 @@ function drawSlideFrameWithVideo(
     ctx.clip();
     drawImageCover(ctx, videoEl, pad, imgY, contentW, imgH);
     ctx.restore();
+
+    // --- Draw caption (below image, before CTA) ---
+    if (displayCaption) {
+      const captionY = imgY + imgH + 20;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      drawRichText(ctx, displayCaption, W / 2, captionY, contentW, captionLineH, captionFont, captionFontBold, subTextColor, accent, 'center');
+    }
 
     // --- Draw CTA button (bottom) ---
     if (texts.cta_label && ctaLinesArr.length > 0) {
