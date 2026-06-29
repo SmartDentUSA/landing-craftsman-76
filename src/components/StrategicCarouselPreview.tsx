@@ -382,20 +382,23 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
   // <video> at zIndex 1 becomes visible. We clone the slide element and inject
   // image="" + texts.bgColor='transparent' + overlayOpacity='0'.
   const renderedChildren = React.useMemo(() => {
-    if (mediaType !== 'video' || !videoUrl || !React.isValidElement(children)) return children;
+    const fullBleedActive = (mediaType === 'video' && !!videoUrl) || useFullBleedImage;
+    if (!fullBleedActive || !React.isValidElement(children)) return children;
     const childProps = (children as React.ReactElement<any>).props || {};
     const mergedTexts = {
       ...(childProps.texts || {}),
       bgColor: 'transparent',
       overlayOpacity: '0',
-      // In video-background mode the slide-specific media placeholders/side strips
-      // must not paint opaque blocks above the video. Text, masks and logos remain.
+      // Em modo full-bleed (vídeo OU imagem com faixa OFF), o slide-specific layout não pode
+      // pintar blocos opacos sobre a mídia. Texto, máscaras e logos seguem normalmente.
       sideStripVisible: 'false',
       imageVisible: 'false',
-      mediaType: 'video',
+      mediaType,
     };
+    // Quando full-bleed por imagem, esvaziamos `image` para que o slide não desenhe sua imagem interna
+    // (a imagem aparece no slot full-bleed do wrapper). Quando full-bleed por vídeo, idem.
     return React.cloneElement(children as React.ReactElement<any>, { image: '', texts: mergedTexts });
-  }, [children, mediaType, videoUrl]);
+  }, [children, mediaType, videoUrl, useFullBleedImage]);
 
   // Unique class so the scoped <style> only affects this slide instance.
   const slideContentClass = `visual-slide-content-${slideNum}-${React.useId().replace(/:/g, '')}`;
