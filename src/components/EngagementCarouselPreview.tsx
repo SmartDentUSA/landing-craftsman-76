@@ -955,18 +955,24 @@ function renderSlideContent(
       overflow: 'hidden',
       position: 'relative',
     }}>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '48px 60px 48px', gap: 28, justifyContent: 'center', overflow: 'hidden' }}>
-        {/* Title */}
-        <div style={{ fontSize: 56, fontWeight: 900, color: textColor, lineHeight: 1.15, maxHeight: 56 * 1.15 * 4, overflow: 'hidden' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '56px 60px 80px', gap: 24, justifyContent: 'center', overflow: 'hidden' }}>
+        {/* Title — clean line clamp prevents mid-line cuts */}
+        <div style={{
+          fontSize: 48, fontWeight: 900, color: textColor, lineHeight: 1.18,
+          display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical' as any, overflow: 'hidden',
+        }}>
           <RichText text={texts.title || ''} />
         </div>
 
         {/* Image */}
-        <MediaBlock height={440} />
+        <MediaBlock height={420} />
 
-        {/* Body text */}
+        {/* Body text — clean line clamp prevents mid-line cuts */}
         {texts.text && (
-          <div style={{ fontSize: 36, lineHeight: 1.5, color: subTextColor, fontWeight: 400, maxHeight: 36 * 1.5 * 4, overflow: 'hidden' }}>
+          <div style={{
+            fontSize: 32, lineHeight: 1.45, color: subTextColor, fontWeight: 400,
+            display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical' as any, overflow: 'hidden',
+          }}>
             <RichText text={texts.text} />
           </div>
         )}
