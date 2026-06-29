@@ -679,7 +679,7 @@ export function EngagementSlideRender(props: EngagementSlideRenderProps) {
   return (
     <div style={{ position: 'relative', width: SLIDE_W, height: SLIDE_H }}>
       {renderSlideContent(slideNum, texts, imageUrl, primaryColor, accentColor, brandName, handleName, videoRenderMode)}
-      <LogoOverlay texts={texts} />
+      <LogoOverlay texts={texts} slideNum={slideNum} />
     </div>
   );
 }
