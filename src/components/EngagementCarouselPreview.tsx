@@ -927,9 +927,8 @@ function renderSlideContent(
 
   // ===== Slide 6: Dedicated CTA layout =====
   if (slideNum === 6) {
-    // Sanitize: truncate title/body for display only
-    const displayTitle = (texts.title || '').slice(0, 120);
-    const displayBody = (texts.text || '').slice(0, 160);
+    const displayTitle = texts.title || '';
+    const displayBody = texts.text || '';
     const ctaLabel = texts.cta_label || '';
 
     return (
