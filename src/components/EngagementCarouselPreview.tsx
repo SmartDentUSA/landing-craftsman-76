@@ -130,6 +130,36 @@ function drawImageCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement | H
   ctx.drawImage(img as any, dx - (nw - dw) / 2, dy - (nh - dh) / 2, nw, nh);
 }
 
+/**
+ * Pre-rasterize an image as a "cover"-cropped PNG data URL at exact w×h.
+ * Used to bypass html2canvas's broken handling of object-fit:cover on <img>.
+ * The optional `scale` mimics CSS `transform: scale()` by zooming the source crop.
+ */
+async function rasterizeCover(srcDataUrl: string, w: number, h: number, scale = 1): Promise<string> {
+  if (!srcDataUrl) return srcDataUrl;
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const i = new Image();
+    i.crossOrigin = 'anonymous';
+    i.onload = () => resolve(i);
+    i.onerror = () => reject(new Error('rasterizeCover img load failed'));
+    i.src = srcDataUrl;
+  });
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(w);
+  canvas.height = Math.round(h);
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return srcDataUrl;
+  const sw = img.naturalWidth || img.width;
+  const sh = img.naturalHeight || img.height;
+  const baseRatio = Math.max(w / sw, h / sh);
+  const ratio = baseRatio * Math.max(0.1, scale);
+  const nw = sw * ratio;
+  const nh = sh * ratio;
+  ctx.drawImage(img, (w - nw) / 2, (h - nh) / 2, nw, nh);
+  return canvas.toDataURL('image/png');
+}
+
+
 /** Estimate number of wrapped lines for a given text and max width */
 function measureWrappedLines(ctx: CanvasRenderingContext2D, text: string, maxW: number): number {
   const words = text.split(/\s+/).filter(Boolean);
