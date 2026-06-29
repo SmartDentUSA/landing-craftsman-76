@@ -1,15 +1,17 @@
-## Plano: Abaixar texto do cabeçalho — Slide 6 (CTA)
+## Plano: Diagnosticar e corrigir erro do ZIP — 🎨 Carrossel Visual
 
-O título e subtítulo do Slide 6 estão colados no topo do card. Vamos adicionar respiro superior para descer o bloco de texto, mantendo paridade preview ↔ export.
+O toast atual só mostra "Não foi possível gerar o ZIP" e não há logs capturados do navegador, então não dá para identificar qual slide/etapa quebra. Plano em 2 passos.
 
-### Alterações em `src/components/EngagementCarouselPreview.tsx`
+### Passo 1 — Instrumentar `handleExportZip` em `src/components/InstagramCopyGenerator.tsx`
 
-1. **Métricas (`getEngagementLayoutMetrics`, slideNum === 6)**
-   - Aumentar `ctaTopPad` em ~60px (de 120 → 180) para empurrar o bloco título+subtítulo para baixo.
+- Logar antes de cada slide: índice, `mediaType`, presença de `videoSrc`/`videoStorageUrl`, URL da imagem.
+- Envolver cada chamada (`fetchAsDataUrl`, `generateSlidePNG`, `generateStrategicSlideVideo`) em try/catch com `console.error` detalhado (nome, mensagem, stack).
+- Mostrar a mensagem real no toast de erro: `description: (error as Error)?.message ?? 'Erro desconhecido'`.
+- Logar tamanho final do ZIP antes de disparar o download.
 
-2. **Exportação canvas (`generateEngagementSlideVideo`, slideNum === 6)**
-   - Deslocar Y inicial do título em +60px para refletir o novo `ctaTopPad`.
-   - Subtítulo e caption seguem relativo ao título (sem alteração extra).
+### Passo 2 — Corrigir a causa raiz
+
+Após o usuário reproduzir e enviar o console, aplico o fix no slide/etapa específica (provavelmente: vídeo sem `videoSrc` válido após reload, CORS no `fetchAsDataUrl`, ou timeout em `generateStrategicSlideVideo`). Sem o log real, qualquer correção agora seria chute.
 
 ### Fora de escopo
-Tamanho/posição da imagem central, fontes, botão CTA e demais slides permanecem inalterados.
+Layouts, máscaras, tipografia e o gerador de Engajamento permanecem inalterados.
