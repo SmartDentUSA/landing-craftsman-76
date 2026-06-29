@@ -14,6 +14,7 @@ export interface EngagementSlideTexts {
   text: string;
   image_suggestion: string;
   cta_label?: string | null;
+  cta_caption?: string | null; // Texto abaixo da imagem, antes do botão CTA (slide 6)
   imageScale?: string;
   bgColor?: string;
   accentColor?: string;
