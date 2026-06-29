@@ -300,7 +300,7 @@ function getEngagementLayoutMetrics(slideNum: number, texts: EngagementSlideText
       ctaCaptionFont: veryLong ? 20 : long ? 22 : 26,
       ctaButtonFont: veryLong ? 24 : long ? 27 : 30,
       ctaMediaHeight: veryLong ? 220 : long ? 250 : 280,
-      ctaTopPad: veryLong ? 96 : long ? 108 : 120,
+      ctaTopPad: veryLong ? 156 : long ? 168 : 180,
       ctaBottomPad: veryLong ? 72 : long ? 84 : 100,
       ctaGap: veryLong ? 10 : 16,
       mediaHeight: veryLong ? 220 : long ? 250 : 280,
@@ -1336,7 +1336,7 @@ function drawSlideFrameWithVideo(
     const displayBody = (texts.text || '').slice(0, 160);
     const displayCaption = (texts.cta_caption || '').slice(0, 200);
 
-    const topPad = 120;
+    const topPad = 180;
     const bottomPad = 100;
 
     // --- Pre-measure blocks ---
