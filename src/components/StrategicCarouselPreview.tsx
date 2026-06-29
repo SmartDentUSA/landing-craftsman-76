@@ -129,6 +129,13 @@ const COMMON_MEDIA_FIELDS: EditorField[] = [
     { value: 'cover', label: 'Cobrir todo o card (cover)' },
     { value: 'contain', label: 'Ajustar (contain / padrão)' },
   ]},
+  { key: 'objectPosition', label: 'Posição do recorte', type: 'select', options: [
+    { value: 'center', label: 'Centro' },
+    { value: 'top', label: 'Topo' },
+    { value: 'bottom', label: 'Base' },
+    { value: 'left', label: 'Esquerda' },
+    { value: 'right', label: 'Direita' },
+  ]},
   { key: 'maskOpacity', label: 'Transparência da máscara (%)', type: 'slider', min: 0, max: 90 },
   { key: 'maskColor',   label: 'Cor da máscara',                type: 'color' },
   { key: 'textColor',   label: 'Cor das fontes',                type: 'color' },
