@@ -290,6 +290,12 @@ const LOGO_FIELDS: EditorField[] = [
   { key: 'productLogoScale', label: 'Tamanho da Logo (Produto)', type: 'slider', min: 40, max: 200, step: 5, defaultValue: 100 },
 ];
 
+// Slide 1 has no product logo slot (full-bleed cover)
+const SLIDE1_LOGO_FIELDS: EditorField[] = [
+  { key: 'companyLogoUrl',   label: '🏢 Logo da Empresa',        type: 'logo' },
+  { key: 'companyLogoScale', label: 'Tamanho da Logo (Empresa)', type: 'slider', min: 40, max: 200, step: 5, defaultValue: 100 },
+];
+
 const EDITOR_FIELDS: Record<number, EditorField[]> = {
   1: [
     { key: 'title', label: 'Título (gancho)', type: 'textarea' },
@@ -297,7 +303,7 @@ const EDITOR_FIELDS: Record<number, EditorField[]> = {
     { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
     { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
     { key: 'accentColor', label: 'Cor de destaque', type: 'color' },
-    ...LOGO_FIELDS,
+    ...SLIDE1_LOGO_FIELDS,
   ],
   2: [
     { key: 'title', label: 'Título', type: 'textarea' },
@@ -343,10 +349,11 @@ const EDITOR_FIELDS: Record<number, EditorField[]> = {
 };
 
 // ===== Logo overlay (rendered inside scaled 1080x1350 area, so it shows in PNG + preview) =====
-function LogoOverlay({ texts }: { texts?: EngagementSlideTexts }) {
+function LogoOverlay({ texts, slideNum }: { texts?: EngagementSlideTexts; slideNum?: number }) {
   if (!texts) return null;
   const companyUrl = texts.companyLogoUrl;
-  const productUrl = texts.productLogoUrl;
+  // Slide 1 (full-bleed cover) has no product logo slot
+  const productUrl = slideNum === 1 ? undefined : texts.productLogoUrl;
   if (!companyUrl && !productUrl) return null;
   const companyScale = Number(texts.companyLogoScale) || 100;
   const productScale = Number(texts.productLogoScale) || 100;
@@ -529,7 +536,7 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
           }}
         >
           {children}
-          <LogoOverlay texts={slideTexts as unknown as EngagementSlideTexts | undefined} />
+          <LogoOverlay texts={slideTexts as unknown as EngagementSlideTexts | undefined} slideNum={slideNum} />
         </div>
       </div>
 
@@ -672,7 +679,7 @@ export function EngagementSlideRender(props: EngagementSlideRenderProps) {
   return (
     <div style={{ position: 'relative', width: SLIDE_W, height: SLIDE_H }}>
       {renderSlideContent(slideNum, texts, imageUrl, primaryColor, accentColor, brandName, handleName, videoRenderMode)}
-      <LogoOverlay texts={texts} />
+      <LogoOverlay texts={texts} slideNum={slideNum} />
     </div>
   );
 }
@@ -828,27 +835,28 @@ function renderSlideContent(
           background: 'linear-gradient(to top, rgba(0,0,0,0.88) 25%, rgba(0,0,0,0.55) 60%, transparent 100%)',
         }} />
 
-        {/* Text over gradient */}
+        {/* Text over gradient — sized to fit without clipping */}
         <div style={{
-          position: 'absolute', bottom: 220, left: 60, right: 60,
-          maxHeight: '65%', overflow: 'hidden',
-          display: 'flex', flexDirection: 'column', gap: 16,
+          position: 'absolute', bottom: 360, left: 60, right: 60,
+          maxHeight: '70%', overflow: 'hidden',
+          display: 'flex', flexDirection: 'column', gap: 14,
         }}>
           <div style={{
-            fontSize: 52, fontWeight: 900, color: '#ffffff', lineHeight: 1.15,
-            display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as any, overflow: 'hidden',
+            fontSize: 46, fontWeight: 900, color: '#ffffff', lineHeight: 1.15,
+            display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical' as any, overflow: 'hidden',
           }}>
             <RichText text={texts.title || ''} />
           </div>
           {texts.text && (
             <div style={{
-              fontSize: 24, lineHeight: 1.5, color: 'rgba(255,255,255,0.8)', fontWeight: 400,
-              display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any, overflow: 'hidden',
+              fontSize: 22, lineHeight: 1.5, color: 'rgba(255,255,255,0.85)', fontWeight: 400,
+              display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as any, overflow: 'hidden',
             }}>
               <RichText text={texts.text} />
             </div>
           )}
         </div>
+
 
         {/* Slide number badge */}
         <div style={{
@@ -947,18 +955,24 @@ function renderSlideContent(
       overflow: 'hidden',
       position: 'relative',
     }}>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '48px 60px 48px', gap: 28, justifyContent: 'center', overflow: 'hidden' }}>
-        {/* Title */}
-        <div style={{ fontSize: 56, fontWeight: 900, color: textColor, lineHeight: 1.15, maxHeight: 56 * 1.15 * 4, overflow: 'hidden' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '56px 60px 80px', gap: 24, justifyContent: 'center', overflow: 'hidden' }}>
+        {/* Title — clean line clamp prevents mid-line cuts */}
+        <div style={{
+          fontSize: 48, fontWeight: 900, color: textColor, lineHeight: 1.18,
+          display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical' as any, overflow: 'hidden',
+        }}>
           <RichText text={texts.title || ''} />
         </div>
 
         {/* Image */}
-        <MediaBlock height={440} />
+        <MediaBlock height={420} />
 
-        {/* Body text */}
+        {/* Body text — clean line clamp prevents mid-line cuts */}
         {texts.text && (
-          <div style={{ fontSize: 36, lineHeight: 1.5, color: subTextColor, fontWeight: 400, maxHeight: 36 * 1.5 * 4, overflow: 'hidden' }}>
+          <div style={{
+            fontSize: 32, lineHeight: 1.45, color: subTextColor, fontWeight: 400,
+            display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical' as any, overflow: 'hidden',
+          }}>
             <RichText text={texts.text} />
           </div>
         )}
