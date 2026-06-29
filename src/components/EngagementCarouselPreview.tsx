@@ -755,7 +755,7 @@ function renderSlideContent(
   const imageScale = Number(texts.imageScale) || 100;
   const videoSource = resolveVideoSource(texts);
   const overlayVideoMode = videoRenderMode === 'overlay' && !!videoSource;
-  const metrics = getEngagementLayoutMetrics(slideNum, texts);
+  const metrics = getEngagementLayoutMetrics(slideNum, texts) as any;
 
   // Rich text renderer for JSX
   const RichText = ({ text, className, style }: { text: string; className?: string; style?: React.CSSProperties }) => {
@@ -833,7 +833,7 @@ function renderSlideContent(
   if (slideNum === 1) {
     return (
       <div style={{
-        width: SLIDE_W, height: SLIDE_H, background: overlayVideoMode ? 'transparent' : bg,
+        width: SLIDE_W, height: SLIDE_H, background: bg,
         position: 'relative', overflow: 'hidden',
         fontFamily: 'system-ui, -apple-system, sans-serif',
       }}>
@@ -1001,7 +1001,7 @@ function renderSlideContent(
   // ===== Slides 2–5: Generic layout =====
   return (
     <div style={{
-      width: SLIDE_W, height: SLIDE_H, background: overlayVideoMode ? 'transparent' : bg,
+      width: SLIDE_W, height: SLIDE_H, background: bg,
       display: 'flex', flexDirection: 'column',
       fontFamily: 'system-ui, -apple-system, sans-serif',
       overflow: 'hidden',
