@@ -1,17 +1,15 @@
-## Plano: Abaixar texto do Slide 1 (Capa / Gancho)
+## Plano: Abaixar texto do cabeçalho — Slide 6 (CTA)
 
-Ajustar a posição vertical do bloco de texto do Slide 1 para ficar mais próximo da base do card, mantendo paridade entre preview e exportação.
+O título e subtítulo do Slide 6 estão colados no topo do card. Vamos adicionar respiro superior para descer o bloco de texto, mantendo paridade preview ↔ export.
 
-### Alterações
+### Alterações em `src/components/EngagementCarouselPreview.tsx`
 
-1. **`src/components/EngagementCarouselPreview.tsx`**
-   - **Métricas de layout** (`getEngagementLayoutMetrics`, slideNum === 1):
-     - `slide1Bottom`: `veryLong ? 520 : 500` → `veryLong ? 460 : 440`
-     - Redução de 60 px no CSS `bottom`, descendo o bloco de texto no preview.
-   - **Exportação de vídeo** (`generateEngagementSlideVideo`, slideNum === 1):
-     - Título: coordenada Y de `H - 220` → `H - 280`
-     - Subtítulo: manter `titleEndY + 16` relativo ao novo título
-     - Redução de 60 px equivalente no canvas, preservando paridade preview ↔ export.
+1. **Métricas (`getEngagementLayoutMetrics`, slideNum === 6)**
+   - Aumentar `ctaTopPad` em ~60px (de 120 → 180) para empurrar o bloco título+subtítulo para baixo.
+
+2. **Exportação canvas (`generateEngagementSlideVideo`, slideNum === 6)**
+   - Deslocar Y inicial do título em +60px para refletir o novo `ctaTopPad`.
+   - Subtítulo e caption seguem relativo ao título (sem alteração extra).
 
 ### Fora de escopo
-Nenhuma alteração em fontes, cores, gradiente, conteúdo textual, badges ou outros slides.
+Tamanho/posição da imagem central, fontes, botão CTA e demais slides permanecem inalterados.
