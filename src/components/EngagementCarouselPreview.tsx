@@ -1049,6 +1049,27 @@ export async function generateEngagementSlidePNG(
     }
   }
 
+  // 1b. Pre-rasterize image at exact slot dimensions (bypasses html2canvas object-fit:cover bug)
+  // Slot sizes mirror MediaBlock heights and slide padding (60px left/right).
+  const imageScalePct = Number((texts as any).imageScale) || 100;
+  const scaleFactor = imageScalePct / 100;
+  if (imgDataUrl) {
+    try {
+      let slotW = SLIDE_W;
+      let slotH = SLIDE_H;
+      if (slideNum === 1) {
+        slotW = SLIDE_W; slotH = SLIDE_H;
+      } else if (slideNum === 6) {
+        slotW = SLIDE_W - 120; slotH = 280;
+      } else {
+        slotW = SLIDE_W - 120; slotH = 440;
+      }
+      imgDataUrl = await rasterizeCover(imgDataUrl, slotW, slotH, scaleFactor);
+    } catch (err) {
+      console.warn('[ENGAGEMENT_PNG] rasterizeCover failed, using raw image:', err);
+    }
+  }
+
   // 2. Build off-screen container at exact slide dimensions
   const container = document.createElement('div');
   container.style.cssText = [
@@ -1082,6 +1103,8 @@ export async function generateEngagementSlidePNG(
     videoStorageUrl: undefined,
     companyLogoUrl: companyLogoData,
     productLogoUrl: productLogoData,
+    // Image is pre-cropped at slot size; neutralize CSS scale to avoid double-scaling
+    imageScale: '100',
   };
 
   const root = createRoot(container);
