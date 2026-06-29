@@ -1576,7 +1576,7 @@ export async function generateEngagementSlideVideo(
       videoRenderMode: 'overlay',
     }),
     slotSelector: '[data-engagement-video-slot="true"]',
-    drawOrder: slideNum === 1 ? 'video-under-overlay' : 'overlay-under-video',
+    drawOrder: slideNum === 1 ? 'video-under-overlay' : 'video-over-overlay',
     logPrefix: `ENGAGEMENT_VIDEO_${slideNum}`,
     durationCapSeconds: 3600,
   });
