@@ -972,7 +972,7 @@ function renderSlideContent(
           <MediaBlock height={metrics.ctaMediaHeight} />
           {ctaCaption && (
             <div style={{
-              fontSize: metrics.ctaCaptionFont, lineHeight: 1.28, color: subTextColor, fontWeight: 500,
+              fontSize: metrics.ctaBodyFont, lineHeight: 1.28, color: subTextColor, fontWeight: 400,
               width: '100%', textAlign: 'center',
               wordBreak: 'normal' as const, overflowWrap: 'break-word' as const,
             }}>
