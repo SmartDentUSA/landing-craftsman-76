@@ -295,6 +295,12 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
   const maskOpacityNum = Math.min(90, Math.max(0, Number(slideTexts?.maskOpacity ?? 0)));
   const maskColor = slideTexts?.maskColor || '#000000';
   const textColorOverride = slideTexts?.textColor || '';
+  const coverModeRaw = (slideTexts?.coverMode as 'cover' | 'contain') || 'cover';
+  const mediaObjectFit: 'cover' | 'contain' = coverModeRaw === 'contain' ? 'contain' : 'cover';
+  // Slides 3/4/5 expõem o toggle de faixa lateral. Quando o usuário desliga a faixa em modo imagem,
+  // o slide perde seu render interno de mídia — então promovemos a imagem para full-bleed no wrapper.
+  const sideStripExplicitlyOff = slideTexts?.sideStripVisible === 'false';
+  const useFullBleedImage = mediaType === 'image' && sideStripExplicitlyOff && !!currentImage;
   // textPosition / textBlockScale were removed from the editor (non-functional with absolute layouts).
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
