@@ -934,6 +934,7 @@ function renderSlideContent(
     const displayTitle = texts.title || '';
     const displayBody = texts.text || '';
     const ctaLabel = texts.cta_label || '';
+    const ctaCaption = texts.cta_caption || '';
 
     return (
       <div style={{
@@ -957,7 +958,7 @@ function renderSlideContent(
           </div>
           {displayBody && (
             <div style={{
-              fontSize: metrics.ctaBodyFont, lineHeight: 1.26, color: subTextColor, fontWeight: 400,
+              fontSize: metrics.ctaBodyFont, lineHeight: 1.3, color: subTextColor, fontWeight: 500,
               overflow: 'visible',
               width: '100%',
             }}>
@@ -966,8 +967,19 @@ function renderSlideContent(
           )}
         </div>
 
-        {/* Center: Media */}
-        <MediaBlock height={metrics.ctaMediaHeight} />
+        {/* Center: Media + caption below */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', gap: 20 }}>
+          <MediaBlock height={metrics.ctaMediaHeight} />
+          {ctaCaption && (
+            <div style={{
+              fontSize: metrics.ctaCaptionFont, lineHeight: 1.28, color: subTextColor, fontWeight: 500,
+              width: '100%', textAlign: 'center',
+              wordBreak: 'normal' as const, overflowWrap: 'break-word' as const,
+            }}>
+              <RichText text={ctaCaption} />
+            </div>
+          )}
+        </div>
 
         {/* Bottom: CTA button */}
         {ctaLabel && (
