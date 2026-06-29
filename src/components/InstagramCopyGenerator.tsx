@@ -920,6 +920,8 @@ ${slide.text}`;
   // === Export ZIP — Carrossel Visual (PNGs 1080×1350px) ===
   const handleExportZip = async () => {
     setIsExportingZip(true);
+    let currentSlide = 0;
+    let currentStep = 'init';
     try {
       const zip = new JSZip();
       const productData = buildStrategicProductData();
@@ -933,35 +935,54 @@ ${slide.text}`;
         6: 'slide-6-cta',
       };
 
+      console.log('[ZIP] Iniciando export. fontFamily=', fontFamily, 'fontSize=', fontSize);
+
       for (let i = 1; i <= 6; i++) {
+        currentSlide = i;
         const textsForSlide = (slideTexts[i as keyof SlideTextsType] as unknown as Record<string, string>) || {};
         const videoUrl = getStrategicPreviewVideoUrl(textsForSlide);
         const isVideo = !!videoUrl;
+        const imgUrl = slideImageMap[i] || '';
         const logos = { companyUrl: companyLogoUrl, productUrl: productLogoUrl, companyScale: companyLogoScale, productScale: productLogoScale };
+
+        console.log(`[ZIP] Slide ${i}`, {
+          mediaType: textsForSlide.mediaType,
+          hasVideoSrc: !!textsForSlide.videoSrc,
+          hasVideoStorageUrl: !!textsForSlide.videoStorageUrl,
+          videoUrlLen: videoUrl ? String(videoUrl).length : 0,
+          imgUrlLen: imgUrl ? String(imgUrl).length : 0,
+          isVideo,
+        });
 
         if (isVideo) {
           try {
-            const productData2 = productData;
-            const videoBlob = await generateStrategicSlideVideo(i, videoUrl, primaryColor, accentColor, productData2, textsForSlide, logos, fontFamily, fontSize);
+            currentStep = 'generateStrategicSlideVideo';
+            const videoBlob = await generateStrategicSlideVideo(i, videoUrl, primaryColor, accentColor, productData, textsForSlide, logos, fontFamily, fontSize);
+            console.log(`[ZIP] Slide ${i} vídeo OK (${videoBlob.size} bytes)`);
             zip.file(`${SLIDE_FILE_NAMES[i]}.webm`, videoBlob);
             continue;
-          } catch (vErr) {
-            console.error(`[ZIP] Falha vídeo slide ${i}; exportação abortada para não gerar arquivo diferente do preview:`, vErr);
-            throw vErr;
+          } catch (vErr: any) {
+            console.error(`[ZIP] Falha vídeo slide ${i}:`, vErr?.name, vErr?.message, vErr?.stack);
+            throw new Error(`Slide ${i} (vídeo): ${vErr?.message || vErr}`);
           }
         }
 
         try {
-          const safeDataUrl = await fetchAsDataUrl(slideImageMap[i] || '');
+          currentStep = 'fetchAsDataUrl';
+          const safeDataUrl = await fetchAsDataUrl(imgUrl);
+          currentStep = 'generateSlidePNG';
           const pngBlob = await generateSlidePNG(i, safeDataUrl, primaryColor, accentColor, productData, textsForSlide, logos, fontFamily, fontSize);
+          console.log(`[ZIP] Slide ${i} PNG OK (${pngBlob.size} bytes)`);
           zip.file(`${SLIDE_FILE_NAMES[i]}.png`, pngBlob);
-        } catch (slideErr) {
-          console.error(`Slide ${i} falhou; exportação abortada para não gerar arquivo diferente do preview:`, slideErr);
-          throw slideErr;
+        } catch (slideErr: any) {
+          console.error(`[ZIP] Falha slide ${i} em '${currentStep}':`, slideErr?.name, slideErr?.message, slideErr?.stack);
+          throw new Error(`Slide ${i} (${currentStep}): ${slideErr?.message || slideErr}`);
         }
       }
 
+      currentStep = 'zip.generateAsync';
       const content = await zip.generateAsync({ type: 'blob' });
+      console.log(`[ZIP] ZIP final: ${content.size} bytes`);
       const url = URL.createObjectURL(content);
       const link = document.createElement('a');
       link.href = url;
@@ -972,9 +993,13 @@ ${slide.text}`;
       URL.revokeObjectURL(url);
 
       toast({ title: "📦 ZIP gerado!", description: "6 slides exportados exatamente do preview." });
-    } catch (error) {
-      console.error('Erro ao gerar ZIP:', error);
-      toast({ title: "Erro", description: "Não foi possível gerar o ZIP.", variant: "destructive" });
+    } catch (error: any) {
+      console.error(`[ZIP] Erro ao gerar ZIP (slide=${currentSlide}, step=${currentStep}):`, error);
+      toast({
+        title: "Erro ao exportar ZIP",
+        description: error?.message ?? 'Erro desconhecido',
+        variant: "destructive",
+      });
     } finally {
       setIsExportingZip(false);
     }
