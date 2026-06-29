@@ -1119,6 +1119,7 @@ export async function generateEngagementSlidePNG(
   // Slot sizes mirror MediaBlock heights and slide padding (60px left/right).
   const imageScalePct = Number((texts as any).imageScale) || 100;
   const scaleFactor = imageScalePct / 100;
+  const exportMetrics = getEngagementLayoutMetrics(slideNum, texts) as any;
   if (imgDataUrl) {
     try {
       let slotW = SLIDE_W;
@@ -1126,9 +1127,9 @@ export async function generateEngagementSlidePNG(
       if (slideNum === 1) {
         slotW = SLIDE_W; slotH = SLIDE_H;
       } else if (slideNum === 6) {
-        slotW = SLIDE_W - 120; slotH = 280;
+        slotW = SLIDE_W - 120; slotH = exportMetrics.ctaMediaHeight;
       } else {
-        slotW = SLIDE_W - 120; slotH = 440;
+        slotW = SLIDE_W - 120; slotH = exportMetrics.cardMediaHeight;
       }
       imgDataUrl = await rasterizeCover(imgDataUrl, slotW, slotH, scaleFactor);
     } catch (err) {
