@@ -295,6 +295,12 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
   const maskOpacityNum = Math.min(90, Math.max(0, Number(slideTexts?.maskOpacity ?? 0)));
   const maskColor = slideTexts?.maskColor || '#000000';
   const textColorOverride = slideTexts?.textColor || '';
+  const coverModeRaw = (slideTexts?.coverMode as 'cover' | 'contain') || 'cover';
+  const mediaObjectFit: 'cover' | 'contain' = coverModeRaw === 'contain' ? 'contain' : 'cover';
+  // Slides 3/4/5 expõem o toggle de faixa lateral. Quando o usuário desliga a faixa em modo imagem,
+  // o slide perde seu render interno de mídia — então promovemos a imagem para full-bleed no wrapper.
+  const sideStripExplicitlyOff = slideTexts?.sideStripVisible === 'false';
+  const useFullBleedImage = mediaType === 'image' && sideStripExplicitlyOff && !!currentImage;
   // textPosition / textBlockScale were removed from the editor (non-functional with absolute layouts).
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -376,20 +382,23 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
   // <video> at zIndex 1 becomes visible. We clone the slide element and inject
   // image="" + texts.bgColor='transparent' + overlayOpacity='0'.
   const renderedChildren = React.useMemo(() => {
-    if (mediaType !== 'video' || !videoUrl || !React.isValidElement(children)) return children;
+    const fullBleedActive = (mediaType === 'video' && !!videoUrl) || useFullBleedImage;
+    if (!fullBleedActive || !React.isValidElement(children)) return children;
     const childProps = (children as React.ReactElement<any>).props || {};
     const mergedTexts = {
       ...(childProps.texts || {}),
       bgColor: 'transparent',
       overlayOpacity: '0',
-      // In video-background mode the slide-specific media placeholders/side strips
-      // must not paint opaque blocks above the video. Text, masks and logos remain.
+      // Em modo full-bleed (vídeo OU imagem com faixa OFF), o slide-specific layout não pode
+      // pintar blocos opacos sobre a mídia. Texto, máscaras e logos seguem normalmente.
       sideStripVisible: 'false',
       imageVisible: 'false',
-      mediaType: 'video',
+      mediaType,
     };
+    // Quando full-bleed por imagem, esvaziamos `image` para que o slide não desenhe sua imagem interna
+    // (a imagem aparece no slot full-bleed do wrapper). Quando full-bleed por vídeo, idem.
     return React.cloneElement(children as React.ReactElement<any>, { image: '', texts: mergedTexts });
-  }, [children, mediaType, videoUrl]);
+  }, [children, mediaType, videoUrl, useFullBleedImage]);
 
   // Unique class so the scoped <style> only affects this slide instance.
   const slideContentClass = `visual-slide-content-${slideNum}-${React.useId().replace(/:/g, '')}`;
@@ -425,7 +434,7 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
           )}
           {/* Full-bleed video overlay (BACKGROUND — sits behind slide content) */}
           {mediaType === 'video' && videoUrl && (
-            <div data-strategic-video-slot="true" data-video-scale="100" data-video-radius="0" style={{ position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none' }}>
+            <div data-strategic-video-slot="true" data-video-scale="100" data-video-radius="0" style={{ position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none', background: mediaObjectFit === 'contain' ? '#000' : 'transparent' }}>
               <video
                 src={videoUrl}
                 autoPlay
@@ -435,7 +444,24 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
                 style={{
                   width: '100%',
                   height: '100%',
-                  objectFit: 'cover',
+                  objectFit: mediaObjectFit,
+                  pointerEvents: 'none',
+                }}
+              />
+            </div>
+          )}
+          {/* Full-bleed image (BACKGROUND) — quando o usuário desliga a faixa lateral no modo imagem */}
+          {useFullBleedImage && (
+            <div style={{ position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none', background: mediaObjectFit === 'contain' ? '#000' : 'transparent' }}>
+              <img
+                src={currentImage}
+                alt=""
+                crossOrigin="anonymous"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: mediaObjectFit,
+                  display: 'block',
                   pointerEvents: 'none',
                 }}
               />
