@@ -1328,14 +1328,15 @@ function drawSlideFrameWithVideo(
     ctx.textBaseline = 'middle';
     ctx.fillText('1', W - 48 - 30, 40 + 30);
   } else if (slideNum === 6) {
-    // ===== Slide 6 Video: text top, image center, CTA bottom =====
+    // ===== Slide 6 Video: text top, image center (+ caption), CTA bottom =====
     const pad = 60;
     const contentW = W - pad * 2;
     const centerX = W / 2;
     const displayTitle = (texts.title || '').slice(0, 120);
     const displayBody = (texts.text || '').slice(0, 160);
+    const displayCaption = (texts.cta_caption || '').slice(0, 200);
 
-    const topPad = 80;
+    const topPad = 120;
     const bottomPad = 100;
 
     // --- Pre-measure blocks ---
@@ -1348,13 +1349,18 @@ function drawSlideFrameWithVideo(
 
     const imgH = 280;
 
-    const bodyFontSize = 26;
-    const bodyFont = `400 ${bodyFontSize}px system-ui, -apple-system, sans-serif`;
+    const bodyFontSize = 32;
+    const bodyFont = `500 ${bodyFontSize}px system-ui, -apple-system, sans-serif`;
     const bodyFontBold = `700 ${bodyFontSize}px system-ui, -apple-system, sans-serif`;
-    const bodyLineH = bodyFontSize * 1.5;
+    const bodyLineH = bodyFontSize * 1.4;
     ctx.font = bodyFont;
     const bodyLines = displayBody ? Math.min(measureWrappedLines(ctx, displayBody, contentW), 3) : 0;
     const bodyH = bodyLines * bodyLineH;
+
+    const captionFontSize = 26;
+    const captionFont = `500 ${captionFontSize}px system-ui, -apple-system, sans-serif`;
+    const captionFontBold = `700 ${captionFontSize}px system-ui, -apple-system, sans-serif`;
+    const captionLineH = captionFontSize * 1.32;
 
     const ctaFontSize = 32;
     const ctaFont = `900 ${ctaFontSize}px system-ui, -apple-system, sans-serif`;
@@ -1414,6 +1420,14 @@ function drawSlideFrameWithVideo(
     ctx.clip();
     drawImageCover(ctx, videoEl, pad, imgY, contentW, imgH);
     ctx.restore();
+
+    // --- Draw caption (below image, before CTA) ---
+    if (displayCaption) {
+      const captionY = imgY + imgH + 20;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      drawRichText(ctx, displayCaption, W / 2, captionY, contentW, captionLineH, captionFont, captionFontBold, subTextColor, accent, 'center');
+    }
 
     // --- Draw CTA button (bottom) ---
     if (texts.cta_label && ctaLinesArr.length > 0) {
