@@ -296,7 +296,7 @@ function getEngagementLayoutMetrics(slideNum: number, texts: EngagementSlideText
     const long = titleLen > 80 || bodyLen > 120 || ctaLen > 45 || captionLen > 70;
     return {
       ctaTitleFont: veryLong ? 34 : long ? 38 : 44,
-      ctaBodyFont: veryLong ? 24 : long ? 28 : 32,
+      ctaBodyFont: veryLong ? 23 : long ? 27 : 32,
       ctaCaptionFont: veryLong ? 20 : long ? 22 : 26,
       ctaButtonFont: veryLong ? 24 : long ? 27 : 30,
       ctaMediaHeight: veryLong ? 220 : long ? 250 : 280,
@@ -958,7 +958,7 @@ function renderSlideContent(
           </div>
           {displayBody && (
             <div style={{
-              fontSize: metrics.ctaBodyFont, lineHeight: 1.3, color: subTextColor, fontWeight: 500,
+              fontSize: metrics.ctaBodyFont, lineHeight: 1.28, color: subTextColor, fontWeight: 400,
               overflow: 'visible',
               width: '100%',
             }}>
