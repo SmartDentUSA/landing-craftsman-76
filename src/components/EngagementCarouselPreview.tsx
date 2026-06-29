@@ -284,7 +284,7 @@ function getEngagementLayoutMetrics(slideNum: number, texts: EngagementSlideText
     return {
       slide1TitleFont: veryLong ? 36 : long ? 40 : 46,
       slide1BodyFont: veryLong ? 19 : long ? 20 : 22,
-      slide1Bottom: veryLong ? 520 : 500,
+      slide1Bottom: veryLong ? 460 : 440,
       slide1Gap: veryLong ? 10 : 14,
       mediaHeight: SLIDE_H,
     };
@@ -1303,11 +1303,11 @@ function drawSlideFrameWithVideo(
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, H);
 
-    // Title (max 3 lines) — text block aligned to bottom:220
+    // Title (max 3 lines) — text block aligned to bottom:280
     const titleFont = '900 52px system-ui, -apple-system, sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    let titleEndY = drawRichText(ctx, (texts.title || '').slice(0, 150), 60, H - 220, W - 120, 62, titleFont, titleFont, '#ffffff', accent, 'left');
+    let titleEndY = drawRichText(ctx, (texts.title || '').slice(0, 150), 60, H - 280, W - 120, 62, titleFont, titleFont, '#ffffff', accent, 'left');
 
     // Subtitle (max 2 lines)
     if (texts.text) {

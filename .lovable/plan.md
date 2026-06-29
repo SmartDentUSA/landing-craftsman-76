@@ -1,17 +1,17 @@
-Scope: Slide 6 (CTA) of the 🎯 Carrossel Engajamento — change the "Texto abaixo da imagem" (`cta_caption`) typography to match the Slide 6 subtitle (`text` / body).
+## Plano: Abaixar texto do Slide 1 (Capa / Gancho)
 
-Current mismatch:
-- Subtitle: `fontSize: ctaBodyFont`, `fontWeight: 400`, `lineHeight: 1.28`
-- Caption: `fontSize: ctaCaptionFont` (smaller), `fontWeight: 500`
+Ajustar a posição vertical do bloco de texto do Slide 1 para ficar mais próximo da base do card, mantendo paridade entre preview e exportação.
 
-Changes in `src/components/EngagementCarouselPreview.tsx`:
+### Alterações
 
-1. JSX preview (Slide 6 caption block):
-   - Change `fontSize` from `metrics.ctaCaptionFont` to `metrics.ctaBodyFont`
-   - Change `fontWeight` from `500` to `400`
+1. **`src/components/EngagementCarouselPreview.tsx`**
+   - **Métricas de layout** (`getEngagementLayoutMetrics`, slideNum === 1):
+     - `slide1Bottom`: `veryLong ? 520 : 500` → `veryLong ? 460 : 440`
+     - Redução de 60 px no CSS `bottom`, descendo o bloco de texto no preview.
+   - **Exportação de vídeo** (`generateEngagementSlideVideo`, slideNum === 1):
+     - Título: coordenada Y de `H - 220` → `H - 280`
+     - Subtítulo: manter `titleEndY + 16` relativo ao novo título
+     - Redução de 60 px equivalente no canvas, preservando paridade preview ↔ export.
 
-2. Canvas export (`generateEngagementSlideVideo`, Slide 6 branch):
-   - Replace dedicated `captionFontSize/captionFont/captionFontBold/captionLineH` variables
-   - Reuse the existing `bodyFontSize/bodyFont/bodyFontBold/bodyLineH` values for caption rendering
-
-No other slides, layouts, or export logic are affected.
+### Fora de escopo
+Nenhuma alteração em fontes, cores, gradiente, conteúdo textual, badges ou outros slides.
