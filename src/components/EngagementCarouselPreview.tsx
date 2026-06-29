@@ -349,10 +349,11 @@ const EDITOR_FIELDS: Record<number, EditorField[]> = {
 };
 
 // ===== Logo overlay (rendered inside scaled 1080x1350 area, so it shows in PNG + preview) =====
-function LogoOverlay({ texts }: { texts?: EngagementSlideTexts }) {
+function LogoOverlay({ texts, slideNum }: { texts?: EngagementSlideTexts; slideNum?: number }) {
   if (!texts) return null;
   const companyUrl = texts.companyLogoUrl;
-  const productUrl = texts.productLogoUrl;
+  // Slide 1 (full-bleed cover) has no product logo slot
+  const productUrl = slideNum === 1 ? undefined : texts.productLogoUrl;
   if (!companyUrl && !productUrl) return null;
   const companyScale = Number(texts.companyLogoScale) || 100;
   const productScale = Number(texts.productLogoScale) || 100;
