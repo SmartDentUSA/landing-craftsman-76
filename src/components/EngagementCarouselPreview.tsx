@@ -1161,18 +1161,18 @@ function drawSlideFrameWithVideo(
     ctx.restore();
 
     // Gradient overlay
-    const grad = ctx.createLinearGradient(0, H * 0.30, 0, H);
+    const grad = ctx.createLinearGradient(0, H * 0.20, 0, H);
     grad.addColorStop(0, 'rgba(0,0,0,0)');
-    grad.addColorStop(0.5, 'rgba(0,0,0,0.5)');
-    grad.addColorStop(1, 'rgba(0,0,0,0.85)');
+    grad.addColorStop(0.5, 'rgba(0,0,0,0.55)');
+    grad.addColorStop(1, 'rgba(0,0,0,0.88)');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, H);
 
-    // Title (max 3 lines) — text block aligned to bottom:340
+    // Title (max 3 lines) — text block aligned to bottom:220
     const titleFont = '900 52px system-ui, -apple-system, sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    let titleEndY = drawRichText(ctx, (texts.title || '').slice(0, 150), 60, H - 340, W - 120, 62, titleFont, titleFont, '#ffffff', accent, 'left');
+    let titleEndY = drawRichText(ctx, (texts.title || '').slice(0, 150), 60, H - 220, W - 120, 62, titleFont, titleFont, '#ffffff', accent, 'left');
 
     // Subtitle (max 2 lines)
     if (texts.text) {
