@@ -755,6 +755,7 @@ function renderSlideContent(
   const imageScale = Number(texts.imageScale) || 100;
   const videoSource = resolveVideoSource(texts);
   const overlayVideoMode = videoRenderMode === 'overlay' && !!videoSource;
+  const metrics = getEngagementLayoutMetrics(slideNum, texts);
 
   // Rich text renderer for JSX
   const RichText = ({ text, className, style }: { text: string; className?: string; style?: React.CSSProperties }) => {
@@ -777,7 +778,7 @@ function renderSlideContent(
     if (videoSource) {
       return (
         <div data-engagement-video-slot="true" data-video-scale={String(imageScale)} data-video-radius="16" style={{
-          width: '100%', height, overflow: 'hidden',
+          width: '100%', height, overflow: 'hidden', background: overlayVideoMode ? 'transparent' : undefined,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           borderRadius: 16,
         }}>
@@ -890,20 +891,19 @@ function renderSlideContent(
 
         {/* Text over gradient — sized to fit without clipping */}
         <div style={{
-          position: 'absolute', bottom: 360, left: 60, right: 60,
-          maxHeight: '70%', overflow: 'hidden',
-          display: 'flex', flexDirection: 'column', gap: 14,
+          position: 'absolute', bottom: metrics.slide1Bottom, left: 60, right: 60,
+          display: 'flex', flexDirection: 'column', gap: metrics.slide1Gap,
         }}>
           <div style={{
-            fontSize: 46, fontWeight: 900, color: '#ffffff', lineHeight: 1.15,
-            display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical' as any, overflow: 'hidden',
+            fontSize: metrics.slide1TitleFont, fontWeight: 900, color: '#ffffff', lineHeight: 1.08,
+            overflow: 'visible', wordBreak: 'normal' as const, overflowWrap: 'break-word' as const,
           }}>
             <RichText text={texts.title || ''} />
           </div>
           {texts.text && (
             <div style={{
-              fontSize: 22, lineHeight: 1.5, color: 'rgba(255,255,255,0.85)', fontWeight: 400,
-              display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as any, overflow: 'hidden',
+              fontSize: metrics.slide1BodyFont, lineHeight: 1.32, color: 'rgba(255,255,255,0.85)', fontWeight: 400,
+              overflow: 'visible', wordBreak: 'normal' as const, overflowWrap: 'break-word' as const,
             }}>
               <RichText text={texts.text} />
             </div>
@@ -934,29 +934,28 @@ function renderSlideContent(
 
     return (
       <div style={{
-        width: SLIDE_W, height: SLIDE_H, background: bg,
+        width: SLIDE_W, height: SLIDE_H, background: overlayVideoMode ? 'transparent' : bg,
         display: 'flex', flexDirection: 'column',
         fontFamily: 'system-ui, -apple-system, sans-serif',
         overflow: 'hidden',
         position: 'relative',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: '80px 60px 100px',
+        padding: `${metrics.ctaTopPad}px 60px ${metrics.ctaBottomPad}px`,
         textAlign: 'center',
       }}>
         {/* Top: Title + Body */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', gap: 16 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', gap: metrics.ctaGap }}>
           <div style={{
-            fontSize: 44, fontWeight: 900, color: textColor, lineHeight: 1.2,
-            width: '100%', wordBreak: 'break-word' as const,
+            fontSize: metrics.ctaTitleFont, fontWeight: 900, color: textColor, lineHeight: 1.12,
+            width: '100%', wordBreak: 'normal' as const, overflowWrap: 'break-word' as const,
           }}>
             <RichText text={displayTitle} />
           </div>
           {displayBody && (
             <div style={{
-              fontSize: 26, lineHeight: 1.45, color: subTextColor, fontWeight: 400,
-              maxHeight: 120, overflow: 'hidden',
-              display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as const,
+              fontSize: metrics.ctaBodyFont, lineHeight: 1.26, color: subTextColor, fontWeight: 400,
+              overflow: 'visible',
               width: '100%',
             }}>
               <RichText text={displayBody} />
@@ -965,7 +964,7 @@ function renderSlideContent(
         </div>
 
         {/* Center: Media */}
-        <MediaBlock height={280} />
+        <MediaBlock height={metrics.ctaMediaHeight} />
 
         {/* Bottom: CTA button */}
         {ctaLabel && (
@@ -974,7 +973,7 @@ function renderSlideContent(
             color: getLuminance(accent) > 0.5 ? '#000' : '#fff',
             padding: '20px 40px',
             borderRadius: 20,
-            fontSize: 30,
+            fontSize: metrics.ctaButtonFont,
             fontWeight: 900,
             textAlign: 'center',
             width: '100%',
@@ -1002,29 +1001,29 @@ function renderSlideContent(
   // ===== Slides 2–5: Generic layout =====
   return (
     <div style={{
-      width: SLIDE_W, height: SLIDE_H, background: bg,
+      width: SLIDE_W, height: SLIDE_H, background: overlayVideoMode ? 'transparent' : bg,
       display: 'flex', flexDirection: 'column',
       fontFamily: 'system-ui, -apple-system, sans-serif',
       overflow: 'hidden',
       position: 'relative',
     }}>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '56px 60px 80px', gap: 24, justifyContent: 'center', overflow: 'hidden' }}>
-        {/* Title — clean line clamp prevents mid-line cuts */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: `${metrics.cardPaddingTop}px 60px ${metrics.cardPaddingBottom}px`, gap: metrics.cardGap, justifyContent: 'center', overflow: 'hidden' }}>
+        {/* Title — dynamic sizing prevents mid-line cuts */}
         <div style={{
-          fontSize: 48, fontWeight: 900, color: textColor, lineHeight: 1.18,
-          display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical' as any, overflow: 'hidden',
+          fontSize: metrics.cardTitleFont, fontWeight: 900, color: textColor, lineHeight: 1.12,
+          overflow: 'visible', wordBreak: 'normal' as const, overflowWrap: 'break-word' as const,
         }}>
           <RichText text={texts.title || ''} />
         </div>
 
         {/* Image */}
-        <MediaBlock height={420} />
+        <MediaBlock height={metrics.cardMediaHeight} />
 
-        {/* Body text — clean line clamp prevents mid-line cuts */}
+        {/* Body text — dynamic sizing prevents mid-line cuts */}
         {texts.text && (
           <div style={{
-            fontSize: 32, lineHeight: 1.45, color: subTextColor, fontWeight: 400,
-            display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical' as any, overflow: 'hidden',
+            fontSize: metrics.cardBodyFont, lineHeight: 1.28, color: subTextColor, fontWeight: 400,
+            overflow: 'visible', wordBreak: 'normal' as const, overflowWrap: 'break-word' as const,
           }}>
             <RichText text={texts.text} />
           </div>
