@@ -1966,7 +1966,7 @@ export async function generateDomCompositedVideo({
 
     const stream = canvas.captureStream(30);
     const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm';
-    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 });
+    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 6_000_000 });
     const chunks: Blob[] = [];
     recorder.ondataavailable = (event) => { if (event.data.size > 0) chunks.push(event.data); };
     const recordingDone = new Promise<Blob>((resolve, reject) => {
@@ -1975,7 +1975,16 @@ export async function generateDomCompositedVideo({
     });
 
     recorder.start();
-    await videoEl.play();
+    try { videoEl.playbackRate = 1; } catch { /* noop */ }
+    // Wait until video is actually playing before starting the draw loop —
+    // avoids 1-2 black frames at the start that look like a freeze.
+    await new Promise<void>((resolve) => {
+      let settled = false;
+      const done = () => { if (!settled) { settled = true; resolve(); } };
+      videoEl.addEventListener('playing', done, { once: true });
+      videoEl.play().then(done).catch(done);
+      setTimeout(done, 1000);
+    });
 
     const startedAt = performance.now();
     const durationMs = duration * 1000;
@@ -1986,31 +1995,65 @@ export async function generateDomCompositedVideo({
       try { recorder.stop(); } catch { /* noop */ }
     };
 
+    // Prefer requestVideoFrameCallback: 1 canvas paint per decoded video frame,
+    // eliminating rAF/video cadence mismatch and reducing encoder pressure.
+    const hasVfc = typeof (videoEl as any).requestVideoFrameCallback === 'function';
+
     await new Promise<void>((resolve) => {
       const onEnded = () => { stopRecorder(); resolve(); };
       videoEl.addEventListener('ended', onEnded, { once: true });
       const fallbackTimer = window.setTimeout(() => { stopRecorder(); resolve(); }, durationMs + 500);
-      const tick = () => {
-        if (stopped) return;
+
+      const finishIfDue = (): boolean => {
+        if (stopped) return true;
         const elapsed = performance.now() - startedAt;
         if (videoEl.ended || elapsed >= durationMs) {
           window.clearTimeout(fallbackTimer);
           stopRecorder();
           resolve();
-          return;
+          return true;
         }
+        return false;
+      };
+
+      const drawSafely = (): boolean => {
         try {
           drawFrame();
-          requestAnimationFrame(tick);
+          return true;
         } catch (err) {
           console.error(`[${logPrefix}] frame draw failed`, err);
           window.clearTimeout(fallbackTimer);
           stopRecorder();
           resolve();
+          return false;
         }
       };
-      requestAnimationFrame(tick);
+
+      if (hasVfc) {
+        const vfcTick = () => {
+          if (finishIfDue()) return;
+          if (!drawSafely()) return;
+          (videoEl as any).requestVideoFrameCallback(vfcTick);
+        };
+        // Safety rAF in case video stalls without firing vfc — still checks
+        // elapsed and stops cleanly when duration is reached.
+        const rafGuard = () => {
+          if (stopped) return;
+          if (finishIfDue()) return;
+          requestAnimationFrame(rafGuard);
+        };
+        (videoEl as any).requestVideoFrameCallback(vfcTick);
+        requestAnimationFrame(rafGuard);
+      } else {
+        const tick = () => {
+          if (finishIfDue()) return;
+          if (!drawSafely()) return;
+          requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      }
     });
+
 
     return await recordingDone;
   } finally {

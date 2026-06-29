@@ -1,35 +1,43 @@
-# Correção — 🎨 Carrossel Visual / 💫 Experiência (Slide 4)
+# Correção — 🎯 Carrossel Engajamento / Slide 3 (💡 Solução): vídeo exportado pula frames
 
-## Problema observado
-1. **"Ajustar (Contain / Padrão)"** não tem efeito visual — o `coverMode` está no painel mas nunca é aplicado ao `<video>` nem à imagem (wrapper hardcoda `objectFit: 'cover'` em `StrategicCarouselPreview.tsx:438`).
-2. Com **"Mostrar faixa lateral" = Desativado**, o Slide 4 some com o vídeo/imagem: o `Slide4Experience` renderiza a imagem **apenas dentro da faixa lateral** (linha 1253) e desenha `background: bgColor4` opaco sobre o slide inteiro (linhas 1251 e 1276), tapando qualquer vídeo full-bleed que esteja no z=1 do wrapper.
+## Diagnóstico
 
-Resultado prático: ao desligar a faixa, o painel direito vira um retângulo sólido sem mídia.
+O export usa `generateDomCompositedVideo` em `src/components/StrategicCarouselPreview.tsx` (linhas 1807-2022). O loop de desenho atual é:
 
-## Mudanças (escopo cirúrgico)
+- `requestAnimationFrame` chama `drawFrame()` no ritmo do display (60/120/144 Hz).
+- Cada frame: `clearRect` → `drawImage(overlay 1080×1350)` → `drawImage(video)`.
+- Saída: `canvas.captureStream(30)` + `MediaRecorder` VP9 @ 8 Mbps em 1080×1350.
 
-**Arquivo único:** `src/components/StrategicCarouselPreview.tsx`
+Dois pontos causam o "pula frames" relatado no Slide 3:
 
-### 1. Aplicar `coverMode` à mídia no wrapper (linhas ~427-443)
-- Ler `coverMode` do `slideTexts[slideNum]` (default `'cover'`).
-- Trocar `objectFit: 'cover'` por `objectFit: coverMode` no `<video>` full-bleed.
-- Adicionar render de **imagem full-bleed** (`<img>` no mesmo slot z=1) quando `mediaType !== 'video'` e o slide estiver em modo full-bleed (slides 1, 2, 6 sempre; slides 3/4/5 quando `sideStripVisible === 'false'`). Respeita `objectFit: coverMode`.
+1. **Dessincronia rAF ↔ frames do vídeo.** O rAF roda no refresh do display, não no cadence do vídeo. Quando o vídeo tem fps diferente do display (ex.: 24/25 fps), o canvas é redesenhado várias vezes com o mesmo frame ou pula amostras, e o encoder VP9 — pesado em 1080×1350 — descarta frames quando não consegue acompanhar, gerando o stutter visível.
+2. **VP9 @ 8 Mbps em 1080×1350 satura o encoder em hardware modesto.** É o único codec/bitrate aplicado a todos os slides; nos vídeos mais longos/complexos (como o de Solução) a defasagem aparece.
 
-### 2. `Slide4Experience` (linhas 1232-1307) — modo full-bleed quando faixa OFF
-- Quando `sideStripVisible === false`:
-  - Trocar `background: bgColor4` do root e do painel direito por `background: 'transparent'` para deixar o vídeo/imagem do wrapper aparecer.
-  - Manter o painel direito ocupando 100% da largura (já feito) e adicionar `textShadow` leve para legibilidade sobre mídia (sem máscara — usuário controla via `maskOpacity` existente).
-- Quando `sideStripVisible === true`: comportamento atual inalterado.
+Slide 1 não exibe o problema com a mesma frequência porque o overlay tem muito menos pixels opacos (full-bleed transparente embaixo), mas a causa raiz é a mesma para qualquer slide 2-6.
 
-### 3. Paridade no export (linha ~2278 — `getSlideHTMLContent` case 4)
-- Replicar a mesma lógica no HTML estático de export do Slide 4: respeitar `sideStripVisible`, `coverMode`, vídeo/imagem full-bleed, fundo transparente quando faixa OFF.
-- Mesma mudança de `objectFit` no `<video>`/`<img>` full-bleed dos demais slides para manter paridade preview ↔ export.
+## Mudanças (escopo cirúrgico, 1 arquivo)
+
+**`src/components/StrategicCarouselPreview.tsx`** — apenas dentro de `generateDomCompositedVideo` (~linhas 1932-2013):
+
+### 1. Acoplar o desenho ao cadence real do `<video>` via `requestVideoFrameCallback`
+- Se `videoEl.requestVideoFrameCallback` existir (Chromium/Edge/recente Safari/Firefox), usar para chamar `drawFrame()` exatamente uma vez por frame decodificado do vídeo. Isso elimina redesenhos redundantes e garante 1:1 entre frames do source e frames capturados.
+- Fallback para `requestAnimationFrame` quando a API não existir (mantém comportamento atual).
+- A condição de parada (`ended` / `elapsed >= durationMs`) continua igual, com mesmo fallback de timeout.
+
+### 2. Reduzir pressão de encoder sem perder qualidade percebida
+- Trocar bitrate para 6 Mbps (mantém VP9 quando suportado) — bitrate de 8 Mbps em VP9 software encoder é o que mais derruba frames em máquinas comuns; 6 Mbps é o sweet spot para 1080×1350 social.
+- Manter fallback para `video/webm` (VP8) inalterado.
+- `captureStream(30)` permanece — combinado com vfc o stream agora recebe exatamente os frames pintados.
+
+### 3. Forçar `playbackRate = 1` e `videoEl.play()` aguardando `playing`
+- Pequeno ajuste: aguardar evento `playing` antes de iniciar o loop de desenho, evitando 1-2 frames pretos no início que o usuário poderia interpretar como "trava".
 
 ## Fora do escopo
-- Layouts de outros slides (somente o wrapper compartilhado e o Slide 4 ganham nova lógica).
-- Tipografia, máscara, faixa central do Slide 1, lógica de logos, geração de vídeo composta.
-- Slides 3 e 5 ganham apenas o **render de imagem full-bleed** quando faixa OFF (mesma correção do wrapper) — sem mexer em seus layouts internos. Se preferir limitar somente ao Slide 4, removo nas linhas 3/5 antes de aplicar.
+- Nenhuma alteração em `EngagementCarouselPreview.tsx`, layouts, tipografia, ou outros geradores.
+- Sem mudanças na UI, no painel de controles, no upload de vídeo, ou na pipeline de SmartOps.
+- Sem mexer no Slide 1 (drawOrder `video-under-overlay`) — recebe o mesmo benefício automaticamente porque o loop é compartilhado.
 
 ## Validação
 - Build TS.
-- Conferir no preview: Slide 4 com faixa ON (atual) + faixa OFF mostrando vídeo full-bleed + alternar cover/contain afetando o recorte.
+- Reexportar Slide 3 (Solução) com o mesmo vídeo que travava e conferir reprodução fluida no `.webm` baixado.
+- Reexportar Slides 1, 2, 4, 5, 6 para garantir paridade (sem regressão de duração nem de sincronia).
