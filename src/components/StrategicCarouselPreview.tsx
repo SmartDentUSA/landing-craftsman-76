@@ -129,6 +129,13 @@ const COMMON_MEDIA_FIELDS: EditorField[] = [
     { value: 'cover', label: 'Cobrir todo o card (cover)' },
     { value: 'contain', label: 'Ajustar (contain / padrão)' },
   ]},
+  { key: 'objectPosition', label: 'Posição do recorte', type: 'select', options: [
+    { value: 'center', label: 'Centro' },
+    { value: 'top', label: 'Topo' },
+    { value: 'bottom', label: 'Base' },
+    { value: 'left', label: 'Esquerda' },
+    { value: 'right', label: 'Direita' },
+  ]},
   { key: 'maskOpacity', label: 'Transparência da máscara (%)', type: 'slider', min: 0, max: 90 },
   { key: 'maskColor',   label: 'Cor da máscara',                type: 'color' },
   { key: 'textColor',   label: 'Cor das fontes',                type: 'color' },
@@ -686,7 +693,7 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
 }
 
 // ==================== SLIDE 1 — HOOK / GANCHO ====================
-function Slide1Hook({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; productData: ProductData; texts?: { hook?: string; productName?: string; imageScale?: string; bgColor?: string; overlayOpacity?: string; faixaVisible?: string; faixaColor?: string; faixaOpacity?: string } }) {
+function Slide1Hook({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; productData: ProductData; texts?: { hook?: string; productName?: string; imageScale?: string; bgColor?: string; overlayOpacity?: string; faixaVisible?: string; faixaColor?: string; faixaOpacity?: string; coverMode?: string; objectPosition?: string } }) {
   const hook = texts?.hook || (() => {
     if (productData.salesPitch) {
       const pitch = productData.salesPitch.trim();
@@ -711,6 +718,8 @@ function Slide1Hook({ image, primaryColor, productData, texts }: { image: string
   const bgColor = texts?.bgColor || '';
   const hasCustomBg = bgColor && bgColor !== '#333333';
   const faixaVisible = (texts?.faixaVisible ?? 'true') !== 'false';
+  const coverMode = (texts?.coverMode === 'contain') ? 'contain' : 'cover';
+  const objectPosition = texts?.objectPosition || 'center';
 
   // Auto text color: when faixa is OFF, adapt text/hook to page background luminance.
   // When ON, white stays best contrast against the colored band.
@@ -723,15 +732,29 @@ function Slide1Hook({ image, primaryColor, productData, texts }: { image: string
 
   return (
     <div style={{ width: SLIDE_W, height: SLIDE_H, position: 'relative', overflow: 'hidden', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-      {/* Background: custom color or image */}
+      {/* Background: custom color or image (background-image preserves aspect-ratio reliably in html2canvas) */}
       {hasCustomBg ? (
         <div style={{ position: 'absolute', inset: 0, background: bgColor }} />
       ) : null}
       {image ? (
-        <img src={image} alt="produto" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', transform: `scale(${imageScale / 100})`, transformOrigin: 'center center' }} />
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            top: 0, left: 0, width: '100%', height: '100%',
+            backgroundImage: `url("${image}")`,
+            backgroundSize: coverMode,
+            backgroundPosition: objectPosition,
+            backgroundRepeat: 'no-repeat',
+            backgroundColor: coverMode === 'contain' ? '#000' : 'transparent',
+            transform: `scale(${imageScale / 100})`,
+            transformOrigin: 'center center',
+          }}
+        />
       ) : (
         !hasCustomBg && <div style={{ position: 'absolute', inset: 0, background: '#333' }} />
       )}
+
 
       {/* Overlay escuro geral sutil para dar profundidade */}
       {(() => {
@@ -1334,7 +1357,7 @@ function Slide4Experience({ image, primaryColor, productData, texts }: { image: 
 
 
 // ==================== SLIDE 5 — SEGURANÇA ====================
-function Slide5Security({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; productData: ProductData; texts?: { title?: string; badge1?: string; badge2?: string; badge3?: string; imageScale?: string; bgColor?: string; headlineVisible?: string; sideStripVisible?: string } }) {
+function Slide5Security({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; productData: ProductData; texts?: { title?: string; badge1?: string; badge2?: string; badge3?: string; imageScale?: string; bgColor?: string; headlineVisible?: string; sideStripVisible?: string; coverMode?: string; objectPosition?: string } }) {
   const features = productData.features || [];
   const benefits = productData.benefits || [];
   const title = texts?.title || 'Você pode confiar';
@@ -1347,6 +1370,8 @@ function Slide5Security({ image, primaryColor, productData, texts }: { image: st
   const bgColor5 = texts?.bgColor || '';
   const sideStripVisible = (texts?.sideStripVisible ?? 'true') !== 'false';
   const headlineVisible = (texts?.headlineVisible ?? 'true') !== 'false';
+  const coverMode5 = (texts?.coverMode === 'contain') ? 'contain' : 'cover';
+  const objectPosition5 = texts?.objectPosition || 'center';
 
   // Quando o "side strip" (imagem de fundo + overlay) é desligado, o fundo
   // vira sólido — recalculamos a cor de textos/badges via luminância para legibilidade.
@@ -1363,13 +1388,27 @@ function Slide5Security({ image, primaryColor, productData, texts }: { image: st
       {sideStripVisible && (
         <>
           {image ? (
-            <img src={image} alt="segurança" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(8px)', transform: `scale(${imageScale5 / 100 * 1.1})` }} />
+            <div
+              aria-hidden
+              style={{
+                position: 'absolute', inset: 0,
+                backgroundImage: `url("${image}")`,
+                backgroundSize: coverMode5,
+                backgroundPosition: objectPosition5,
+                backgroundRepeat: 'no-repeat',
+                backgroundColor: coverMode5 === 'contain' ? '#000' : 'transparent',
+                filter: 'blur(8px)',
+                transform: `scale(${(imageScale5 / 100) * 1.1})`,
+                transformOrigin: 'center center',
+              }}
+            />
           ) : (
             <div style={{ position: 'absolute', inset: 0, background: '#222' }} />
           )}
           <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.65)' }} />
         </>
       )}
+
       <div style={{ position: 'absolute', top: 60, left: 60, width: 70, height: 70, borderRadius: '50%', background: numberBg, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
         <span style={{ color: textColor, fontWeight: 900, fontSize: 30 }}>5</span>
       </div>
