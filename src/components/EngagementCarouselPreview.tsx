@@ -835,27 +835,28 @@ function renderSlideContent(
           background: 'linear-gradient(to top, rgba(0,0,0,0.88) 25%, rgba(0,0,0,0.55) 60%, transparent 100%)',
         }} />
 
-        {/* Text over gradient */}
+        {/* Text over gradient — sized to fit without clipping */}
         <div style={{
-          position: 'absolute', bottom: 220, left: 60, right: 60,
-          maxHeight: '65%', overflow: 'hidden',
-          display: 'flex', flexDirection: 'column', gap: 16,
+          position: 'absolute', bottom: 360, left: 60, right: 60,
+          maxHeight: '70%', overflow: 'hidden',
+          display: 'flex', flexDirection: 'column', gap: 14,
         }}>
           <div style={{
-            fontSize: 52, fontWeight: 900, color: '#ffffff', lineHeight: 1.15,
-            display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as any, overflow: 'hidden',
+            fontSize: 46, fontWeight: 900, color: '#ffffff', lineHeight: 1.15,
+            display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical' as any, overflow: 'hidden',
           }}>
             <RichText text={texts.title || ''} />
           </div>
           {texts.text && (
             <div style={{
-              fontSize: 24, lineHeight: 1.5, color: 'rgba(255,255,255,0.8)', fontWeight: 400,
-              display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any, overflow: 'hidden',
+              fontSize: 22, lineHeight: 1.5, color: 'rgba(255,255,255,0.85)', fontWeight: 400,
+              display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as any, overflow: 'hidden',
             }}>
               <RichText text={texts.text} />
             </div>
           )}
         </div>
+
 
         {/* Slide number badge */}
         <div style={{
