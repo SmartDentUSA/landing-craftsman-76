@@ -264,6 +264,59 @@ function wrapText(ctx: CanvasRenderingContext2D, text: string, x: number, y: num
   return cy;
 }
 
+function plainText(input?: string | null): string {
+  return (input || '')
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/\{(.*?)\}/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function getEngagementLayoutMetrics(slideNum: number, texts: EngagementSlideTexts) {
+  const titleLen = plainText(texts.title).length;
+  const bodyLen = plainText(texts.text).length;
+  const ctaLen = plainText(texts.cta_label).length;
+
+  if (slideNum === 1) {
+    const veryLong = titleLen > 135 || bodyLen > 170;
+    const long = titleLen > 95 || bodyLen > 110;
+    return {
+      slide1TitleFont: veryLong ? 36 : long ? 40 : 46,
+      slide1BodyFont: veryLong ? 19 : long ? 20 : 22,
+      slide1Bottom: veryLong ? 520 : 500,
+      slide1Gap: veryLong ? 10 : 14,
+      mediaHeight: SLIDE_H,
+    };
+  }
+
+  if (slideNum === 6) {
+    const veryLong = titleLen > 115 || bodyLen > 170 || ctaLen > 70;
+    const long = titleLen > 80 || bodyLen > 120 || ctaLen > 45;
+    return {
+      ctaTitleFont: veryLong ? 34 : long ? 38 : 44,
+      ctaBodyFont: veryLong ? 20 : long ? 22 : 26,
+      ctaButtonFont: veryLong ? 24 : long ? 27 : 30,
+      ctaMediaHeight: veryLong ? 220 : long ? 250 : 280,
+      ctaTopPad: veryLong ? 56 : long ? 64 : 80,
+      ctaBottomPad: veryLong ? 72 : long ? 84 : 100,
+      ctaGap: veryLong ? 10 : 16,
+      mediaHeight: veryLong ? 220 : long ? 250 : 280,
+    };
+  }
+
+  const veryLong = titleLen > 125 || bodyLen > 280;
+  const long = titleLen > 82 || bodyLen > 175;
+  return {
+    cardTitleFont: veryLong ? 34 : long ? 40 : 48,
+    cardBodyFont: veryLong ? 23 : long ? 27 : 32,
+    cardMediaHeight: veryLong ? 300 : long ? 360 : 420,
+    cardGap: veryLong ? 16 : long ? 20 : 24,
+    cardPaddingTop: veryLong ? 50 : 56,
+    cardPaddingBottom: veryLong ? 72 : 80,
+    mediaHeight: veryLong ? 300 : long ? 360 : 420,
+  };
+}
+
 // ========================= SlideWrapper =========================
 interface SlideWrapperProps {
   slideNum: number;
@@ -702,6 +755,7 @@ function renderSlideContent(
   const imageScale = Number(texts.imageScale) || 100;
   const videoSource = resolveVideoSource(texts);
   const overlayVideoMode = videoRenderMode === 'overlay' && !!videoSource;
+  const metrics = getEngagementLayoutMetrics(slideNum, texts) as any;
 
   // Rich text renderer for JSX
   const RichText = ({ text, className, style }: { text: string; className?: string; style?: React.CSSProperties }) => {
@@ -724,7 +778,7 @@ function renderSlideContent(
     if (videoSource) {
       return (
         <div data-engagement-video-slot="true" data-video-scale={String(imageScale)} data-video-radius="16" style={{
-          width: '100%', height, overflow: 'hidden',
+          width: '100%', height, overflow: 'hidden', background: overlayVideoMode ? 'transparent' : undefined,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           borderRadius: 16,
         }}>
@@ -837,20 +891,19 @@ function renderSlideContent(
 
         {/* Text over gradient — sized to fit without clipping */}
         <div style={{
-          position: 'absolute', bottom: 360, left: 60, right: 60,
-          maxHeight: '70%', overflow: 'hidden',
-          display: 'flex', flexDirection: 'column', gap: 14,
+          position: 'absolute', bottom: metrics.slide1Bottom, left: 60, right: 60,
+          display: 'flex', flexDirection: 'column', gap: metrics.slide1Gap,
         }}>
           <div style={{
-            fontSize: 46, fontWeight: 900, color: '#ffffff', lineHeight: 1.15,
-            display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical' as any, overflow: 'hidden',
+            fontSize: metrics.slide1TitleFont, fontWeight: 900, color: '#ffffff', lineHeight: 1.08,
+            overflow: 'visible', wordBreak: 'normal' as const, overflowWrap: 'break-word' as const,
           }}>
             <RichText text={texts.title || ''} />
           </div>
           {texts.text && (
             <div style={{
-              fontSize: 22, lineHeight: 1.5, color: 'rgba(255,255,255,0.85)', fontWeight: 400,
-              display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as any, overflow: 'hidden',
+              fontSize: metrics.slide1BodyFont, lineHeight: 1.32, color: 'rgba(255,255,255,0.85)', fontWeight: 400,
+              overflow: 'visible', wordBreak: 'normal' as const, overflowWrap: 'break-word' as const,
             }}>
               <RichText text={texts.text} />
             </div>
@@ -874,9 +927,8 @@ function renderSlideContent(
 
   // ===== Slide 6: Dedicated CTA layout =====
   if (slideNum === 6) {
-    // Sanitize: truncate title/body for display only
-    const displayTitle = (texts.title || '').slice(0, 120);
-    const displayBody = (texts.text || '').slice(0, 160);
+    const displayTitle = texts.title || '';
+    const displayBody = texts.text || '';
     const ctaLabel = texts.cta_label || '';
 
     return (
@@ -888,22 +940,21 @@ function renderSlideContent(
         position: 'relative',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: '80px 60px 100px',
+        padding: `${metrics.ctaTopPad}px 60px ${metrics.ctaBottomPad}px`,
         textAlign: 'center',
       }}>
         {/* Top: Title + Body */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', gap: 16 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', gap: metrics.ctaGap }}>
           <div style={{
-            fontSize: 44, fontWeight: 900, color: textColor, lineHeight: 1.2,
-            width: '100%', wordBreak: 'break-word' as const,
+            fontSize: metrics.ctaTitleFont, fontWeight: 900, color: textColor, lineHeight: 1.12,
+            width: '100%', wordBreak: 'normal' as const, overflowWrap: 'break-word' as const,
           }}>
             <RichText text={displayTitle} />
           </div>
           {displayBody && (
             <div style={{
-              fontSize: 26, lineHeight: 1.45, color: subTextColor, fontWeight: 400,
-              maxHeight: 120, overflow: 'hidden',
-              display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as const,
+              fontSize: metrics.ctaBodyFont, lineHeight: 1.26, color: subTextColor, fontWeight: 400,
+              overflow: 'visible',
               width: '100%',
             }}>
               <RichText text={displayBody} />
@@ -912,7 +963,7 @@ function renderSlideContent(
         </div>
 
         {/* Center: Media */}
-        <MediaBlock height={280} />
+        <MediaBlock height={metrics.ctaMediaHeight} />
 
         {/* Bottom: CTA button */}
         {ctaLabel && (
@@ -921,7 +972,7 @@ function renderSlideContent(
             color: getLuminance(accent) > 0.5 ? '#000' : '#fff',
             padding: '20px 40px',
             borderRadius: 20,
-            fontSize: 30,
+            fontSize: metrics.ctaButtonFont,
             fontWeight: 900,
             textAlign: 'center',
             width: '100%',
@@ -955,23 +1006,23 @@ function renderSlideContent(
       overflow: 'hidden',
       position: 'relative',
     }}>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '56px 60px 80px', gap: 24, justifyContent: 'center', overflow: 'hidden' }}>
-        {/* Title — clean line clamp prevents mid-line cuts */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: `${metrics.cardPaddingTop}px 60px ${metrics.cardPaddingBottom}px`, gap: metrics.cardGap, justifyContent: 'center', overflow: 'hidden' }}>
+        {/* Title — dynamic sizing prevents mid-line cuts */}
         <div style={{
-          fontSize: 48, fontWeight: 900, color: textColor, lineHeight: 1.18,
-          display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical' as any, overflow: 'hidden',
+          fontSize: metrics.cardTitleFont, fontWeight: 900, color: textColor, lineHeight: 1.12,
+          overflow: 'visible', wordBreak: 'normal' as const, overflowWrap: 'break-word' as const,
         }}>
           <RichText text={texts.title || ''} />
         </div>
 
         {/* Image */}
-        <MediaBlock height={420} />
+        <MediaBlock height={metrics.cardMediaHeight} />
 
-        {/* Body text — clean line clamp prevents mid-line cuts */}
+        {/* Body text — dynamic sizing prevents mid-line cuts */}
         {texts.text && (
           <div style={{
-            fontSize: 32, lineHeight: 1.45, color: subTextColor, fontWeight: 400,
-            display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical' as any, overflow: 'hidden',
+            fontSize: metrics.cardBodyFont, lineHeight: 1.28, color: subTextColor, fontWeight: 400,
+            overflow: 'visible', wordBreak: 'normal' as const, overflowWrap: 'break-word' as const,
           }}>
             <RichText text={texts.text} />
           </div>
@@ -1067,6 +1118,7 @@ export async function generateEngagementSlidePNG(
   // Slot sizes mirror MediaBlock heights and slide padding (60px left/right).
   const imageScalePct = Number((texts as any).imageScale) || 100;
   const scaleFactor = imageScalePct / 100;
+  const exportMetrics = getEngagementLayoutMetrics(slideNum, texts) as any;
   if (imgDataUrl) {
     try {
       let slotW = SLIDE_W;
@@ -1074,9 +1126,9 @@ export async function generateEngagementSlidePNG(
       if (slideNum === 1) {
         slotW = SLIDE_W; slotH = SLIDE_H;
       } else if (slideNum === 6) {
-        slotW = SLIDE_W - 120; slotH = 280;
+        slotW = SLIDE_W - 120; slotH = exportMetrics.ctaMediaHeight;
       } else {
-        slotW = SLIDE_W - 120; slotH = 440;
+        slotW = SLIDE_W - 120; slotH = exportMetrics.cardMediaHeight;
       }
       imgDataUrl = await rasterizeCover(imgDataUrl, slotW, slotH, scaleFactor);
     } catch (err) {
@@ -1524,7 +1576,7 @@ export async function generateEngagementSlideVideo(
       videoRenderMode: 'overlay',
     }),
     slotSelector: '[data-engagement-video-slot="true"]',
-    drawOrder: 'video-under-overlay',
+    drawOrder: slideNum === 1 ? 'video-under-overlay' : 'video-over-overlay',
     logPrefix: `ENGAGEMENT_VIDEO_${slideNum}`,
     durationCapSeconds: 3600,
   });

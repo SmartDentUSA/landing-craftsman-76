@@ -295,7 +295,17 @@ export function EngagementCarouselSection({
 
       if (urlData?.publicUrl) {
         console.log('[CAROUSEL_VIDEO_UPLOAD_SUCCESS]', { slideNum, publicUrl: urlData.publicUrl });
-        handleSlideTextChange(slideNum, 'videoStorageUrl', urlData.publicUrl);
+        const nextTexts: EngagementSlideTextsMap = {
+          ...slideTextsRef.current,
+          [slideNum]: {
+            ...slideTextsRef.current[slideNum],
+            mediaType: 'video',
+            videoStorageUrl: urlData.publicUrl,
+          },
+        };
+        slideTextsRef.current = nextTexts;
+        setSlideTexts(nextTexts);
+        await persistData();
         toast({
           title: "✅ Vídeo enviado",
           description: `Slide ${slideNum} atualizado (${fileSizeMB} MB).`,
