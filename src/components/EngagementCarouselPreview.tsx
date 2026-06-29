@@ -917,11 +917,12 @@ function renderSlideContent(
 
         {/* Slide number badge */}
         <div style={{
-          position: 'absolute', top: 40, right: 48,
+          position: 'absolute', bottom: 40, right: 48,
           width: 60, height: 60, borderRadius: '50%',
-          background: 'rgba(0,0,0,0.35)',
+          background: 'rgba(0,0,0,0.45)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 28, fontWeight: 900, color: 'rgba(255,255,255,0.85)',
+          fontSize: 28, fontWeight: 900, color: 'rgba(255,255,255,0.9)',
+          zIndex: 5,
         }}>
           1
         </div>
