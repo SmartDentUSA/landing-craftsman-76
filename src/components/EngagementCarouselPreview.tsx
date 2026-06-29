@@ -396,6 +396,7 @@ const EDITOR_FIELDS: Record<number, EditorField[]> = {
   6: [
     { key: 'title', label: 'Título CTA', type: 'textarea' },
     { key: 'text', label: 'Corpo CTA', type: 'textarea' },
+    { key: 'cta_caption', label: 'Texto abaixo da imagem', type: 'textarea' },
     { key: 'cta_label', label: 'Botão CTA', type: 'input' },
     { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
     { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
