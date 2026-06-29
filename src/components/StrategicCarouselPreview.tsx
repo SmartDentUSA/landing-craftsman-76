@@ -1871,16 +1871,37 @@ export async function generateDomCompositedVideo({
 
     await Promise.race([
       new Promise<void>((resolve, reject) => {
-        videoEl.onloadeddata = () => resolve();
+        videoEl.onloadedmetadata = () => resolve();
         videoEl.onerror = () => reject(new Error('video load failed'));
         videoEl.load();
       }),
       new Promise<void>((_, reject) => setTimeout(() => reject(new Error('video load timeout (15s)')), 15_000)),
     ]);
 
+    // Force duration resolution for webm/mp4 without cues (duration === Infinity)
     let duration = videoEl.duration;
-    if (!isFinite(duration) || isNaN(duration) || duration <= 0) duration = 10;
+    if (!isFinite(duration) || isNaN(duration) || duration <= 0) {
+      console.warn(`[${logPrefix}] duration unavailable (${duration}), forcing via seek`);
+      await new Promise<void>((resolve) => {
+        const onDurationChange = () => {
+          if (isFinite(videoEl.duration) && videoEl.duration > 0) {
+            videoEl.removeEventListener('durationchange', onDurationChange);
+            resolve();
+          }
+        };
+        videoEl.addEventListener('durationchange', onDurationChange);
+        try { videoEl.currentTime = 1e101; } catch { /* noop */ }
+        setTimeout(resolve, 3000);
+      });
+      duration = videoEl.duration;
+      try { videoEl.currentTime = 0; } catch { /* noop */ }
+    }
+    if (!isFinite(duration) || isNaN(duration) || duration <= 0) {
+      console.warn(`[${logPrefix}] duration still unavailable, falling back to 10s`);
+      duration = 10;
+    }
     duration = Math.min(duration, durationCapSeconds);
+    console.log(`[${logPrefix}] using duration ${duration.toFixed(2)}s`);
 
     const canvas = document.createElement('canvas');
     canvas.width = SLIDE_W;

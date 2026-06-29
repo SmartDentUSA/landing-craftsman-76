@@ -130,6 +130,36 @@ function drawImageCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement | H
   ctx.drawImage(img as any, dx - (nw - dw) / 2, dy - (nh - dh) / 2, nw, nh);
 }
 
+/**
+ * Pre-rasterize an image as a "cover"-cropped PNG data URL at exact w×h.
+ * Used to bypass html2canvas's broken handling of object-fit:cover on <img>.
+ * The optional `scale` mimics CSS `transform: scale()` by zooming the source crop.
+ */
+async function rasterizeCover(srcDataUrl: string, w: number, h: number, scale = 1): Promise<string> {
+  if (!srcDataUrl) return srcDataUrl;
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const i = new Image();
+    i.crossOrigin = 'anonymous';
+    i.onload = () => resolve(i);
+    i.onerror = () => reject(new Error('rasterizeCover img load failed'));
+    i.src = srcDataUrl;
+  });
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(w);
+  canvas.height = Math.round(h);
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return srcDataUrl;
+  const sw = img.naturalWidth || img.width;
+  const sh = img.naturalHeight || img.height;
+  const baseRatio = Math.max(w / sw, h / sh);
+  const ratio = baseRatio * Math.max(0.1, scale);
+  const nw = sw * ratio;
+  const nh = sh * ratio;
+  ctx.drawImage(img, (w - nw) / 2, (h - nh) / 2, nw, nh);
+  return canvas.toDataURL('image/png');
+}
+
+
 /** Estimate number of wrapped lines for a given text and max width */
 function measureWrappedLines(ctx: CanvasRenderingContext2D, text: string, maxW: number): number {
   const words = text.split(/\s+/).filter(Boolean);
@@ -792,16 +822,16 @@ function renderSlideContent(
           </div>
         )}
 
-        {/* Gradient overlay bottom 70% */}
+        {/* Gradient overlay bottom 80% */}
         <div style={{
-          position: 'absolute', bottom: 0, left: 0, width: '100%', height: '70%',
-          background: 'linear-gradient(to top, rgba(0,0,0,0.85) 20%, rgba(0,0,0,0.5) 55%, transparent 100%)',
+          position: 'absolute', bottom: 0, left: 0, width: '100%', height: '80%',
+          background: 'linear-gradient(to top, rgba(0,0,0,0.88) 25%, rgba(0,0,0,0.55) 60%, transparent 100%)',
         }} />
 
         {/* Text over gradient */}
         <div style={{
-          position: 'absolute', bottom: 340, left: 60, right: 60,
-          maxHeight: '55%', overflow: 'hidden',
+          position: 'absolute', bottom: 220, left: 60, right: 60,
+          maxHeight: '65%', overflow: 'hidden',
           display: 'flex', flexDirection: 'column', gap: 16,
         }}>
           <div style={{
@@ -1019,6 +1049,27 @@ export async function generateEngagementSlidePNG(
     }
   }
 
+  // 1b. Pre-rasterize image at exact slot dimensions (bypasses html2canvas object-fit:cover bug)
+  // Slot sizes mirror MediaBlock heights and slide padding (60px left/right).
+  const imageScalePct = Number((texts as any).imageScale) || 100;
+  const scaleFactor = imageScalePct / 100;
+  if (imgDataUrl) {
+    try {
+      let slotW = SLIDE_W;
+      let slotH = SLIDE_H;
+      if (slideNum === 1) {
+        slotW = SLIDE_W; slotH = SLIDE_H;
+      } else if (slideNum === 6) {
+        slotW = SLIDE_W - 120; slotH = 280;
+      } else {
+        slotW = SLIDE_W - 120; slotH = 440;
+      }
+      imgDataUrl = await rasterizeCover(imgDataUrl, slotW, slotH, scaleFactor);
+    } catch (err) {
+      console.warn('[ENGAGEMENT_PNG] rasterizeCover failed, using raw image:', err);
+    }
+  }
+
   // 2. Build off-screen container at exact slide dimensions
   const container = document.createElement('div');
   container.style.cssText = [
@@ -1052,6 +1103,8 @@ export async function generateEngagementSlidePNG(
     videoStorageUrl: undefined,
     companyLogoUrl: companyLogoData,
     productLogoUrl: productLogoData,
+    // Image is pre-cropped at slot size; neutralize CSS scale to avoid double-scaling
+    imageScale: '100',
   };
 
   const root = createRoot(container);
@@ -1161,18 +1214,18 @@ function drawSlideFrameWithVideo(
     ctx.restore();
 
     // Gradient overlay
-    const grad = ctx.createLinearGradient(0, H * 0.30, 0, H);
+    const grad = ctx.createLinearGradient(0, H * 0.20, 0, H);
     grad.addColorStop(0, 'rgba(0,0,0,0)');
-    grad.addColorStop(0.5, 'rgba(0,0,0,0.5)');
-    grad.addColorStop(1, 'rgba(0,0,0,0.85)');
+    grad.addColorStop(0.5, 'rgba(0,0,0,0.55)');
+    grad.addColorStop(1, 'rgba(0,0,0,0.88)');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, H);
 
-    // Title (max 3 lines) — text block aligned to bottom:340
+    // Title (max 3 lines) — text block aligned to bottom:220
     const titleFont = '900 52px system-ui, -apple-system, sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    let titleEndY = drawRichText(ctx, (texts.title || '').slice(0, 150), 60, H - 340, W - 120, 62, titleFont, titleFont, '#ffffff', accent, 'left');
+    let titleEndY = drawRichText(ctx, (texts.title || '').slice(0, 150), 60, H - 220, W - 120, 62, titleFont, titleFont, '#ffffff', accent, 'left');
 
     // Subtitle (max 2 lines)
     if (texts.text) {
