@@ -283,7 +283,7 @@ function getEngagementLayoutMetrics(slideNum: number, texts: EngagementSlideText
     return {
       slide1TitleFont: veryLong ? 36 : long ? 40 : 46,
       slide1BodyFont: veryLong ? 19 : long ? 20 : 22,
-      slide1Bottom: veryLong ? 420 : 430,
+      slide1Bottom: veryLong ? 520 : 500,
       slide1Gap: veryLong ? 10 : 14,
       mediaHeight: SLIDE_H,
     };
