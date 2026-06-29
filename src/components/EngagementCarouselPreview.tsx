@@ -1350,9 +1350,9 @@ function drawSlideFrameWithVideo(
     const imgH = 280;
 
     const bodyFontSize = 32;
-    const bodyFont = `500 ${bodyFontSize}px system-ui, -apple-system, sans-serif`;
+    const bodyFont = `400 ${bodyFontSize}px system-ui, -apple-system, sans-serif`;
     const bodyFontBold = `700 ${bodyFontSize}px system-ui, -apple-system, sans-serif`;
-    const bodyLineH = bodyFontSize * 1.4;
+    const bodyLineH = bodyFontSize * 1.28;
     ctx.font = bodyFont;
     const bodyLines = displayBody ? Math.min(measureWrappedLines(ctx, displayBody, contentW), 3) : 0;
     const bodyH = bodyLines * bodyLineH;
