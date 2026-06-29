@@ -290,6 +290,12 @@ const LOGO_FIELDS: EditorField[] = [
   { key: 'productLogoScale', label: 'Tamanho da Logo (Produto)', type: 'slider', min: 40, max: 200, step: 5, defaultValue: 100 },
 ];
 
+// Slide 1 has no product logo slot (full-bleed cover)
+const SLIDE1_LOGO_FIELDS: EditorField[] = [
+  { key: 'companyLogoUrl',   label: '🏢 Logo da Empresa',        type: 'logo' },
+  { key: 'companyLogoScale', label: 'Tamanho da Logo (Empresa)', type: 'slider', min: 40, max: 200, step: 5, defaultValue: 100 },
+];
+
 const EDITOR_FIELDS: Record<number, EditorField[]> = {
   1: [
     { key: 'title', label: 'Título (gancho)', type: 'textarea' },
@@ -297,7 +303,7 @@ const EDITOR_FIELDS: Record<number, EditorField[]> = {
     { key: 'imageScale', label: 'Escala da imagem (%)', type: 'slider' },
     { key: 'bgColor', label: 'Cor de fundo', type: 'color' },
     { key: 'accentColor', label: 'Cor de destaque', type: 'color' },
-    ...LOGO_FIELDS,
+    ...SLIDE1_LOGO_FIELDS,
   ],
   2: [
     { key: 'title', label: 'Título', type: 'textarea' },
