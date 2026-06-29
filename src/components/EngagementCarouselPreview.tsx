@@ -917,11 +917,12 @@ function renderSlideContent(
 
         {/* Slide number badge */}
         <div style={{
-          position: 'absolute', top: 40, right: 48,
+          position: 'absolute', bottom: 40, right: 48,
           width: 60, height: 60, borderRadius: '50%',
-          background: 'rgba(0,0,0,0.35)',
+          background: 'rgba(0,0,0,0.45)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 28, fontWeight: 900, color: 'rgba(255,255,255,0.85)',
+          fontSize: 28, fontWeight: 900, color: 'rgba(255,255,255,0.9)',
+          zIndex: 5,
         }}>
           1
         </div>
@@ -1316,17 +1317,16 @@ function drawSlideFrameWithVideo(
       drawRichText(ctx, (texts.text).slice(0, 200), 60, titleEndY + 16, W - 120, 36, bodyFont, bodyFontBold, 'rgba(255,255,255,0.8)', accent, 'left');
     }
 
-    // Badge
-    // Badge (top:40, right:48 — matches React preview)
+    // Badge (bottom:40, right:48 — matches React preview)
     ctx.beginPath();
-    ctx.arc(W - 48 - 30, 40 + 30, 30, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.arc(W - 48 - 30, H - 40 - 30, 30, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
     ctx.fill();
     ctx.font = '900 28px system-ui, -apple-system, sans-serif';
-    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('1', W - 48 - 30, 40 + 30);
+    ctx.fillText('1', W - 48 - 30, H - 40 - 30);
   } else if (slideNum === 6) {
     // ===== Slide 6 Video: text top, image center (+ caption), CTA bottom =====
     const pad = 60;
