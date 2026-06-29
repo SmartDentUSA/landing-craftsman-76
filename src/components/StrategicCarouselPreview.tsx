@@ -693,7 +693,7 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
 }
 
 // ==================== SLIDE 1 — HOOK / GANCHO ====================
-function Slide1Hook({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; productData: ProductData; texts?: { hook?: string; productName?: string; imageScale?: string; bgColor?: string; overlayOpacity?: string; faixaVisible?: string; faixaColor?: string; faixaOpacity?: string } }) {
+function Slide1Hook({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; productData: ProductData; texts?: { hook?: string; productName?: string; imageScale?: string; bgColor?: string; overlayOpacity?: string; faixaVisible?: string; faixaColor?: string; faixaOpacity?: string; coverMode?: string; objectPosition?: string } }) {
   const hook = texts?.hook || (() => {
     if (productData.salesPitch) {
       const pitch = productData.salesPitch.trim();
@@ -718,6 +718,8 @@ function Slide1Hook({ image, primaryColor, productData, texts }: { image: string
   const bgColor = texts?.bgColor || '';
   const hasCustomBg = bgColor && bgColor !== '#333333';
   const faixaVisible = (texts?.faixaVisible ?? 'true') !== 'false';
+  const coverMode = (texts?.coverMode === 'contain') ? 'contain' : 'cover';
+  const objectPosition = texts?.objectPosition || 'center';
 
   // Auto text color: when faixa is OFF, adapt text/hook to page background luminance.
   // When ON, white stays best contrast against the colored band.
@@ -730,15 +732,29 @@ function Slide1Hook({ image, primaryColor, productData, texts }: { image: string
 
   return (
     <div style={{ width: SLIDE_W, height: SLIDE_H, position: 'relative', overflow: 'hidden', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-      {/* Background: custom color or image */}
+      {/* Background: custom color or image (background-image preserves aspect-ratio reliably in html2canvas) */}
       {hasCustomBg ? (
         <div style={{ position: 'absolute', inset: 0, background: bgColor }} />
       ) : null}
       {image ? (
-        <img src={image} alt="produto" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', transform: `scale(${imageScale / 100})`, transformOrigin: 'center center' }} />
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            top: 0, left: 0, width: '100%', height: '100%',
+            backgroundImage: `url("${image}")`,
+            backgroundSize: coverMode,
+            backgroundPosition: objectPosition,
+            backgroundRepeat: 'no-repeat',
+            backgroundColor: coverMode === 'contain' ? '#000' : 'transparent',
+            transform: `scale(${imageScale / 100})`,
+            transformOrigin: 'center center',
+          }}
+        />
       ) : (
         !hasCustomBg && <div style={{ position: 'absolute', inset: 0, background: '#333' }} />
       )}
+
 
       {/* Overlay escuro geral sutil para dar profundidade */}
       {(() => {
