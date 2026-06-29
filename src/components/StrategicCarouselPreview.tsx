@@ -434,7 +434,7 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
           )}
           {/* Full-bleed video overlay (BACKGROUND — sits behind slide content) */}
           {mediaType === 'video' && videoUrl && (
-            <div data-strategic-video-slot="true" data-video-scale="100" data-video-radius="0" style={{ position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none' }}>
+            <div data-strategic-video-slot="true" data-video-scale="100" data-video-radius="0" style={{ position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none', background: mediaObjectFit === 'contain' ? '#000' : 'transparent' }}>
               <video
                 src={videoUrl}
                 autoPlay
@@ -444,7 +444,24 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
                 style={{
                   width: '100%',
                   height: '100%',
-                  objectFit: 'cover',
+                  objectFit: mediaObjectFit,
+                  pointerEvents: 'none',
+                }}
+              />
+            </div>
+          )}
+          {/* Full-bleed image (BACKGROUND) — quando o usuário desliga a faixa lateral no modo imagem */}
+          {useFullBleedImage && (
+            <div style={{ position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none', background: mediaObjectFit === 'contain' ? '#000' : 'transparent' }}>
+              <img
+                src={currentImage}
+                alt=""
+                crossOrigin="anonymous"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: mediaObjectFit,
+                  display: 'block',
                   pointerEvents: 'none',
                 }}
               />
