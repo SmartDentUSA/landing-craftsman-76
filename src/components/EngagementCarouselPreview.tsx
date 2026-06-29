@@ -291,14 +291,16 @@ function getEngagementLayoutMetrics(slideNum: number, texts: EngagementSlideText
   }
 
   if (slideNum === 6) {
-    const veryLong = titleLen > 115 || bodyLen > 170 || ctaLen > 70;
-    const long = titleLen > 80 || bodyLen > 120 || ctaLen > 45;
+    const captionLen = plainText(texts.cta_caption).length;
+    const veryLong = titleLen > 115 || bodyLen > 170 || ctaLen > 70 || captionLen > 120;
+    const long = titleLen > 80 || bodyLen > 120 || ctaLen > 45 || captionLen > 70;
     return {
       ctaTitleFont: veryLong ? 34 : long ? 38 : 44,
-      ctaBodyFont: veryLong ? 20 : long ? 22 : 26,
+      ctaBodyFont: veryLong ? 24 : long ? 28 : 32,
+      ctaCaptionFont: veryLong ? 20 : long ? 22 : 26,
       ctaButtonFont: veryLong ? 24 : long ? 27 : 30,
       ctaMediaHeight: veryLong ? 220 : long ? 250 : 280,
-      ctaTopPad: veryLong ? 56 : long ? 64 : 80,
+      ctaTopPad: veryLong ? 96 : long ? 108 : 120,
       ctaBottomPad: veryLong ? 72 : long ? 84 : 100,
       ctaGap: veryLong ? 10 : 16,
       mediaHeight: veryLong ? 220 : long ? 250 : 280,
