@@ -536,7 +536,7 @@ function SlideWrapper({ slideNum, children, productImages, currentImage, onImage
           }}
         >
           {children}
-          <LogoOverlay texts={slideTexts as unknown as EngagementSlideTexts | undefined} />
+          <LogoOverlay texts={slideTexts as unknown as EngagementSlideTexts | undefined} slideNum={slideNum} />
         </div>
       </div>
 
