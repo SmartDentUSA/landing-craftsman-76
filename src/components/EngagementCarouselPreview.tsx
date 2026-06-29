@@ -792,16 +792,16 @@ function renderSlideContent(
           </div>
         )}
 
-        {/* Gradient overlay bottom 70% */}
+        {/* Gradient overlay bottom 80% */}
         <div style={{
-          position: 'absolute', bottom: 0, left: 0, width: '100%', height: '70%',
-          background: 'linear-gradient(to top, rgba(0,0,0,0.85) 20%, rgba(0,0,0,0.5) 55%, transparent 100%)',
+          position: 'absolute', bottom: 0, left: 0, width: '100%', height: '80%',
+          background: 'linear-gradient(to top, rgba(0,0,0,0.88) 25%, rgba(0,0,0,0.55) 60%, transparent 100%)',
         }} />
 
         {/* Text over gradient */}
         <div style={{
-          position: 'absolute', bottom: 340, left: 60, right: 60,
-          maxHeight: '55%', overflow: 'hidden',
+          position: 'absolute', bottom: 220, left: 60, right: 60,
+          maxHeight: '65%', overflow: 'hidden',
           display: 'flex', flexDirection: 'column', gap: 16,
         }}>
           <div style={{
