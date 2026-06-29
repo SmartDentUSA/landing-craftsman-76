@@ -1,24 +1,32 @@
-Plano cirúrgico para corrigir somente o 🎯 Carrossel Engajamento — 6 Slides Visuais:
+## Ajustes no Slide 6 (CTA) — 🎯 Carrossel Engajamento
 
-1. Unificar o layout de preview e export de vídeo
-   - Remover/contornar o renderizador canvas manual antigo que ainda usa medidas diferentes do preview.
-   - Forçar `generateEngagementSlideVideo` a usar a mesma composição DOM do preview (`EngagementSlideRender`) sobre o vídeo, para que vídeos não sumam e o texto fique na mesma posição do card visto na tela.
+Escopo restrito ao Slide 6. Não altera tamanho da imagem, nem outros slides, nem o Carrossel Visual.
 
-2. Corrigir texto cortado em todos os slides
-   - Slide 1: subir o bloco visual e reduzir dinamicamente o texto quando necessário, sem cortar no meio.
-   - Slides 2 e 3: liberar área real para título + vídeo + corpo, com fonte responsiva ao conteúdo e sem `overflow` que corte linhas.
-   - Slides 4 e 5: aplicar a mesma regra de ajuste de texto, preservando o layout atual.
-   - Slide 6: aumentar a área do subtítulo no topo e reduzir o tamanho automaticamente se o subtítulo for maior.
+### Mudanças
 
-3. Garantir vídeos nos slides 2 e 3
-   - Validar `resolveVideoSource` no export e no preview.
-   - Quando `mediaType` for vídeo e houver `videoSrc` ou `videoStorageUrl`, exportar `.webm` obrigatoriamente, não PNG.
-   - Manter erro explícito se o vídeo falhar, para não exportar um arquivo diferente do preview.
+1. **Texto do topo (título + subtítulo) desce um pouco**
+   - Aumentar `ctaTopPad` para empurrar o bloco do topo para baixo (mais respiro abaixo do título antes da imagem).
 
-4. Corrigir proporção da mídia
-   - Usar sempre `object-fit: cover` equivalente no preview e export.
-   - Remover pre-crop/scale divergente onde ele altera a aparência real do card.
+2. **Aumentar fonte do subtítulo (texto sob o título)**
+   - Subir `ctaBodyFont` (atualmente 22–26) para 28–32 com escala dinâmica preservada para textos longos.
 
-5. Verificação
-   - Conferir no código que as dimensões usadas no preview são as mesmas usadas no export para os 6 slides.
-   - Não alterar banco, SmartOps, Sistema B, SEO, nem o Carrossel Visual nesta etapa.
+3. **Novo campo de texto abaixo da imagem, antes do botão CTA**
+   - Adicionar campo `cta_caption` em `EngagementSlideTexts` (tipo).
+   - Adicionar input no editor do Slide 6 em `EngagementCarouselSection.tsx` (label: "Texto abaixo da imagem").
+   - Renderizar no `EngagementSlideRender` (JSX preview) entre a mídia e o botão CTA.
+   - Replicar no `generateEngagementSlidePNG` (canvas export) na mesma posição.
+   - Estilo: fonte ~22px, cor branca suave, centralizado, com `lineClamp`/escala dinâmica para não estourar.
+
+4. **Persistência**
+   - Garantir que `cta_caption` é salvo/carregado junto com os outros textos do slide (mesmo fluxo de `slideTexts`/`debouncedPersist`).
+
+### Arquivos afetados
+
+- `src/components/EngagementCarouselPreview.tsx` — tipo, métricas (`getEngagementLayoutMetrics`), JSX do Slide 6, export PNG do Slide 6.
+- `src/components/EngagementCarouselSection.tsx` — novo input no editor do Slide 6.
+
+### Fora de escopo
+
+- Tamanho/posição da imagem (mantida).
+- Demais slides (1–5).
+- Carrossel Visual, SmartOps, Sistema B, SEO.
