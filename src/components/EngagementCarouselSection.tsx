@@ -295,7 +295,15 @@ export function EngagementCarouselSection({
 
       if (urlData?.publicUrl) {
         console.log('[CAROUSEL_VIDEO_UPLOAD_SUCCESS]', { slideNum, publicUrl: urlData.publicUrl });
-        handleSlideTextChange(slideNum, 'videoStorageUrl', urlData.publicUrl);
+        setSlideTexts(prev => ({
+          ...prev,
+          [slideNum]: {
+            ...prev[slideNum],
+            mediaType: 'video',
+            videoStorageUrl: urlData.publicUrl,
+          },
+        }));
+        debouncedPersist();
         toast({
           title: "✅ Vídeo enviado",
           description: `Slide ${slideNum} atualizado (${fileSizeMB} MB).`,
