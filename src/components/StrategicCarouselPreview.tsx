@@ -1357,7 +1357,7 @@ function Slide4Experience({ image, primaryColor, productData, texts }: { image: 
 
 
 // ==================== SLIDE 5 — SEGURANÇA ====================
-function Slide5Security({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; productData: ProductData; texts?: { title?: string; badge1?: string; badge2?: string; badge3?: string; imageScale?: string; bgColor?: string; headlineVisible?: string; sideStripVisible?: string } }) {
+function Slide5Security({ image, primaryColor, productData, texts }: { image: string; primaryColor: string; productData: ProductData; texts?: { title?: string; badge1?: string; badge2?: string; badge3?: string; imageScale?: string; bgColor?: string; headlineVisible?: string; sideStripVisible?: string; coverMode?: string; objectPosition?: string } }) {
   const features = productData.features || [];
   const benefits = productData.benefits || [];
   const title = texts?.title || 'Você pode confiar';
@@ -1370,6 +1370,8 @@ function Slide5Security({ image, primaryColor, productData, texts }: { image: st
   const bgColor5 = texts?.bgColor || '';
   const sideStripVisible = (texts?.sideStripVisible ?? 'true') !== 'false';
   const headlineVisible = (texts?.headlineVisible ?? 'true') !== 'false';
+  const coverMode5 = (texts?.coverMode === 'contain') ? 'contain' : 'cover';
+  const objectPosition5 = texts?.objectPosition || 'center';
 
   // Quando o "side strip" (imagem de fundo + overlay) é desligado, o fundo
   // vira sólido — recalculamos a cor de textos/badges via luminância para legibilidade.
@@ -1386,13 +1388,27 @@ function Slide5Security({ image, primaryColor, productData, texts }: { image: st
       {sideStripVisible && (
         <>
           {image ? (
-            <img src={image} alt="segurança" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(8px)', transform: `scale(${imageScale5 / 100 * 1.1})` }} />
+            <div
+              aria-hidden
+              style={{
+                position: 'absolute', inset: 0,
+                backgroundImage: `url("${image}")`,
+                backgroundSize: coverMode5,
+                backgroundPosition: objectPosition5,
+                backgroundRepeat: 'no-repeat',
+                backgroundColor: coverMode5 === 'contain' ? '#000' : 'transparent',
+                filter: 'blur(8px)',
+                transform: `scale(${(imageScale5 / 100) * 1.1})`,
+                transformOrigin: 'center center',
+              }}
+            />
           ) : (
             <div style={{ position: 'absolute', inset: 0, background: '#222' }} />
           )}
           <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.65)' }} />
         </>
       )}
+
       <div style={{ position: 'absolute', top: 60, left: 60, width: 70, height: 70, borderRadius: '50%', background: numberBg, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
         <span style={{ color: textColor, fontWeight: 900, fontSize: 30 }}>5</span>
       </div>
