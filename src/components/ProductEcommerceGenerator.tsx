@@ -27,28 +27,44 @@ const extractLiProductIdFromResourceUri = (value?: string | null) => {
 
 const normalizeLiProductId = (value: unknown) => {
   if (value === null || value === undefined) return undefined;
+  if (typeof value === 'object') return undefined;
 
   const text = String(value).trim();
   if (!text || text === 'null' || text === 'undefined' || text === 'not_found') return undefined;
 
-  return extractLiProductIdFromResourceUri(text) || text.replace(/\.0+$/, '');
+  const extracted = extractLiProductIdFromResourceUri(text);
+  if (extracted) return extracted;
+
+  const normalized = text.replace(/\.0+$/, '');
+  return /^\d+$/.test(normalized) ? normalized : undefined;
 };
 
-const resolveLojaIntegradaProductId = (originalData: any, propLiProductId?: string) => {
+const resolveLojaIntegradaProductId = (source: any, propLiProductId?: string) => {
+  const originalData = source?.original_data || source;
   const candidates = [
     propLiProductId,
+    source?.li_product_id,
+    source?.id,
+    source?.resource_uri,
+    source?.product_url,
+    source?.slug,
     originalData?.li_product_id,
     originalData?.id,
     originalData?.resource_uri,
+    originalData?.product_url,
+    originalData?.slug,
     originalData?.variation?.li_product_id,
     originalData?.variation?.id,
     originalData?.variation?.resource_uri,
+    originalData?.variation?.product_url,
     originalData?.merged?.li_product_id,
     originalData?.merged?.id,
     originalData?.merged?.resource_uri,
+    originalData?.merged?.product_url,
     originalData?.parent?.li_product_id,
     originalData?.parent?.id,
     originalData?.parent?.resource_uri,
+    originalData?.parent?.product_url,
   ];
 
   for (const candidate of candidates) {
@@ -234,20 +250,19 @@ export function ProductEcommerceGenerator({
         console.log('🔎 liProductId ausente na prop, buscando do banco...');
         const { data: row, error: fetchErr } = await supabase
           .from('products_repository')
-          .select('original_data')
+          .select('original_data, product_url, slug')
           .eq('id', productId)
           .maybeSingle();
         if (fetchErr) {
           console.warn('⚠️ Falha ao buscar original_data:', fetchErr);
         }
-        const od = row?.original_data as any;
-        resolvedLiProductId = resolveLojaIntegradaProductId(od, liProductId);
+        resolvedLiProductId = resolveLojaIntegradaProductId(row, liProductId);
       }
 
       if (!resolvedLiProductId) {
         toast({
           title: "⚠️ Produto não vinculado",
-          description: "Não encontrei ID da Loja Integrada neste produto. Reimporte via URL/ID para capturar o vínculo.",
+          description: "Este registro foi salvo sem ID da Loja Integrada. Reimporte pelo ID/URL do produto para gravar o vínculo e enviar o HTML.",
           variant: "destructive",
         });
         setIsSendingToLI(false);
