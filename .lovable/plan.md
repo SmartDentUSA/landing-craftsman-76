@@ -1,24 +1,28 @@
-## Problema
+Vou corrigir o caso do produto “Ativação DentalCAD Ultimate Lab Bundle - RMS”, que parece cair no fluxo de variação da Loja Integrada e perde o `li_product_id` no topo de `original_data`.
 
-Mesmo após importar o produto da Loja Integrada, o botão **🚀 Enviar Loja Integrada** mostra "⚠️ Produto não vinculado".
+Plano:
 
-Causa: o componente `ProductEcommerceGenerator` recebe `liProductId` como prop, vindo de `product.original_data?.li_product_id` no `ModernProductCard`. Se a lista de produtos foi renderizada antes da importação terminar (ou o refetch não incluiu `original_data` naquele momento), a prop chega `undefined` e a validação frontend bloqueia o envio, sem sequer tentar consultar o banco.
+1. Corrigir o envio do HTML e-commerce
+   - Em `ProductEcommerceGenerator`, resolver o ID da Loja Integrada a partir de vários formatos possíveis:
+     - `original_data.li_product_id`
+     - `original_data.id`
+     - `original_data.resource_uri`
+     - `original_data.variation.id`
+     - `original_data.variation.resource_uri`
+     - `original_data.merged.id`
+   - Assim o botão “Enviar Loja Integrada” não bloqueia produtos recém-importados como variação.
 
-## Correção
+2. Corrigir a importação via API da Loja Integrada
+   - Em `import-loja-integrada-api`, quando o produto for `atributo_opcao`/variação, preservar também no topo:
+     - `li_product_id`
+     - `resource_uri`
+     - dados de `variation`, `parent` e `merged`
+   - Isso evita que futuros imports salvem `original_data` sem vínculo utilizável.
 
-No `ProductEcommerceGenerator.tsx`, tornar o handler resiliente: quando `liProductId` não está presente na prop, buscar direto de `products_repository` pelo `productId` antes de decidir bloquear.
+3. Corrigir normalização no frontend do importador
+   - Em `ProductLojaIntegradaImporter`, extrair o ID também dos caminhos aninhados (`variation.id`, `variation.resource_uri`, `merged.id`, etc.).
+   - Isso garante que o modal de edição já salve o produto com o ID correto.
 
-### Fluxo novo do `handleSendToLojaIntegrada`
-
-1. Se `liProductId` da prop existir, usa direto.
-2. Senão, faz `SELECT original_data FROM products_repository WHERE id = productId` e lê `original_data.li_product_id`.
-3. Se ainda assim não existir, aí sim mostra o toast "Produto não vinculado".
-4. Caso contrário, segue chamando `update-loja-integrada-product` com o `liProductId` recém-obtido.
-
-Isso elimina a dependência do estado do pai estar atualizado e resolve o caso "acabei de importar".
-
-## Escopo
-
-- Arquivo único: `src/components/ProductEcommerceGenerator.tsx`.
-- Sem mudanças em edge functions, banco ou outros componentes.
-- Comportamento inalterado para produtos que já têm o vínculo carregado.
+4. Validar
+   - Verificar que o botão deixa de mostrar “Produto não vinculado” quando houver ID em qualquer desses formatos.
+   - Se ainda não houver ID salvo para esse registro específico, a UI passará a mostrar um erro mais útil indicando que o import não capturou nenhum ID da Loja Integrada.
