@@ -20,6 +20,45 @@ interface ProductEcommerceGeneratorProps {
   onUpdate?: () => void;
 }
 
+const extractLiProductIdFromResourceUri = (value?: string | null) => {
+  const match = value?.match(/\/produto\/(\d+)\/?/i);
+  return match?.[1];
+};
+
+const normalizeLiProductId = (value: unknown) => {
+  if (value === null || value === undefined) return undefined;
+
+  const text = String(value).trim();
+  if (!text || text === 'null' || text === 'undefined' || text === 'not_found') return undefined;
+
+  return extractLiProductIdFromResourceUri(text) || text.replace(/\.0+$/, '');
+};
+
+const resolveLojaIntegradaProductId = (originalData: any, propLiProductId?: string) => {
+  const candidates = [
+    propLiProductId,
+    originalData?.li_product_id,
+    originalData?.id,
+    originalData?.resource_uri,
+    originalData?.variation?.li_product_id,
+    originalData?.variation?.id,
+    originalData?.variation?.resource_uri,
+    originalData?.merged?.li_product_id,
+    originalData?.merged?.id,
+    originalData?.merged?.resource_uri,
+    originalData?.parent?.li_product_id,
+    originalData?.parent?.id,
+    originalData?.parent?.resource_uri,
+  ];
+
+  for (const candidate of candidates) {
+    const resolved = normalizeLiProductId(candidate);
+    if (resolved) return resolved;
+  }
+
+  return undefined;
+};
+
 export function ProductEcommerceGenerator({ 
   productId, 
   liProductId,
@@ -189,8 +228,8 @@ export function ProductEcommerceGenerator({
 
     setIsSendingToLI(true);
     try {
-      // Resolver liProductId: usar prop, senão buscar direto do banco (evita prop stale após import recente)
-      let resolvedLiProductId = liProductId;
+      // Resolver liProductId em múltiplos formatos (produto pai, variação ou prop stale pós-import)
+      let resolvedLiProductId = normalizeLiProductId(liProductId);
       if (!resolvedLiProductId) {
         console.log('🔎 liProductId ausente na prop, buscando do banco...');
         const { data: row, error: fetchErr } = await supabase
@@ -202,13 +241,13 @@ export function ProductEcommerceGenerator({
           console.warn('⚠️ Falha ao buscar original_data:', fetchErr);
         }
         const od = row?.original_data as any;
-        resolvedLiProductId = od?.li_product_id ? String(od.li_product_id) : undefined;
+        resolvedLiProductId = resolveLojaIntegradaProductId(od, liProductId);
       }
 
       if (!resolvedLiProductId) {
         toast({
           title: "⚠️ Produto não vinculado",
-          description: "Este produto não foi importado da Loja Integrada. Importe via URL primeiro.",
+          description: "Não encontrei ID da Loja Integrada neste produto. Reimporte via URL/ID para capturar o vínculo.",
           variant: "destructive",
         });
         setIsSendingToLI(false);

@@ -317,6 +317,41 @@ function extractIdFromUri(uri: string): string | null {
   return match ? match[1] : null;
 }
 
+function normalizeLojaIntegradaProductId(value?: unknown): string | null {
+  if (value === null || value === undefined) return null;
+
+  const text = String(value).trim();
+  if (!text || text === 'null' || text === 'undefined' || text === 'not_found') return null;
+
+  return extractIdFromUri(text) || text.replace(/\.0+$/, '');
+}
+
+function resolveLojaIntegradaProductId(...sources: any[]): string | null {
+  for (const source of sources) {
+    const direct = normalizeLojaIntegradaProductId(source?.li_product_id ?? source?.id ?? source?.resource_uri ?? source);
+    if (direct) return direct;
+
+    const nestedCandidates = [
+      source?.variation?.li_product_id,
+      source?.variation?.id,
+      source?.variation?.resource_uri,
+      source?.merged?.li_product_id,
+      source?.merged?.id,
+      source?.merged?.resource_uri,
+      source?.parent?.li_product_id,
+      source?.parent?.id,
+      source?.parent?.resource_uri,
+    ];
+
+    for (const candidate of nestedCandidates) {
+      const nested = normalizeLojaIntegradaProductId(candidate);
+      if (nested) return nested;
+    }
+  }
+
+  return null;
+}
+
 // Fetch parent product for variations
 async function fetchParentProduct(
   apiKey: string,
@@ -983,7 +1018,11 @@ serve(async (req) => {
       
       // Save complete original_data with parent info if variation
       if (productData.tipo === 'atributo_opcao' && productData.pai) {
+        const variationLiProductId = resolveLojaIntegradaProductId(productData, productToMap, finalData.original_data);
         finalData.original_data = {
+          ...(finalData.original_data || {}),
+          li_product_id: variationLiProductId,
+          resource_uri: productData.resource_uri || finalData.original_data?.resource_uri || null,
           variation: productData,           // Original variation data
           parent: productToMap !== productData ? productToMap : null, // Parent data if fetched
           merged: productToMap              // Final merged data
