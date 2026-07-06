@@ -14,6 +14,7 @@ import { RichTextEditor } from '@/components/ui/rich-text-editor';
 
 interface ProductEcommerceGeneratorProps {
   productId: string;
+  productName?: string;
   liProductId?: string;
   isOpen: boolean;
   onClose: () => void;
@@ -37,6 +38,28 @@ const normalizeLiProductId = (value: unknown) => {
 
   const normalized = text.replace(/\.0+$/, '');
   return /^\d+$/.test(normalized) ? normalized : undefined;
+};
+
+const MANUAL_LOJA_INTEGRADA_PRODUCT_IDS: Record<string, string> = {
+  'Ativação DentalCAD Ultimate Lab Bundle - RMS': '402002410',
+};
+
+const resolveManualLojaIntegradaProductId = (productName?: string | null) => {
+  if (!productName) return undefined;
+
+  const normalizeName = (name: string) => name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+
+  const normalizedProductName = normalizeName(productName);
+  const match = Object.entries(MANUAL_LOJA_INTEGRADA_PRODUCT_IDS).find(([name]) => (
+    normalizeName(name) === normalizedProductName
+  ));
+
+  return match?.[1];
 };
 
 const resolveLojaIntegradaProductId = (source: any, propLiProductId?: string) => {
@@ -65,6 +88,7 @@ const resolveLojaIntegradaProductId = (source: any, propLiProductId?: string) =>
     originalData?.parent?.id,
     originalData?.parent?.resource_uri,
     originalData?.parent?.product_url,
+    resolveManualLojaIntegradaProductId(source?.name),
   ];
 
   for (const candidate of candidates) {
@@ -77,6 +101,7 @@ const resolveLojaIntegradaProductId = (source: any, propLiProductId?: string) =>
 
 export function ProductEcommerceGenerator({ 
   productId, 
+  productName,
   liProductId,
   isOpen, 
   onClose, 
@@ -201,6 +226,46 @@ export function ProductEcommerceGenerator({
     });
   };
 
+  const persistResolvedLojaIntegradaProductId = async (resolvedLiProductId: string) => {
+    try {
+      const { data: currentRow, error: fetchError } = await supabase
+        .from('products_repository')
+        .select('original_data')
+        .eq('id', productId)
+        .maybeSingle();
+
+      if (fetchError) {
+        console.warn('⚠️ Não foi possível conferir original_data antes de persistir li_product_id:', fetchError);
+        return;
+      }
+
+      const currentOriginalData = currentRow?.original_data && typeof currentRow.original_data === 'object' && !Array.isArray(currentRow.original_data)
+        ? currentRow.original_data as Record<string, unknown>
+        : {};
+
+      if (normalizeLiProductId(currentOriginalData.li_product_id) === resolvedLiProductId) return;
+
+      const { error: updateError } = await supabase
+        .from('products_repository')
+        .update({
+          original_data: {
+            ...currentOriginalData,
+            li_product_id: resolvedLiProductId,
+          },
+        })
+        .eq('id', productId);
+
+      if (updateError) {
+        console.warn('⚠️ Não foi possível persistir li_product_id no produto:', updateError);
+        return;
+      }
+
+      onUpdate?.();
+    } catch (error) {
+      console.warn('⚠️ Erro inesperado ao persistir li_product_id:', error);
+    }
+  };
+
   const handleDelete = async () => {
     if (!confirm('Tem certeza que deseja excluir o HTML gerado?')) return;
 
@@ -245,12 +310,13 @@ export function ProductEcommerceGenerator({
     setIsSendingToLI(true);
     try {
       // Resolver liProductId em múltiplos formatos (produto pai, variação ou prop stale pós-import)
-      let resolvedLiProductId = normalizeLiProductId(liProductId);
+      let resolvedLiProductId = normalizeLiProductId(liProductId)
+        || normalizeLiProductId(resolveManualLojaIntegradaProductId(productName));
       if (!resolvedLiProductId) {
         console.log('🔎 liProductId ausente na prop, buscando do banco...');
         const { data: row, error: fetchErr } = await supabase
           .from('products_repository')
-          .select('original_data, product_url, slug')
+          .select('name, original_data, product_url, slug')
           .eq('id', productId)
           .maybeSingle();
         if (fetchErr) {
@@ -270,6 +336,8 @@ export function ProductEcommerceGenerator({
       }
 
       console.log('📤 Enviando HTML para Loja Integrada (ID:', resolvedLiProductId, ')');
+      await persistResolvedLojaIntegradaProductId(resolvedLiProductId);
+
       const { data, error } = await supabase.functions.invoke(
         "update-loja-integrada-product",
         {

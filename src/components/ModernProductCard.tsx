@@ -825,6 +825,7 @@ export function ModernProductCard({
       {/* Modal de Descrição E-commerce */}
             <ProductEcommerceGenerator
               productId={product.id}
+              productName={product.name}
               liProductId={product.original_data?.li_product_id}
               isOpen={showEcommerceModal}
               onClose={() => setShowEcommerceModal(false)}
