@@ -14,6 +14,7 @@ import { RichTextEditor } from '@/components/ui/rich-text-editor';
 
 interface ProductEcommerceGeneratorProps {
   productId: string;
+  productName?: string;
   liProductId?: string;
   isOpen: boolean;
   onClose: () => void;
@@ -82,6 +83,7 @@ const resolveLojaIntegradaProductId = (source: any, propLiProductId?: string) =>
 
 export function ProductEcommerceGenerator({ 
   productId, 
+  productName,
   liProductId,
   isOpen, 
   onClose, 
@@ -250,7 +252,8 @@ export function ProductEcommerceGenerator({
     setIsSendingToLI(true);
     try {
       // Resolver liProductId em múltiplos formatos (produto pai, variação ou prop stale pós-import)
-      let resolvedLiProductId = normalizeLiProductId(liProductId);
+      let resolvedLiProductId = normalizeLiProductId(liProductId)
+        || normalizeLiProductId(MANUAL_LOJA_INTEGRADA_PRODUCT_IDS[productName || '']);
       if (!resolvedLiProductId) {
         console.log('🔎 liProductId ausente na prop, buscando do banco...');
         const { data: row, error: fetchErr } = await supabase
