@@ -44,6 +44,24 @@ const MANUAL_LOJA_INTEGRADA_PRODUCT_IDS: Record<string, string> = {
   'Ativação DentalCAD Ultimate Lab Bundle - RMS': '402002410',
 };
 
+const resolveManualLojaIntegradaProductId = (productName?: string | null) => {
+  if (!productName) return undefined;
+
+  const normalizeName = (name: string) => name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+
+  const normalizedProductName = normalizeName(productName);
+  const match = Object.entries(MANUAL_LOJA_INTEGRADA_PRODUCT_IDS).find(([name]) => (
+    normalizeName(name) === normalizedProductName
+  ));
+
+  return match?.[1];
+};
+
 const resolveLojaIntegradaProductId = (source: any, propLiProductId?: string) => {
   const originalData = source?.original_data || source;
   const candidates = [
@@ -70,7 +88,7 @@ const resolveLojaIntegradaProductId = (source: any, propLiProductId?: string) =>
     originalData?.parent?.id,
     originalData?.parent?.resource_uri,
     originalData?.parent?.product_url,
-    MANUAL_LOJA_INTEGRADA_PRODUCT_IDS[source?.name],
+    resolveManualLojaIntegradaProductId(source?.name),
   ];
 
   for (const candidate of candidates) {
@@ -253,7 +271,7 @@ export function ProductEcommerceGenerator({
     try {
       // Resolver liProductId em múltiplos formatos (produto pai, variação ou prop stale pós-import)
       let resolvedLiProductId = normalizeLiProductId(liProductId)
-        || normalizeLiProductId(MANUAL_LOJA_INTEGRADA_PRODUCT_IDS[productName || '']);
+        || normalizeLiProductId(resolveManualLojaIntegradaProductId(productName));
       if (!resolvedLiProductId) {
         console.log('🔎 liProductId ausente na prop, buscando do banco...');
         const { data: row, error: fetchErr } = await supabase
