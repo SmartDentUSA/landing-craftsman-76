@@ -1972,7 +1972,10 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
         // Resource Descriptions
         resource_descriptions: formData.resource_descriptions,
         // Original Data (inclui li_product_id da Loja Integrada)
-        original_data: formData.original_data || product?.original_data || null,
+        original_data: {
+          ...(product?.original_data || {}),
+          ...(formData.original_data || {}),
+        },
         // Document Transcriptions
         document_transcriptions: documentTranscriptions.length > 0 ? documentTranscriptions as any : [],
         // Competitor Comparison Table
@@ -2811,9 +2814,18 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
               <Input
                 id="li_product_id"
                 value={formData.original_data?.li_product_id || ''}
-                readOnly
-                className="bg-muted"
-                placeholder="Importar produto da Loja Integrada para preencher"
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, '');
+                  setFormData(prev => ({
+                    ...prev,
+                    original_data: {
+                      ...(prev.original_data || {}),
+                      li_product_id: value,
+                    },
+                  }));
+                }}
+                inputMode="numeric"
+                placeholder="Ex.: 402002410"
               />
               <p className="text-xs text-muted-foreground">
                 ID necessário para enviar descrição HTML para a Loja Integrada

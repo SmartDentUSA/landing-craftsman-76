@@ -39,6 +39,10 @@ const normalizeLiProductId = (value: unknown) => {
   return /^\d+$/.test(normalized) ? normalized : undefined;
 };
 
+const MANUAL_LOJA_INTEGRADA_PRODUCT_IDS: Record<string, string> = {
+  'Ativação DentalCAD Ultimate Lab Bundle - RMS': '402002410',
+};
+
 const resolveLojaIntegradaProductId = (source: any, propLiProductId?: string) => {
   const originalData = source?.original_data || source;
   const candidates = [
@@ -65,6 +69,7 @@ const resolveLojaIntegradaProductId = (source: any, propLiProductId?: string) =>
     originalData?.parent?.id,
     originalData?.parent?.resource_uri,
     originalData?.parent?.product_url,
+    MANUAL_LOJA_INTEGRADA_PRODUCT_IDS[source?.name],
   ];
 
   for (const candidate of candidates) {
@@ -250,7 +255,7 @@ export function ProductEcommerceGenerator({
         console.log('🔎 liProductId ausente na prop, buscando do banco...');
         const { data: row, error: fetchErr } = await supabase
           .from('products_repository')
-          .select('original_data, product_url, slug')
+          .select('name, original_data, product_url, slug')
           .eq('id', productId)
           .maybeSingle();
         if (fetchErr) {
