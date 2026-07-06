@@ -1,17 +1,34 @@
-## Plano
+## Problema
 
-1. **Atualizar o produto existente**
-   - Localizar o produto `Ativação DentalCAD Ultimate Lab Bundle - RMS` no repositório.
-   - Gravar o vínculo da Loja Integrada como `li_product_id = "402002410"` dentro de `original_data`, preservando os dados já existentes.
+No modal "Editar Produto", ao adicionar imagens na **Galeria de Imagens** e salvar, as imagens somem ao reabrir o produto.
 
-2. **Garantir que o envio use esse vínculo**
-   - Confirmar que o botão **Enviar Loja Integrada** resolve o ID `402002410` a partir de `original_data.li_product_id`.
-   - Se necessário, ajustar o fallback para priorizar esse campo antes de mostrar “Produto não vinculado”.
+## Causa raiz
 
-3. **Evitar perda do ID em futuras edições/importações**
-   - Revisar o fluxo de importação/edição para não sobrescrever `original_data.li_product_id` com vazio quando o produto já tem vínculo.
-   - Manter o ID da Loja Integrada quando dados parciais forem salvos.
+`RepositoryPanel.tsx` define as listas de colunas usadas em todos os `select()` do repositório:
 
-4. **Validar o caso real**
-   - Testar o fluxo para o produto informado e confirmar que ele não exibe mais o alerta “Produto não vinculado”.
-   - O resultado esperado é o envio do HTML E-commerce para o produto `402002410`.
+- `PRODUCT_REPOSITORY_LIST_COLUMNS` (linha 114) — usado na listagem
+- `PRODUCT_REPOSITORY_EDIT_COLUMNS` (linha 122) — usado ao abrir um produto para edição
+
+Nenhuma das duas listas inclui `images_gallery`. O `ProductEditModal` grava a coluna corretamente no banco (linha 1894), mas quando o produto é relido (linha 615 do `RepositoryPanel`, `.select(PRODUCT_REPOSITORY_EDIT_COLUMNS)`), o campo não vem, e `setImagesGallery((product as any).images_gallery || [])` cai no `[]`. Resultado: parece que sumiu.
+
+O mapeamento em `RepositoryPanel.tsx:464` (`images_gallery: Array.isArray(data.images_gallery) ? … : []`) confirma que o código espera o campo, mas ele nunca é solicitado no SELECT.
+
+## Correção
+
+Adicionar `images_gallery` a `PRODUCT_REPOSITORY_EDIT_COLUMNS` em `src/components/RepositoryPanel.tsx` para que o campo seja carregado ao abrir o modal de edição.
+
+Opcionalmente incluir também em `PRODUCT_REPOSITORY_LIST_COLUMNS` apenas se a listagem precisar da galeria (não é o caso deste bug — vou deixar de fora para não ampliar o payload).
+
+## Validação
+
+1. Abrir um produto no `/repository`.
+2. Adicionar uma imagem na Galeria de Imagens → salvar.
+3. Fechar o modal e reabrir o mesmo produto.
+4. Confirmar que a imagem persiste na galeria.
+
+## Detalhes técnicos
+
+- Arquivo alterado: `src/components/RepositoryPanel.tsx`
+- Mudança: incluir `'images_gallery'` na constante `PRODUCT_REPOSITORY_EDIT_COLUMNS`.
+- Sem alteração de esquema (coluna já existe em `products_repository`).
+- Sem alterações no `ProductEditModal` — o save já grava corretamente.
