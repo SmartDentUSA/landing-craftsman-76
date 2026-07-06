@@ -187,23 +187,39 @@ export function ProductEcommerceGenerator({
       return;
     }
 
-    // ✅ VALIDAÇÃO ANTECIPADA NO FRONTEND
-    if (!liProductId) {
-      toast({
-        title: "⚠️ Produto não vinculado",
-        description: "Este produto não foi importado da Loja Integrada. Importe via URL primeiro.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsSendingToLI(true);
     try {
-      console.log('📤 Enviando HTML para Loja Integrada (ID:', liProductId, ')');
+      // Resolver liProductId: usar prop, senão buscar direto do banco (evita prop stale após import recente)
+      let resolvedLiProductId = liProductId;
+      if (!resolvedLiProductId) {
+        console.log('🔎 liProductId ausente na prop, buscando do banco...');
+        const { data: row, error: fetchErr } = await supabase
+          .from('products_repository')
+          .select('original_data')
+          .eq('id', productId)
+          .maybeSingle();
+        if (fetchErr) {
+          console.warn('⚠️ Falha ao buscar original_data:', fetchErr);
+        }
+        const od = row?.original_data as any;
+        resolvedLiProductId = od?.li_product_id ? String(od.li_product_id) : undefined;
+      }
+
+      if (!resolvedLiProductId) {
+        toast({
+          title: "⚠️ Produto não vinculado",
+          description: "Este produto não foi importado da Loja Integrada. Importe via URL primeiro.",
+          variant: "destructive",
+        });
+        setIsSendingToLI(false);
+        return;
+      }
+
+      console.log('📤 Enviando HTML para Loja Integrada (ID:', resolvedLiProductId, ')');
       const { data, error } = await supabase.functions.invoke(
         "update-loja-integrada-product",
         {
-          body: { productId, liProductId, htmlContent },
+          body: { productId, liProductId: resolvedLiProductId, htmlContent },
         }
       );
 
