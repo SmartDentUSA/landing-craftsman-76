@@ -319,28 +319,47 @@ function extractIdFromUri(uri: string): string | null {
 
 function normalizeLojaIntegradaProductId(value?: unknown): string | null {
   if (value === null || value === undefined) return null;
+  if (typeof value === 'object') return null;
 
   const text = String(value).trim();
   if (!text || text === 'null' || text === 'undefined' || text === 'not_found') return null;
 
-  return extractIdFromUri(text) || text.replace(/\.0+$/, '');
+  const extracted = extractIdFromUri(text);
+  if (extracted) return extracted;
+
+  const normalized = text.replace(/\.0+$/, '');
+  return /^\d+$/.test(normalized) ? normalized : null;
 }
 
 function resolveLojaIntegradaProductId(...sources: any[]): string | null {
   for (const source of sources) {
-    const direct = normalizeLojaIntegradaProductId(source?.li_product_id ?? source?.id ?? source?.resource_uri ?? source);
-    if (direct) return direct;
+    const directCandidates = [
+      source?.li_product_id,
+      source?.id,
+      source?.resource_uri,
+      source?.product_url,
+      source?.slug,
+      typeof source === 'object' ? undefined : source,
+    ];
+
+    for (const candidate of directCandidates) {
+      const direct = normalizeLojaIntegradaProductId(candidate);
+      if (direct) return direct;
+    }
 
     const nestedCandidates = [
       source?.variation?.li_product_id,
       source?.variation?.id,
       source?.variation?.resource_uri,
+      source?.variation?.product_url,
       source?.merged?.li_product_id,
       source?.merged?.id,
       source?.merged?.resource_uri,
+      source?.merged?.product_url,
       source?.parent?.li_product_id,
       source?.parent?.id,
       source?.parent?.resource_uri,
+      source?.parent?.product_url,
     ];
 
     for (const candidate of nestedCandidates) {
@@ -1017,7 +1036,7 @@ serve(async (req) => {
       finalData = await mapAPIProductToRepository(productToMap, lojaIntegradaApiKey, lojaIntegradaAppKey);
       
       // Save complete original_data with parent info if variation
-      if (productData.tipo === 'atributo_opcao' && productData.pai) {
+      if (productData.pai) {
         const variationLiProductId = resolveLojaIntegradaProductId(productData, productToMap, finalData.original_data);
         finalData.original_data = {
           ...(finalData.original_data || {}),

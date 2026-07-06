@@ -2232,7 +2232,7 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
                   if (!importedData || typeof importedData !== 'object') {
                     throw new Error('Dados importados inválidos');
                   }
-                  if (!importedData.name || typeof importedData.name !== 'string') {
+                  if ('name' in importedData && importedData.name && typeof importedData.name !== 'string') {
                     throw new Error('Nome do produto é obrigatório');
                   }
 
@@ -2243,9 +2243,9 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
                     ...prev,
                     ...importedData,
                     // Garantir defaults se vierem null
-                    condition: importedData.condition || 'new',
-                    availability: importedData.availability || 'in stock',
-                    currency: importedData.currency || 'BRL',
+                    condition: importedData.condition ?? prev.condition ?? 'new',
+                    availability: importedData.availability ?? prev.availability ?? 'in stock',
+                    currency: importedData.currency ?? prev.currency ?? 'BRL',
                     // Merge profundo de original_data para preservar li_product_id
                     original_data: {
                       ...(prev.original_data || {}),

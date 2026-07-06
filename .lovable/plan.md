@@ -1,28 +1,24 @@
-Vou corrigir o caso do produto “Ativação DentalCAD Ultimate Lab Bundle - RMS”, que parece cair no fluxo de variação da Loja Integrada e perde o `li_product_id` no topo de `original_data`.
+## Plano
 
-Plano:
+Corrigir o fluxo para que produtos recém-importados da Loja Integrada não fiquem sem vínculo ao clicar em **Enviar Loja Integrada** na Descrição E-commerce.
 
-1. Corrigir o envio do HTML e-commerce
-   - Em `ProductEcommerceGenerator`, resolver o ID da Loja Integrada a partir de vários formatos possíveis:
-     - `original_data.li_product_id`
-     - `original_data.id`
-     - `original_data.resource_uri`
-     - `original_data.variation.id`
-     - `original_data.variation.resource_uri`
-     - `original_data.merged.id`
-   - Assim o botão “Enviar Loja Integrada” não bloqueia produtos recém-importados como variação.
+## O que será ajustado
 
-2. Corrigir a importação via API da Loja Integrada
-   - Em `import-loja-integrada-api`, quando o produto for `atributo_opcao`/variação, preservar também no topo:
-     - `li_product_id`
-     - `resource_uri`
-     - dados de `variation`, `parent` e `merged`
-   - Isso evita que futuros imports salvem `original_data` sem vínculo utilizável.
+1. **Preservar o ID no importador**
+   - Garantir que `ProductLojaIntegradaImporter` sempre propague `original_data.li_product_id` quando a API retornar `id`, `resource_uri`, `pai`, `variation`, `merged` ou `parent`.
+   - Isso deve acontecer mesmo quando o produto já tem nome/preço e o modo “sobrescrever” está desligado.
 
-3. Corrigir normalização no frontend do importador
-   - Em `ProductLojaIntegradaImporter`, extrair o ID também dos caminhos aninhados (`variation.id`, `variation.resource_uri`, `merged.id`, etc.).
-   - Isso garante que o modal de edição já salve o produto com o ID correto.
+2. **Aceitar importação parcial no modal de edição**
+   - Ajustar `ProductEditModal` para não rejeitar callbacks de importação que tragam apenas campos parciais, como somente `original_data.li_product_id`.
+   - Hoje o callback exige `name`, mas o próprio importador pode enviar apenas campos atualizados; isso pode impedir o ID da Loja Integrada de entrar no formulário.
 
-4. Validar
-   - Verificar que o botão deixa de mostrar “Produto não vinculado” quando houver ID em qualquer desses formatos.
-   - Se ainda não houver ID salvo para esse registro específico, a UI passará a mostrar um erro mais útil indicando que o import não capturou nenhum ID da Loja Integrada.
+3. **Resolver o ID de forma mais robusta no envio do HTML**
+   - Em `ProductEcommerceGenerator`, ampliar o fallback do botão **Enviar Loja Integrada** para buscar no banco mais campos além de `original_data`, como `product_url` e `slug`.
+   - Resolver o ID a partir de múltiplos formatos: número direto, `/produto/{id}`, `resource_uri`, variação, pai e dados mesclados.
+
+4. **Melhorar a mensagem quando realmente não houver ID**
+   - Se nenhum ID existir em lugar nenhum, a mensagem deve explicar que o produto foi salvo sem vínculo e orientar a colar/reimportar pelo ID da Loja Integrada.
+
+5. **Validar no fluxo atual**
+   - Conferir que o produto “Ativação DentalCAD Ultimate Lab Bundle - RMS” deixa de cair no toast **Produto não vinculado** quando o ID estiver disponível no dado importado.
+   - Se o registro antigo já estiver salvo sem nenhum ID, o código novo evitará novas perdas; para esse registro específico será necessário reimportar pelo ID/URL uma vez para gravar o vínculo.

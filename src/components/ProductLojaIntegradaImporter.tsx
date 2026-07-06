@@ -74,11 +74,16 @@ const extractLiProductIdFromResourceUri = (value?: string | null) => {
 
 const normalizeLiProductId = (value: unknown) => {
   if (value === null || value === undefined) return undefined;
+  if (typeof value === 'object') return undefined;
 
   const text = String(value).trim();
   if (!text || text === 'null' || text === 'undefined' || text === 'not_found') return undefined;
 
-  return extractLiProductIdFromResourceUri(text) || text.replace(/\.0+$/, '');
+  const extracted = extractLiProductIdFromResourceUri(text);
+  if (extracted) return extracted;
+
+  const normalized = text.replace(/\.0+$/, '');
+  return /^\d+$/.test(normalized) ? normalized : undefined;
 };
 
 const resolveLojaIntegradaProductId = (payload: any, data?: any) => {
@@ -87,21 +92,28 @@ const resolveLojaIntegradaProductId = (payload: any, data?: any) => {
     data?.li_product_id,
     data?.id,
     data?.resource_uri,
+    data?.product_url,
+    data?.slug,
     payload?.li_product_id,
     payload?.data?.li_product_id,
     payload?.product?.li_product_id,
     originalData?.li_product_id,
     originalData?.id,
     originalData?.resource_uri,
+    originalData?.product_url,
+    originalData?.slug,
     originalData?.variation?.li_product_id,
     originalData?.variation?.id,
     originalData?.variation?.resource_uri,
+    originalData?.variation?.product_url,
     originalData?.merged?.li_product_id,
     originalData?.merged?.id,
     originalData?.merged?.resource_uri,
+    originalData?.merged?.product_url,
     originalData?.parent?.li_product_id,
     originalData?.parent?.id,
     originalData?.parent?.resource_uri,
+    originalData?.parent?.product_url,
   ];
 
   for (const candidate of candidates) {
@@ -754,6 +766,7 @@ export function ProductLojaIntegradaImporter({
         if (result?.original_data?.li_product_id) {
           updates.original_data = {
             ...(currentFormData.original_data || {}),
+            ...(result.original_data || {}),
             li_product_id: result.original_data.li_product_id,
           };
           fieldsImported.push('ID Loja Integrada');
