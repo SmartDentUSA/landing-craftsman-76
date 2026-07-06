@@ -1,17 +1,24 @@
-## Causa raiz
+## Problema
 
-O toast **"⚠️ Produto não vinculado"** vem de `ProductEcommerceGenerator.tsx:191`, que checa `liProductId`. Esse valor chega via `ModernProductCard.tsx:828` como `product.original_data?.li_product_id`.
+Mesmo após importar o produto da Loja Integrada, o botão **🚀 Enviar Loja Integrada** mostra "⚠️ Produto não vinculado".
 
-O campo existe no banco (gravado por `import-loja-integrada-api` em `original_data.li_product_id`), mas o SELECT da lista do Repositório (`RepositoryPanel.tsx:114-120`, `PRODUCT_REPOSITORY_LIST_COLUMNS`) **não inclui `original_data`** — removido na otimização anti-timeout e nunca reintroduzido. Resultado: `original_data` chega `undefined`, `liProductId` fica `undefined`, e o botão bloqueia antes de chamar a edge function.
+Causa: o componente `ProductEcommerceGenerator` recebe `liProductId` como prop, vindo de `product.original_data?.li_product_id` no `ModernProductCard`. Se a lista de produtos foi renderizada antes da importação terminar (ou o refetch não incluiu `original_data` naquele momento), a prop chega `undefined` e a validação frontend bloqueia o envio, sem sequer tentar consultar o banco.
 
-## Mudança (1 linha, frontend)
+## Correção
 
-`src/components/RepositoryPanel.tsx` — adicionar `'original_data'` ao array `PRODUCT_REPOSITORY_LIST_COLUMNS` (linhas 114-120). O `EDIT_COLUMNS` herda automaticamente e o mapeamento em `linha 463` já trata o campo.
+No `ProductEcommerceGenerator.tsx`, tornar o handler resiliente: quando `liProductId` não está presente na prop, buscar direto de `products_repository` pelo `productId` antes de decidir bloquear.
 
-Nenhuma mudança em edge functions, schema, RLS ou outros componentes.
+### Fluxo novo do `handleSendToLojaIntegrada`
 
-## Validação
+1. Se `liProductId` da prop existir, usa direto.
+2. Senão, faz `SELECT original_data FROM products_repository WHERE id = productId` e lê `original_data.li_product_id`.
+3. Se ainda assim não existir, aí sim mostra o toast "Produto não vinculado".
+4. Caso contrário, segue chamando `update-loja-integrada-product` com o `liProductId` recém-obtido.
 
-1. Recarregar `/repository` em produto importado da Loja Integrada → badge **"LI: …"** aparece.
-2. Clicar **🚀 Enviar Loja Integrada** → não dispara mais "Produto não vinculado"; console mostra `📤 Enviando HTML para Loja Integrada (ID: …)` e toast final "✅ Enviado com Sucesso!".
-3. Produtos sem `li_product_id` continuam bloqueados como esperado.
+Isso elimina a dependência do estado do pai estar atualizado e resolve o caso "acabei de importar".
+
+## Escopo
+
+- Arquivo único: `src/components/ProductEcommerceGenerator.tsx`.
+- Sem mudanças em edge functions, banco ou outros componentes.
+- Comportamento inalterado para produtos que já têm o vínculo carregado.
