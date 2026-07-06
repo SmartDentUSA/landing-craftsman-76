@@ -2229,7 +2229,8 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
                 width: width ? parseFloat(width) : undefined,
                 depth: depth ? parseFloat(depth) : undefined,
                 package_size: packageSize,
-                store_category: storeCategory
+                store_category: storeCategory,
+                original_data: formData.original_data || product?.original_data || null,
               }}
               onImportSuccess={(importedData) => {
                 try {
