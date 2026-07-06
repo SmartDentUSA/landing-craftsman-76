@@ -1,24 +1,17 @@
 ## Plano
 
-Corrigir o fluxo para que produtos recém-importados da Loja Integrada não fiquem sem vínculo ao clicar em **Enviar Loja Integrada** na Descrição E-commerce.
+1. **Atualizar o produto existente**
+   - Localizar o produto `Ativação DentalCAD Ultimate Lab Bundle - RMS` no repositório.
+   - Gravar o vínculo da Loja Integrada como `li_product_id = "402002410"` dentro de `original_data`, preservando os dados já existentes.
 
-## O que será ajustado
+2. **Garantir que o envio use esse vínculo**
+   - Confirmar que o botão **Enviar Loja Integrada** resolve o ID `402002410` a partir de `original_data.li_product_id`.
+   - Se necessário, ajustar o fallback para priorizar esse campo antes de mostrar “Produto não vinculado”.
 
-1. **Preservar o ID no importador**
-   - Garantir que `ProductLojaIntegradaImporter` sempre propague `original_data.li_product_id` quando a API retornar `id`, `resource_uri`, `pai`, `variation`, `merged` ou `parent`.
-   - Isso deve acontecer mesmo quando o produto já tem nome/preço e o modo “sobrescrever” está desligado.
+3. **Evitar perda do ID em futuras edições/importações**
+   - Revisar o fluxo de importação/edição para não sobrescrever `original_data.li_product_id` com vazio quando o produto já tem vínculo.
+   - Manter o ID da Loja Integrada quando dados parciais forem salvos.
 
-2. **Aceitar importação parcial no modal de edição**
-   - Ajustar `ProductEditModal` para não rejeitar callbacks de importação que tragam apenas campos parciais, como somente `original_data.li_product_id`.
-   - Hoje o callback exige `name`, mas o próprio importador pode enviar apenas campos atualizados; isso pode impedir o ID da Loja Integrada de entrar no formulário.
-
-3. **Resolver o ID de forma mais robusta no envio do HTML**
-   - Em `ProductEcommerceGenerator`, ampliar o fallback do botão **Enviar Loja Integrada** para buscar no banco mais campos além de `original_data`, como `product_url` e `slug`.
-   - Resolver o ID a partir de múltiplos formatos: número direto, `/produto/{id}`, `resource_uri`, variação, pai e dados mesclados.
-
-4. **Melhorar a mensagem quando realmente não houver ID**
-   - Se nenhum ID existir em lugar nenhum, a mensagem deve explicar que o produto foi salvo sem vínculo e orientar a colar/reimportar pelo ID da Loja Integrada.
-
-5. **Validar no fluxo atual**
-   - Conferir que o produto “Ativação DentalCAD Ultimate Lab Bundle - RMS” deixa de cair no toast **Produto não vinculado** quando o ID estiver disponível no dado importado.
-   - Se o registro antigo já estiver salvo sem nenhum ID, o código novo evitará novas perdas; para esse registro específico será necessário reimportar pelo ID/URL uma vez para gravar o vínculo.
+4. **Validar o caso real**
+   - Testar o fluxo para o produto informado e confirmar que ele não exibe mais o alerta “Produto não vinculado”.
+   - O resultado esperado é o envio do HTML E-commerce para o produto `402002410`.
