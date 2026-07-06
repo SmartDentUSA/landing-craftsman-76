@@ -226,6 +226,46 @@ export function ProductEcommerceGenerator({
     });
   };
 
+  const persistResolvedLojaIntegradaProductId = async (resolvedLiProductId: string) => {
+    try {
+      const { data: currentRow, error: fetchError } = await supabase
+        .from('products_repository')
+        .select('original_data')
+        .eq('id', productId)
+        .maybeSingle();
+
+      if (fetchError) {
+        console.warn('⚠️ Não foi possível conferir original_data antes de persistir li_product_id:', fetchError);
+        return;
+      }
+
+      const currentOriginalData = currentRow?.original_data && typeof currentRow.original_data === 'object' && !Array.isArray(currentRow.original_data)
+        ? currentRow.original_data as Record<string, unknown>
+        : {};
+
+      if (normalizeLiProductId(currentOriginalData.li_product_id) === resolvedLiProductId) return;
+
+      const { error: updateError } = await supabase
+        .from('products_repository')
+        .update({
+          original_data: {
+            ...currentOriginalData,
+            li_product_id: resolvedLiProductId,
+          },
+        })
+        .eq('id', productId);
+
+      if (updateError) {
+        console.warn('⚠️ Não foi possível persistir li_product_id no produto:', updateError);
+        return;
+      }
+
+      onUpdate?.();
+    } catch (error) {
+      console.warn('⚠️ Erro inesperado ao persistir li_product_id:', error);
+    }
+  };
+
   const handleDelete = async () => {
     if (!confirm('Tem certeza que deseja excluir o HTML gerado?')) return;
 
@@ -296,6 +336,8 @@ export function ProductEcommerceGenerator({
       }
 
       console.log('📤 Enviando HTML para Loja Integrada (ID:', resolvedLiProductId, ')');
+      await persistResolvedLojaIntegradaProductId(resolvedLiProductId);
+
       const { data, error } = await supabase.functions.invoke(
         "update-loja-integrada-product",
         {
