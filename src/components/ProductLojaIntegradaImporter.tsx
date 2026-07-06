@@ -67,6 +67,51 @@ interface ProductLojaIntegradaImporterProps {
   currentFormData?: any;
 }
 
+const extractLiProductIdFromResourceUri = (value?: string | null) => {
+  const match = value?.match(/\/produto\/(\d+)\/?/i);
+  return match?.[1];
+};
+
+const normalizeLiProductId = (value: unknown) => {
+  if (value === null || value === undefined) return undefined;
+
+  const text = String(value).trim();
+  if (!text || text === 'null' || text === 'undefined' || text === 'not_found') return undefined;
+
+  return extractLiProductIdFromResourceUri(text) || text.replace(/\.0+$/, '');
+};
+
+const resolveLojaIntegradaProductId = (payload: any, data?: any) => {
+  const originalData = data?.original_data || payload?.data?.original_data || payload?.product?.original_data;
+  const candidates = [
+    data?.li_product_id,
+    data?.id,
+    data?.resource_uri,
+    payload?.li_product_id,
+    payload?.data?.li_product_id,
+    payload?.product?.li_product_id,
+    originalData?.li_product_id,
+    originalData?.id,
+    originalData?.resource_uri,
+    originalData?.variation?.li_product_id,
+    originalData?.variation?.id,
+    originalData?.variation?.resource_uri,
+    originalData?.merged?.li_product_id,
+    originalData?.merged?.id,
+    originalData?.merged?.resource_uri,
+    originalData?.parent?.li_product_id,
+    originalData?.parent?.id,
+    originalData?.parent?.resource_uri,
+  ];
+
+  for (const candidate of candidates) {
+    const resolved = normalizeLiProductId(candidate);
+    if (resolved) return resolved;
+  }
+
+  return undefined;
+};
+
 export function ProductLojaIntegradaImporter({ 
   productUrl: initialUrl, 
   onImportSuccess,
@@ -87,11 +132,9 @@ export function ProductLojaIntegradaImporter({
 
   // ✅ Sincronizar input com li_product_id existente
   useEffect(() => {
-    const idFromForm = currentFormData?.original_data?.li_product_id;
+    const idFromForm = resolveLojaIntegradaProductId({ data: currentFormData }, currentFormData);
     if (idFromForm) {
-      // Garantir que seja string e não notação científica
-      const cleanId = String(idFromForm).replace(/e\+\d+$/, '');
-      setProductId(cleanId);
+      setProductId(idFromForm);
     }
   }, [currentFormData]);
 
@@ -189,6 +232,8 @@ export function ProductLojaIntegradaImporter({
         }
       }
     }
+
+    const resolvedLiProductId = resolveLojaIntegradaProductId(payload, data);
 
     // -------- Normalização completa --------
     const normalized = {
@@ -324,10 +369,7 @@ export function ProductLojaIntegradaImporter({
       // Dados originais com li_product_id preservado
       original_data: {
         ...(data?.original_data || {}),
-        li_product_id: data?.original_data?.li_product_id || 
-                       payload?.data?.original_data?.li_product_id || 
-                       payload?.li_product_id || 
-                       null
+        li_product_id: resolvedLiProductId || null
       }
     };
 
@@ -336,10 +378,9 @@ export function ProductLojaIntegradaImporter({
       from_data_original: data?.original_data?.li_product_id,
       from_payload_data_original: payload?.data?.original_data?.li_product_id,
       from_payload_root: payload?.li_product_id,
-      final: data?.original_data?.li_product_id || 
-             payload?.data?.original_data?.li_product_id || 
-             payload?.li_product_id || 
-             'NULL'
+      from_variation: data?.original_data?.variation?.id || data?.original_data?.variation?.resource_uri,
+      from_merged: data?.original_data?.merged?.id || data?.original_data?.merged?.resource_uri,
+      final: resolvedLiProductId || 'NULL'
     });
 
     // -------- Logging melhorado --------
