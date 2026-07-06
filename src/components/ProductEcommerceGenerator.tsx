@@ -229,7 +229,7 @@ export function ProductEcommerceGenerator({
       }
 
       if (data?.success) {
-        const targetLiProductId = data?.target_li_product_id || liProductId;
+        const targetLiProductId = data?.target_li_product_id || resolvedLiProductId;
         const updatedParentProduct = Boolean(data?.updated_parent_product);
 
         toast({
