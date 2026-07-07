@@ -873,10 +873,10 @@ function Slide2Solution({ image, primaryColor, accentColor, productData, texts }
   return (
     <div style={{ width: SLIDE_W, height: SLIDE_H, background: bgColor, fontFamily: 'system-ui, -apple-system, sans-serif', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', padding: '80px 80px 100px' }}>
       <div style={{ alignSelf: 'flex-start', width: 70, height: 70, borderRadius: '50%', background: primaryColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <span style={{ color: textOnPrimary, fontWeight: 900, fontSize: 30 }}>2</span>
+        <span style={{ color: textOnPrimary, fontWeight: 900, fontSize: 'calc(30px * var(--fs, 1))' }}>2</span>
       </div>
       {category && (
-        <div style={{ background: primaryColor, color: textOnPrimary, borderRadius: 50, padding: '16px 48px', fontSize: 36, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase' as const }}>
+        <div style={{ background: primaryColor, color: textOnPrimary, borderRadius: 50, padding: '16px 48px', fontSize: 'calc(36px * var(--fs, 1))', fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase' as const }}>
           {category}
         </div>
       )}
@@ -902,13 +902,14 @@ function Slide2Solution({ image, primaryColor, accentColor, productData, texts }
       <div style={{ textAlign: 'center', marginTop: 40 }}>
         {introLabel && (
           <div style={{ marginBottom: 12 }}>
-            <span style={{ fontSize: 32, fontWeight: 400, color: subTextColor, letterSpacing: 3, textTransform: 'uppercase' as const }}>
+            <span style={{ fontSize: 'calc(32px * var(--fs, 1))', fontWeight: 400, color: subTextColor, letterSpacing: 3, textTransform: 'uppercase' as const }}>
               {introLabel}
             </span>
           </div>
         )}
-        <h2 style={{ margin: 0, fontSize: 68, fontWeight: 900, color: textColor, lineHeight: 1.1 }}>{name}</h2>
+        <h2 style={{ margin: 0, fontSize: 'calc(68px * var(--fs, 1))', fontWeight: 900, color: textColor, lineHeight: 1.1 }}>{name}</h2>
       </div>
+
     </div>
   );
 }
