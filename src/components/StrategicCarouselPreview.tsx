@@ -2155,8 +2155,9 @@ export function StrategicSlideRender({ slideNum, image, primaryColor, accentColo
       position: 'relative', width: SLIDE_W, height: SLIDE_H,
       background: videoMode ? 'transparent' : undefined,
       fontFamily: fontFamily || undefined,
-      fontSize: typeof fontSize === 'number' ? `${fontSize}%` : undefined,
+      ['--fs' as any]: typeof fontSize === 'number' ? String(fontSize / 100) : '1',
     }}>
+
 
       {textColorOverride && (
         <style>{`.${contentClass} :is(p, span, h1, h2, h3, h4, h5, h6, div, li, a, button) { color: ${textColorOverride} !important; }`}</style>
