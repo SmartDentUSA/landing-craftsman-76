@@ -1,0 +1,2 @@
+ALTER TABLE public.products_repository ADD COLUMN IF NOT EXISTS processing_instructions TEXT;
+COMMENT ON COLUMN public.products_repository.processing_instructions IS 'Instruções de pré/pós processamento do produto, disponibilizadas em todos os endpoints e usadas pela IA.';

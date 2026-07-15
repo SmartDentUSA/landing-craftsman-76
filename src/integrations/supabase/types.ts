@@ -3556,6 +3556,7 @@ export type Database = {
           original_data: Json | null
           package_size: string | null
           price: number | null
+          processing_instructions: string | null
           product_type: string | null
           product_url: string | null
           promo_price: number | null
@@ -3677,6 +3678,7 @@ export type Database = {
           original_data?: Json | null
           package_size?: string | null
           price?: number | null
+          processing_instructions?: string | null
           product_type?: string | null
           product_url?: string | null
           promo_price?: number | null
@@ -3798,6 +3800,7 @@ export type Database = {
           original_data?: Json | null
           package_size?: string | null
           price?: number | null
+          processing_instructions?: string | null
           product_type?: string | null
           product_url?: string | null
           promo_price?: number | null
