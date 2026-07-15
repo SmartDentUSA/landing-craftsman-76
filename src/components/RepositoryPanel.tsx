@@ -120,7 +120,7 @@ const PRODUCT_REPOSITORY_LIST_COLUMNS = [
 ].join(', ');
 
 const PRODUCT_REPOSITORY_EDIT_COLUMNS = [
-  PRODUCT_REPOSITORY_LIST_COLUMNS, 'applications', 'image_alt', 'images_gallery', 'color', 'size', 'material',
+  PRODUCT_REPOSITORY_LIST_COLUMNS, 'applications', 'processing_instructions', 'image_alt', 'images_gallery', 'color', 'size', 'material',
   'google_product_category', 'condition', 'availability', 'package_size', 'weight', 'height',
   'width', 'depth', 'store_category', 'stock_quantity', 'stock_managed', 'min_order_quantity',
   'max_order_quantity', 'multiple_order_quantity', 'unit_measure', 'shipping_time', 'free_shipping',

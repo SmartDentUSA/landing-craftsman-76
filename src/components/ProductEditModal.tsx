@@ -119,6 +119,7 @@ interface Product {
   description?: string;
   sales_pitch?: string;
   applications?: string;
+  processing_instructions?: string;
   price?: number;
   promo_price?: number;
   currency?: string;
@@ -1885,6 +1886,7 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
         description: formData.description,
         sales_pitch: formData.sales_pitch,
         applications: formData.applications,
+        processing_instructions: formData.processing_instructions,
         price: formData.price,
         promo_price: promoPrice,
         currency: formData.currency || 'BRL',
@@ -2504,6 +2506,39 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
             />
             <p className="text-sm text-muted-foreground">
               Este campo será usado pela IA para gerar conteúdo mais contextualizado
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="processing_instructions">Instruções de Pré/Pós Processamento</Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Descreva os cuidados e etapas de preparação (pré-processamento)</p>
+                    <p>e de finalização (pós-processamento) do produto. Essas informações</p>
+                    <p>serão disponibilizadas em todos os endpoints e conteúdos gerados por IA.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <Textarea
+              id="processing_instructions"
+              value={formData.processing_instructions || ''}
+              onChange={(e) => {
+                const newValue = e.target.value;
+                setFormData(prev => ({ ...prev, processing_instructions: newValue }));
+                autoSave({ processing_instructions: newValue } as any);
+              }}
+              placeholder="Ex: Pré-processamento: agitar o frasco por 10s antes de uso, preparar o substrato com condicionamento ácido. Pós-processamento: fotopolimerizar por 20s, realizar acabamento com brocas diamantadas..."
+              rows={4}
+              className="w-full"
+            />
+            <p className="text-sm text-muted-foreground">
+              Disponibilizado em todos os endpoints do produto e utilizado pela IA na geração de conteúdo
             </p>
           </div>
 
