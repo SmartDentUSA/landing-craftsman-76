@@ -1647,6 +1647,7 @@ export type Database = {
           cta_primary_url: string | null
           description: string | null
           domain: string
+          favicon_url: string | null
           ftp_profile: string | null
           google_indexing_enabled: boolean | null
           gsc_last_sitemap_submission_at: string | null
@@ -1656,6 +1657,7 @@ export type Database = {
           hub_domain: string | null
           is_hub: boolean | null
           keyword_rules: string[] | null
+          logo_url: string | null
           main_theme: string
           monthly_target: number | null
           narrative_pillar: string | null
@@ -1685,6 +1687,7 @@ export type Database = {
           cta_primary_url?: string | null
           description?: string | null
           domain: string
+          favicon_url?: string | null
           ftp_profile?: string | null
           google_indexing_enabled?: boolean | null
           gsc_last_sitemap_submission_at?: string | null
@@ -1694,6 +1697,7 @@ export type Database = {
           hub_domain?: string | null
           is_hub?: boolean | null
           keyword_rules?: string[] | null
+          logo_url?: string | null
           main_theme: string
           monthly_target?: number | null
           narrative_pillar?: string | null
@@ -1723,6 +1727,7 @@ export type Database = {
           cta_primary_url?: string | null
           description?: string | null
           domain?: string
+          favicon_url?: string | null
           ftp_profile?: string | null
           google_indexing_enabled?: boolean | null
           gsc_last_sitemap_submission_at?: string | null
@@ -1732,6 +1737,7 @@ export type Database = {
           hub_domain?: string | null
           is_hub?: boolean | null
           keyword_rules?: string[] | null
+          logo_url?: string | null
           main_theme?: string
           monthly_target?: number | null
           narrative_pillar?: string | null
@@ -3550,6 +3556,7 @@ export type Database = {
           original_data: Json | null
           package_size: string | null
           price: number | null
+          processing_instructions: string | null
           product_type: string | null
           product_url: string | null
           promo_price: number | null
@@ -3671,6 +3678,7 @@ export type Database = {
           original_data?: Json | null
           package_size?: string | null
           price?: number | null
+          processing_instructions?: string | null
           product_type?: string | null
           product_url?: string | null
           promo_price?: number | null
@@ -3792,6 +3800,7 @@ export type Database = {
           original_data?: Json | null
           package_size?: string | null
           price?: number | null
+          processing_instructions?: string | null
           product_type?: string | null
           product_url?: string | null
           promo_price?: number | null
@@ -4121,6 +4130,33 @@ export type Database = {
             referencedColumns: ["review_id"]
           },
         ]
+      }
+      sd_faq_templates: {
+        Row: {
+          answer_tmpl: string
+          domain_type: string
+          faq_order: number
+          id: number
+          question: string
+          scanner_type: string
+        }
+        Insert: {
+          answer_tmpl: string
+          domain_type?: string
+          faq_order: number
+          id?: number
+          question: string
+          scanner_type?: string
+        }
+        Update: {
+          answer_tmpl?: string
+          domain_type?: string
+          faq_order?: number
+          id?: number
+          question?: string
+          scanner_type?: string
+        }
+        Relationships: []
       }
       smartdent_answer_blocks: {
         Row: {
@@ -5846,6 +5882,22 @@ export type Database = {
         }
         Returns: boolean
       }
+      insert_landing_page: {
+        Args: {
+          p_cta_url: string
+          p_is_homepage: boolean
+          p_name: string
+          p_original_html: string
+          p_page_path: string
+          p_publish_status: string
+          p_seo_config: Json
+          p_target_domain: string
+          p_transformed_html: string
+          p_user_id: string
+          p_version: number
+        }
+        Returns: undefined
+      }
       match_knowledge_chunks: {
         Args: {
           filter_chunk_type?: string
@@ -5865,6 +5917,20 @@ export type Database = {
         }[]
       }
       promote_user_to_admin: { Args: { _email: string }; Returns: boolean }
+      sd_build_testimonial_html: {
+        Args: {
+          p_client: string
+          p_dep_title: string
+          p_domain: string
+          p_domain_type: string
+          p_geo: string
+          p_quote: string
+          p_scanner: string
+          p_scanner_type: string
+          p_vid: string
+        }
+        Returns: string
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       slugify: { Args: { input: string }; Returns: string }
