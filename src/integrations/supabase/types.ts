@@ -4392,6 +4392,27 @@ export type Database = {
         }
         Relationships: []
       }
+      staging_produtos_url: {
+        Row: {
+          produto_id: string | null
+          produto_nome: string | null
+          produto_sku: string | null
+          produto_url: string | null
+        }
+        Insert: {
+          produto_id?: string | null
+          produto_nome?: string | null
+          produto_sku?: string | null
+          produto_url?: string | null
+        }
+        Update: {
+          produto_id?: string | null
+          produto_nome?: string | null
+          produto_sku?: string | null
+          produto_url?: string | null
+        }
+        Relationships: []
+      }
       system_flags: {
         Row: {
           key: string
