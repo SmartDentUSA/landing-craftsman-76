@@ -1,34 +1,34 @@
-## Problema
+# Investigar e corrigir "Confirmar agendamento"
 
-No modal "Editar Produto", ao adicionar imagens na **Galeria de Imagens** e salvar, as imagens somem ao reabrir o produto.
+## O que eu verifiquei
 
-## Causa raiz
+Busquei em todo o código deste projeto (Sistema A / parametros.smartdent.com.br) por qualquer tela de agendamento e **não existe**:
 
-`RepositoryPanel.tsx` define as listas de colunas usadas em todos os `select()` do repositório:
+- Nenhum texto "Confirmar agendamento", "Agendar" ou "Publicar depois" em `src/`.
+- Nenhum campo `scheduled_at` / `scheduled_for` / `publish_at` usado no frontend.
+- Os únicos botões de publicação são imediatos: "Publicar post GBP" (`src/components/repository/GoogleApisTab.tsx`, chama `publish-gbp-post`) e os fluxos de publicação de landing pages/blog.
+- Os únicos diálogos de "Confirmar" existentes são de exclusão (CSManager, AfterSalesManager).
 
-- `PRODUCT_REPOSITORY_LIST_COLUMNS` (linha 114) — usado na listagem
-- `PRODUCT_REPOSITORY_EDIT_COLUMNS` (linha 122) — usado ao abrir um produto para edição
+Ou seja: o botão que você está clicando **não pertence a este projeto** — muito provavelmente está no Sistema B / SmartOps (`okeogjgqijbfkudfjadz`), que é onde ficam os fluxos de WhatsApp/Copilot/leads, ou em uma ferramenta externa.
 
-Nenhuma das duas listas inclui `images_gallery`. O `ProductEditModal` grava a coluna corretamente no banco (linha 1894), mas quando o produto é relido (linha 615 do `RepositoryPanel`, `.select(PRODUCT_REPOSITORY_EDIT_COLUMNS)`), o campo não vem, e `setImagesGallery((product as any).images_gallery || [])` cai no `[]`. Resultado: parece que sumiu.
+## Plano (em duas etapas)
 
-O mapeamento em `RepositoryPanel.tsx:464` (`images_gallery: Array.isArray(data.images_gallery) ? … : []`) confirma que o código espera o campo, mas ele nunca é solicitado no SELECT.
+### Etapa 1 — Localizar a origem real do botão (rápida, sem alterar nada)
+1. Consultar os logs de Edge Functions e os logs HTTP recentes do Sistema B para identificar qual função é chamada (ou falha) no momento do clique em "Confirmar agendamento".
+2. Se a chamada nem sai do navegador, confirmar pelos logs de rede/console do app onde a tela vive — indicando erro de validação, RLS ou botão em estado `disabled`.
+3. Reportar a causa exata (função, tabela, erro) antes de qualquer correção.
 
-## Correção
+Como o Sistema B é **read-only e imutável** por regra do projeto, qualquer correção lá é aplicada por você/no painel do Supabase — eu entrego o diagnóstico e o SQL/ajuste necessário.
 
-Adicionar `images_gallery` a `PRODUCT_REPOSITORY_EDIT_COLUMNS` em `src/components/RepositoryPanel.tsx` para que o campo seja carregado ao abrir o modal de edição.
-
-Opcionalmente incluir também em `PRODUCT_REPOSITORY_LIST_COLUMNS` apenas se a listagem precisar da galeria (não é o caso deste bug — vou deixar de fora para não ampliar o payload).
-
-## Validação
-
-1. Abrir um produto no `/repository`.
-2. Adicionar uma imagem na Galeria de Imagens → salvar.
-3. Fechar o modal e reabrir o mesmo produto.
-4. Confirmar que a imagem persiste na galeria.
+### Etapa 2 — Se a intenção for ter agendamento aqui no Sistema A
+Caso o que você queira seja agendar publicações dentro deste sistema (ex.: post GBP / blog / carrossel em data futura), eu implemento:
+1. Campo de data/hora no fluxo de publicação existente, gravando `scheduled_at` + `status = 'scheduled'`.
+2. Botão "Confirmar agendamento" com validação (data futura obrigatória), toast de sucesso/erro e log de erro visível — sem falhas silenciosas.
+3. Worker/cron horário que publica somente itens com `scheduled_at <= now()` e `status = 'scheduled'`, marcando como `published` para evitar reenvio duplicado.
 
 ## Detalhes técnicos
+- Diagnóstico via `supabase--edge_function_logs` e `analytics_query` (function_edge_logs) do projeto correspondente.
+- Se implementado no Sistema A: migração adicionando `scheduled_at timestamptz` e status `scheduled` na tabela de publicação alvo, com GRANTs e RLS mantidos; reaproveitando `publish-gbp-post` / `publish-blog-post` no worker.
 
-- Arquivo alterado: `src/components/RepositoryPanel.tsx`
-- Mudança: incluir `'images_gallery'` na constante `PRODUCT_REPOSITORY_EDIT_COLUMNS`.
-- Sem alteração de esquema (coluna já existe em `products_repository`).
-- Sem alterações no `ProductEditModal` — o save já grava corretamente.
+## Bloqueio
+Para a Etapa 1 preciso saber em qual tela/app o botão aparece (print ou URL). Sem isso, eu começo consultando os logs do Sistema B por suspeita mais provável.
