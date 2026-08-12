@@ -7,6 +7,7 @@
 - [Parâmetros](#parâmetros)
 - [Formatos de Resposta](#formatos-de-resposta)
 - [Estrutura de Dados](#estrutura-de-dados)
+- [Cache](#cache-ttl-3h)
 - [Rate Limits](#rate-limits)
 - [Códigos de Erro](#códigos-de-erro)
 - [Exemplos de Uso](#exemplos-de-uso)
@@ -41,26 +42,17 @@ A **Knowledge Base API** é um endpoint RESTful que fornece acesso completo a to
 
 ## 🔐 Autenticação
 
-### API Key (Obrigatória)
-
-Todas as requisições devem incluir o header `x-api-key`:
+**A Edge Function `knowledge-base` é PÚBLICA (`verify_jwt = false`) e não exige autenticação.**
 
 ```bash
-curl -H "x-api-key: YOUR_API_KEY" \
-  https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/knowledge-base
+curl https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/knowledge-base
 ```
 
-### Como Obter sua API Key
+- Nenhum header obrigatório (`x-api-key`, `Authorization` e `apikey` são aceitos e ignorados).
+- CORS liberado (`*`) com preflight `OPTIONS` cacheado por 24h.
+- Como o conteúdo é público, apenas registros **aprovados/publicados** são retornados (produtos `approved = true`, marcos `is_published = true`, etc.).
 
-1. Entre em contato com o administrador do sistema
-2. A API Key será fornecida de forma segura
-3. Armazene em variáveis de ambiente (NUNCA no código)
-
-**⚠️ IMPORTANTE:**
-- Não compartilhe sua API Key
-- Não comite no Git
-- Rotacione periodicamente
-- Use HTTPS sempre
+> ⚠️ Se precisar restringir o acesso, será necessário adicionar validação de API Key na própria função — hoje ela não existe.
 
 ---
 
@@ -72,45 +64,80 @@ https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/knowledge-base
 ```
 
 ### GET /knowledge-base
+Parâmetros via query string.
 
-Retorna a base de conhecimento completa baseada nos parâmetros fornecidos.
+### POST /knowledge-base
+Mesmos parâmetros via corpo JSON. Valores do body têm **precedência** sobre a query string.
 
-**Método:** `GET`  
-**Autenticação:** API Key (header `x-api-key`)  
-**Rate Limit:** 100 requisições/minuto
+```bash
+curl -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"format":"rag","include_products":true,"limit":200}' \
+  https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/knowledge-base
+```
+
+### Funções auxiliares relacionadas
+
+| Função | Uso |
+|--------|-----|
+| `POST /refresh-knowledge-base` | Regenera o cache (`rag` e `json`) na tabela `knowledge_base_cache` |
+| `POST /index-knowledge-base` | Gera embeddings (chunks) dos produtos para busca vetorial |
+| `POST /rag-chat` | Chat RAG que consome os chunks indexados |
 
 ---
 
 ## ⚙️ Parâmetros
 
-### Query Parameters
+### Seleção de conteúdo
 
 | Parâmetro | Tipo | Padrão | Descrição |
 |-----------|------|--------|-----------|
-| `format` | `string` | `json` | Formato de resposta: `json`, `ai_training`, `system_b` |
-| `include_company` | `boolean` | `true` | Incluir dados do perfil da empresa |
-| `include_categories` | `boolean` | `true` | Incluir configurações de categorias |
-| `include_links` | `boolean` | `true` | Incluir repository de links/keywords |
-| `include_products` | `boolean` | `true` | Incluir produtos e relacionamentos |
-| `approved_only` | `boolean` | `true` | Retornar apenas itens aprovados |
-| `category` | `string` | `null` | Filtrar por categoria específica |
-| `limit` | `number` | `50` | Limite de produtos (1-500) |
+| `format` | `string` | `json` | `json`, `ai_training`, `system_b`, `rag` |
+| `include_company` | `boolean` | `true` | Perfil da empresa (`company_profile`) |
+| `include_milestones` | `boolean` | `true` | Marcos históricos (`company_milestones`, apenas publicados). Requer `include_company=true` |
+| `include_products` | `boolean` | `true` | Produtos + relacionamentos e documentos técnicos |
+| `include_categories` | `boolean` | `true` | Configurações de categorias |
+| `include_links` | `boolean` | `true` | Repositório de links/keywords |
+| `include_landing_pages` | `boolean` | `true` | Landing pages publicadas |
+| `include_spin_solutions` | `boolean` | `true` | Soluções SPIN Selling |
+| `include_video_testimonials` | `boolean` | `true` | Depoimentos em vídeo |
+| `include_google_reviews` | `boolean` | `true` | Avaliações Google aprovadas |
+| `include_kols` | `boolean` | **`false`** | Key Opinion Leaders (envie `true` para incluir) |
+| `include_blog_posts` | `boolean` | **`false`** | Posts de blog (envie `true` para incluir) |
+| `include_external_videos` | `boolean` | **`false`** | Vídeos do Sistema B via `data-export` (envie `true`) |
+
+### Filtros e paginação
+
+| Parâmetro | Tipo | Padrão | Descrição |
+|-----------|------|--------|-----------|
+| `approved_only` | `boolean` | `true` | Apenas itens aprovados |
+| `category` | `string` | — | Filtra produtos por categoria |
+| `limit` | `number` | `50` | Limite de produtos (1–500) |
 | `offset` | `number` | `0` | Offset para paginação |
+
+### Cache
+
+| Parâmetro | Tipo | Padrão | Descrição |
+|-----------|------|--------|-----------|
+| `use_cache` | `boolean` | `true` | Usa `knowledge_base_cache` para `format=json` e `format=rag` |
+| `force_refresh` | `boolean` | `false` | Ignora o cache e busca dados frescos (não sobrescreve o cache) |
+
+> Os formatos `ai_training` e `system_b` **nunca** usam cache — são sempre gerados na hora.
 
 ### Exemplos de URLs
 
 ```bash
-# Dados completos (padrão)
+# Dados completos (padrão, com cache)
 ?format=json
 
+# RAG otimizado, ignorando cache
+?format=rag&force_refresh=true
+
 # Apenas produtos de uma categoria
-?category=Odontologia&limit=100
+?category=Odontologia&limit=100&include_company=false
 
-# Formato para treinar IA
-?format=ai_training
-
-# Sem perfil da empresa
-?include_company=false&include_products=true
+# Markdown para treinar LLM, incluindo KOLs e blog
+?format=ai_training&include_kols=true&include_blog_posts=true
 
 # Paginação (produtos 51-100)
 ?limit=50&offset=50
@@ -120,55 +147,95 @@ Retorna a base de conhecimento completa baseada nos parâmetros fornecidos.
 
 ## 📊 Formatos de Resposta
 
-### 1. `json` (Padrão)
+### 1. `json` (padrão)
 
-Estrutura hierárquica completa com metadados.
-
-**Content-Type:** `application/json`
+Estrutura hierárquica completa com metadados. **Content-Type:** `application/json`
 
 ```json
 {
   "api_version": "1.0.0",
-  "timestamp": "2025-01-15T10:30:00Z",
+  "timestamp": "2026-08-12T10:30:00Z",
   "total_fields": 3547,
   "data": {
-    "company_profile": { /* 60+ campos */ },
-    "categories_config": [ /* array */ ],
-    "external_links": [ /* array */ ],
-    "products": [ /* array */ ]
+    "company_profile": { },
+    "company_milestones": [],
+    "categories_config": [],
+    "external_links": [],
+    "products": [],
+    "landing_pages": [],
+    "spin_solutions": [],
+    "video_testimonials": [],
+    "google_reviews": []
+  },
+  "_cache": {
+    "hit": true,
+    "updated_at": "2026-08-12T09:00:00Z",
+    "expires_at": "2026-08-12T12:00:00Z",
+    "products_count": 214
   }
 }
 ```
 
+O bloco `_cache` só aparece quando a resposta vem do cache. Headers sempre presentes:
+
+```http
+X-Cache: HIT | MISS
+X-Cache-Updated: 2026-08-12T09:00:00Z
+```
+
 ### 2. `ai_training`
 
-Formato de texto otimizado para LLMs (GPT, Claude, etc).
-
-**Content-Type:** `text/plain`
+Markdown/texto otimizado para LLMs (GPT, Claude, Gemini). **Content-Type:** `text/plain`
 
 ```markdown
 # BASE DE CONHECIMENTO COMPLETA
 
 ## PERFIL DA EMPRESA
-**Nome:** Smartdent CAD/CAM
-**Descrição:** Especializada em soluções odontológicas...
+**Nome:** Smart Dent
 ...
+## MARCOS HISTÓRICOS
+**2026 — 150ª Edição da Imersão Chairside Print**
 ```
 
 ### 3. `system_b`
 
-Estrutura flat para sistemas legados.
-
-**Content-Type:** `application/json`
+Estrutura flat para sistemas legados. **Content-Type:** `application/json`
 
 ```json
 {
-  "company": { /* flat object */ },
-  "categories": [ /* array */ ],
-  "links": [ /* array */ ],
-  "products": [ /* array with nested relations */ ]
+  "company": { },
+  "categories": [],
+  "links": [],
+  "products": []
 }
 ```
+
+### 4. `rag`
+
+JSON enxuto e token-otimizado (HTML removido, campos vazios omitidos), pronto para vetorização/RAG. **Content-Type:** `application/json`
+
+```json
+{
+  "_meta": { "generated_at": "...", "format": "rag_optimized", "version": "2.0" },
+  "company": { },
+  "products": [],
+  "milestones": []
+}
+```
+
+---
+
+## ⏱️ Cache (TTL 3h)
+
+- Tabela: `knowledge_base_cache` (chave única `format`).
+- TTL: **3 horas** (`expires_at`).
+- Renovação automática via `pg_cron` chamando `refresh-knowledge-base`.
+- Renovação manual:
+
+```bash
+curl -X POST https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/refresh-knowledge-base
+```
+
 
 ---
 
@@ -413,6 +480,8 @@ Estrutura flat para sistemas legados.
         "seo_enhanced": "boolean",
         
         // Especificações Técnicas (20 campos)
+        "product_applications": "string",
+        "processing_instructions": "string (Instruções de Pré/Pós Processamento)",
         "technical_specifications": [
           {
             "label": "string",
@@ -658,31 +727,14 @@ Estrutura flat para sistemas legados.
 
 ## 🚦 Rate Limits
 
-### Limites Atuais
+**Não há rate limiting implementado na função.** Valem apenas os limites de plataforma das Supabase Edge Functions (concorrência e timeout de execução).
 
-- **100 requisições por minuto** por API Key
-- Contadores resetam a cada minuto
-- Rate limit compartilhado entre todos os formatos
+Boas práticas para evitar timeouts e carga desnecessária:
 
-### Headers de Resposta
-
-```http
-X-RateLimit-Limit: 100
-X-RateLimit-Remaining: 87
-X-RateLimit-Reset: 2025-01-15T10:31:00Z
-```
-
-### Resposta ao Exceder Limite
-
-**HTTP 429 Too Many Requests**
-
-```json
-{
-  "error": "Rate limit exceeded",
-  "message": "Maximum 100 requests per minute",
-  "reset_at": "2025-01-15T10:31:00Z"
-}
-```
+- Use `format=rag` ou `format=json` com cache ligado (padrão) — respostas vêm da tabela `knowledge_base_cache`.
+- Use `limit`/`offset` em vez de puxar todos os produtos numa chamada.
+- Desligue seções que não usa (`include_products=false`, `include_links=false`, etc.).
+- Evite `force_refresh=true` em loops — ele reconstrói tudo a partir do banco.
 
 ---
 
@@ -690,18 +742,20 @@ X-RateLimit-Reset: 2025-01-15T10:31:00Z
 
 | Código | Significado | Solução |
 |--------|-------------|---------|
-| `401` | Unauthorized | Verificar `x-api-key` header |
-| `429` | Too Many Requests | Aguardar reset do rate limit |
-| `500` | Internal Server Error | Contactar suporte |
+| `500` | Internal Server Error | Erro ao buscar/formatar dados. Ver logs da função; tente `force_refresh=true` ou reduza `limit` |
+| `504` / timeout | Execução longa | Reduza `limit`, desligue seções ou use o cache (`use_cache=true`) |
 
-### Exemplo de Erro 401
+### Exemplo de Erro 500
 
 ```json
 {
-  "error": "Invalid or missing API key",
-  "message": "Please provide a valid x-api-key header"
+  "error": "canceling statement due to statement timeout",
+  "details": "Internal server error"
 }
 ```
+
+> Não há respostas `401`/`429`: o endpoint é público e sem rate limit próprio.
+
 
 ---
 
@@ -711,7 +765,6 @@ X-RateLimit-Reset: 2025-01-15T10:31:00Z
 
 ```bash
 curl -X GET \
-  -H "x-api-key: YOUR_API_KEY" \
   "https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/knowledge-base"
 ```
 
@@ -719,7 +772,6 @@ curl -X GET \
 
 ```bash
 curl -X GET \
-  -H "x-api-key: YOUR_API_KEY" \
   "https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/knowledge-base?format=ai_training" \
   > knowledge_base.txt
 ```
@@ -728,7 +780,6 @@ curl -X GET \
 
 ```bash
 curl -X GET \
-  -H "x-api-key: YOUR_API_KEY" \
   "https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/knowledge-base?format=system_b"
 ```
 
@@ -736,7 +787,6 @@ curl -X GET \
 
 ```bash
 curl -X GET \
-  -H "x-api-key: YOUR_API_KEY" \
   "https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/knowledge-base?category=Odontologia&limit=100"
 ```
 
@@ -744,12 +794,10 @@ curl -X GET \
 
 ```bash
 # Página 1 (produtos 1-50)
-curl -H "x-api-key: YOUR_API_KEY" \
-  "https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/knowledge-base?limit=50&offset=0"
+curl "https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/knowledge-base?limit=50&offset=0"
 
 # Página 2 (produtos 51-100)
-curl -H "x-api-key: YOUR_API_KEY" \
-  "https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/knowledge-base?limit=50&offset=50"
+curl "https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/knowledge-base?limit=50&offset=50"
 ```
 
 ### 6. JavaScript (Node.js)
@@ -760,11 +808,6 @@ const fetch = require('node-fetch');
 async function getKnowledgeBase() {
   const response = await fetch(
     'https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/knowledge-base',
-    {
-      headers: {
-        'x-api-key': process.env.KNOWLEDGE_BASE_API_KEY
-      }
-    }
   );
   
   const data = await response.json();
@@ -783,8 +826,7 @@ import os
 
 def get_knowledge_base():
     response = requests.get(
-        'https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/knowledge-base',
-        headers={'x-api-key': os.environ['KNOWLEDGE_BASE_API_KEY']}
+        'https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/knowledge-base'
     )
     
     data = response.json()
@@ -804,15 +846,23 @@ Schema completo disponível em: [KNOWLEDGE_BASE_FIELDS_REFERENCE.md](./KNOWLEDGE
 
 ## 📅 Changelog
 
+### v2.1.0 (2026-08-12)
+- ✅ Documentação alinhada ao código atual da Edge Function
+- ✅ Endpoint é **público** (sem API Key / sem `verify_jwt`)
+- ✅ 4 formatos: `json`, `ai_training`, `system_b`, `rag`
+- ✅ Suporte a `POST` com parâmetros no body
+- ✅ Cache de 3h em `knowledge_base_cache` (`use_cache`, `force_refresh`, headers `X-Cache`)
+- ✅ Novas seções: marcos históricos, SPIN, landing pages, KOLs, blog, depoimentos em vídeo, avaliações Google, vídeos externos (Sistema B)
+- ✅ Campo `processing_instructions` (Instruções de Pré/Pós Processamento) exposto nos produtos
+
 ### v1.0.0 (2025-01-15)
 - ✅ Lançamento inicial
 - ✅ 250+ campos documentados
 - ✅ 3 formatos de saída (json, ai_training, system_b)
-- ✅ Rate limiting (100 req/min)
-- ✅ Autenticação via API Key
 - ✅ Filtros por categoria
 - ✅ Paginação de produtos
 - ✅ Índices de performance
+
 
 ---
 
@@ -826,6 +876,6 @@ Para dúvidas ou problemas:
 
 ---
 
-**🚀 API Version:** 1.0.0  
-**📅 Última Atualização:** 2025-01-15  
+**🚀 API Version:** 2.1.0  
+**📅 Última Atualização:** 2026-08-12  
 **📧 Suporte:** Via administrador do sistema
