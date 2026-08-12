@@ -7,6 +7,7 @@
 - [Parâmetros](#parâmetros)
 - [Formatos de Resposta](#formatos-de-resposta)
 - [Estrutura de Dados](#estrutura-de-dados)
+- [Cache](#cache-ttl-3h)
 - [Rate Limits](#rate-limits)
 - [Códigos de Erro](#códigos-de-erro)
 - [Exemplos de Uso](#exemplos-de-uso)
@@ -762,7 +763,6 @@ Boas práticas para evitar timeouts e carga desnecessária:
 
 ```bash
 curl -X GET \
-  -H "x-api-key: YOUR_API_KEY" \
   "https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/knowledge-base"
 ```
 
@@ -770,7 +770,6 @@ curl -X GET \
 
 ```bash
 curl -X GET \
-  -H "x-api-key: YOUR_API_KEY" \
   "https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/knowledge-base?format=ai_training" \
   > knowledge_base.txt
 ```
@@ -779,7 +778,6 @@ curl -X GET \
 
 ```bash
 curl -X GET \
-  -H "x-api-key: YOUR_API_KEY" \
   "https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/knowledge-base?format=system_b"
 ```
 
@@ -787,7 +785,6 @@ curl -X GET \
 
 ```bash
 curl -X GET \
-  -H "x-api-key: YOUR_API_KEY" \
   "https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/knowledge-base?category=Odontologia&limit=100"
 ```
 
@@ -795,12 +792,10 @@ curl -X GET \
 
 ```bash
 # Página 1 (produtos 1-50)
-curl -H "x-api-key: YOUR_API_KEY" \
-  "https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/knowledge-base?limit=50&offset=0"
+curl "https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/knowledge-base?limit=50&offset=0"
 
 # Página 2 (produtos 51-100)
-curl -H "x-api-key: YOUR_API_KEY" \
-  "https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/knowledge-base?limit=50&offset=50"
+curl "https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/knowledge-base?limit=50&offset=50"
 ```
 
 ### 6. JavaScript (Node.js)
@@ -811,11 +806,6 @@ const fetch = require('node-fetch');
 async function getKnowledgeBase() {
   const response = await fetch(
     'https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/knowledge-base',
-    {
-      headers: {
-        'x-api-key': process.env.KNOWLEDGE_BASE_API_KEY
-      }
-    }
   );
   
   const data = await response.json();
@@ -834,8 +824,7 @@ import os
 
 def get_knowledge_base():
     response = requests.get(
-        'https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/knowledge-base',
-        headers={'x-api-key': os.environ['KNOWLEDGE_BASE_API_KEY']}
+        'https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/knowledge-base'
     )
     
     data = response.json()
