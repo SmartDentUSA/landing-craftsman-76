@@ -480,6 +480,8 @@ curl -X POST https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/refresh-knowl
         "seo_enhanced": "boolean",
         
         // Especificações Técnicas (20 campos)
+        "product_applications": "string",
+        "processing_instructions": "string (Instruções de Pré/Pós Processamento)",
         "technical_specifications": [
           {
             "label": "string",
@@ -874,6 +876,6 @@ Para dúvidas ou problemas:
 
 ---
 
-**🚀 API Version:** 1.0.0  
+**🚀 API Version:** 2.1.0  
 **📅 Última Atualização:** 2025-01-15  
 **📧 Suporte:** Via administrador do sistema
