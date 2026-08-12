@@ -1,0 +1,22 @@
+INSERT INTO public.company_milestones (
+  user_id, year, month, day, slug, title, description, market_context, strategic_decision, impact, legacy,
+  location, key_people, products_involved, technologies, certifications, is_published, display_order
+)
+SELECT
+  '2dc85508-8333-45a3-83f6-39d459973a65'::uuid, 2026, 7, 7,
+  '2026-modulo-escaneamento-edentulos-blzdental-dmc',
+  'Implementação do Módulo de Escaneamento de Edêntulos BLZDental DMC (Ferramentas BLZ INO200 com Kit DMC)',
+  'A Smart Dent disponibilizou no ecossistema de captura dos scanners BLZ (como o INO 200) o módulo avançado BLZ DMC Edentulous, uma solução digital que associa algoritmos inteligentes a corpos de referência geométricos temporários (Scan Buddies). O sistema adota o princípio da fotogrametria por imagem através de referenciamento horizontal, concentrando os pontos de referência em áreas reduzidas e permitindo um alinhamento tridimensional ultrapreciso por sobreposição com bibliotecas STL proprietárias.',
+  'O escaneamento intraoral de arcos totalmente edêntulos representava o maior desafio da odontologia digital, pois a mucosa gengival é lisa, extensa e carece de pontos estáveis de referência anatômica. Nos fluxos tradicionais, as trajetórias longas de varredura faziam o scanner perder constantemente o rastreamento (tracking), acumulando erros geométricos e gerando falhas na emenda das imagens ("erros de costura"). Isso comprometia totalmente a passividade das barras de próteses tipo protocolo, resultando em sessões exaustivas de ajuste, soldas e retrabalhos laboratoriais.',
+  'A empresa optou por abandonar a complexa e imprecisa varredura linear contínua da mucosa em favor de uma estratégia focada e inteligente. A decisão estratégica consistiu em desenvolver um fluxo guiado por software que exige a ativação obrigatória do módulo "Edentulous Case" e o uso coordenado de Scan Buddies antirreflexo em dois formatos anatômicos: o Tipo L (expandido e plano para a estabilização volumétrica da região posterior) e o Tipo SM (perfil compacto adaptado para respeitar a curvatura acentuada da região anterior). O fluxo força o direcionamento convergente das cabeças ativas dos pinos para formar um bloco de leitura otimizado e micrométrico.',
+  'A união do hardware dedicado à Engine de Inteligência Artificial reduziu o erro posicional e cumulativo a níveis praticamente nulos em arcos totais extensos. O algoritmo de IA atua filtrando em tempo real os ruídos ópticos e tecidos móveis (como língua e bochecha), permitindo que o cirurgião-dentista escaneie apenas as cabeças dos Scan Buddies através de correspondência automatizada (auto-match). O tempo de cadeira (chairside) foi severamente reduzido, e a ferramenta viabilizou o envio de três arquivos digitais perfeitamente coordenados para o ambiente CAD (Exocad), assegurando o assentamento passivo perfeito de infraestruturas metálicas ou de zircônia e protocolos de carga imediata.',
+  'Hoje, a tecnologia BLZ DMC consolida a liderança da Smart Dent em fluxos cirúrgicos e protéticos de alta complexidade no conceito Same-Day Dentistry. Totalmente integrado à versatilidade física de hardware do scanner BLZ INO 200 (aproveitando sua profundidade de campo de até 25 mm), o sistema é amplamente ensinado nas imersões da Smart Dent Academy, convertendo o antigo "caos digital" de pacientes desdentados em um protocolo limpo, altamente rentável, universal e livre de anuidades comerciais.',
+  '{"city":"São Carlos","state":"SP","country":"Brasil"}'::jsonb,
+  '[{"name":"Equipe de Engenharia e P&D da Smart Dent","role":"Desenvolvimento do módulo e biblioteca STL"},{"name":"Danilo Cutigi","role":"Especialista de Suporte Técnico"}]'::jsonb,
+  '["Scanner Intraoral BLZ INO 200","Kit DMC (Scan Buddies Tipo L e Tipo SM/P, M, G)","Biblioteca STL Proprietária DMC","Software CAD (Exocad/BLZ)"]'::jsonb,
+  '["Fotogrametria por Imagem Horizontal","Algoritmo de Inteligência Artificial para Filtragem de Tecido Mole (F.A.I.)","Correspondência Automatizada (Auto-Match / A.I. Scanbody Matching)","Profundidade de campo de até 25 mm (BLZ INO 200)"]'::jsonb,
+  '["Validação de Interoperabilidade Aberta (Formatos STL, PLY, OBJ)","Conformidade com Normas Internacionais para Scanners e Dispositivos Médicos Classe II","Sistema de Qualidade de Fábrica ISO 13485"]'::jsonb,
+  true, 0
+WHERE NOT EXISTS (
+  SELECT 1 FROM public.company_milestones WHERE slug = '2026-modulo-escaneamento-edentulos-blzdental-dmc'
+);
