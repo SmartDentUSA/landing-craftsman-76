@@ -870,15 +870,23 @@ Schema completo disponível em: [KNOWLEDGE_BASE_FIELDS_REFERENCE.md](./KNOWLEDGE
 
 ## 📅 Changelog
 
+### v2.1.0 (2026-08-12)
+- ✅ Documentação alinhada ao código atual da Edge Function
+- ✅ Endpoint é **público** (sem API Key / sem `verify_jwt`)
+- ✅ 4 formatos: `json`, `ai_training`, `system_b`, `rag`
+- ✅ Suporte a `POST` com parâmetros no body
+- ✅ Cache de 3h em `knowledge_base_cache` (`use_cache`, `force_refresh`, headers `X-Cache`)
+- ✅ Novas seções: marcos históricos, SPIN, landing pages, KOLs, blog, depoimentos em vídeo, avaliações Google, vídeos externos (Sistema B)
+- ✅ Campo `processing_instructions` (Instruções de Pré/Pós Processamento) exposto nos produtos
+
 ### v1.0.0 (2025-01-15)
 - ✅ Lançamento inicial
 - ✅ 250+ campos documentados
 - ✅ 3 formatos de saída (json, ai_training, system_b)
-- ✅ Rate limiting (100 req/min)
-- ✅ Autenticação via API Key
 - ✅ Filtros por categoria
 - ✅ Paginação de produtos
 - ✅ Índices de performance
+
 
 ---
 
