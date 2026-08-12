@@ -877,5 +877,5 @@ Para dúvidas ou problemas:
 ---
 
 **🚀 API Version:** 2.1.0  
-**📅 Última Atualização:** 2025-01-15  
+**📅 Última Atualização:** 2026-08-12  
 **📧 Suporte:** Via administrador do sistema
