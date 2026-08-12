@@ -724,31 +724,14 @@ curl -X POST https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/refresh-knowl
 
 ## 🚦 Rate Limits
 
-### Limites Atuais
+**Não há rate limiting implementado na função.** Valem apenas os limites de plataforma das Supabase Edge Functions (concorrência e timeout de execução).
 
-- **100 requisições por minuto** por API Key
-- Contadores resetam a cada minuto
-- Rate limit compartilhado entre todos os formatos
+Boas práticas para evitar timeouts e carga desnecessária:
 
-### Headers de Resposta
-
-```http
-X-RateLimit-Limit: 100
-X-RateLimit-Remaining: 87
-X-RateLimit-Reset: 2025-01-15T10:31:00Z
-```
-
-### Resposta ao Exceder Limite
-
-**HTTP 429 Too Many Requests**
-
-```json
-{
-  "error": "Rate limit exceeded",
-  "message": "Maximum 100 requests per minute",
-  "reset_at": "2025-01-15T10:31:00Z"
-}
-```
+- Use `format=rag` ou `format=json` com cache ligado (padrão) — respostas vêm da tabela `knowledge_base_cache`.
+- Use `limit`/`offset` em vez de puxar todos os produtos numa chamada.
+- Desligue seções que não usa (`include_products=false`, `include_links=false`, etc.).
+- Evite `force_refresh=true` em loops — ele reconstrói tudo a partir do banco.
 
 ---
 
@@ -756,18 +739,20 @@ X-RateLimit-Reset: 2025-01-15T10:31:00Z
 
 | Código | Significado | Solução |
 |--------|-------------|---------|
-| `401` | Unauthorized | Verificar `x-api-key` header |
-| `429` | Too Many Requests | Aguardar reset do rate limit |
-| `500` | Internal Server Error | Contactar suporte |
+| `500` | Internal Server Error | Erro ao buscar/formatar dados. Ver logs da função; tente `force_refresh=true` ou reduza `limit` |
+| `504` / timeout | Execução longa | Reduza `limit`, desligue seções ou use o cache (`use_cache=true`) |
 
-### Exemplo de Erro 401
+### Exemplo de Erro 500
 
 ```json
 {
-  "error": "Invalid or missing API key",
-  "message": "Please provide a valid x-api-key header"
+  "error": "canceling statement due to statement timeout",
+  "details": "Internal server error"
 }
 ```
+
+> Não há respostas `401`/`429`: o endpoint é público e sem rate limit próprio.
+
 
 ---
 
